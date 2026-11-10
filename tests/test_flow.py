@@ -213,3 +213,4 @@ class DriverWeb(unittest.TestCase):
         self.assertTrue(st["online"])
         self.assertIsNone(st["offer"])
         self.assertEqual(st["today"]["rides"], 0)
+        core.set_driver("tg:88", online=0, live_until=None)   # башка сыноолорго тийбесин
