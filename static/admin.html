@@ -101,7 +101,7 @@ function login(pending, link) {
     ? `<div class="login"><h2>Номерди ырастаңыз</h2><p class="muted">Telegram'да ботко өтүп, номериңизди жөнөтүңүз.</p>
        ${link ? `<a href="${esc(link)}" target="_blank"><button class="btn gold">Telegram'да ырастоо</button></a>` : ""}</div>`
     : `<div class="login"><h2>Админ панели</h2><p class="muted">Админдин номери (ADMIN_PHONES же ADMIN_IDS).</p>
-       <input class="f" id="ph" placeholder="+996 700 123 456" inputmode="tel"><div class="err" id="er"></div>
+       <input class="f" id="ph" placeholder="0700 123 456" inputmode="tel"><div class="err" id="er"></div>
        <button class="btn gold" id="go">Кирүү</button></div>`;
   if (pending) { const t = setInterval(async () => { if ((await api("/api/me")).auth) { clearInterval(t); boot(); } }, 2500); return; }
   $("#go").onclick = async () => {

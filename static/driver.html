@@ -174,7 +174,7 @@ function viewLogin(pending, link, err) {
   render(`<h2>Айдоочунун кабинети</h2>
     <p class="muted">Номериңиз менен кириңиз. Айдоочу эмес болсоңуз — кийинки кадамда арыз толтурасыз.</p>
     <input class="f" id="nm" placeholder="Атыңыз" autocomplete="given-name">
-    <input class="f" id="ph" placeholder="+996 700 123 456" inputmode="tel" autocomplete="tel">
+    <input class="f" id="ph" placeholder="0700 123 456" inputmode="tel" autocomplete="tel">
     <div class="err" id="er">${esc(err || "")}</div>
     <label style="display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--soft);margin:2px 0 6px">
       <input type="checkbox" id="agree" style="width:20px;height:20px;flex:none;margin-top:1px">
@@ -184,7 +184,7 @@ function viewLogin(pending, link, err) {
   $("#go").onclick = async () => {
     if (!$("#agree").checked) return $("#er").textContent = "Шарттар менен макул экениңизди белгилеңиз.";
     const r = await api("/api/login", {phone:$("#ph").value, name:$("#nm").value, kind:"driver", agree:true});
-    if (r.error) return $("#er").textContent = "Номерди толук жазыңыз: +996 700 123 456";
+    if (r.error) return $("#er").textContent = "Номерди толук жазыңыз: 0700 123 456";
     r.auth ? boot() : viewLogin(true, r.link);
   };
 }
