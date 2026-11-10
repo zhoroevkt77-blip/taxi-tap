@@ -268,3 +268,4 @@ body.athome .top,body.athome #pin,body.athome .navbtns,body.athome .sheet{visibi
 .res{display:flex;align-items:center;gap:12px}
 .tile b,.tile small{position:relative;z-index:1;max-width:72%}
 .tile .ico{font-size:46px!important;right:10px!important;bottom:8px!important;opacity:.95}
+.tiles3{grid-template-columns:repeat(auto-fit,minmax(0,1fr))!important}

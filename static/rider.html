@@ -100,7 +100,7 @@ input.f:focus{border-color:var(--navy)}
 .quick{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=19">
+<link rel="stylesheet" href="/static/theme.css?v=20">
 </head>
 <body>
 <div id="map"></div>
@@ -277,9 +277,11 @@ function viewIdle() {
     <div class="role hrole"><a class="on">🧳 Жүргүнчүмүн</a><a href="/driver">🚗 Айдоочумун</a></div>
     <button class="haddr" id="hAddr"><small>📍 Сиз турган жер</small><b id="fromTxt">${esc(S.fromAddr || "Аныкталууда…")}</b><span>›</span></button>
     <div class="tiles">${tile("tTaxi", "🚕", "Такси", `<span id="taxiEta">${homeEta()}</span>`, true)}
-      ${has("delivery") ? tile("tDel", "📦", "Жеткирүү", "Буюм, документ") : tile("tWhen0", "🕐", "Алдын ала", "Убактысын тандаңыз")}</div>
-    <div class="tiles3"><button class="sm" id="tWhen"><span>🕐</span>Алдын ала</button><button class="sm" id="tOther"><span>👵</span>Башка адамга</button>
-      ${has("comfort") ? `<button class="sm" id="tComf"><span>🚘</span>Комфорт</button>` : has("minivan") ? `<button class="sm" id="tVan"><span>🚐</span>Минивэн</button>` : `<button class="sm" id="tMap"><span>🗺</span>Картадан</button>`}</div>
+      ${has("delivery") ? tile("tDel", "📦", "Жеткирүү", "Буюм, документ") : tile("tOther", "👵", "Башка адамга", "Ата-эне, тууганга")}</div>
+    <div class="tiles3">${[has("delivery") ? `<button class="sm" id="tOther"><span>👵</span>Башка адамга</button>` : "",
+      has("comfort") ? `<button class="sm" id="tComf"><span>🚘</span>Комфорт</button>` : "",
+      has("minivan") ? `<button class="sm" id="tVan"><span>🚐</span>Минивэн</button>` : "",
+      `<button class="sm" id="tMap"><span>🗺</span>Картадан белгилөө</button>`].filter(Boolean).join("")}</div>
     <button class="hsearch" id="hSearch">🔍 <span>Каякка барабыз?</span><em>›</em></button>
     <div class="hrec">${rec.slice(0, 5).map((r, i) => `<button class="rec" data-i="${i}"><span class="pi">${r.ico}</span><span class="rt"><b>${esc(r.name)}</b><small>${esc(r.sub)}</small></span><span class="t">${minsTo(r)}</span></button>`).join("")}</div>
     <p class="muted" id="nearMsg" style="margin:10px 4px 0;font-size:13px">${esc(S.nearMsg || "")}</p>`;
@@ -292,7 +294,6 @@ function viewIdle() {
   if ($("#tComf")) $("#tComf").onclick = () => go("comfort");
   if ($("#tVan")) $("#tVan").onclick = () => go("minivan");
   if ($("#tMap")) $("#tMap").onclick = () => { S.cls = "econom"; viewPickDest(); };
-  ["#tWhen", "#tWhen0"].forEach(k => { if ($(k)) $(k).onclick = () => { S.openWhen = true; go("econom"); }; });
   $("#tOther").onclick = () => { S.openOther = true; go("econom"); };
   $("#home").querySelectorAll(".rec").forEach(b => b.onclick = () => { const r = rec[+b.dataset.i];
     S.cls = "econom"; S.to = [r.lat, r.lon]; S.toAddr = r.name === "Үй" || r.name === "Иш" ? r.name : r.name; picked("Б"); viewQuote(); });
@@ -450,7 +451,7 @@ async function viewQuote() {
     <div class="cls" id="cls">${q.classes.map(c => `<div data-c="${c.id}"><i>${ICON[c.id] || "🚕"}</i><div class="muted">${esc(c.name)}</div><b>${priceTxt(c)}</b></div>`).join("")}</div>
     <div class="muted" style="margin-top:6px">${sub}${q.surge > 1 ? ` · ⚡ ×${q.surge}` : ""} · <span id="qp"></span></div>
     <div id="extra"></div>
-    <div class="chips" style="flex-wrap:wrap"><button id="promoOpen">🎁 Промокод</button><button id="whenOpen">🕐 Алдын ала</button><button id="otherOpen">👤 Башка адамга</button><button id="noteOpen">📝 Каалоо</button></div>
+    <div class="chips" style="flex-wrap:wrap"><button id="promoOpen">🎁 Промокод</button><button id="otherOpen">👤 Башка адамга</button><button id="noteOpen">📝 Каалоо</button></div>
     <div id="promoBox"></div><div id="whenBox"></div><div id="otherBox"></div><div id="noteBox"></div>
     <p class="muted" style="margin:6px 0 0">Айдоочу ${q.wait.free_min} мүнөт акысыз күтөт, андан кийин ${q.wait.per_min} сом/мүн.</p>
     <button class="btn main" id="order">Чакыруу</button><button class="btn ghost" id="back">Артка</button>`);
@@ -481,7 +482,7 @@ async function viewQuote() {
     $("#qn").querySelectorAll("button").forEach(b => b.onclick = () => { const i = $("#nt"); i.value = (i.value ? i.value + ", " : "") + b.textContent; });
   };
   paint();
-  $("#whenOpen").onclick = () => {
+  if ($("#whenOpen")) $("#whenOpen").onclick = () => {
     const pad = n => String(n).padStart(2, "0"), fmt = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
     const min = new Date(Date.now() + 25 * 60000), max = new Date(Date.now() + 3 * 86400000);
     $("#whenBox").innerHTML = `<input class="f" type="datetime-local" id="when" min="${fmt(min)}" max="${fmt(max)}" value="${fmt(new Date(Date.now() + 60 * 60000))}" style="margin:10px 0 0;padding:10px">`;
