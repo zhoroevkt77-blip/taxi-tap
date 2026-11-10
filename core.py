@@ -1231,6 +1231,11 @@ def driver_today(uid):
     return {"rides": r["n"], "earned": int(r["s"] or 0)}
 
 
+def passenger_history(uid, limit=20):
+    return query("SELECT id, status, price, discount, wait_fee, dist_km, p_addr, d_addr, cls, created_at, completed_at "
+                 "FROM rides WHERE passenger=? ORDER BY id DESC LIMIT ?", (uid, limit), "all")
+
+
 def driver_history(uid, limit=20):
     return query("SELECT id, status, price, dist_km, created_at, completed_at FROM rides "
                  "WHERE driver=? ORDER BY id DESC LIMIT ?", (uid, limit), "all")

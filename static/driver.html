@@ -81,7 +81,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=10">
+<link rel="stylesheet" href="/static/theme.css?v=11">
 </head>
 <body>
 <div id="map"></div>
@@ -305,7 +305,10 @@ function viewCabinet() {
     <p class="muted">Сумма сом менен. «Колуңузда» — жүргүнчүлөр төлөгөн акчадан комиссия кемитилгени.
     ${D.min_balance > 0 ? `Баланс ${D.min_balance} сомдон аз болсо, заказ келбейт.` : ""}</p>
     ${D.pending_topup ? `<div class="note">🕓 Чегиңиз текшерилүүдө.</div>` : `<button class="btn main" id="top">➕ Балансты толуктоо</button>`}
+    ${linksHTML(D.bot)}
+    <p class="muted">Жүргүнчүлөргө жүргүнчүнүн шилтемесин, тааныш айдоочуларга айдоочунун шилтемесин жөнөтүңүз.</p>
     <button class="btn ghost" id="back">Артка</button>`);
+  bindLinks(); window.SHEET && SHEET.expand();
   $("#top") && ($("#top").onclick = viewTopup);
   $("#back").onclick = () => { lastView = ""; show(); };
 }

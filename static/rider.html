@@ -100,7 +100,7 @@ input.f:focus{border-color:var(--navy)}
 .quick{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=10">
+<link rel="stylesheet" href="/static/theme.css?v=11">
 </head>
 <body>
 <div id="map"></div>
@@ -108,7 +108,7 @@ input.f:focus{border-color:var(--navy)}
 <div class="top">
   <div class="lcol"><div class="logo"><img src="/static/icon-192.png" alt="">Такси <b>ТАП!</b></div>
     <div class="role"><a class="on">🧳 Жүргүнчүмүн</a><a href="/driver">🚗 Айдоочумун</a></div></div>
-  <button class="round" id="menuBtn" aria-label="Меню">☰</button>
+  <button class="round" id="menuBtn" aria-label="Кабинет">👤</button>
 </div>
 
 <div class="pin" id="pin">
@@ -614,23 +614,44 @@ function viewRide() {
 }
 
 let prevView = null;
-$("#menuBtn").onclick = async () => {
+$("#menuBtn").onclick = () => viewCabinet();
+async function viewCabinet() {
   if (S.mode === "login" || S.mode === "menu") return;
   const me = await api("/api/me");
   if (!me.auth) return;
   prevView = S.mode; S.mode = "menu";
   const drv = {active:"Айдоочу кабинети", pending:"Арызыңыз текшерилүүдө", rejected:"Арызды оңдоо", blocked:"Айдоочу кабинети"}[me.driver] || "Айдоочу болуу";
-  render(`<h2>${esc(me.name || "Профиль")}</h2><p class="muted">${esc(me.phone)}</p>
+  const P = PLACES && !PLACES.error ? PLACES : await api("/api/places");
+  const place = (k, ico, t) => `<div class="hrow"><span>${ico} <b>${t}</b> ${P[k] ? `<span class="muted">· ${esc(P[k].name || "белгиленген")}</span>` : `<span class="muted">· белгилене элек</span>`}</span>
+    <span><button class="lnk-b" style="width:auto;height:32px;padding:0 10px;font-size:13px" data-pl="${k}">${P[k] ? "Өзгөртүү" : "Кошуу"}</button>${P[k] ? ` <button class="lnk-b" style="width:32px;height:32px;font-size:13px" data-del="${k}">✕</button>` : ""}</span></div>`;
+  render(`<h2>💼 Менин кабинетим</h2>
+    <div class="car"><div class="av">${esc((me.name || "?")[0].toUpperCase())}</div><div style="flex:1"><b>${esc(me.name || "Жүргүнчү")}</b><div class="muted">${esc(me.phone)}</div></div></div>
+    ${linksHTML(me.bot)}
+    <div class="lnks"><h3 style="margin:4px 0 4px">📍 Даректерим</h3>${place("home", "🏠", "Үй")}${place("work", "💼", "Иш")}</div>
+    <div class="lnks"><h3 style="margin:4px 0 4px">🕘 Сапарларым</h3><div id="hist"><p class="muted">Жүктөлүүдө…</p></div></div>
     <div class="row" style="justify-content:space-between"><div><b>Telegram билдирүүлөрү</b><div class="muted">${me.tg ? "Айдоочу табылганда, келгенде кабар берет" : "Telegram туташкан эмес"}</div></div>
     ${me.tg ? `<input type="checkbox" id="nt" ${me.notify ? "checked" : ""} style="width:24px;height:24px">` : ""}</div>
     <a href="/driver"><button class="btn ghost">🚗 ${drv}</button></a>
     ${me.admin ? `<a href="/admin"><button class="btn ghost">🛠 Админ панели</button></a>` : ""}
+    <a href="/terms"><button class="btn ghost">📄 Колдонуу шарттары</button></a>
     ${installHTML()}<button class="btn ghost" id="out">Чыгуу</button><button class="btn main" id="close">Жабуу</button>`);
-  bindInstall();
+  if (window.SHEET) SHEET.expand();
+  bindInstall(); bindLinks();
+  document.querySelectorAll("[data-pl]").forEach(b => b.onclick = () => viewPickDest(b.dataset.pl));
+  document.querySelectorAll("[data-del]").forEach(b => b.onclick = async () => {
+    if (!confirm("Өчүрөсүзбү?")) return; PLACES = await api("/api/place", {kind:b.dataset.del}); S.mode = prevView; viewCabinet(); });
   const nt = $("#nt"); if (nt) nt.onchange = () => api("/api/notify", {on:nt.checked});
   $("#out").onclick = async () => { await api("/api/logout", {}); location.reload(); };
   $("#close").onclick = () => { S.ride ? viewRide() : viewIdle(); };
-};
+  const H = await api("/api/history");
+  const ST = {completed:"✅", cancelled:"✕", searching:"⏳", scheduled:"🕐", accepted:"🚕", arrived:"🚕", in_trip:"🚕"};
+  const box = $("#hist"); if (!box) return;
+  const rows = (H.rides || []);
+  box.innerHTML = rows.length ? rows.map(r => {
+    const d = new Date(r.created_at * 1000), pay = r.price ? Math.max(0, r.price - Math.round(r.discount || 0)) + " с" : "";
+    return `<div class="hrow"><span>${ST[r.status] || ""} ${d.toLocaleDateString("ru-RU", {day:"2-digit", month:"2-digit"})} · ${esc(r.d_addr || "сапар")}</span><b>${r.status === "cancelled" ? '<span class="muted">жокко чыкты</span>' : pay}</b></div>`;
+  }).join("") : `<p class="muted">Азырынча сапар жок.</p>`;
+}
 
 async function boot() {
   const me = await api("/api/me");

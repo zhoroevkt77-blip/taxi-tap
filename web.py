@@ -132,6 +132,7 @@ def driver_state(uid):
                    "p": [d["home_lat"], d["home_lon"]] if d.get("home_lat") is not None else None},
           "in_area": (core.in_area(d["lat"], d["lon"]) if d and d.get("lat") is not None and core.AREA_ON else None),
           "area_name": core.AREA_CITY if core.AREA_ON else "",
+          "bot": BOT_USERNAME,
           "notify": bool(u.get("notify", 1)), "tg": bool(u.get("tg_uid")),
           "pending_topup": bool(d and core.query(
               "SELECT id FROM balance_tx WHERE driver=? AND status='pending'", (uid,), "one"))}
@@ -287,6 +288,8 @@ class H(BaseHTTPRequestHandler):
                 return self._json({"ride": ride_view(core.last_ride_of(uid))})
             if u.path == "/api/places":
                 return self._json(core.get_places(uid))
+            if u.path == "/api/history":
+                return self._json({"rides": core.passenger_history(uid)})
             if u.path == "/api/addr":
                 near = _point([(q.get("lat") or [""])[0], (q.get("lon") or [""])[0]])
                 return self._json({"items": addrbook.search_all((q.get("q") or [""])[0][:60], near)})

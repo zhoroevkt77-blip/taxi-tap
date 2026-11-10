@@ -99,3 +99,27 @@ window.SHEET = (function () {
   };
 })();
 document.addEventListener("DOMContentLoaded", () => { const s = document.querySelector(".sheet"); if (s && s.querySelector(".grab")) SHEET.init(s); });
+
+// ---------- Такси ТАП! шилтемелери (кабинетте бөлүшүү үчүн) ----------
+function linksHTML(bot) {
+  const o = location.origin;
+  const row = (id, ico, title, url, sub) => `<div class="lnk"><div class="lnk-t"><b>${ico} ${title}</b><span>${url.replace(/^https?:\/\//, "")}</span>${sub ? `<small>${sub}</small>` : ""}</div>
+    <button class="lnk-b" data-copy="${url}">📋</button><button class="lnk-b" data-share="${url}" data-title="${title}">📤</button></div>`;
+  return `<div class="lnks"><h3 style="margin:4px 0 8px">🔗 Такси ТАП! шилтемелери</h3>
+    ${row("p", "🧳", "Жүргүнчүлөр үчүн", o + "/", "Таксини ушул жерден чакырышат")}
+    ${row("d", "🚗", "Айдоочулар үчүн", o + "/driver", "Айдоочу болуп катталуу")}
+    ${bot ? row("b", "✈️", "Telegram бот", "https://t.me/" + bot, "Номерди ырастоо жана билдирүүлөр") : ""}
+    <p class="muted" style="margin:6px 0 0">📋 — көчүрүү, 📤 — WhatsApp, Telegram аркылуу жөнөтүү.</p></div>`;
+}
+function bindLinks() {
+  document.querySelectorAll("[data-copy]").forEach(b => b.onclick = async () => {
+    try { await navigator.clipboard.writeText(b.dataset.copy); b.textContent = "✓"; }
+    catch (e) { prompt("Көчүрүп алыңыз:", b.dataset.copy); }
+    setTimeout(() => b.textContent = "📋", 1500);
+  });
+  document.querySelectorAll("[data-share]").forEach(b => b.onclick = async () => {
+    const url = b.dataset.share, text = "Такси ТАП! — Базар-Коргондо такси чакыруу:";
+    if (navigator.share) { try { await navigator.share({title:"Такси ТАП!", text, url}); } catch (e) {} }
+    else location.href = "https://wa.me/?text=" + encodeURIComponent(text + " " + url);
+  });
+}
