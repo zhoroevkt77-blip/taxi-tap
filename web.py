@@ -269,6 +269,11 @@ class H(BaseHTTPRequestHandler):
                 return self._json(core.area_info())
             if u.path == "/api/near":
                 return self._near(q)
+            if u.path == "/api/rev":
+                p = _point([(q.get("lat") or [""])[0], (q.get("lon") or [""])[0]])
+                if not p:
+                    return self._json({"error": "bad_point"}, 400)
+                return self._json(addrbook.reverse(p[0], p[1]))
             if u.path == "/api/route":
                 if not self._uid():
                     return self._json({"error": "auth"}, 401)
@@ -287,7 +292,9 @@ class H(BaseHTTPRequestHandler):
             if u.path == "/api/ride":
                 return self._json({"ride": ride_view(core.last_ride_of(uid))})
             if u.path == "/api/places":
-                return self._json(core.get_places(uid))
+                pl = core.get_places(uid)
+                pl["popular"] = addrbook.popular()
+                return self._json(pl)
             if u.path == "/api/history":
                 return self._json({"rides": core.passenger_history(uid)})
             if u.path == "/api/addr":

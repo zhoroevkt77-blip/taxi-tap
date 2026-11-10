@@ -451,6 +451,21 @@ class AddrBook(unittest.TestCase):
         self.assertEqual(r[0]["area"], "Текебаева, 21 · 2ГИС")
         self.assertEqual(addrbook.dgis_search("нурбек"), [])          # ачкыч жок — сурабайт
 
+    def test_reverse_and_popular(self):
+        old = addrbook.DGIS_KEY; addrbook.DGIS_KEY = ""
+        try:
+            addrbook.save("Борбордук базар", "market", 41.0400, 72.7460)
+            addrbook.save("Райондук оорукана", "health", 41.0500, 72.7600)
+            addrbook._rev_cache.clear()
+            r = addrbook.reverse(41.0405, 72.7462)                  # ~60 м
+            self.assertEqual(r["near"], "Борбордук базар")
+            self.assertIsNone(addrbook.reverse(41.0700, 72.7900)["near"])
+            addrbook._pop_cache["t"] = 0
+            names = [x["name"] for x in addrbook.popular()]
+            self.assertEqual(names[:2], ["Борбордук базар", "Райондук оорукана"])
+        finally:
+            addrbook.DGIS_KEY = old
+
     def test_suggest_and_seed(self):
         # жүргүнчү сунуштады — азырынча көрүнбөйт
         a1 = addrbook.suggest("Нурбек той-кана", 42.4910, 78.3910, by="ph:1", weight=1)

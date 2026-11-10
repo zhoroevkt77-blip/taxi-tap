@@ -198,3 +198,9 @@ input.f::placeholder{color:#8a8a95}
 .navb{pointer-events:auto;width:54px;height:54px;border-radius:50%;background:#fff;border:0;box-shadow:0 3px 12px rgba(20,20,30,.2);display:grid;place-items:center;cursor:pointer;padding:0}
 .navb.hide{display:none}
 .navb svg{display:block}
+/* v15: кабар, белги талаасы, чиптин ETA */
+#toast{position:fixed;left:12px;right:12px;top:calc(env(safe-area-inset-top,0px) + 132px);z-index:3001;background:#16161a;color:#fff;border-radius:16px;padding:12px 14px;font-size:14px;line-height:1.35;box-shadow:0 10px 28px rgba(0,0,0,.35);opacity:0;transform:translateY(-10px);pointer-events:none;transition:.25s}
+#toast.on{opacity:1;transform:none;pointer-events:auto}
+.f.lm{margin:2px 0 8px;padding:9px 12px;font-size:14px}
+#chipEta:empty{display:none}
+#nearMsg:empty{display:none}

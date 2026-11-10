@@ -100,7 +100,7 @@ input.f:focus{border-color:var(--navy)}
 .quick{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=14">
+<link rel="stylesheet" href="/static/theme.css?v=15">
 </head>
 <body>
 <div id="map"></div>
@@ -146,6 +146,11 @@ let revSeq = 0;
 async function reverse(lat, lon) {
   const my = ++revSeq;
   try {
+    const x = await (await fetch(`/api/rev?lat=${lat}&lon=${lon}`)).json();
+    if (my !== revSeq) return null;
+    if (x && (x.addr || x.near)) return x.addr ? (x.near ? `${x.addr} (${x.near} жанында)` : x.addr) : `${x.near} жанында`;
+  } catch (e) {}
+  try {
     const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&accept-language=ky,ru`);
     const j = await r.json();
     if (my !== revSeq) return null;
@@ -187,8 +192,9 @@ async function loadNear() {
   S.near = n;
   nearLayer.clearLayers();
   (n.drivers || []).forEach(p => L.marker(p, {icon:icon("", "🚕"), interactive:false}).addTo(nearLayer));
-  $("#chipEta").textContent = !n.city ? `Биз ${(window.AREA && AREA.name) || "бул аймакта"} гана иштейбиз`
-    : n.eta_min ? `${n.eta_min} мүнөттө берүү` : "Жакын арада бош айдоочу жок";
+  $("#chipEta").textContent = n.city && n.eta_min ? `🚕 ${n.eta_min} мүн` : "";
+  S.nearMsg = !n.city ? `📍 Биз ${(window.AREA && AREA.name) || "бул аймакта"} гана иштейбиз` : n.eta_min ? "" : "Азыр жакын арада бош айдоочу жок — заказ берсеңиз, табылганда кабар беребиз";
+  if ($("#nearMsg")) $("#nearMsg").textContent = S.nearMsg;
 }
 function setPin(kind) {
   const show = kind !== null;
@@ -202,11 +208,13 @@ function locate(force) {
   navigator.geolocation.getCurrentPosition(p => {
     const ll = [p.coords.latitude, p.coords.longitude];
     NAV.set(ll, p.coords.heading, p.coords.speed);
+    S.gpsBad = p.coords.accuracy > 60 ? Math.round(p.coords.accuracy) : 0;
     if (!inArea(ll[0], ll[1])) {               // аймактан сырткары — карта борборунда калат
       if (force) $("#chipEta").textContent = `Сиз ${window.AREA && AREA.name ? AREA.name + " районунун" : "аймактын"} сыртындасыз`;
       return;
     }
-    if (force || S.mode === "idle") map.setView(ll, 16);
+    if (force || S.mode === "idle") map.setView(ll, S.gpsBad ? 17 : 16);
+    if (S.gpsBad && (S.mode === "idle")) toast(`📡 GPS так эмес (±${S.gpsBad} м). Картаны жылдырып, А пинди так турган жериңизге коюңуз.`);
   }, () => {}, {enableHighAccuracy:true, timeout:8000});
 }
 
@@ -251,13 +259,13 @@ function pollMe() {
 }
 
 function viewIdle() {
-  S.mode = "idle"; S.to = null; S.quote = null; S.hnT = ""; setPin("from"); showA(false);
+  S.mode = "idle"; S.to = null; S.quote = null; S.hnT = ""; S.lmT = ""; setPin("from"); showA(false);
   rideLayer.clearLayers(); driverMarker = null;
   render(`<div class="ab">
       <div class="abr abb" id="fromRow"><span class="bul lt">А</span><span class="abl"><small>А точка · каяктан</small><b id="fromTxt">${esc(S.fromAddr || "…")}</b></span><button class="mapb" id="mapA">🗺 Картадан<br>белгиле</button></div>
       <div class="abr abb" id="where"><span class="bul to lt">Б</span><span class="abl"><small>Б точка · каякка</small><b class="ph">Каякка барасыз?</b></span><button class="mapb" id="mapB">🗺 Картадан<br>белгиле</button></div>
     </div>
-    <div class="chips" id="places"></div>`);
+    <div class="chips" id="places"></div><p class="muted" id="nearMsg" style="margin:4px 2px 0;font-size:13px">${esc(S.nearMsg || "")}</p>`);
   loadPlaces();
   $("#where").onclick = () => viewSearch("to");
   $("#fromRow").onclick = () => viewSearch("from");
@@ -324,7 +332,8 @@ function viewSearch(field) {
       if (act === "from") quick.push({icon:"📍", name:"Менин жерим", area:"GPS / картадагы пин", gps:true});
       if (P.home) quick.push({icon:"🏠", name:"Үй", area:P.home.name || "", lat:P.home.lat, lon:P.home.lon});
       if (P.work) quick.push({icon:"💼", name:"Иш", area:P.work.name || "", lat:P.work.lat, lon:P.work.lon});
-      (P.recent || []).forEach(r => quick.push({icon:"🕘", name:r.name, area:"", lat:r.lat, lon:r.lon}));
+      (P.recent || []).forEach(r => quick.push({icon:"🕘", name:r.name, area:"Акыркы сапар", lat:r.lat, lon:r.lon}));
+      if (act === "to") (P.popular || []).forEach(r => { if (!quick.some(x => x.name === r.name)) quick.push(r); });
       let items = [];
       if (q.length >= 2 && !(act === "from" && q === S.fromAddr)) {
         const near = S.from || [map.getCenter().lat, map.getCenter().lng];
@@ -394,7 +403,9 @@ async function viewQuote() {
   const cur = () => q.classes.find(c => c.id === S.cls);
   const priceTxt = c => c.price ? `${c.price} с` : `${c.min} с+`;
   render(`<div class="row"><span class="bul lt">А</span><div style="flex:1"><b>${esc(S.fromAddr)}</b></div><input class="hn" id="hnF" placeholder="үй №" maxlength="12" value="${esc(S.hnF || "")}"></div>
+    <input class="f lm" id="lmF" maxlength="60" placeholder="А белгиси: мис. көк дарбаза, дүкөндүн алдында" value="${esc(S.lmF || "")}">
     <div class="row"><span class="bul to lt">Б</span><div style="flex:1"><b>${esc(S.toAddr)}</b></div><input class="hn" id="hnT" placeholder="үй №" maxlength="12" value="${esc(S.hnT || "")}"></div>
+    <input class="f lm" id="lmT" maxlength="60" placeholder="Б белгиси (милдеттүү эмес)" value="${esc(S.lmT || "")}">
     <div class="cls" id="cls">${q.classes.map(c => `<div data-c="${c.id}"><i>${ICON[c.id] || "🚕"}</i><div class="muted">${esc(c.name)}</div><b>${priceTxt(c)}</b></div>`).join("")}</div>
     <div class="muted" style="margin-top:6px">${sub}${q.surge > 1 ? ` · ⚡ ×${q.surge}` : ""} · <span id="qp"></span></div>
     <div id="extra"></div>
@@ -404,6 +415,7 @@ async function viewQuote() {
     <button class="btn main" id="order">Чакыруу</button><button class="btn ghost" id="back">Артка</button>`);
   S.promo = null; S.at = null; S.disc = 0; S.other = null; S.note = "";
   $("#hnF").oninput = e => S.hnF = e.target.value; $("#hnT").oninput = e => S.hnT = e.target.value;
+  $("#lmF").oninput = e => S.lmF = e.target.value; $("#lmT").oninput = e => S.lmT = e.target.value;
   const paint = () => {
     $("#cls").querySelectorAll("[data-c]").forEach(el => el.classList.toggle("on", el.dataset.c === S.cls));
     const c = cur();
@@ -451,7 +463,7 @@ async function viewQuote() {
       : $("#oPh") && $("#oPh").value.trim() ? {other_phone:$("#oPh").value, other_name:$("#oNm").value} : {};
     $("#order").disabled = true;
     const r = await api("/api/order", {p:S.from, d:S.to, promo:S.promo, at:S.at, cls:S.cls, note:nt,
-      p_addr:withHn(S.fromAddr, $("#hnF").value), d_addr:withHn(S.toAddr, $("#hnT").value), ...oth});
+      p_addr:withLm(withHn(S.fromAddr, $("#hnF").value), $("#lmF").value), d_addr:withLm(withHn(S.toAddr, $("#hnT").value), $("#lmT").value), ...oth});
     if (r.ride) { S.ride = r.ride; viewRide(); poll(); }
     else { $("#order").disabled = false; alertBox(r.error === "have_active" ? "Сизде активдүү заказ бар."
       : r.error === "bad_time" ? "Убакытты 25 мүнөттөн 3 күнгө чейинки аралыкта тандаңыз."
@@ -460,6 +472,7 @@ async function viewQuote() {
   $("#back").onclick = () => { map.setView(S.from, 15); viewIdle(); };
 }
 const withHn = (a, h) => (h = (h || "").trim()) ? `${a}, ${h}` : a;
+const withLm = (a, m) => (m = (m || "").trim()) ? `${a} — ${m}` : a;
 function alertBox(t) { const e = document.createElement("p"); e.className = "err"; e.textContent = t; $("#view").appendChild(e); }
 
 // А → Б маршруту: адегенде түз сызык (дароо), анан жол боюнча (сервер OSRM'ден алат)

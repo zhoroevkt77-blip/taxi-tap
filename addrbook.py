@@ -468,5 +468,110 @@ def search_all(q, near=None, limit=8):
 def dgis_selftest():
     if DGIS_KEY:
         r = dgis_search("Базар-Коргон", (41.0417, 72.7472))
+        try:
+            print("  2ГИС дарек (тест): %s" % (_dgis_reverse(41.0399, 72.7466) or "табылган жок — " + str(dgis_state["last_error"])), flush=True)
+        except Exception as e:
+            print("  2ГИС дарек: ката", e, flush=True)
         print("  2ГИС: %s (%d натыйжа)%s" % ("ачкыч иштейт" if dgis_state["ok"] else "иштебей жатат", len(r),
                                             "" if dgis_state["ok"] else " — " + str(dgis_state["last_error"])), flush=True)
+
+
+# ==================== Тескери геокод: чекит → так дарек ====================
+# 1) 2ГИС: көчө + үй номери; 2) өз тизмебизден жакын белгилүү жер («… жанында»).
+_rev_cache = {}
+LANDMARK_M = 150
+
+
+def nearest_landmark(lat, lon, max_m=LANDMARK_M):
+    best, bd = None, max_m / 1000.0
+    for r in _rows():
+        if r["kind"] == "street" or r.get("approx") or r["lat"] is None:
+            continue
+        d = core.haversine_km(lat, lon, r["lat"], r["lon"])
+        if d < bd:
+            best, bd = r, d
+    return best["name"] if best else None
+
+
+def _dgis_reverse(lat, lon):
+    if not DGIS_KEY:
+        return None
+    params = {"lat": "%.6f" % lat, "lon": "%.6f" % lon, "key": DGIS_KEY, "type": "building,street",
+              "fields": "items.point,items.address_name,items.full_name,items.address", "page_size": 3, "locale": "ru_KG"}
+    try:
+        dgis_state["calls"] += 1
+        req = urllib.request.Request(DGIS_URL + "/geocode?" + urllib.parse.urlencode(params),
+                                     headers={"User-Agent": "TaksiTAP/1.0"})
+        with urllib.request.urlopen(req, timeout=5) as r:
+            data = json.loads(r.read().decode())
+    except Exception as e:
+        dgis_state["errors"] += 1
+        dgis_state["last_error"] = "rev: " + str(e)[:150]
+        return None
+    for it in ((data or {}).get("result") or {}).get("items") or []:
+        if it.get("type") == "building":
+            a = it.get("address_name") or ""
+            if a:
+                parts = [x.strip() for x in a.split(",")]
+                if len(parts) >= 2:
+                    return pretty(parts[0]) + " " + parts[1]
+                return pretty(a)
+            if it.get("name"):
+                return it["name"]
+        elif it.get("type") == "street" and it.get("name"):
+            return pretty(it["name"])
+    return None
+
+
+def reverse(lat, lon):
+    """{"addr": "Эн-Сай көчөсү 12", "near": "Стадион"} — бири же экөө тең None болушу мүмкүн."""
+    key = (round(lat, 4), round(lon, 4))
+    hit = _rev_cache.get(key)
+    if hit and hit[0] > time.time():
+        return hit[1]
+    res = {"addr": _dgis_reverse(lat, lon), "near": nearest_landmark(lat, lon)}
+    if len(_rev_cache) > 5000:
+        _rev_cache.clear()
+    _rev_cache[key] = (time.time() + 3600, res)
+    return res
+
+
+# ==================== Көп барылчу жерлер (Б точка үчүн даяр тизме) ====================
+_POP_KINDS = ("market", "bus", "health", "gov", "mosque", "shop")
+_pop_cache = {"t": 0, "v": []}
+
+
+def popular(limit=6):
+    if _pop_cache["t"] > time.time():
+        return _pop_cache["v"]
+    out, seen = [], set()
+    # 1) Жүргүнчүлөр акыркы 30 күндө көп барган жерлер
+    try:
+        rows = core.query("SELECT d_addr, AVG(d_lat) AS lat, AVG(d_lon) AS lon, COUNT(*) AS n FROM rides "
+                          "WHERE status='completed' AND d_addr IS NOT NULL AND d_lat IS NOT NULL AND created_at>? "
+                          "GROUP BY d_addr ORDER BY n DESC LIMIT 10", (core.now() - 30 * 86400,), "all")
+    except Exception:
+        rows = []
+    for r in rows:
+        if (r["n"] or 0) < 3:
+            continue
+        k = norm(r["d_addr"])
+        if k in seen:
+            continue
+        seen.add(k)
+        out.append({"icon": "🔥", "name": r["d_addr"], "area": "Көп барышат", "lat": r["lat"], "lon": r["lon"]})
+    # 2) Белгилүү жайлар (жери так болгондору гана)
+    pois = [r for r in _rows() if r["kind"] in _POP_KINDS and not r.get("approx") and r["lat"] is not None]
+    pois.sort(key=lambda r: (_POP_KINDS.index(r["kind"]), -(r.get("votes") or 0), r["name"]))
+    used_kind = {}
+    for r in pois:
+        if len(out) >= limit:
+            break
+        if used_kind.get(r["kind"], 0) >= 2 or norm(r["name"]) in seen:
+            continue
+        used_kind[r["kind"]] = used_kind.get(r["kind"], 0) + 1
+        seen.add(norm(r["name"]))
+        out.append({"icon": KINDS[r["kind"]][0], "name": r["name"], "area": r.get("area") or KINDS[r["kind"]][1],
+                    "lat": r["lat"], "lon": r["lon"]})
+    _pop_cache.update(t=time.time() + 600, v=out[:limit])
+    return out[:limit]

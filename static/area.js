@@ -217,3 +217,12 @@ window.NAV = (function () {
   }
   return {init, set, place, pos: () => pos};
 })();
+
+// ---------- Кыска кабар (5 сек) ----------
+function toast(text, ms) {
+  let t = document.getElementById("toast");
+  if (!t) { t = document.createElement("div"); t.id = "toast"; document.body.appendChild(t); }
+  t.textContent = text; t.classList.add("on");
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("on"), ms || 5000);
+  t.onclick = () => t.classList.remove("on");
+}
