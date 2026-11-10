@@ -399,7 +399,9 @@ class Http(unittest.TestCase):
     def test_driver_journey(self):
         offline_all()
         drv, adm, pas = self.client(), self.client(), self.client()
-        self.assertTrue(drv("/api/login", {"phone": "0700 444 555", "name": "Нурбек", "kind": "driver"})["auth"])
+        self.assertEqual(drv("/api/login", {"phone": "0700 444 555", "kind": "driver"})["error"], "terms")
+        self.assertTrue(drv("/api/login", {"phone": "0700 444 555", "name": "Нурбек", "kind": "driver", "agree": True})["auth"])
+        self.assertTrue(core.get_user("ph:+996700444555")["terms_at"])
         st = drv("/api/d/state")
         self.assertIsNone(st["status"])
         self.assertEqual(drv("/api/d/register", {"name": "Нурбек", "model": "Fit", "color": "Боз",
@@ -433,7 +435,7 @@ class Http(unittest.TestCase):
         adm("/api/a/finance", {"percent": 10})
         # линия, заказ
         self.assertTrue(drv("/api/d/online", {"on": True, "p": list(NEAR)})["online"])
-        pas("/api/login", {"phone": "0555 444 555", "name": "Айгүл"})
+        pas("/api/login", {"phone": "0555 444 555", "name": "Айгүл", "agree": True})
         self.assertEqual(pas("/api/order", {"p": list(KARAKOL), "d": list(DEST)})["ride"]["status"], "searching")
         dispatch.tick()
         st = drv("/api/d/state")

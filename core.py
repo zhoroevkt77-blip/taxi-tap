@@ -255,7 +255,8 @@ SCHEMA = [
 
 # Эски базага жаңы тилкелер (таблица мурун түзүлгөн болсо)
 NEW_COLUMNS = {
-    "users": {"tg_uid": "TEXT", "notify": "INTEGER DEFAULT 1"},
+    "users": {"tg_uid": "TEXT", "notify": "INTEGER DEFAULT 1", "terms_at": "REAL"},
+    "web_sessions": {"agreed": "INTEGER DEFAULT 0"},
     "drivers": {"doc_license": "TEXT", "doc_techpass": "TEXT", "doc_car": "TEXT",
                 "reject_note": "TEXT"},
     "balance_tx": {"claimed": "REAL"},
@@ -787,10 +788,10 @@ def phone_uid(phone):
     return "ph:+" + d if len(d) >= 11 else None
 
 
-def web_session_new(phone, name, kind="rider"):
+def web_session_new(phone, name, kind="rider", agreed=False):
     tok = secrets.token_urlsafe(18)
-    query("INSERT INTO web_sessions (token, phone, name, kind, created_at) VALUES (?, ?, ?, ?, ?)",
-          (tok, phone, name, kind, now()))
+    query("INSERT INTO web_sessions (token, phone, name, kind, created_at, agreed) VALUES (?, ?, ?, ?, ?, ?)",
+          (tok, phone, name, kind, now(), 1 if agreed else 0))
     return tok
 
 
@@ -820,6 +821,8 @@ def web_session_verify(tok, phone_seen=None, tg_uid=None):
         fields["name"] = s["name"]
     if tg_uid:
         fields["tg_uid"] = tg_uid
+    if s.get("agreed") and not u.get("terms_at"):
+        fields["terms_at"] = now()               # шарттарга макулдук берилген убакыт
     set_user(uid, **fields)
     if s.get("kind") == "admin" and not is_admin(uid):
         return None

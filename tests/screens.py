@@ -65,7 +65,7 @@ with sync_playwright() as p:
 
     # --- жаңы айдоочу каттоодон өтөт ---
     d = page_for(phone)
-    d.goto(URL + "/driver"); d.fill("#nm", "Нурбек"); d.fill("#ph", "0700 444 555"); d.click("#go")
+    d.goto(URL + "/driver"); d.fill("#nm", "Нурбек"); d.fill("#ph", "0700 444 555"); d.check("#agree"); d.click("#go")
     d.wait_for_timeout(1500)
     d.fill("#rm", "Honda Fit"); d.fill("#rc", "Боз"); d.fill("#rp", "01 777 KGA")
     for sel, f in (("#dl", DOCS[0]), ("#dt", DOCS[1]), ("#dc", DOCS[2])):
@@ -89,7 +89,7 @@ with sync_playwright() as p:
 
     # --- жүргүнчүнүн менюсу ---
     r = page_for(phone)
-    r.goto(URL + "/"); r.fill("#nm", "Айгүл"); r.fill("#ph", "0555 111 222"); r.click("#go"); r.wait_for_timeout(1500)
+    r.goto(URL + "/"); r.fill("#nm", "Айгүл"); r.fill("#ph", "0555 111 222"); r.check("#agree"); r.click("#go"); r.wait_for_timeout(1500)
     r.click("#menuBtn"); shot(r, "v8_rider_menu", 1200)
     b.close()
 srv.terminate()

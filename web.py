@@ -33,7 +33,7 @@ COOKIE = "tt"
 MAX_BODY = 9 * 1024 * 1024          # 3 документ (браузерде кичирейтилген)
 PAGES = {"/": "rider.html", "/index.html": "rider.html",
          "/driver": "driver.html", "/driver/": "driver.html",
-         "/admin": "admin.html", "/admin/": "admin.html"}
+         "/admin": "admin.html", "/admin/": "admin.html", "/terms": "terms.html"}
 
 # Out'торду жеткирүүчү: bot.py өзүнүкүн коёт (Telegram). Сайт өзү абалды окуйт.
 deliver = lambda outs: None   # noqa: E731
@@ -286,7 +286,9 @@ class H(BaseHTTPRequestHandler):
         kind = b.get("kind") if b.get("kind") in ("rider", "driver", "admin") else "rider"
         if not core.phone_uid(phone):
             return self._json({"error": "bad_phone"}, 400)
-        tok = core.web_session_new(phone, name, kind)
+        if kind != "admin" and not b.get("agree"):
+            return self._json({"error": "terms"}, 400)
+        tok = core.web_session_new(phone, name, kind, bool(b.get("agree")))
         if DEV_LOGIN:
             if not core.web_session_verify(tok):
                 return self._json({"error": "not_admin"}, 403)
