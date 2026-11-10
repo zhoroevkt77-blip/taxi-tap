@@ -198,7 +198,7 @@ function locate(force) {
   navigator.geolocation.getCurrentPosition(p => {
     const ll = [p.coords.latitude, p.coords.longitude];
     if (!inArea(ll[0], ll[1])) {               // аймактан сырткары — карта борборунда калат
-      if (force) $("#chipEta").textContent = `Сиз ${(window.AREA && AREA.name) || "аймактан"} сырткарыдасыз`;
+      if (force) $("#chipEta").textContent = `Сиз ${window.AREA && AREA.name ? AREA.name + " районунун" : "аймактын"} сыртындасыз`;
       return;
     }
     if (force || S.mode === "idle") map.setView(ll, 16);

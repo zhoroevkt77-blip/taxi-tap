@@ -245,7 +245,7 @@ function viewAddAddr() {
 
 function outHTML() {
   if (D.in_area !== false) return "";
-  return `<div class="note" style="background:#fdecef!important;border-color:#f5c2cb!important">⚠️ <b>Сиз ${esc(D.area_name || "иштөө аймагынан")} районунан сырткарыдасыз.</b>
+  return `<div class="note" style="background:#fdecef!important;border-color:#f5c2cb!important">⚠️ <b>Сиз ${D.area_name ? esc(D.area_name) + " районунун" : "иштөө аймагынын"} сыртындасыз.</b>
     Такси ТАП! ушул райондун ичинде гана иштейт — бул жерде заказ келбейт. Аймакка киргенде заказдар өзү келе баштайт.</div>`;
 }
 
@@ -261,7 +261,7 @@ function viewHome() {
   const sw = D.tg ? `<div class="sw"><div><b>Telegram билдирүүлөрү</b><div class="muted">Сайт жабык болсо да жаңы заказ жөнүндө кабар келет</div></div>
     <input type="checkbox" id="nt" ${D.notify ? "checked" : ""} style="width:24px;height:24px"></div>` : "";
   if (D.online) {
-    render(`${outHTML()}<div class="wait"><div class="blink"${D.in_area === false ? ' style="background:var(--bad)"' : ""}></div><div><b>${D.in_area === false ? "Заказ келбейт — аймактан сырткарыдасыз" : "Заказ күтүлүүдө"}${D.home && D.home.on ? " · 🏠 үйгө карай" : ""}</b><div class="muted">Экранды өчүрбөңүз — GPS иштеп турат</div></div></div>
+    render(`${outHTML()}<div class="wait"><div class="blink"${D.in_area === false ? ' style="background:var(--bad)"' : ""}></div><div><b>${D.in_area === false ? "Заказ келбейт — аймактын сыртындасыз" : "Заказ күтүлүүдө"}${D.home && D.home.on ? " · 🏠 үйгө карай" : ""}</b><div class="muted">Экранды өчүрбөңүз — GPS иштеп турат</div></div></div>
       ${stats}${homeHTML()}<button class="btn ghost" id="addAddr">📍 Дарек кошуу</button><button class="btn red" id="off">Линиядан чыгуу</button>`);
     bindHome(); $("#addAddr").onclick = viewAddAddr;
     $("#off").onclick = async () => { D = await api("/api/d/online", {on:false}); wake(false); lastView = ""; show(); };
