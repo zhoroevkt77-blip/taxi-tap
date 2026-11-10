@@ -23,6 +23,7 @@ import urllib.request
 
 import core
 import dispatch
+import ops
 import web
 from strings import L
 
@@ -71,6 +72,26 @@ def site(path="/"):
 def send(chat, text, kb=None):
     return api("sendMessage", chat_id=chat, text=text, parse_mode="HTML",
                disable_web_page_preview=True, reply_markup=kb)
+
+
+def send_document(chat, path, caption=""):
+    """Файлды Telegram'га жиберет (multipart, китепканасыз)."""
+    if not API:
+        return {"ok": False}
+    import uuid
+    bnd = uuid.uuid4().hex
+    parts = []
+    for k, v in (("chat_id", str(chat)), ("caption", caption)):
+        parts.append(("--%s\r\nContent-Disposition: form-data; name=\"%s\"\r\n\r\n%s\r\n"
+                      % (bnd, k, v)).encode())
+    parts.append(("--%s\r\nContent-Disposition: form-data; name=\"document\"; filename=\"%s\"\r\n"
+                  "Content-Type: application/gzip\r\n\r\n" % (bnd, os.path.basename(path))).encode())
+    parts.append(open(path, "rb").read())
+    parts.append(("\r\n--%s--\r\n" % bnd).encode())
+    req = urllib.request.Request(API + "sendDocument", data=b"".join(parts),
+                                 headers={"Content-Type": "multipart/form-data; boundary=" + bnd})
+    with urllib.request.urlopen(req, timeout=120, context=_ctx) as r:
+        return json.loads(r.read().decode())
 
 
 def open_kb(path, lang="ky"):
@@ -164,7 +185,7 @@ def dispatch_worker():
         try:
             deliver(dispatch.tick())
         except Exception:
-            traceback.print_exc()
+            ops.report_error("dispatch")
         time.sleep(TICK_SEC)
 
 
@@ -195,8 +216,13 @@ def main():
         print("  ⚠️  SITE_URL коюлган жок — билдирүүлөрдө шилтеме болбойт", flush=True)
 
     web.deliver = deliver
+    ops.send_text = lambda tg, text: send(tg[3:], text)
+    ops.send_file = lambda tg, path, cap: send_document(tg[3:], path, cap)
     web.start()
     threading.Thread(target=dispatch_worker, daemon=True).start()
+    threading.Thread(target=ops.backup_worker, daemon=True).start()
+    if API:
+        ops.notify_admins("🟢 Такси ТАП! иштеп баштады (жаңы версия же кайра жүргүзүлдү).")
 
     if not API:
         while True:
@@ -214,7 +240,7 @@ def main():
             try:
                 handle_update(up)
             except Exception:
-                traceback.print_exc()
+                ops.report_error("бот")
 
 
 if __name__ == "__main__":

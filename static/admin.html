@@ -257,6 +257,8 @@ async function viewFinance() {
       <div class="bars">${F.months.map(m => `<div><b>${m[key] ? m[key].toLocaleString("ru-RU") : ""}</b>
         <i style="height:${Math.round(100 * (m[key] || 0) / mx)}%"></i>${MN[+m.month.slice(5)]}</div>`).join("")}</div>
       <div style="height:12px"></div></div>
+    <div class="panel"><h3>Камдык көчүрмө</h3><div class="item"><div class="main"><span class="muted">Күн сайын 03:00дө автоматтык түрдө жасалат жана Telegram'ыңызга файл болуп келет. Азыр жүктөп алуу:</span></div>
+      <a class="btn" href="/api/a/backup">💾 Жүктөп алуу</a></div></div>
     <div class="panel"><h3>Айдоочулар — ушул ай</h3><div class="scroll"><table>
       <tr><th>Айдоочу</th><th>Сапар</th><th>Жүгүртүү</th><th>Комиссия</th><th>Баланс</th></tr>
       ${F.drivers.map(d => `<tr><td>${esc(d.name)}<div class="muted">${esc(d.phone)}</div></td><td>${d.rides}</td><td>${money(d.gross)}</td>

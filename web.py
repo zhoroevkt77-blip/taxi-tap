@@ -24,6 +24,7 @@ from urllib.parse import parse_qs, urlparse
 
 import core
 import flow
+import ops
 
 STATIC = os.path.join(core.BASE, "static")
 DEV_LOGIN = os.environ.get("WEB_DEV_LOGIN") == "1"
@@ -222,7 +223,7 @@ class H(BaseHTTPRequestHandler):
                 return self._admin_get(u.path[7:], q)
             return self._json({"error": "not_found"}, 404)
         except Exception:
-            traceback.print_exc()
+            ops.report_error("сайт " + self.path.split("?")[0])
             return self._json({"error": "server"}, 500)
 
     def _me(self):
@@ -277,7 +278,7 @@ class H(BaseHTTPRequestHandler):
                 return self._admin_post(uid, path[7:], b)
             return self._rider_post(uid, path, b)
         except Exception:
-            traceback.print_exc()
+            ops.report_error("сайт " + self.path.split("?")[0])
             return self._json({"error": "server"}, 500)
 
     def _login(self, b):
@@ -406,6 +407,16 @@ class H(BaseHTTPRequestHandler):
             return self._json({"tariffs": core.all_tariffs()})
         if action == "finance":
             return self._json(core.admin_finance())
+        if action == "backup":
+            path = ops.backup()
+            data = open(path, "rb").read()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/gzip")
+            self.send_header("Content-Disposition", 'attachment; filename="%s"' % os.path.basename(path))
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+            return None
         if action == "file":
             return self._file(core.upload_path((q.get("n") or [""])[0]), private=True)
         return self._json({"error": "not_found"}, 404)

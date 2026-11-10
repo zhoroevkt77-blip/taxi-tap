@@ -23,6 +23,7 @@ import core      # noqa: E402
 import dispatch  # noqa: E402
 import flow      # noqa: E402
 import web       # noqa: E402
+import ops       # noqa: E402
 
 KARAKOL = (42.4907, 78.3936)
 NEAR = (42.4950, 78.3990)       # ~0.6 км
@@ -250,6 +251,40 @@ class Finance(unittest.TestCase):
         out = flow.driver_step(d, rid)
         self.assertIn(d, [o["to"] for o in out])                          # «баланс аз» кабары
         self.assertFalse(core.is_available(core.get_driver(d)))
+
+
+class Ops(unittest.TestCase):
+    def test_backup_restore(self):
+        core.init_db()
+        make_driver("0700 000 081", "Көчүрмө", NEAR, 300)
+        path = ops.backup()
+        self.assertTrue(path.endswith(".json.gz"))
+        import gzip as _gz
+        data = json.load(_gz.open(path, "rt", encoding="utf-8"))
+        self.assertNotIn("web_sessions", data["tables"])                      # токендер кирбейт
+        self.assertTrue(any(d["uid"] == "ph:+996700000081" for d in data["tables"]["drivers"]))
+        # бош базага кайтаруу
+        old = core.SQLITE_PATH
+        core.SQLITE_PATH = os.path.join(_tmp, "restore.db"); core._drop()
+        try:
+            ops.restore(path)
+            self.assertEqual(core.get_driver("ph:+996700000081")["balance"], 300)
+        finally:
+            core._drop(); core.SQLITE_PATH = old
+
+    def test_error_alert_rate_limited(self):
+        sent = []
+        ops.send_text = lambda tg, text: sent.append((tg, text))
+        try:
+            for _ in range(3):
+                try:
+                    1 / 0
+                except ZeroDivisionError:
+                    ops.report_error("сыноо")
+            self.assertEqual(len(sent), len(core.admins()))                    # бир жолу гана
+            self.assertIn("ZeroDivisionError", sent[0][1])
+        finally:
+            ops.send_text = None
 
 
 class Accounts(unittest.TestCase):
