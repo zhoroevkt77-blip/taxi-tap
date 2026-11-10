@@ -67,6 +67,17 @@ table.fin td:first-child,table.fin th:first-child{text-align:left}
 .doc i{font-style:normal;font-size:24px;display:block;margin-bottom:4px}
 label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .note{background:#FBF5E6;border-radius:14px;padding:12px;font-size:14px;margin:6px 0}
+.tag{display:inline-block;background:var(--navy);color:#fff;border-radius:8px;padding:2px 8px;font-size:12px;font-weight:700;margin-right:4px}
+.tag.g{background:var(--gold);color:#14243F}
+.stars{display:flex;justify-content:center;gap:6px;font-size:36px;margin:6px 0}
+.stars span{cursor:pointer;color:var(--line)}.stars span.on{color:var(--gold)}
+.chatb{position:relative}
+.chatb em{position:absolute;top:6px;right:10px;background:var(--bad);color:#fff;border-radius:10px;font-style:normal;font-size:12px;padding:1px 7px}
+.msgs{max-height:40vh;overflow:auto;display:flex;flex-direction:column;gap:6px;margin:6px 0 10px}
+.msgs div{max-width:80%;padding:8px 12px;border-radius:14px;background:var(--paper);font-size:15px;align-self:flex-start;white-space:pre-wrap;word-break:break-word}
+.msgs div.me{align-self:flex-end;background:var(--navy);color:#fff}
+.quick{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
 </head>
@@ -184,6 +195,27 @@ function header() {
   $("#stBadge").classList.toggle("on", D.online || !!D.ride);
 }
 
+const ICON = {econom:"🚕", comfort:"🚘", minivan:"🚐", delivery:"📦"};
+const clsTag = c => c && c !== "econom" ? `<span class="tag g">${ICON[c] || ""} ${esc((D.class_names || {})[c] || c)}</span>` : "";
+function homeHTML() {
+  const h = D.home || {};
+  if (!h.set) return `<div class="sw"><div><b>🏠 Үйгө карай</b><div class="muted">Үйүңүздүн жагына бара турган заказдар гана келет. Адегенде үйүңүздү белгилеңиз.</div></div>
+    <button class="btn ghost" id="hset" style="width:auto;margin:0;padding:10px 12px;font-size:14px">Ушул жер — үйүм</button></div>`;
+  return `<div class="sw"><div><b>🏠 Үйгө карай</b><div class="muted">${h.on ? "Күйүк: үйүңүздүн жагына заказдар гана келет" : `Бүгүн дагы ${h.left} жолу күйгүзсө болот`}</div>
+    <a href="#" id="hset" class="muted" style="font-size:12px">Үйдүн жерин жаңыртуу (азыркы жериңиз)</a></div>
+    <input type="checkbox" id="hon" ${h.on ? "checked" : ""} ${!h.on && !h.left ? "disabled" : ""} style="width:24px;height:24px"></div>`;
+}
+function bindHome() {
+  const hs = $("#hset"); if (hs) hs.onclick = async e => { e.preventDefault();
+    const p = await getPos(); if (!p) return alert("GPS'ке уруксат бериңиз.");
+    if (!confirm("Азыркы жериңизди үйүңүз катары сактайсызбы?")) return;
+    D = await api("/api/d/home_set", {p}); lastView = ""; show(); };
+  const ho = $("#hon"); if (ho) ho.onchange = async () => {
+    D = await api("/api/d/home", {on:ho.checked});
+    if (D.error === "home_limit") alert("Бүгүнкү лимит бүттү (күнүнө 2 жолу).");
+    lastView = ""; show(); };
+}
+
 function viewHome() {
   const low = D.balance < D.min_balance;
   const stats = `<div class="grid">
@@ -196,8 +228,9 @@ function viewHome() {
   const sw = D.tg ? `<div class="sw"><div><b>Telegram билдирүүлөрү</b><div class="muted">Сайт жабык болсо да жаңы заказ жөнүндө кабар келет</div></div>
     <input type="checkbox" id="nt" ${D.notify ? "checked" : ""} style="width:24px;height:24px"></div>` : "";
   if (D.online) {
-    render(`<div class="wait"><div class="blink"></div><div><b>Заказ күтүлүүдө</b><div class="muted">Экранды өчүрбөңүз — GPS иштеп турат</div></div></div>
-      ${stats}<button class="btn red" id="off">Линиядан чыгуу</button>`);
+    render(`<div class="wait"><div class="blink"></div><div><b>Заказ күтүлүүдө${D.home && D.home.on ? " · 🏠 үйгө карай" : ""}</b><div class="muted">Экранды өчүрбөңүз — GPS иштеп турат</div></div></div>
+      ${stats}${homeHTML()}<button class="btn red" id="off">Линиядан чыгуу</button>`);
+    bindHome();
     $("#off").onclick = async () => { D = await api("/api/d/online", {on:false}); wake(false); lastView = ""; show(); };
   } else {
     render(`<h2>Салам, ${esc(D.name || "айдоочу")}!</h2><p class="muted">${esc(D.car_color)} ${esc(D.car_model)}, ${esc(D.car_plate)}</p>
@@ -205,7 +238,7 @@ function viewHome() {
       <button class="btn go" id="on">Линияга чыгуу</button>
       <div class="err" id="er"></div>${stats}${topup}
       <button class="btn ghost" id="cab">💼 Менин кабинетим</button>
-      <button class="btn ghost" id="hist">Сапарлардын тарыхы</button>${sw}
+      <button class="btn ghost" id="hist">Сапарлардын тарыхы</button>${homeHTML()}${sw}
       ${installHTML()}<a class="btn ghost" href="/">🚕 Такси чакыруу (жүргүнчү)</a><button class="btn ghost" id="out">Чыгуу</button>`);
     bindInstall();
     $("#top") && ($("#top").onclick = viewTopup);
@@ -221,6 +254,7 @@ function viewHome() {
       startGps(); wake(true); lastView = ""; show();
     };
     $("#hist").onclick = viewHistory;
+    bindHome();
   }
 }
 
@@ -228,7 +262,8 @@ function viewCabinet() {
   const f = D.finance || {}, row = (t, k) => { const x = f[k] || {rides:0, gross:0, fee:0, net:0};
     return `<tr><td>${t}</td><td>${x.rides}</td><td>${x.gross}</td><td>${x.fee}</td><td><b>${x.net}</b></td></tr>`; };
   render(`<h2>Менин кабинетим</h2>
-    <div class="note">💼 Тариф: <b>${esc(D.tariff)}</b></div>
+    <div class="note">💼 Тариф: <b>${esc(D.tariff)}</b><br>🚕 Класстарыңыз: <b>${(D.classes || []).map(c => esc((D.class_names || {})[c] || c)).join(", ")}</b>
+      <div class="muted">Комфорт же Минивэн класска өтүү үчүн админге кайрылыңыз.</div></div>
     <div class="grid"><div class="stat"><span class="muted">Баланс</span><b style="color:${D.balance < D.min_balance ? "var(--bad)" : "inherit"}">${D.balance} с</b></div>
       <div class="stat"><span class="muted">Рейтинг</span><b>★ ${D.rating ?? "5.0"}</b></div></div>
     <table class="fin"><tr><th></th><th>Сапар</th><th>Жүгүртүү</th><th>Комиссия</th><th>Колуңузда</th></tr>
@@ -250,8 +285,10 @@ async function viewHistory() {
   $("#back").onclick = () => { lastView = ""; show(); };
 }
 
+let seenRide = null;
 function viewRide() {
   const r = D.ride;
+  if (seenRide !== r.id) { seenRide = r.id; seen = 0; unread.last = 0; }
   layer.clearLayers();
   L.marker(r.p, {icon:icon("", "👤"), interactive:false}).addTo(layer);
   if (r.d) L.marker(r.d, {icon:icon("to", "■"), interactive:false}).addTo(layer);
@@ -269,28 +306,85 @@ function viewRide() {
     });
   }
   lastRide = r.id + r.status;
-  const title = {accepted:"Жүргүнчүгө барыңыз", arrived:"Жүргүнчүнү күтүңүз", in_trip:"Сапар жүрүп жатат"}[r.status];
-  const next = {accepted:["📍 Келдим", "main"], arrived:["▶️ Сапарды баштоо", "go"], in_trip:["🏁 Сапарды бүтүрүү", "dark"]}[r.status];
-  render(`<h2>${title}</h2><div class="muted" id="rinfo" style="margin:-6px 0 6px"></div>
-    <div class="row"><span class="bul"></span><div style="flex:1"><b>${esc(r.passenger)}</b><div class="muted">${r.price ? r.price + " сом" : "Тариф боюнча"}${r.dist_km ? " · ~" + r.dist_km + " км" : ""}</div></div></div>
-    ${r.d ? "" : `<div class="row"><span class="bul to"></span><div class="muted">Бара турган жерин жүргүнчү өзү айтат</div></div>`}
+  const del = r.cls === "delivery";
+  const title = del ? {accepted:"Буюмду алууга барыңыз", arrived:"Буюмду алыңыз", in_trip:"Алуучуга жеткириңиз"}[r.status]
+    : {accepted:"Жүргүнчүгө барыңыз", arrived:"Жүргүнчүнү күтүңүз", in_trip:"Сапар жүрүп жатат"}[r.status];
+  const next = {accepted:["📍 Келдим", "main"], arrived:[del ? "▶️ Алдым, жолго чыктым" : "▶️ Сапарды баштоо", "go"], in_trip:[del ? "🏁 Жеткирдим" : "🏁 Сапарды бүтүрүү", "dark"]}[r.status];
+  const who = r.other_name || r.other_phone ? `${esc(r.other_name || "Башка адам")}<div class="muted">Заказ берген: ${esc(r.passenger)}</div>` : esc(r.passenger);
+  const callPh = !del && r.other_phone ? r.other_phone : r.phone;
+  render(`<h2>${clsTag(r.cls)}${title}</h2><div class="muted" id="rinfo" style="margin:-6px 0 6px"></div>
+    <div class="row"><span class="bul"></span><div style="flex:1"><b>${who}</b>${r.p_rating ? `<span class="muted"> · ★ ${r.p_rating}</span>` : ""}
+      <div class="muted">${r.price ? r.price + " сом" : "Тариф боюнча"}${r.dist_km ? " · ~" + r.dist_km + " км" : ""}${r.p_addr ? " · " + esc(r.p_addr) : ""}</div></div></div>
+    ${r.d ? (r.d_addr ? `<div class="row"><span class="bul to"></span><div>${esc(r.d_addr)}</div></div>` : "") : `<div class="row"><span class="bul to"></span><div class="muted">Бара турган жерин жүргүнчү өзү айтат</div></div>`}
+    ${del && r.other_phone ? `<div class="note">📦 Алуучу: <a href="tel:${esc(r.other_phone)}">${esc(r.other_phone)}</a></div>` : ""}
     ${r.note ? `<div class="note">📝 ${esc(r.note)}</div>` : ""}
+    ${r.status === "arrived" ? `<div class="note" id="wt">${waitText(r)}</div>` : r.wait && r.wait.fee ? `<div class="note">⏳ Күтүү акысы: +${r.wait.fee} сом (баага кошулду)</div>` : ""}
     ${r.discount ? `<div class="note">🎁 Промокод: жүргүнчү <b>${r.price - Math.round(r.discount)} с</b> төлөйт, ${Math.round(r.discount)} с сапар бүткөндө балансыңызга кошулат</div>` : ""}
-    <div class="two"><a class="btn ghost" href="tel:${esc(r.phone)}">📞 Чалуу</a>${target ? `<a class="btn ghost" href="${navUrl(target)}" target="_blank">🧭 Навигатор</a>` : ""}</div>
+    ${D.next ? `<div class="note">🔁 <b>Кийинки заказ:</b> ${esc(D.next.p_addr || "жүргүнчү")}${D.next.price ? " · " + D.next.price + " с" : ""}. Ушул сапардан кийин барасыз.
+      <a href="#" id="nx" style="color:var(--bad)">Баш тартуу</a></div>` : ""}
+    <div class="two"><a class="btn ghost" href="tel:${esc(callPh)}">📞 Чалуу</a><button class="btn ghost chatb" id="chat">💬 Чат<em id="chatN" class="hide"></em></button>${target ? `<a class="btn ghost" href="${navUrl(target)}" target="_blank">🧭</a>` : ""}</div>
     <button class="btn ${next[1]}" id="step">${next[0]}</button>
     ${r.status !== "in_trip" ? `<button class="btn red" id="cx">Жокко чыгаруу</button>` : ""}`);
-  $("#step").onclick = async () => { $("#step").disabled = true; const prev = r; D = await api("/api/d/step", {id:r.id}); if (!D.ride && prev.status === "in_trip") done(prev); else show(); };
+  $("#chat").onclick = viewChat;
+  const nx = $("#nx"); if (nx) nx.onclick = async e => { e.preventDefault(); if (!confirm("Кийинки заказдан баш тартасызбы?")) return;
+    D = await api("/api/d/cancel", {id:D.next.id}); lastView = ""; show(); };
+  unread();
+  $("#step").onclick = async () => { $("#step").disabled = true; const prev = r; D = await api("/api/d/step", {id:r.id});
+    if (prev.status === "in_trip" && (!D.ride || D.ride.id !== prev.id)) done(prev); else show(); };
   const cx = $("#cx");
   if (cx) cx.onclick = async () => { if (!confirm("Заказды жокко чыгарасызбы?")) return; D = await api("/api/d/cancel", {id:r.id}); show(); };
 }
 
 function done(r) {
-  layer.clearLayers();
-  lastView = D.online ? "on" : "off";
+  layer.clearLayers(); chatOpen = false; seen = 0;
+  lastView = D.ride ? "ride" + D.ride.id + D.ride.status + (D.next ? D.next.id : "") : D.online ? "on" : "off";
   const pay = r.price ? r.price - Math.round(r.discount || 0) : 0;
   render(`<h2 style="text-align:center">Сапар бүттү</h2><p class="oprice" style="text-align:center;margin:0">${pay ? pay + " сом" : "Тариф боюнча"}</p>
-    <p class="muted" style="text-align:center">Жүргүнчүдөн акчаны алыңыз${r.discount ? ` · +${Math.round(r.discount)} с промокод балансыңызга кошулду` : ""}</p><button class="btn main" id="ok">Улантуу</button>`);
+    <p class="muted" style="text-align:center">Жүргүнчүдөн акчаны алыңыз${r.discount ? ` · +${Math.round(r.discount)} с промокод балансыңызга кошулду` : ""}${r.wait && r.wait.fee ? ` · күтүү +${r.wait.fee} с баада бар` : ""}</p>
+    <p class="muted" style="text-align:center;margin-bottom:0">Жүргүнчүнү баалаңыз</p><div class="stars" id="stars">${[1,2,3,4,5].map(n => `<span data-n="${n}">★</span>`).join("")}</div>
+    <button class="btn main" id="ok">${D.ride ? "Кийинки заказга" : "Улантуу"}</button>`);
+  $("#stars").querySelectorAll("span").forEach(x => x.onclick = () => {
+    const n = +x.dataset.n; $("#stars").querySelectorAll("span").forEach(y => y.classList.toggle("on", +y.dataset.n <= n));
+    api("/api/d/rate", {id:r.id, stars:n});
+  });
   $("#ok").onclick = () => { lastView = ""; show(); };
+}
+
+// ---------- күтүү жана чат ----------
+function waitText(r) {
+  const w = r.wait; if (!w || !w.arrived_at) return "";
+  const skew = Date.now() / 1000 - w.now, left = Math.round(w.arrived_at + w.free_min * 60 - (Date.now() / 1000 - skew));
+  if (left > 0) return `⏳ Акысыз күтүү: <b>${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}</b>`;
+  return `⏳ Акылуу күтүү: <b>+${w.fee} сом</b> (${w.per_min} с/мүн) — баага кошулат`;
+}
+setInterval(() => { if (D && D.ride && D.ride.status === "arrived" && $("#wt")) $("#wt").innerHTML = waitText(D.ride); }, 1000);
+let chatOpen = false, seen = 0;
+function unread() {
+  const n = D.ride ? (D.ride.msgs || []).filter(m => !m.me).length : 0, el = $("#chatN");
+  if (chatOpen) { seen = n; return drawMsgs(); }
+  if (el) { el.textContent = n - seen > 0 ? n - seen : ""; el.classList.toggle("hide", n - seen <= 0); }
+  if (n > seen && D.ride && unread.last !== n) { unread.last = n; if (n > 0 && unread.ready) beep(); }
+  unread.ready = true;
+}
+function drawMsgs() {
+  const box = $("#msgs"); if (!box || !D.ride) return;
+  const ms = D.ride.msgs || [];
+  box.innerHTML = ms.length ? ms.map(m => `<div class="${m.me ? "me" : ""}">${esc(m.text)}</div>`).join("") : `<p class="muted">Жүргүнчүгө жазыңыз.</p>`;
+  box.scrollTop = box.scrollHeight;
+}
+function viewChat() {
+  chatOpen = true;
+  render(`<h2>💬 Жүргүнчү менен чат</h2><div class="msgs" id="msgs"></div>
+    <div class="quick" id="qk">${["Келдим, күтүп турам", "5 мүнөттө келем", "Тыгын бар, кечигем", "Кайдасыз?"].map(t => `<button>${t}</button>`).join("")}</div>
+    <div class="two"><input class="f" id="mt" placeholder="Билдирүү…" maxlength="300" style="margin:0"><button class="btn main" id="ms" style="margin:0;flex:0 0 90px">➤</button></div>
+    <button class="btn ghost" id="back">Артка</button>`);
+  unread();
+  const send = async t => { t = (t || "").trim(); if (!t) return; $("#mt").value = "";
+    const x = await api("/api/d/msg", {id:D.ride.id, text:t}); if (!x.error) { D = x; drawMsgs(); } };
+  $("#ms").onclick = () => send($("#mt").value);
+  $("#mt").onkeydown = e => { if (e.key === "Enter") send($("#mt").value); };
+  $("#qk").querySelectorAll("button").forEach(b => b.onclick = () => send(b.textContent));
+  $("#back").onclick = () => { chatOpen = false; lastView = ""; show(); };
 }
 
 function showOffer() {
@@ -300,8 +394,9 @@ function showOffer() {
   box.classList.remove("hide");
   const C = 2 * Math.PI * 32, frac = o.left / o.total;
   $("#ocard").innerHTML = `<div style="display:flex;align-items:center;gap:14px">
-      <div style="flex:1"><div class="muted">Жаңы заказ</div><div class="oprice">${o.price ? o.price + " с" : "Тариф"}</div>
-      <div class="muted">Сизден ${o.to_pickup_km} км${o.has_dest ? " · сапар ~" + o.dist_km + " км" : " · багыты айтылат"}</div>
+      <div style="flex:1"><div class="muted">${clsTag(o.cls)}${o.chained ? "🔁 Кийинки заказ" : "Жаңы заказ"}${o.p_rating ? " · ★ " + o.p_rating : ""}</div><div class="oprice">${o.price ? o.price + " с" : "Тариф"}</div>
+      <div class="muted">${o.chained ? "Азыркы сапардан кийин · " : "Сизден "}${o.to_pickup_km} км${o.has_dest ? " · сапар ~" + o.dist_km + " км" : " · багыты айтылат"}</div>
+      ${o.p_addr || o.d_addr ? `<div class="muted">${esc(o.p_addr || "")}${o.d_addr ? " → " + esc(o.d_addr) : ""}</div>` : ""}
       ${o.discount ? `<div class="muted">🎁 Жүргүнчү ${o.price - Math.round(o.discount)} с төлөйт, +${Math.round(o.discount)} с балансыңызга</div>` : ""}
       ${o.note ? `<div class="muted">📝 ${esc(o.note)}</div>` : ""}</div>
       <div class="ring"><svg width="74" height="74"><circle cx="37" cy="37" r="32" stroke="#E1E7F1" stroke-width="7" fill="none"/>
@@ -406,8 +501,11 @@ function show() {
     return render(`<h2>Аккаунт бөгөттөлгөн</h2><p class="muted">Админ менен байланышыңыз.</p>`);
   }
   showOffer();
-  const key = D.ride ? "ride" + D.ride.id + D.ride.status : D.online ? "on" : "off";
+  if (chatOpen && D.ride) return unread();
+  chatOpen = false;
+  const key = D.ride ? "ride" + D.ride.id + D.ride.status + (D.next ? D.next.id : "") : D.online ? "on" : "off";
   if (key !== lastView) { lastView = key; D.ride ? viewRide() : viewHome(); }
+  else if (D.ride) unread();
   if (!D.ride) layer.clearLayers();
 }
 

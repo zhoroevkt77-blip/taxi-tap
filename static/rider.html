@@ -65,6 +65,21 @@ input.f:focus{border-color:var(--navy)}
 .carm{width:30px;height:30px;border-radius:50%;background:var(--navy);border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3);display:grid;place-items:center;color:#fff;font-size:15px}
 .carm.mine{background:var(--gold);color:#14243F}
 .hide{display:none!important}
+.chips{display:flex;gap:8px;overflow-x:auto;margin:10px 0 2px;padding-bottom:2px}
+.chips button{flex:none;border:0;background:var(--paper);border-radius:12px;padding:10px 12px;font-size:14px;font-weight:600;color:var(--ink);cursor:pointer;max-width:170px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cls{display:flex;gap:8px;overflow-x:auto;margin-top:10px;padding-bottom:2px}
+.cls>div{flex:1 0 92px;border:2px solid var(--line);border-radius:14px;padding:10px;cursor:pointer;background:#fff}
+.cls>div.on{border-color:var(--gold);background:#FBF5E6}
+.cls b{display:block;font-size:18px;margin-top:2px}
+.cls i{font-style:normal;font-size:22px}
+.wbox{background:#FBF5E6;border-radius:14px;padding:12px;margin-top:8px;font-size:14px}
+.chatb{position:relative}
+.chatb em{position:absolute;top:6px;right:10px;background:var(--bad);color:#fff;border-radius:10px;font-style:normal;font-size:12px;padding:1px 7px}
+.msgs{max-height:40vh;overflow:auto;display:flex;flex-direction:column;gap:6px;margin:6px 0 10px}
+.msgs div{max-width:80%;padding:8px 12px;border-radius:14px;background:var(--paper);font-size:15px;align-self:flex-start;white-space:pre-wrap;word-break:break-word}
+.msgs div.me{align-self:flex-end;background:var(--navy);color:#fff}
+.quick{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
 </head>
 <body>
@@ -95,7 +110,7 @@ const api = async (path, body) => {
   return r.json();
 };
 
-const S = { mode:"boot", from:null, fromAddr:"", to:null, toAddr:"", ride:null, quote:null, near:null, timer:null };
+const S = { cls:"econom", seen:0, mode:"boot", from:null, fromAddr:"", to:null, toAddr:"", ride:null, quote:null, near:null, timer:null };
 const map = L.map("map", {zoomControl:false, attributionControl:true}).setView([41.0377, 72.7470], 15);
 const areaReady = setupArea(map, {zoom:15});
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:"© OpenStreetMap"}).addTo(map);
@@ -249,11 +264,34 @@ function viewIdle() {
   S.mode = "idle"; S.to = null; S.quote = null; setPin("from");
   rideLayer.clearLayers(); driverMarker = null;
   render(`<button class="search" id="where">🔍&nbsp; Кайда бара жатабыз?</button>
+    <div class="chips" id="places"></div>
     <div class="two"><button class="btn ghost" id="mapTo">📍 Картадан</button><button class="btn ghost" id="noTo">Айдоочуга айтам</button></div>`);
+  loadPlaces();
   $("#where").onclick = viewSearch;
   $("#mapTo").onclick = viewPickDest;
   $("#noTo").onclick = () => { S.to = null; S.toAddr = ""; viewQuote(); };
   onPinMoved();
+}
+
+// ---------- сакталган даректер ----------
+let PLACES = null;
+async function loadPlaces(force) {
+  if (!PLACES || force) PLACES = await api("/api/places");
+  const box = $("#places"); if (!box || PLACES.error) return;
+  const P = PLACES, btn = (k, t) => `<button data-k="${k}">${t}</button>`;
+  box.innerHTML = btn("home", P.home ? "🏠 Үй" : "🏠 Үйдү кошуу") + btn("work", P.work ? "💼 Иш" : "💼 Ишти кошуу")
+    + P.recent.map((r, i) => btn("r" + i, "🕘 " + esc(r.name))).join("");
+  box.querySelectorAll("button").forEach(b => b.onclick = () => {
+    const k = b.dataset.k;
+    if (k[0] === "r") { const r = P.recent[+k.slice(1)]; S.to = [r.lat, r.lon]; S.toAddr = r.name; return viewQuote(); }
+    if (P[k]) { S.to = [P[k].lat, P[k].lon]; S.toAddr = k === "home" ? "Үй" : "Иш"; return viewQuote(); }
+    viewPickDest(k);
+  });
+  // басып туруу → өчүрүү
+  box.querySelectorAll("[data-k=home],[data-k=work]").forEach(b => b.oncontextmenu = async e => {
+    e.preventDefault(); const k = b.dataset.k;
+    if (PLACES[k] && confirm((k === "home" ? "Үй" : "Иш") + " дарегин өчүрөсүзбү?")) { PLACES = await api("/api/place", {kind:k}); loadPlaces(); }
+  });
 }
 
 function viewSearch() {
@@ -280,11 +318,14 @@ function viewSearch() {
   }, 450); };
 }
 
-function viewPickDest() {
+function viewPickDest(save) {
   S.mode = "pickDest"; setPin("to");
-  render(`<h2>Кайда?</h2><p class="muted">Картаны басыңыз же жылдырыңыз — сары пин бара турган жерди көрсөтөт.</p>
-    <button class="btn main" id="ok">Даяр</button><button class="btn ghost" id="back">Артка</button>`);
-  $("#ok").onclick = () => { const c = map.getCenter(); S.to = [c.lat, c.lng]; S.toAddr = $("#chipAddr").textContent; viewQuote(); };
+  const what = save === "home" ? "Үйүңүз кайда?" : save === "work" ? "Ишиңиз кайда?" : "Кайда?";
+  render(`<h2>${what}</h2><p class="muted">Картаны басыңыз же жылдырыңыз — сары пин ${save ? "даректи" : "бара турган жерди"} көрсөтөт.</p>
+    <button class="btn main" id="ok">${save ? "Сактоо" : "Даяр"}</button><button class="btn ghost" id="back">Артка</button>`);
+  $("#ok").onclick = async () => { const c = map.getCenter(); S.to = [c.lat, c.lng]; S.toAddr = $("#chipAddr").textContent;
+    if (save) { PLACES = await api("/api/place", {kind:save, p:S.to, name:S.toAddr}); map.setView(S.from, 15); return viewIdle(); }
+    viewQuote(); };
   $("#back").onclick = () => { map.setView(S.from, map.getZoom()); viewIdle(); };
   onPinMoved();
 }
@@ -299,40 +340,73 @@ async function viewQuote() {
       ? "Такси ТАП! Базар-Коргон районунун ичинде гана иштейт. Шаар аралык каттамдарга бара албайбыз."
       : "Бул жерде Такси ТАП! азырынча иштебейт."}</p><button class="btn ghost" id="back">Артка</button>`); $("#back").onclick = viewIdle; return; }
   S.quote = q;
-  const price = q.price ? `${q.price} с` : `${Math.round(q.tariff.min_price)} с+`;
+  if (!q.classes.some(c => c.id === S.cls)) S.cls = "econom";
+  const ICON = {econom:"🚕", comfort:"🚘", minivan:"🚐", delivery:"📦"};
   const sub = q.price ? `${q.dist_km} км · ~${q.minutes} мүн` : `отуруу ${Math.round(q.tariff.base)} с + ${Math.round(q.tariff.per_km)} с/км`;
+  const cur = () => q.classes.find(c => c.id === S.cls);
+  const priceTxt = c => c.price ? `${c.price} с` : `${c.min} с+`;
   render(`<div class="row"><span class="bul"></span><div><b>${esc(S.fromAddr)}</b></div></div>
     <div class="row"><span class="bul to"></span><div><b>${S.to ? esc(S.toAddr) : "Айдоочуга айтам"}</b></div></div>
-    <div class="tariff"><div><b>Стандарт</b><div class="muted">${sub}${q.surge > 1 ? ` · ⚡ ×${q.surge}` : ""}</div></div><div class="price" id="qp">${price}</div></div>
-    <div class="two"><div id="promoBox"><button class="btn ghost" id="promoOpen" style="padding:10px;font-size:14px;font-weight:600">🎁 Промокод</button></div>
-      <div id="whenBox"><button class="btn ghost" id="whenOpen" style="padding:10px;font-size:14px;font-weight:600">🕐 Алдын ала</button></div></div>
+    <div class="cls" id="cls">${q.classes.map(c => `<div data-c="${c.id}"><i>${ICON[c.id] || "🚕"}</i><div class="muted">${esc(c.name)}</div><b>${priceTxt(c)}</b></div>`).join("")}</div>
+    <div class="muted" style="margin-top:6px">${sub}${q.surge > 1 ? ` · ⚡ ×${q.surge}` : ""} · <span id="qp"></span></div>
+    <div id="extra"></div>
+    <div class="chips" style="flex-wrap:wrap"><button id="promoOpen">🎁 Промокод</button><button id="whenOpen">🕐 Алдын ала</button><button id="otherOpen">👤 Башка адамга</button><button id="noteOpen">📝 Каалоо</button></div>
+    <div id="promoBox"></div><div id="whenBox"></div><div id="otherBox"></div><div id="noteBox"></div>
+    <p class="muted" style="margin:6px 0 0">Айдоочу ${q.wait.free_min} мүнөт акысыз күтөт, андан кийин ${q.wait.per_min} сом/мүн.</p>
     <button class="btn main" id="order">Чакыруу</button><button class="btn ghost" id="back">Артка</button>`);
-  S.promo = null; S.at = null;
+  S.promo = null; S.at = null; S.disc = 0; S.other = null; S.note = "";
+  const paint = () => {
+    $("#cls").querySelectorAll("[data-c]").forEach(el => el.classList.toggle("on", el.dataset.c === S.cls));
+    const c = cur();
+    $("#qp").innerHTML = c.price ? (S.disc ? `<s>${c.price}</s> <b>${c.price - S.disc} с</b>` : `<b>${c.price} с</b>`) : "тариф боюнча";
+    const del = S.cls === "delivery";
+    $("#extra").innerHTML = del ? `<div class="wbox">📦 Айдоочу буюмду алып, алуучуга жеткирет.
+      <input class="f" id="dWhat" placeholder="Эмне жеткирилет (мис. документ, пакет)" style="margin:8px 0 6px" value="${esc(S.dWhat || "")}">
+      <input class="f" id="dPh" placeholder="Алуучунун номери" inputmode="tel" style="margin:0" value="${esc(S.dPh || "")}"></div>` : "";
+    if (del) { $("#dWhat").oninput = e => S.dWhat = e.target.value; $("#dPh").oninput = e => S.dPh = e.target.value; }
+    $("#otherOpen").classList.toggle("hide", del); $("#otherBox").classList.toggle("hide", del);
+    $("#order").textContent = S.at ? "Алдын ала заказ берүү" : del ? "Жеткирүүнү чакыруу" : "Чакыруу";
+  };
+  $("#cls").querySelectorAll("[data-c]").forEach(el => el.onclick = () => { S.cls = el.dataset.c; S.promo = null; S.disc = 0; $("#promoBox").innerHTML = ""; paint(); });
+  $("#otherOpen").onclick = () => {
+    $("#otherBox").innerHTML = `<div class="wbox">👤 Такси башка адамга — айдоочу ага чалат.
+      <input class="f" id="oNm" placeholder="Аты (мис. Апам)" style="margin:8px 0 6px"><input class="f" id="oPh" placeholder="Номери" inputmode="tel" style="margin:0"></div>`;
+  };
+  $("#noteOpen").onclick = () => {
+    $("#noteBox").innerHTML = `<div class="quick" id="qn">${["Балдар отургучу керек", "Жүгүм бар", "Жаныбар менен", "Кондиционер"].map(t => `<button>${t}</button>`).join("")}</div>
+      <input class="f" id="nt" placeholder="Айдоочуга каалоо же белги" maxlength="200">`;
+    $("#qn").querySelectorAll("button").forEach(b => b.onclick = () => { const i = $("#nt"); i.value = (i.value ? i.value + ", " : "") + b.textContent; });
+  };
+  paint();
   $("#whenOpen").onclick = () => {
     const pad = n => String(n).padStart(2, "0"), fmt = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
     const min = new Date(Date.now() + 25 * 60000), max = new Date(Date.now() + 3 * 86400000);
     $("#whenBox").innerHTML = `<input class="f" type="datetime-local" id="when" min="${fmt(min)}" max="${fmt(max)}" value="${fmt(new Date(Date.now() + 60 * 60000))}" style="margin:10px 0 0;padding:10px">`;
-    const upd = () => { const t = new Date($("#when").value).getTime(); S.at = t ? Math.round(t / 1000) : null;
-      $("#order").textContent = S.at ? "Алдын ала заказ берүү" : "Чакыруу"; };
+    const upd = () => { const t = new Date($("#when").value).getTime(); S.at = t ? Math.round(t / 1000) : null; paint(); };
     $("#when").onchange = upd; upd();
   };
   $("#promoOpen").onclick = () => {
-    $("#promoBox").innerHTML = `<div class="two" style="margin-top:10px"><input class="f" id="pc" placeholder="ТАП50" style="margin:0;text-transform:uppercase">
+    $("#promoBox").innerHTML = `<div class="two" style="margin-top:6px"><input class="f" id="pc" placeholder="ТАП50" style="margin:0;text-transform:uppercase">
       <button class="btn ghost" id="pcGo" style="margin:0;flex:0 0 120px">Колдонуу</button></div><div class="err" id="pcEr"></div>`;
     $("#pcGo").onclick = async () => {
-      const x = await api("/api/promo", {code:$("#pc").value, p:S.from, d:S.to});
-      if (x.error || !x.discount) { S.promo = null; return $("#pcEr").textContent = x.error || "Промокод туура эмес"; }
-      S.promo = x.code;
-      $("#pcEr").innerHTML = `<span style="color:var(--ok)">✓ ${Math.round(x.discount)} сом арзандатуу</span>`;
-      if (q.price) $("#qp").innerHTML = `<s style="font-size:16px;color:var(--soft);font-weight:500">${q.price}</s> ${q.price - Math.round(x.discount)} с`;
+      const x = await api("/api/promo", {code:$("#pc").value, p:S.from, d:S.to, cls:S.cls});
+      if (x.error || !x.discount) { S.promo = null; S.disc = 0; paint(); return $("#pcEr").textContent = x.error || "Промокод туура эмес"; }
+      S.promo = x.code; S.disc = Math.round(x.discount);
+      $("#pcEr").innerHTML = `<span style="color:var(--ok)">✓ ${S.disc} сом арзандатуу</span>`; paint();
     };
   };
   $("#order").onclick = async () => {
+    const del = S.cls === "delivery";
+    const nt = [del && S.dWhat ? "📦 " + S.dWhat : "", $("#nt") ? $("#nt").value.trim() : ""].filter(Boolean).join(" · ");
+    const oth = del ? {other_phone:S.dPh || "", other_name:"Алуучу"}
+      : $("#oPh") && $("#oPh").value.trim() ? {other_phone:$("#oPh").value, other_name:$("#oNm").value} : {};
     $("#order").disabled = true;
-    const r = await api("/api/order", {p:S.from, d:S.to, promo:S.promo, at:S.at});
+    const r = await api("/api/order", {p:S.from, d:S.to, promo:S.promo, at:S.at, cls:S.cls, note:nt,
+      p_addr:S.fromAddr, d_addr:S.to ? S.toAddr : "", ...oth});
     if (r.ride) { S.ride = r.ride; viewRide(); poll(); }
     else { $("#order").disabled = false; alertBox(r.error === "have_active" ? "Сизде активдүү заказ бар."
-      : r.error === "bad_time" ? "Убакытты 25 мүнөттөн 3 күнгө чейинки аралыкта тандаңыз." : r.message || "Ката кетти, кайра аракет кылыңыз."); }
+      : r.error === "bad_time" ? "Убакытты 25 мүнөттөн 3 күнгө чейинки аралыкта тандаңыз."
+      : r.error === "bad_other_phone" ? "Номерди толук жазыңыз: 0700 123 456" : r.message || "Ката кетти, кайра аракет кылыңыз."); }
   };
   $("#back").onclick = () => { map.setView(S.from, 15); viewIdle(); };
 }
@@ -367,9 +441,10 @@ function poll() {
   S.timer = setInterval(async () => {
     const r = await api("/api/ride");
     if (!r.ride) return;
-    const changed = !S.ride || r.ride.status !== S.ride.status;
+    const changed = !S.ride || r.ride.status !== S.ride.status || !!r.ride.chained !== !!S.ride.chained;
     S.ride = r.ride; updateDriver();
-    if (changed) viewRide(); else tickRide();
+    const live = ["accepted", "arrived", "in_trip"].includes(r.ride.status);
+    if (changed && (S.mode !== "chat" || !live)) viewRide(); else tickRide();
   }, 2000);
 }
 function updateDriver() {
@@ -384,7 +459,55 @@ function tickRide() {
   if (r.status === "searching" && $("#bar")) {
     $("#bar").style.width = Math.min(100, 100 * r.search_sec / r.search_max) + "%";
   }
-  if (r.status === "accepted" && $("#eta") && r.driver) $("#eta").textContent = r.driver.eta_min ? `${r.driver.eta_min} мүнөттө келет` : "Жолдо";
+  if (r.status === "accepted" && $("#eta") && r.driver) $("#eta").textContent = etaText(r);
+  if (r.status === "arrived" && $("#wt")) $("#wt").innerHTML = waitText(r);
+  const n = (r.msgs || []).filter(m => !m.me).length, unread = n - (S.seen || 0);
+  if ($("#chatN")) $("#chatN").textContent = unread > 0 ? unread : "", $("#chatN") && $("#chatN").classList.toggle("hide", unread <= 0);
+  if (S.mode === "chat") { drawMsgs(); S.seen = n; }
+}
+function etaText(r) {
+  const m = r.driver.eta_min;
+  return r.chained ? `Айдоочу азыркы сапарын бүтүрүп келет${m ? " · ~" + m + " мүн" : ""}` : m ? `${m} мүнөттө келет` : "Айдоочу жолдо";
+}
+function waitText(r) {
+  const w = r.wait; if (!w.arrived_at) return "";
+  const skew = Date.now() / 1000 - w.now, left = Math.round(w.arrived_at + w.free_min * 60 - (Date.now() / 1000 - skew));
+  if (left > 0) return `⏳ Акысыз күтүү: <b>${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}</b>`;
+  return `⏳ Акылуу күтүү: <b>+${w.fee} сом</b> (${w.per_min} с/мүн)`;
+}
+setInterval(() => { if (S.ride && S.ride.status === "arrived" && $("#wt")) $("#wt").innerHTML = waitText(S.ride); }, 1000);
+function rideBtns() {
+  return `<div class="two"><button class="btn ghost chatb" id="chat">💬 Чат<em id="chatN" class="hide"></em></button><button class="btn ghost" id="share">🔗 Бөлүшүү</button></div>`;
+}
+function bindRideBtns() {
+  const c = $("#chat"); if (c) c.onclick = viewChat;
+  const sh = $("#share"); if (sh) sh.onclick = async () => {
+    const x = await api("/api/share", {}); if (!x.url) return;
+    const text = "Мен Такси ТАП! менен баратам, сапарымды бул жерден көрө аласың:";
+    if (navigator.share) { try { await navigator.share({title:"Такси ТАП!", text, url:x.url}); } catch (e) {} }
+    else { try { await navigator.clipboard.writeText(x.url); } catch (e) {} alertBox("Шилтеме көчүрүлдү: " + x.url); }
+  };
+}
+function drawMsgs() {
+  const box = $("#msgs"); if (!box) return;
+  const ms = S.ride.msgs || [];
+  box.innerHTML = ms.length ? ms.map(m => `<div class="${m.me ? "me" : ""}">${esc(m.text)}</div>`).join("") : `<p class="muted">Айдоочуга жазыңыз — номериңизди көрсөтпөй эле.</p>`;
+  box.scrollTop = box.scrollHeight;
+}
+function viewChat() {
+  S.mode = "chat";
+  render(`<h2>💬 Айдоочу менен чат</h2><div class="msgs" id="msgs"></div>
+    <div class="quick" id="qk">${["Чыгып жатам", "5 мүнөт күтүңүз", "Кайдасыз?", "Дарбазанын алдындамын"].map(t => `<button>${t}</button>`).join("")}</div>
+    <div class="two"><input class="f" id="mt" placeholder="Билдирүү…" maxlength="300" style="margin:0"><button class="btn main" id="ms" style="margin:0;flex:0 0 90px">➤</button></div>
+    <button class="btn ghost" id="back">Артка</button>`);
+  S.seen = (S.ride.msgs || []).filter(m => !m.me).length;
+  drawMsgs();
+  const send = async t => { t = (t || "").trim(); if (!t) return; $("#mt").value = "";
+    const x = await api("/api/msg", {text:t}); if (x.ride) { S.ride = x.ride; drawMsgs(); } };
+  $("#ms").onclick = () => send($("#mt").value);
+  $("#mt").onkeydown = e => { if (e.key === "Enter") send($("#mt").value); };
+  $("#qk").querySelectorAll("button").forEach(b => b.onclick = () => send(b.textContent));
+  $("#back").onclick = () => viewRide();
 }
 function carCard(d) {
   return `<div class="car"><div class="av">${esc((d.name || "?")[0])}</div>
@@ -407,16 +530,17 @@ function viewRide() {
       <div class="bar"><i id="bar" style="width:0"></i></div>
       <p class="muted" style="text-align:center">Эң жакынкы айдоочуга сунуш кетти</p>${cancelBtn}`);
   } else if (r.status === "accepted") {
-    render(`<h2 id="eta">${r.driver.eta_min ? r.driver.eta_min + " мүнөттө келет" : "Айдоочу жолдо"}</h2>${carCard(r.driver)}${cancelBtn}`);
+    render(`<h2 id="eta">${etaText(r)}</h2>${carCard(r.driver)}${rideBtns()}${cancelBtn}`);
   } else if (r.status === "arrived") {
-    render(`<h2>Айдоочу күтүп турат</h2><p class="muted">Чыгыңыз — унаа сиздин жаныңызда.</p>${carCard(r.driver)}${cancelBtn}`);
+    render(`<h2>Айдоочу күтүп турат</h2><div class="wbox" id="wt">${waitText(r)}</div>${carCard(r.driver)}${rideBtns()}${cancelBtn}`);
   } else if (r.status === "in_trip") {
-    render(`<h2>Жолдо</h2><p class="muted">Жолуңуз ачык болсун!</p>${carCard(r.driver)}`);
+    render(`<h2>Жолдо</h2><p class="muted">Жолуңуз ачык болсун!${r.wait.fee ? ` Күтүү: +${r.wait.fee} сом.` : ""}</p>${carCard(r.driver)}${rideBtns()}`);
   } else if (r.status === "completed") {
     clearInterval(S.timer);
     render(`<h2 style="text-align:center">Келдиңиз!</h2>
       <p class="price" style="text-align:center;margin:4px 0">${r.pay ? r.pay + " сом" : "Тариф боюнча"}</p>
       ${r.discount ? `<p class="muted" style="text-align:center">🎁 Промокод: −${Math.round(r.discount)} сом</p>` : ""}
+      ${r.wait.fee ? `<p class="muted" style="text-align:center">⏳ Күтүү: +${r.wait.fee} сом (баада бар)</p>` : ""}
       ${r.rated ? "" : `<p class="muted" style="text-align:center">Айдоочуну баалаңыз</p><div class="stars" id="stars">${[1,2,3,4,5].map(n => `<span data-n="${n}">★</span>`).join("")}</div>`}
       <button class="btn main" id="again">Даяр</button>`);
     $("#stars") && $("#stars").querySelectorAll("span").forEach(s => s.onclick = async () => {
@@ -424,7 +548,7 @@ function viewRide() {
       $("#stars").querySelectorAll("span").forEach(x => x.classList.toggle("on", +x.dataset.n <= n));
       await api("/api/rate", {id:r.id, stars:n});
     });
-    $("#again").onclick = () => { S.ride = null; viewIdle(); };
+    $("#again").onclick = () => { S.ride = null; S.seen = 0; loadPlaces(true); viewIdle(); };
   } else if (r.status === "cancelled") {
     clearInterval(S.timer);
     const why = r.cancel_by === "system" ? "Азыр бош айдоочу табылган жок. Бир аздан кийин кайра аракет кылыңыз."
@@ -434,6 +558,7 @@ function viewRide() {
   }
   const cx = $("#cx");
   if (cx) cx.onclick = async () => { cx.disabled = true; const x = await api("/api/cancel", {}); if (x.ride) { S.ride = x.ride; viewRide(); } };
+  bindRideBtns();
   tickRide();
 }
 

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ky">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#17365C">
+<meta name="robots" content="noindex">
+<title>Такси ТАП! — сапар</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{--navy:#17365C;--gold:#C9A03A;--gold2:#E3C368;--ink:#152741;--soft:#5A6880;--paper:#F1F4F9;--line:#E1E7F1;--ok:#1D9E75}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--paper)}
+#map{position:fixed;inset:0}
+.logo{position:fixed;top:12px;left:12px;z-index:5;background:var(--navy);color:#fff;font-weight:800;font-size:15px;padding:10px 12px;border-radius:14px}
+.logo b{color:var(--gold2)}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:6;background:#fff;border-radius:22px 22px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom));box-shadow:0 -6px 24px rgba(21,39,65,.12)}
+h2{font-size:20px;margin:0 0 8px}
+.muted{color:var(--soft);font-size:14px}
+.car{display:flex;gap:12px;align-items:center;background:var(--paper);border-radius:16px;padding:12px;margin-top:8px}
+.plate{border:2px solid var(--ink);border-radius:6px;padding:2px 8px;font-weight:800;background:#fff;margin-left:auto}
+.carm{width:30px;height:30px;border-radius:50%;background:var(--navy);border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3);display:grid;place-items:center;color:#fff;font-size:14px}
+.carm.g{background:var(--gold);color:#14243F}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div class="logo">Такси <b>ТАП!</b></div>
+<div class="sheet" id="v"><p class="muted">Жүктөлүүдө…</p></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const tok = location.pathname.split("/").pop();
+const map = L.map("map", {zoomControl:false}).setView([41.0377, 72.7470], 14);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:"© OpenStreetMap"}).addTo(map);
+map.attributionControl && map.attributionControl.setPrefix(false);
+const ic = (c, t) => L.divIcon({className:"", html:`<div class="carm ${c}">${t}</div>`, iconSize:[30,30], iconAnchor:[15,15]});
+let car = null, drawn = false, timer = null;
+const TITLE = {searching:"Айдоочу изделүүдө", scheduled:"Алдын ала заказ", accepted:"Айдоочу жолдо", arrived:"Айдоочу күтүп турат",
+               in_trip:"Жолдо", completed:"Сапар бүттү ✅", cancelled:"Заказ жокко чыгарылды"};
+async function load() {
+  let r;
+  try { const x = await fetch("/api/track?t=" + encodeURIComponent(tok)); r = await x.json(); } catch (e) { return; }
+  if (r.error) { document.getElementById("v").innerHTML = `<h2>Шилтеме табылган жок</h2>`; return clearInterval(timer); }
+  if (!drawn) {
+    drawn = true;
+    L.marker(r.p, {icon:ic("", "●")}).addTo(map);
+    if (r.d) { L.marker(r.d, {icon:ic("g", "■")}).addTo(map); map.fitBounds(L.latLngBounds([r.p, r.d]), {padding:[60, 60]}); } else map.setView(r.p, 15);
+  }
+  const d = r.driver;
+  if (d && d.pos) { if (!car) car = L.marker(d.pos, {icon:ic("g", "🚕")}).addTo(map); else car.setLatLng(d.pos); }
+  if (["completed", "cancelled"].includes(r.status) && car) { car.remove(); car = null; }
+  document.getElementById("v").innerHTML = `<h2>${TITLE[r.status] || ""}</h2>
+    <div class="muted">${esc(r.p_addr || "")}${r.d_addr ? " → " + esc(r.d_addr) : ""}</div>
+    ${d ? `<div class="car"><div><b>${esc(d.color)} ${esc(d.car)}</b><div class="muted">Айдоочу: ${esc(d.name)}</div></div><span class="plate">${esc(d.plate)}</span></div>` : ""}`;
+  if (["completed", "cancelled"].includes(r.status)) clearInterval(timer);
+}
+load(); timer = setInterval(load, 4000);
+</script>
+</body>
+</html>

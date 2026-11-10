@@ -187,7 +187,9 @@ function drawMap() {
   });
   if (!fitted && pts.length) { map.fitBounds(L.latLngBounds(pts.length > 1 ? pts : [pts[0], pts[0]]), {padding:[40, 40], maxZoom:15}); fitted = true; }
   const act = $("#act");
-  if (act) act.innerHTML = O.rides.length ? O.rides.map(r => `<div class="item"><div class="main"><b>${r.source === "phone" ? "📞 " : ""}№${r.id} · ${esc(r.passenger || "")} ${tag(r.status)}</b>
+  const CLS = {comfort:"🚘 Комфорт", minivan:"🚐 Минивэн", delivery:"📦 Жеткирүү"};
+  if (act) act.innerHTML = O.rides.length ? O.rides.map(r => `<div class="item"><div class="main"><b>${r.source === "phone" ? "📞 " : ""}№${r.id} · ${esc(r.passenger || "")} ${tag(r.status)} ${CLS[r.cls] ? `<span class="tag">${CLS[r.cls]}</span>` : ""}</b>
+      ${r.other ? `<span class="muted">👤 ${esc(r.other)}</span>` : ""}
       ${r.note ? `<span class="muted">📝 ${esc(r.note)}</span>` : ""}
       ${r.scheduled_at ? `<span class="muted">🕐 ${new Date(r.scheduled_at * 1000).toLocaleString("ru-RU", {day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit"})}</span>` : ""}
       <span class="muted">${esc(r.city)} · ${r.price ? r.price + " с" : "тариф"} · ${Math.floor(r.age / 60)} мүн мурун · ${esc(r.phone || "")}</span></div>
@@ -207,7 +209,9 @@ async function viewDrivers() {
       d[k] ? `<a href="${file(d[k])}" target="_blank"><img src="${file(d[k])}" alt="${t}" loading="lazy"><span>${t}</span></a>` : "").join("")}</div>`;
   const row = d => `<div class="item"><div class="main"><b>${esc(d.name)} ${tag(d.status)} ${d.is_online ? '<span class="tag t-in_trip">онлайн</span>' : ""}</b>
       <span class="muted">${esc(d.phone)} · ${esc(d.car_color)} ${esc(d.car_model)}, ${esc(d.car_plate)}${d.status === "active" || d.status === "blocked" ? ` · ★ ${d.rating} · ${d.rides_done} сапар · баланс <b>${Math.round(d.balance)} с</b>` : ""}</span>
-      ${d.status === "rejected" && d.reject_note ? `<span class="muted">Себеби: ${esc(d.reject_note)}</span>` : ""}${d.status === "pending" ? docs(d) : ""}</div>
+      ${d.status === "rejected" && d.reject_note ? `<span class="muted">Себеби: ${esc(d.reject_note)}</span>` : ""}${d.status === "pending" ? docs(d) : ""}
+      ${d.status === "active" ? `<span class="muted" data-cl="${esc(d.uid)}">${[["econom","Эконом"],["comfort","Комфорт"],["minivan","Минивэн"],["delivery","Жеткирүү"]].map(([c, t]) =>
+        `<label style="margin-right:10px;white-space:nowrap"><input type="checkbox" value="${c}" ${(d.classes || "econom,delivery").split(",").includes(c) ? "checked" : ""}> ${t}</label>`).join("")}</span>` : ""}</div>
       ${d.status === "pending" ? `<button class="btn ok" data-a="approve" data-u="${esc(d.uid)}">Ырастоо</button><button class="btn bad" data-a="reject" data-u="${esc(d.uid)}">Баш тартуу</button>`
         : `<button class="btn" data-bal="${esc(d.uid)}">± Баланс</button>` + (d.status === "blocked"
           ? `<button class="btn ok" data-a="unblock" data-u="${esc(d.uid)}">Ачуу</button>` : `<button class="btn bad" data-a="block" data-u="${esc(d.uid)}">Бөгөттөө</button>`)}</div>`;
@@ -219,6 +223,11 @@ async function viewDrivers() {
     if (b.dataset.a === "reject") { reason = prompt("Себеби (айдоочуга көрүнөт):", "Документтин сүрөтү бүдөмүк"); if (reason === null) return; }
     await api("/api/a/driver", {uid:b.dataset.u, action:b.dataset.a, reason}); viewDrivers(); refresh();
   });
+  $("#main").querySelectorAll("[data-cl]").forEach(box => box.querySelectorAll("input").forEach(i => i.onchange = async () => {
+    const cl = [...box.querySelectorAll("input:checked")].map(x => x.value);
+    if (!cl.length) { i.checked = true; return; }
+    await api("/api/a/driver_classes", {uid:box.dataset.cl, classes:cl});
+  }));
   $("#main").querySelectorAll("[data-bal]").forEach(b => b.onclick = async () => {
     const v = prompt("Канча сом кошуу (+) же кемитүү (−)? Мис: 500 же -100");
     if (!v || isNaN(+v) || +v === 0) return;
@@ -255,13 +264,32 @@ async function viewRides() {
 
 // ---------- тарифтер ----------
 async function viewTariffs() {
-  const {tariffs} = await api("/api/a/tariffs");
+  const {tariffs, classes, wait} = await api("/api/a/tariffs");
   $("#main").innerHTML = `<div class="panel"><h3>Тарифтер (сом)</h3><div class="scroll"><table>
     <tr><th>Шаар</th><th>Отуруу</th><th>1 км</th><th>1 мүнөт</th><th>Минимум</th><th></th></tr>
     ${tariffs.map((t, i) => `<tr><td><b>${esc(t.city)}</b>${t.saved ? "" : `<div class="muted">демейки</div>`}</td>
       ${["base", "per_km", "per_min", "min_price"].map(k => `<td><input class="f" inputmode="decimal" id="t${i}${k}" value="${+t[k]}"></td>`).join("")}
       <td><button class="btn gold" data-i="${i}">Сактоо</button></td></tr>`).join("")}</table></div></div>
-    <p class="muted">Баа = max(минимум, отуруу + км × 1 км баасы + мүнөт × 1 мүнөт баасы) × талап коэффициенти, 10 сомго тегеректелет.</p>`;
+    <p class="muted">Баа = max(минимум, отуруу + км × 1 км баасы + мүнөт × 1 мүнөт баасы) × талап коэффициенти × класс, 10 сомго тегеректелет.</p>
+    <div class="panel"><h3>Класстар</h3><div class="scroll"><table>
+      <tr><th>Класс</th><th>Коэффициент</th><th>Күйүк</th></tr>
+      ${Object.entries(classes).map(([c, x]) => `<tr><td><b>${esc(x.name)}</b></td><td><input class="f" inputmode="decimal" data-ck="${c}" value="${x.k}" style="max-width:90px"></td>
+        <td><input type="checkbox" data-con="${c}" ${x.on ? "checked" : ""} ${c === "econom" ? "disabled" : ""}></td></tr>`).join("")}</table></div>
+      <div style="padding:0 14px 14px"><button class="btn gold" id="clSave">Сактоо</button> <span class="muted" id="clMsg"></span>
+      <p class="muted">Мис. Комфорт 1.3 = Экономдон 30% кымбат. Айдоочунун класстары «Айдоочулар» бөлүмүндө белгиленет. Комфорт/Минивэн айдоочусу Эконом заказды да алат.</p></div></div>
+    <div class="panel"><h3>Акылуу күтүү</h3><div class="fset">
+      <div><label>Акысыз мүнөт</label><input class="f" id="wFree" inputmode="decimal" value="${wait.free_min}"></div>
+      <div><label>Андан кийин, сом/мүн</label><input class="f" id="wPer" inputmode="decimal" value="${wait.per_min}"></div></div>
+      <div style="padding:0 14px 14px"><button class="btn gold" id="wSave">Сактоо</button> <span class="muted" id="wMsg"></span>
+      <p class="muted">Айдоочу «Келдим» баскандан кийин эсептелет жана сапардын баасына кошулат.</p></div></div>`;
+  $("#clSave").onclick = async () => {
+    const out = {}; Object.keys(classes).forEach(c => out[c] = {k:+$(`[data-ck=${c}]`).value, on:$(`[data-con=${c}]`).checked});
+    const x = await api("/api/a/classes", {classes:out}); $("#clMsg").textContent = x.error ? "Коэффициент 0.5–5 болушу керек." : "✓ Сакталды";
+  };
+  $("#wSave").onclick = async () => {
+    const x = await api("/api/a/wait", {free_min:$("#wFree").value, per_min:$("#wPer").value});
+    $("#wMsg").textContent = x.error ? "Текшериңиз: 0–30 мүн, 0–100 сом." : "✓ Сакталды";
+  };
   $("#main").querySelectorAll("[data-i]").forEach(b => b.onclick = async () => {
     const i = +b.dataset.i, v = k => $(`#t${i}${k}`).value;
     const r = await api("/api/a/tariff", {city:tariffs[i].city, base:v("base"), per_km:v("per_km"), per_min:v("per_min"), min_price:v("min_price")});

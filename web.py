@@ -34,6 +34,7 @@ MAX_BODY = 9 * 1024 * 1024          # 3 документ (браузерде к�
 PAGES = {"/": "rider.html", "/index.html": "rider.html",
          "/driver": "driver.html", "/driver/": "driver.html",
          "/admin": "admin.html", "/admin/": "admin.html", "/terms": "terms.html"}
+SITE_URL = (os.environ.get("SITE_URL") or "").rstrip("/")
 
 # Out'торду жеткирүүчү: bot.py өзүнүкүн коёт (Telegram). Сайт өзү абалды окуйт.
 deliver = lambda outs: None   # noqa: E731
@@ -61,12 +62,29 @@ def _txt(v, n=60):
 
 # ==================== Көрүнүштөр ====================
 
+def _wait(r):
+    w = core.wait_config()
+    return {"arrived_at": r.get("arrived_at"), "free_min": w["free_min"], "per_min": w["per_min"],
+            "fee": r.get("wait_fee") or (core.wait_fee_for(r) if r["status"] == "arrived" else 0),
+            "now": core.now()}
+
+
+def _msgs(r, me):
+    return [{"id": m["id"], "me": m["sender"] == me, "text": m["text"], "at": m["at"]}
+            for m in core.messages(r["id"])]
+
+
 def ride_view(r):
     """Сапар жүргүнчүнүн көзү менен."""
     if not r:
         return None
     v = {k: r[k] for k in ("id", "status", "city", "price", "dist_km", "surge",
                            "p_lat", "p_lon", "d_lat", "d_lon", "cancel_by")}
+    v["cls"] = r.get("cls") or "econom"
+    v["other_name"], v["other_phone"] = r.get("other_name"), r.get("other_phone")
+    v["wait"] = _wait(r)
+    if r["status"] in ("accepted", "arrived", "in_trip"):
+        v["msgs"] = _msgs(r, r["passenger"])
     v["rated"] = core.rated(r["id"])
     v["scheduled_at"] = r.get("scheduled_at")
     v["discount"] = r.get("discount") or 0
@@ -84,8 +102,9 @@ def ride_view(r):
         if r["status"] != "completed" and d.get("lat") is not None:
             v["driver"]["pos"] = [d["lat"], d["lon"]]
             if r["status"] == "accepted":
-                km = core.road_km(d["lat"], d["lon"], r["p_lat"], r["p_lon"])
+                km = flow.eta_km(d, r)
                 v["driver"]["eta_min"] = max(1, round(km / core.AVG_SPEED_KMH * 60))
+                v["chained"] = bool(d.get("busy_ride") and d["busy_ride"] != r["id"])
     return v
 
 
@@ -104,29 +123,65 @@ def driver_state(uid):
           "finance": core.driver_finance(uid) if d else None,
           "rating": d.get("rating"), "rides_done": d.get("rides_done"),
           "today": core.driver_today(uid) if d else {"rides": 0, "earned": 0},
-          "offer": None, "ride": None, "pay_info": core.PAY_INFO,
+          "offer": None, "ride": None, "next": None, "pay_info": core.PAY_INFO,
+          "classes": sorted(core.driver_classes(d)) if d else [],
+          "class_names": {c: x["name"] for c, x in core.class_config().items()},
+          "home": {"set": d.get("home_lat") is not None, "on": bool(d.get("home_on")),
+                   "left": core.home_uses_left(d) if d else 0,
+                   "p": [d["home_lat"], d["home_lon"]] if d.get("home_lat") is not None else None},
           "notify": bool(u.get("notify", 1)), "tg": bool(u.get("tg_uid")),
           "pending_topup": bool(d and core.query(
               "SELECT id FROM balance_tx WHERE driver=? AND status='pending'", (uid,), "one"))}
     o = core.offer_for(uid) if d else None
     if o and d.get("lat") is not None:
+        pu = core.get_user(o["passenger"]) or {}
         st["offer"] = {"id": o["id"], "price": o["price"], "dist_km": o["dist_km"],
-                       "to_pickup_km": round(core.haversine_km(d["lat"], d["lon"],
-                                                               o["p_lat"], o["p_lon"]), 1),
+                       "to_pickup_km": round(flow.eta_km(d, o) / core.ROAD_FACTOR, 1),
                        "has_dest": o["d_lat"] is not None, "note": o.get("note"),
-                       "discount": o.get("discount") or 0,
+                       "discount": o.get("discount") or 0, "cls": o.get("cls") or "econom",
+                       "chained": bool(d.get("busy_ride")),
+                       "p_addr": o.get("p_addr"), "d_addr": o.get("d_addr"),
+                       "p_rating": pu.get("p_rating") if (pu.get("p_rated") or 0) >= 3 else None,
                        "left": max(0, int(core.OFFER_SEC - (t - (o["offered_at"] or t)))),
                        "total": int(core.OFFER_SEC)}
     if d.get("busy_ride"):
         r = core.get_ride(d["busy_ride"])
         if r and r["status"] in ("accepted", "arrived", "in_trip"):
-            p = core.get_user(r["passenger"]) or {}
-            st["ride"] = {"id": r["id"], "status": r["status"], "price": r["price"],
-                          "dist_km": r["dist_km"], "passenger": p.get("name") or "",
-                          "phone": p.get("phone") or "", "p": [r["p_lat"], r["p_lon"]],
-                          "note": r.get("note"), "discount": r.get("discount") or 0,
-                          "d": [r["d_lat"], r["d_lon"]] if r["d_lat"] is not None else None}
+            st["ride"] = _driver_ride(r)
+    if d.get("next_ride"):
+        r = core.get_ride(d["next_ride"])
+        if r and r["status"] == "accepted":
+            st["next"] = _driver_ride(r)
     return st
+
+
+def _driver_ride(r):
+    p = core.get_user(r["passenger"]) or {}
+    v = {"id": r["id"], "status": r["status"], "price": r["price"],
+         "dist_km": r["dist_km"], "passenger": p.get("name") or "",
+         "phone": p.get("phone") or "", "p": [r["p_lat"], r["p_lon"]],
+         "note": r.get("note"), "discount": r.get("discount") or 0,
+         "cls": r.get("cls") or "econom", "p_addr": r.get("p_addr"), "d_addr": r.get("d_addr"),
+         "other_name": r.get("other_name"), "other_phone": r.get("other_phone"),
+         "p_rating": p.get("p_rating") if (p.get("p_rated") or 0) >= 3 else None,
+         "wait": _wait(r), "msgs": _msgs(r, r["driver"]),
+         "d": [r["d_lat"], r["d_lon"]] if r["d_lat"] is not None else None}
+    return v
+
+
+def track_view(r):
+    """Бөлүшүлгөн шилтеме: телефон номерлери жок, жалпы маалымат гана."""
+    v = {"status": r["status"], "p": [r["p_lat"], r["p_lon"]],
+         "d": [r["d_lat"], r["d_lon"]] if r["d_lat"] is not None else None,
+         "p_addr": r.get("p_addr"), "d_addr": r.get("d_addr")}
+    if r["driver"] and r["status"] in ("accepted", "arrived", "in_trip"):
+        d = core.get_driver(r["driver"]) or {}
+        du = core.get_user(r["driver"]) or {}
+        v["driver"] = {"name": (du.get("name") or "").split(" ")[0], "car": d.get("car_model"),
+                       "color": d.get("car_color"), "plate": d.get("car_plate")}
+        if d.get("lat") is not None:
+            v["driver"]["pos"] = [d["lat"], d["lon"]]
+    return v
 
 
 # ==================== HTTP ====================
@@ -191,6 +246,13 @@ class H(BaseHTTPRequestHandler):
             q = parse_qs(u.query)
             if u.path in PAGES:
                 return self._file(os.path.join(STATIC, PAGES[u.path]))
+            if u.path.startswith("/t/"):
+                return self._file(os.path.join(STATIC, "track.html"))
+            if u.path == "/api/track":
+                r = core.ride_by_share((q.get("t") or [""])[0])
+                if not r:
+                    return self._json({"error": "not_found"}, 404)
+                return self._json(track_view(r))
             if u.path == "/sw.js":          # service worker бүт сайтка иштеши үчүн тамырда
                 return self._file(os.path.join(STATIC, "sw.js"))
             if u.path.startswith("/static/"):
@@ -220,6 +282,8 @@ class H(BaseHTTPRequestHandler):
                 return self._json({"error": "auth"}, 401)
             if u.path == "/api/ride":
                 return self._json({"ride": ride_view(core.last_ride_of(uid))})
+            if u.path == "/api/places":
+                return self._json(core.get_places(uid))
             if u.path == "/api/d/state":
                 return self._json(driver_state(uid))
             if u.path == "/api/d/history":
@@ -314,13 +378,18 @@ class H(BaseHTTPRequestHandler):
             if q.get("dest_out"):
                 return self._json({"error": "dest_out"})
             t = q["tariff"]
+            cfg = core.class_config()
             return self._json({"city": q["city"], "price": q["price"], "dist_km": q["dist_km"],
                                "minutes": q.get("minutes"), "surge": q["surge"],
                                "route": (q.get("route") or {}).get("coords"),
+                               "classes": [{"id": c, "name": cfg[c]["name"], "price": pr,
+                                            "min": int(t["min_price"] * cfg[c]["k"])}
+                                           for c, pr in q["prices"].items()],
+                               "wait": core.wait_config(),
                                "tariff": {k: t[k] for k in ("base", "per_km", "min_price")}})
         if path == "/api/promo":
             p, d = _point(b.get("p")), _point(b.get("d"))
-            price = core.quote(p[0], p[1], *(d or (None, None)))["price"] if p else None
+            price = core.quote(p[0], p[1], *(d or (None, None)), cls=b.get("cls") or "econom")["price"] if p else None
             amount, err = core.check_promo(b.get("code"), uid, price)
             return self._json({"discount": amount, "error": err, "code": core.promo_norm(b.get("code"))})
         if path == "/api/order":
@@ -329,11 +398,17 @@ class H(BaseHTTPRequestHandler):
                 return self._json({"error": "bad_point"}, 400)
             if core.active_ride_of(uid):
                 return self._json({"error": "have_active"}, 409)
-            q = core.quote(p[0], p[1], *(d or (None, None)))
+            q = core.quote(p[0], p[1], *(d or (None, None)), cls=b.get("cls") or "econom")
             if not q["city"]:
                 return self._json({"error": "no_city"}, 400)
             if q.get("dest_out"):
                 return self._json({"error": "dest_out"}, 400)
+            other_name, other_phone = _txt(b.get("other_name"), 40) or None, None
+            if b.get("other_phone"):
+                ou = core.phone_uid(_txt(b.get("other_phone"), 20))
+                if not ou:
+                    return self._json({"error": "bad_other_phone"}, 400)
+                other_phone = ou[3:]
             promo, disc = None, 0
             if b.get("promo"):
                 disc, err = core.check_promo(b.get("promo"), uid, q["price"])
@@ -344,7 +419,10 @@ class H(BaseHTTPRequestHandler):
             if at is not None and not (core.now() + core.SCHEDULE_MIN - 120 <= at <= core.now() + core.SCHEDULE_MAX):
                 return self._json({"error": "bad_time"}, 400)
             rid = core.create_ride(uid, q, p[0], p[1], *(d or (None, None)), promo=promo, discount=disc,
-                                   scheduled_at=at)
+                                   scheduled_at=at, note=_txt(b.get("note"), 200) or None,
+                                   other_name=other_name, other_phone=other_phone,
+                                   p_addr=_txt(b.get("p_addr"), 80) or None,
+                                   d_addr=_txt(b.get("d_addr"), 80) or None if d else None)
             return self._json({"ride": ride_view(core.get_ride(rid))})
         if path == "/api/cancel":
             r = core.active_ride_of(uid)
@@ -355,6 +433,24 @@ class H(BaseHTTPRequestHandler):
                 return self._json({"error": "cant_cancel"}, 409)
             deliver(outs)
             return self._json({"ride": ride_view(core.get_ride(r["id"]))})
+        if path == "/api/place":
+            p = _point(b.get("p")) if b.get("p") else None
+            ok = core.set_place(uid, b.get("kind"), *(p or (None, None)), name=_txt(b.get("name"), 80))
+            return self._json(core.get_places(uid) if ok else {"error": "bad"}, 200 if ok else 400)
+        if path == "/api/msg":
+            r = core.active_ride_of(uid)
+            outs = flow.send_message(uid, r["id"], _txt(b.get("text"), core.MSG_MAX)) if r else None
+            if outs is None:
+                return self._json({"error": "cant"}, 409)
+            deliver(outs)
+            return self._json({"ride": ride_view(core.get_ride(r["id"]))})
+        if path == "/api/share":
+            r = core.active_ride_of(uid)
+            if not r or r["passenger"] != uid:
+                return self._json({"error": "no_ride"}, 404)
+            tok = core.share_token(r["id"])
+            base = SITE_URL or ("https://" + (self.headers.get("Host") or ""))
+            return self._json({"url": "%s/t/%s" % (base, tok)})
         if path == "/api/rate":
             rid, stars = int(b.get("id") or 0), int(b.get("stars") or 0)
             return self._json({"ok": core.rate(rid, uid, max(1, min(5, stars)))})
@@ -406,6 +502,25 @@ class H(BaseHTTPRequestHandler):
             else:
                 core.set_driver(uid, online=0, live_until=None)
             return self._json(driver_state(uid))
+        if action == "msg":
+            outs = flow.send_message(uid, int(b.get("id") or 0), _txt(b.get("text"), core.MSG_MAX))
+            if outs is None:
+                return self._json({"error": "cant"}, 409)
+            deliver(outs)
+            return self._json(driver_state(uid))
+        if action == "rate":
+            stars = max(1, min(5, int(b.get("stars") or 0)))
+            return self._json({"ok": core.rate_passenger(int(b.get("id") or 0), uid, stars)})
+        if action == "home_set":
+            p = _point(b.get("p"))
+            if not p:
+                return self._json({"error": "bad_point"}, 400)
+            core.set_driver(uid, home_lat=p[0], home_lon=p[1])
+            return self._json(driver_state(uid))
+        if action == "home":
+            if not core.set_home_mode(uid, bool(b.get("on"))):
+                return self._json(dict(driver_state(uid), error="home_limit"))
+            return self._json(driver_state(uid))
         handlers = {"accept": flow.driver_accept, "decline": flow.driver_decline,
                     "step": flow.driver_step, "cancel": flow.driver_cancel}
         rid = int(b.get("id") or 0)
@@ -436,7 +551,8 @@ class H(BaseHTTPRequestHandler):
         if action == "promos":
             return self._json({"promos": core.list_promos()})
         if action == "tariffs":
-            return self._json({"tariffs": core.all_tariffs()})
+            return self._json({"tariffs": core.all_tariffs(), "classes": core.class_config(),
+                               "wait": core.wait_config()})
         if action == "finance":
             return self._json(core.admin_finance())
         if action == "backup":
@@ -481,6 +597,21 @@ class H(BaseHTTPRequestHandler):
             if city not in core.CITIES or any(v is None or v < 0 for v in vals):
                 return self._json({"error": "bad"}, 400)
             core.set_tariff(city, *vals)
+            return self._json({"ok": True})
+        if action == "classes":
+            if not core.set_class_config(b.get("classes")):
+                return self._json({"error": "bad"}, 400)
+            return self._json({"classes": core.class_config()})
+        if action == "wait":
+            if not core.set_wait_config(_num(b.get("free_min")), _num(b.get("per_min"))):
+                return self._json({"error": "bad"}, 400)
+            return self._json({"wait": core.wait_config()})
+        if action == "driver_classes":
+            target = _txt(b.get("uid"), 40)
+            cl = [c for c in (b.get("classes") or []) if c in core.CLASSES]
+            if not core.get_driver(target) or not cl:
+                return self._json({"error": "bad"}, 400)
+            core.set_driver(target, classes=",".join(cl))
             return self._json({"ok": True})
         if action == "promo":
             ok = core.save_promo(_txt(b.get("code"), 20), _num(b.get("amount")) or 0,

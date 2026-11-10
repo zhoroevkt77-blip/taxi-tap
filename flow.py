@@ -11,6 +11,8 @@ Out (dict):  {"to": uid, "text": str, "path": "/driver"}
     path — сайттын кайсы бети ачылсын (билдирүүнүн астындагы баскыч)
 """
 
+import html
+
 import core
 from strings import L
 
@@ -33,10 +35,34 @@ def driver_accept(uid, rid):
     r, d = core.get_ride(rid), core.get_driver(uid)
     eta = ""
     if d["lat"] is not None:
-        km = core.road_km(d["lat"], d["lon"], r["p_lat"], r["p_lon"])
+        km = eta_km(d, r)
         eta = L("eta", m=max(1, round(km / core.AVG_SPEED_KMH * 60)))
     return [note(r["passenger"], "p_found", "/", car="%s %s" % (d["car_color"], d["car_model"]),
                  plate=d["car_plate"], eta=eta)]
+
+
+def eta_km(d, r):
+    """Айдоочудан жүргүнчүгө. Кийинки заказ болсо — азыркы сапардын аягы аркылуу."""
+    if d.get("busy_ride") and d["busy_ride"] != r["id"]:
+        cur = core.get_ride(d["busy_ride"])
+        if cur and cur["d_lat"] is not None:
+            return core.road_km(d["lat"], d["lon"], cur["d_lat"], cur["d_lon"]) + \
+                core.road_km(cur["d_lat"], cur["d_lon"], r["p_lat"], r["p_lon"])
+    return core.road_km(d["lat"], d["lon"], r["p_lat"], r["p_lon"])
+
+
+def send_message(uid, rid, text):
+    """Чат: жүргүнчү ↔ айдоочу, сапар активдүү болгондо гана."""
+    r = core.get_ride(rid)
+    if not r or uid not in (r["passenger"], r["driver"]) or \
+            r["status"] not in ("accepted", "arrived", "in_trip"):
+        return None
+    if not core.add_message(rid, uid, text):
+        return None
+    to = r["driver"] if uid == r["passenger"] else r["passenger"]
+    who = "Айдоочу" if uid == r["driver"] else ((core.get_user(uid) or {}).get("name") or "Жүргүнчү")
+    return [note(to, "chat_msg", "/driver" if to == r["driver"] else "/", who=html.escape(who),
+                 text=html.escape((text or "").strip()[:120]))]
 
 
 def driver_decline(uid, rid):

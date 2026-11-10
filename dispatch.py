@@ -26,12 +26,29 @@ def radius_for(age):
 
 
 def candidates(ride, radius_km):
+    """
+    Бош айдоочулар + сапары бүтүүгө жакын айдоочулар (кийинки заказ).
+    Класс (Комфорт, Минивэн, Жеткирүү) жана «Үйгө карай» режими эске алынат.
+    """
     tried = set(json.loads(ride["tried"] or "[]"))
     out = []
+
+    def ok(d):
+        return not (d["uid"] in tried or (d["uid"] == ride["passenger"] and not core.TEST_SELF_ORDER)) \
+            and core.can_take(d, ride.get("cls")) and core.toward_home(d, ride)
+
     for d in core.online_drivers():
-        if d["uid"] in tried or (d["uid"] == ride["passenger"] and not core.TEST_SELF_ORDER):
+        if not ok(d):
             continue
         dist = core.haversine_km(ride["p_lat"], ride["p_lon"], d["lat"], d["lon"])
+        if dist <= radius_km:
+            out.append((dist, -(d["rating"] or 5.0), d))
+    for d, cur in core.chain_drivers():
+        end_km = core.haversine_km(cur["d_lat"], cur["d_lon"], ride["p_lat"], ride["p_lon"])
+        if end_km > core.CHAIN_KM or not ok(d):
+            continue
+        # айдоочу адегенде азыркы жүргүнчүнү жеткирет: жол узунураак + бош айдоочу артык
+        dist = core.haversine_km(d["lat"], d["lon"], cur["d_lat"], cur["d_lon"]) + end_km + 0.5
         if dist <= radius_km:
             out.append((dist, -(d["rating"] or 5.0), d))
     out.sort(key=lambda x: (round(x[0], 1), x[1]))

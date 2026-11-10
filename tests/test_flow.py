@@ -287,6 +287,112 @@ class Ops(unittest.TestCase):
             ops.send_text = None
 
 
+class Features(unittest.TestCase):
+    def setUp(self):
+        core.init_db(); offline_all()
+        core.query("DELETE FROM settings"); core._settings_cache.clear()
+
+    def tearDown(self):
+        core.query("DELETE FROM settings"); core._settings_cache.clear()
+
+    def test_classes_price_and_dispatch(self):
+        q = core.quote(*KARAKOL, *DEST)
+        self.assertEqual(q["cls"], "econom")
+        self.assertGreater(q["prices"]["comfort"], q["prices"]["econom"])
+        self.assertTrue(core.set_class_config({"minivan": {"k": 1.5, "on": False}}))
+        core._settings_cache.clear()
+        self.assertNotIn("minivan", core.quote(*KARAKOL, *DEST)["prices"])
+        p = rider("0555 000 071")
+        e = make_driver("0700 000 071", "Эконом", NEAR, 0)
+        c = make_driver("0700 000 072", "Комфорт", (42.4975, 78.4020), 0)
+        core.set_driver(c, classes="econom,comfort")
+        qc = core.quote(*KARAKOL, *DEST, cls="comfort")
+        rid = core.create_ride(p, qc, *KARAKOL, *DEST)
+        self.assertEqual(core.get_ride(rid)["cls"], "comfort")
+        dispatch.tick()
+        self.assertEqual(core.get_ride(rid)["offered_to"], c)          # эконом айдоочуга барбайт
+        core.cancel(rid, p)
+        rid2 = order(p)                                                  # эконом: жакыны
+        dispatch.tick()
+        self.assertEqual(core.get_ride(rid2)["offered_to"], e)
+        core.cancel(rid2, p)
+
+    def test_wait_fee_chat_rating(self):
+        p = rider("0555 000 073")
+        d = make_driver("0700 000 073", "Күтүү", NEAR, 0)
+        rid = order(p)
+        dispatch.tick(); flow.driver_accept(d, rid); flow.driver_step(d, rid)       # келди
+        price0 = core.get_ride(rid)["price"]
+        core.query("UPDATE rides SET arrived_at=? WHERE id=?", (core.now() - 5 * 60 - 10, rid))
+        self.assertEqual(core.wait_fee_for(core.get_ride(rid)), 9)                # 3 акысыз, 3 мүн × 3 с
+        outs = flow.send_message(p, rid, "<b>Чыгып жатам</b>")
+        self.assertEqual(outs[0]["to"], d)
+        self.assertIn("&lt;b&gt;", outs[0]["text"])
+        self.assertEqual(len(web.driver_state(d)["ride"]["msgs"]), 1)
+        self.assertIsNone(flow.send_message(rider("0555 000 074"), rid, "бөтөн"))
+        flow.driver_step(d, rid)                                                    # жолго
+        r = core.get_ride(rid)
+        self.assertEqual((r["wait_fee"], r["price"]), (9, price0 + 9))
+        flow.driver_step(d, rid)
+        self.assertTrue(core.rate_passenger(rid, d, 4))
+        self.assertFalse(core.rate_passenger(rid, d, 5))
+        self.assertEqual(core.get_user(p)["p_rating"], 4)
+        self.assertIsNone(flow.send_message(p, rid, "бүттү"))
+
+    def test_chain_order(self):
+        p1, p2 = rider("0555 000 075"), rider("0555 000 076")
+        d = make_driver("0700 000 075", "Чынжыр", NEAR, 0)
+        rid = order(p1, KARAKOL, DEST)
+        dispatch.tick(); flow.driver_accept(d, rid)
+        flow.driver_step(d, rid); flow.driver_step(d, rid)                          # сапарда
+        core.driver_location(d, DEST[0] + 0.005, DEST[1], live_period=3600)          # аягына жакын
+        rid2 = order(p2, (DEST[0] + 0.004, DEST[1] + 0.004), KARAKOL)
+        dispatch.tick()
+        self.assertEqual(core.get_ride(rid2)["offered_to"], d)
+        self.assertTrue(web.driver_state(d)["offer"]["chained"])
+        flow.driver_accept(d, rid2)
+        dr = core.get_driver(d)
+        self.assertEqual((dr["busy_ride"], dr["next_ride"]), (rid, rid2))
+        self.assertTrue(web.ride_view(core.get_ride(rid2))["chained"])
+        self.assertIsNone(flow.driver_step(d, rid2))                                  # азырынча болбойт
+        flow.driver_step(d, rid)                                                     # биринчиси бүттү
+        dr = core.get_driver(d)
+        self.assertEqual((dr["busy_ride"], dr["next_ride"]), (rid2, None))
+        self.assertEqual(flow.driver_step(d, rid2)[0]["to"], p2)                     # келди
+
+    def test_home_mode_places_share(self):
+        p = rider("0555 000 077")
+        d = make_driver("0700 000 077", "Үй", NEAR, 0)
+        self.assertFalse(core.set_home_mode(d, True))                               # үй белгиленген эмес
+        core.set_driver(d, home_lat=DEST[0], home_lon=DEST[1])
+        self.assertTrue(core.set_home_mode(d, True))
+        rid = order(p, KARAKOL, FAR)                                                 # үйдөн тескери
+        dispatch.tick()
+        self.assertIsNone(core.get_ride(rid)["offered_to"])
+        core.cancel(rid, p)
+        rid = order(p, KARAKOL, DEST)                                                # үйгө карай
+        dispatch.tick()
+        self.assertEqual(core.get_ride(rid)["offered_to"], d)
+        flow.driver_accept(d, rid)
+        tok = core.share_token(rid)
+        self.assertEqual(core.share_token(rid), tok)
+        tv = web.track_view(core.ride_by_share(tok))
+        self.assertNotIn("phone", json.dumps(tv))
+        for _ in range(3):
+            flow.driver_step(d, rid)
+        self.assertFalse(core.get_driver(d)["home_on"])                              # үйгө жетти
+        self.assertTrue(core.set_home_mode(d, True))
+        self.assertFalse(core.set_home_mode(d, True))                                # күнүнө 2 жолу
+        core.set_driver(d, home_on=0)
+        core.set_place(p, "home", 42.49, 78.39, "Үй")
+        core.query("UPDATE rides SET d_addr='Базар' WHERE id=?", (rid,))
+        pl = core.get_places(p)
+        self.assertEqual(pl["home"]["name"], "Үй")
+        self.assertEqual(pl["recent"][0]["name"], "Базар")
+        core.set_place(p, "home")
+        self.assertIsNone(core.get_places(p)["home"])
+
+
 class DestOut(unittest.TestCase):
     def test_intercity_refused(self):
         core.init_db()

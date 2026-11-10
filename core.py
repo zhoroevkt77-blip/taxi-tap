@@ -251,6 +251,11 @@ SCHEMA = [
         expires TEXT, active INTEGER DEFAULT 1, created_at REAL)""",
     """CREATE TABLE IF NOT EXISTS settings (
         key TEXT PRIMARY KEY, value TEXT)""",
+    f"""CREATE TABLE IF NOT EXISTS messages (
+        id {_PK}, ride_id INTEGER, sender TEXT, text TEXT, at REAL)""",
+    """CREATE TABLE IF NOT EXISTS passenger_ratings (
+        ride_id INTEGER PRIMARY KEY, stars INTEGER, at REAL)""",
+    "CREATE INDEX IF NOT EXISTS idx_msg_ride ON messages(ride_id)",
     "CREATE INDEX IF NOT EXISTS idx_rides_status ON rides(status)",
     "CREATE INDEX IF NOT EXISTS idx_tx_kind ON balance_tx(kind, at)",
     "CREATE INDEX IF NOT EXISTS idx_drivers_online ON drivers(online, status)",
@@ -259,14 +264,25 @@ SCHEMA = [
 
 # Эски базага жаңы тилкелер (таблица мурун түзүлгөн болсо)
 NEW_COLUMNS = {
-    "users": {"tg_uid": "TEXT", "notify": "INTEGER DEFAULT 1", "terms_at": "REAL"},
+    "users": {"tg_uid": "TEXT", "notify": "INTEGER DEFAULT 1", "terms_at": "REAL",
+              "places": "TEXT",                              # {"home": {...}, "work": {...}}
+              "p_rating": "REAL", "p_rated": "INTEGER DEFAULT 0"},   # айдоочулар берген баа
     "web_sessions": {"agreed": "INTEGER DEFAULT 0"},
     "drivers": {"doc_license": "TEXT", "doc_techpass": "TEXT", "doc_car": "TEXT",
-                "reject_note": "TEXT"},
+                "reject_note": "TEXT",
+                "classes": "TEXT",                 # 'econom,delivery,comfort,minivan'
+                "next_ride": "INTEGER",            # сапар бүтө электе алган кийинки заказ
+                "home_lat": "REAL", "home_lon": "REAL", "home_on": "INTEGER DEFAULT 0",
+                "home_day": "TEXT", "home_uses": "INTEGER DEFAULT 0"},
     "balance_tx": {"claimed": "REAL"},
     "rides": {"note": "TEXT", "source": "TEXT",   # source: web | phone (диспетчер)
               "promo": "TEXT", "discount": "REAL DEFAULT 0",
-              "scheduled_at": "REAL"},                     # алдын ала заказ
+              "scheduled_at": "REAL",                      # алдын ала заказ
+              "cls": "TEXT",                               # econom | comfort | minivan | delivery
+              "other_name": "TEXT", "other_phone": "TEXT", # башка адамга / жеткирүүдө алуучу
+              "p_addr": "TEXT", "d_addr": "TEXT",
+              "wait_fee": "REAL DEFAULT 0",                # акылуу күтүү
+              "share_tok": "TEXT"},                        # сапарды бөлүшүү шилтемеси
 }
 
 
@@ -647,20 +663,101 @@ def price_of(t, km, minutes, k=1.0):
     return int(max(t["min_price"] * k, math.floor(raw / 10.0 + 0.5) * 10))
 
 
-def quote(p_lat, p_lon, d_lat=None, d_lon=None):
-    """Маршрут → баа (price_of). Баа заказ берилгенде белгиленет, жолдо өзгөрбөйт."""
+def quote(p_lat, p_lon, d_lat=None, d_lon=None, cls="econom"):
+    """Маршрут → баа (price_of). Баа заказ берилгенде белгиленет, жолдо өзгөрбөйт.
+    prices — ар бир класстын баасы (класстын коэффициенти × тариф)."""
     city = city_of(p_lat, p_lon)
     t = get_tariff(city)
     k = surge_k(city)
+    cfg = class_config()
+    if cls not in cfg or not cfg[cls]["on"]:
+        cls = "econom"
+    base = {"city": city, "dist_km": None, "price": None, "surge": k, "tariff": t, "cls": cls,
+            "prices": {c: None for c in cfg if cfg[c]["on"]}}
     if d_lat is not None and city and not in_area(d_lat, d_lon):
         # шаар аралык каттамдар — бизде жок (аларды башка айдоочулар иштейт)
-        return {"city": city, "dest_out": True, "dist_km": None, "price": None, "surge": k, "tariff": t}
+        return dict(base, dest_out=True)
     if d_lat is None:
-        return {"city": city, "dist_km": None, "price": None, "surge": k, "tariff": t}
+        return base
     rt = route(p_lat, p_lon, d_lat, d_lon)
     km, minutes = rt["km"], rt["min"]
-    return {"city": city, "dist_km": round(km, 1), "minutes": round(minutes),
-            "price": price_of(t, km, minutes, k), "surge": k, "tariff": t, "route": rt}
+    prices = {c: price_of(t, km, minutes, k * cfg[c]["k"]) for c in cfg if cfg[c]["on"]}
+    return dict(base, dist_km=round(km, 1), minutes=round(minutes), price=prices[cls],
+                prices=prices, route=rt)
+
+
+# ==================== Класстар ====================
+# Коэффициент тарифке көбөйтүлөт. Админ «Тарифтер» бөлүмүнөн өзгөртөт.
+CLASSES = {
+    "econom": {"name": "Эконом", "k": 1.0, "on": True},
+    "comfort": {"name": "Комфорт", "k": 1.3, "on": True},
+    "minivan": {"name": "Минивэн", "k": 1.5, "on": True},
+    "delivery": {"name": "Жеткирүү", "k": 1.0, "on": True},
+}
+DEFAULT_DRIVER_CLASSES = ("econom", "delivery")
+
+
+def class_config():
+    saved = get_setting("classes") or {}
+    out = {}
+    for c, d in CLASSES.items():
+        x = dict(d)
+        x.update({k: v for k, v in (saved.get(c) or {}).items() if k in ("k", "on")})
+        if c == "econom":
+            x["on"] = True                     # негизги класс өчпөйт
+        out[c] = x
+    return out
+
+
+def set_class_config(rows):
+    clean = {}
+    for c, x in (rows or {}).items():
+        if c not in CLASSES:
+            return False
+        try:
+            k = float(x.get("k", CLASSES[c]["k"]))
+        except (TypeError, ValueError):
+            return False
+        if not 0.5 <= k <= 5:
+            return False
+        clean[c] = {"k": k, "on": bool(x.get("on", True))}
+    set_setting("classes", clean)
+    return True
+
+
+def driver_classes(d):
+    raw = (d or {}).get("classes")
+    return set(raw.split(",")) if raw else set(DEFAULT_DRIVER_CLASSES)
+
+
+def can_take(d, cls):
+    """Комфорт / минивэн айдоочусу эконом заказды да ала алат."""
+    have = driver_classes(d)
+    cls = cls or "econom"
+    return cls in have or (cls == "econom" and bool(have & {"comfort", "minivan"}))
+
+
+# ==================== Акылуу күтүү ====================
+
+def wait_config():
+    w = get_setting("wait") or {}
+    return {"free_min": float(w.get("free_min", 3)), "per_min": float(w.get("per_min", 3))}
+
+
+def set_wait_config(free_min, per_min):
+    if free_min is None or per_min is None or not (0 <= free_min <= 30 and 0 <= per_min <= 100):
+        return False
+    set_setting("wait", {"free_min": free_min, "per_min": per_min})
+    return True
+
+
+def wait_fee_for(r, at=None):
+    """Айдоочу келгенден кийин акысыз мүнөттөр, андан ары ар бир баштал мүнөт акылуу."""
+    if not r.get("arrived_at"):
+        return 0
+    w = wait_config()
+    over = (at or now()) - r["arrived_at"] - w["free_min"] * 60
+    return int(math.ceil(over / 60.0) * w["per_min"]) if over > 0 else 0
 
 
 # ==================== Сапар ====================
@@ -668,14 +765,17 @@ def quote(p_lat, p_lon, d_lat=None, d_lon=None):
 #                                            ↘ cancelled (каалаган кадамда)
 
 def create_ride(passenger, q, p_lat, p_lon, d_lat=None, d_lon=None, note=None, source="web",
-                promo=None, discount=0, scheduled_at=None):
+                promo=None, discount=0, scheduled_at=None, other_name=None, other_phone=None,
+                p_addr=None, d_addr=None):
     status = "scheduled" if scheduled_at else "searching"
     rid = query("INSERT INTO rides (passenger, city, p_lat, p_lon, d_lat, d_lon, dist_km, "
-                "price, surge, status, created_at, note, source, promo, discount, scheduled_at) VALUES "
-                "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "price, surge, status, created_at, note, source, promo, discount, scheduled_at, "
+                "cls, other_name, other_phone, p_addr, d_addr) VALUES "
+                "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (passenger, q["city"], p_lat, p_lon, d_lat, d_lon, q["dist_km"],
                  q["price"], q["surge"], status, now(), note, source, promo,
-                 discount or 0, scheduled_at), "id")
+                 discount or 0, scheduled_at, q.get("cls") or "econom", other_name, other_phone,
+                 p_addr, d_addr), "id")
     log_event(rid, status, passenger)
     return rid
 
@@ -744,7 +844,11 @@ def accept(rid, driver):
               (driver, now(), rid, driver), "count")
     if not n:
         return False
-    set_driver(driver, busy_ride=rid)
+    d = get_driver(driver)
+    if d.get("busy_ride") and d["busy_ride"] != rid:
+        set_driver(driver, next_ride=rid)        # азыркы сапарды бүтүрүп барат
+    else:
+        set_driver(driver, busy_ride=rid)
     log_event(rid, "accepted", driver)
     return True
 
@@ -759,7 +863,14 @@ def advance(rid, driver):
     r = get_ride(rid)
     if not r or r["driver"] != driver or r["status"] not in _NEXT:
         return None
+    if (get_driver(driver) or {}).get("busy_ride") != rid:
+        return None                              # кийинки заказ — азыркы бүтө элек
     new, col = _NEXT[r["status"]]
+    if new == "in_trip":
+        fee = wait_fee_for(r)
+        if fee:
+            query("UPDATE rides SET wait_fee=?, price=CASE WHEN price IS NULL THEN NULL "
+                  "ELSE price+? END WHERE id=?", (fee, fee, rid))
     n = query("UPDATE rides SET status=?, %s=? WHERE id=? AND status=?" % col,
               (new, now(), rid, r["status"]), "count")
     if not n:
@@ -772,7 +883,12 @@ def advance(rid, driver):
 
 def _finish(rid, driver):
     r = get_ride(rid)
-    query("UPDATE drivers SET busy_ride=NULL, rides_done=rides_done+1 WHERE uid=?", (driver,))
+    d = get_driver(driver) or {}
+    query("UPDATE drivers SET busy_ride=next_ride, next_ride=NULL, rides_done=rides_done+1 WHERE uid=?",
+          (driver,))
+    if d.get("home_on") and r["d_lat"] is not None and d.get("home_lat") is not None and \
+            haversine_km(r["d_lat"], r["d_lon"], d["home_lat"], d["home_lon"]) < 1.5:
+        set_driver(driver, home_on=0)            # үйгө жетти — режим өчөт
     if r.get("discount"):
         # промокод: жүргүнчү азыраак төлөдү — айырманы платформа айдоочуга кайтарат
         add_tx(driver, r["discount"], "promo", ride_id=rid)
@@ -792,7 +908,11 @@ def cancel(rid, by, allowed=("scheduled", "searching", "accepted", "arrived")):
     if not n:
         return None
     if r["driver"]:
-        set_driver(r["driver"], busy_ride=None)
+        d = get_driver(r["driver"]) or {}
+        if d.get("next_ride") == rid:
+            set_driver(r["driver"], next_ride=None)
+        elif d.get("busy_ride") == rid:
+            set_driver(r["driver"], busy_ride=d.get("next_ride"), next_ride=None)
     log_event(rid, "cancelled", by)
     return r
 
@@ -809,6 +929,155 @@ def rate(rid, passenger, stars):
     avg = ((d["rating"] or 5.0) * (n - 1) + stars) / n
     set_driver(r["driver"], rating=round(avg, 2), rated=n)
     return True
+
+
+def rate_passenger(rid, driver, stars):
+    r = get_ride(rid)
+    if not r or r["driver"] != driver or r["status"] != "completed":
+        return False
+    if query("SELECT ride_id FROM passenger_ratings WHERE ride_id=?", (rid,), "one"):
+        return False
+    query("INSERT INTO passenger_ratings (ride_id, stars, at) VALUES (?, ?, ?)", (rid, stars, now()))
+    u = get_user(r["passenger"]) or {}
+    n = (u.get("p_rated") or 0) + 1
+    avg = ((u.get("p_rating") or 5.0) * (n - 1) + stars) / n
+    set_user(r["passenger"], p_rating=round(avg, 2), p_rated=n)
+    return True
+
+
+# ==================== Сакталган даректер ====================
+
+def get_places(uid):
+    u = get_user(uid) or {}
+    try:
+        saved = json.loads(u.get("places") or "{}")
+    except ValueError:
+        saved = {}
+    recent, seen = [], set()
+    for r in query("SELECT d_lat, d_lon, d_addr FROM rides WHERE passenger=? AND d_lat IS NOT NULL "
+                   "AND d_addr IS NOT NULL AND status='completed' ORDER BY id DESC LIMIT 30", (uid,), "all"):
+        k = (round(r["d_lat"], 3), round(r["d_lon"], 3))
+        if k in seen:
+            continue
+        seen.add(k)
+        recent.append({"name": r["d_addr"], "lat": r["d_lat"], "lon": r["d_lon"]})
+        if len(recent) >= 4:
+            break
+    return {"home": saved.get("home"), "work": saved.get("work"), "recent": recent}
+
+
+def set_place(uid, kind, lat=None, lon=None, name=""):
+    if kind not in ("home", "work"):
+        return False
+    u = get_user(uid) or {}
+    try:
+        saved = json.loads(u.get("places") or "{}")
+    except ValueError:
+        saved = {}
+    if lat is None:
+        saved.pop(kind, None)
+    else:
+        saved[kind] = {"lat": lat, "lon": lon, "name": (name or "")[:80]}
+    set_user(uid, places=json.dumps(saved, ensure_ascii=False))
+    return True
+
+
+# ==================== Чат ====================
+
+MSG_MAX = 300
+
+
+def add_message(rid, sender, text):
+    text = (text or "").strip()[:MSG_MAX]
+    if not text:
+        return False
+    if query("SELECT COUNT(*) AS n FROM messages WHERE ride_id=?", (rid,), "one")["n"] >= 100:
+        return False
+    query("INSERT INTO messages (ride_id, sender, text, at) VALUES (?, ?, ?, ?)", (rid, sender, text, now()))
+    return True
+
+
+def messages(rid):
+    return query("SELECT id, sender, text, at FROM messages WHERE ride_id=? ORDER BY id", (rid,), "all")
+
+
+# ==================== Сапарды бөлүшүү ====================
+
+def share_token(rid):
+    r = get_ride(rid)
+    if not r:
+        return None
+    if r.get("share_tok"):
+        return r["share_tok"]
+    tok = secrets.token_urlsafe(10)
+    query("UPDATE rides SET share_tok=? WHERE id=?", (tok, rid))
+    return tok
+
+
+def ride_by_share(tok):
+    if not tok or len(tok) > 40:
+        return None
+    return query("SELECT * FROM rides WHERE share_tok=?", (tok,), "one")
+
+
+# ==================== Үйгө карай ====================
+HOME_USES_PER_DAY = 2
+
+
+def _today_str():
+    return time.strftime("%Y-%m-%d", time.gmtime(now() + 6 * 3600))
+
+
+def home_uses_left(d):
+    used = (d.get("home_uses") or 0) if d.get("home_day") == _today_str() else 0
+    return max(0, HOME_USES_PER_DAY - used)
+
+
+def set_home_mode(uid, on):
+    d = get_driver(uid) or {}
+    if not on:
+        set_driver(uid, home_on=0)
+        return True
+    if d.get("home_lat") is None or home_uses_left(d) <= 0:
+        return False
+    used = (d.get("home_uses") or 0) if d.get("home_day") == _today_str() else 0
+    set_driver(uid, home_on=1, home_day=_today_str(), home_uses=used + 1)
+    return True
+
+
+def toward_home(d, ride):
+    """Бара турган жер айдоочунун үйүнө азыркы жеринен кеминде 1 км жакын болсо — ылайык."""
+    if not d.get("home_on"):
+        return True
+    if ride["d_lat"] is None or d.get("home_lat") is None or d.get("lat") is None:
+        return False
+    now_km = haversine_km(d["lat"], d["lon"], d["home_lat"], d["home_lon"])
+    after_km = haversine_km(ride["d_lat"], ride["d_lon"], d["home_lat"], d["home_lon"])
+    return after_km <= now_km - 1.0
+
+
+# ==================== Кийинки заказ (сапар бүтө электе) ====================
+CHAIN_KM = 1.5            # азыркы сапардын аягынан жаңы заказга чейин
+
+
+def chain_drivers():
+    """Сапарда жүргөн, кийинки заказы жок, сапары бүтүүгө жакын айдоочулар:
+    [(driver, ride)] — ride: азыркы сапар (бара турган жери белгилүү)."""
+    out = []
+    t = now()
+    for d in query("SELECT * FROM drivers WHERE online=1 AND status='active' AND busy_ride IS NOT NULL "
+                   "AND next_ride IS NULL", (), "all"):
+        if d["lat"] is None or (d["balance"] or 0) < min_balance():
+            continue
+        if not ((d["live_until"] or 0) > t or t - (d["loc_at"] or 0) < LOC_TTL_SEC):
+            continue
+        r = get_ride(d["busy_ride"])
+        if not r or r["status"] != "in_trip" or r["d_lat"] is None:
+            continue
+        if haversine_km(d["lat"], d["lon"], r["d_lat"], r["d_lon"]) > 2.0:
+            continue                             # аягына дагы алыс
+        out.append((d, r))
+    return out
 
 
 def searching_rides():
@@ -994,7 +1263,8 @@ def admin_overview():
                    "d": [r["d_lat"], r["d_lon"]] if r["d_lat"] is not None else None,
                    "price": r["price"], "city": r["city"], "passenger": r["p_name"],
                    "note": r.get("note"), "source": r.get("source") or "web",
-                   "scheduled_at": r.get("scheduled_at"),
+                   "scheduled_at": r.get("scheduled_at"), "cls": r.get("cls") or "econom",
+                   "other": " ".join(x for x in (r.get("other_name"), r.get("other_phone")) if x),
                    "phone": r["p_phone"], "driver": r["driver"],
                    "age": int(now() - (r["created_at"] or now()))} for r in rides],
         "pending_drivers": [{"uid": d["uid"], "name": d["name"], "phone": d["phone"],
@@ -1009,7 +1279,7 @@ def admin_overview():
 def admin_drivers():
     return query("SELECT d.uid, d.status, d.balance, d.rating, d.rides_done, d.car_model, "
                  "d.car_color, d.car_plate, d.online, d.busy_ride, d.loc_at, d.live_until, d.lat, d.lon, "
-                 "d.doc_license, d.doc_techpass, d.doc_car, d.reject_note, d.created_at, "
+                 "d.doc_license, d.doc_techpass, d.doc_car, d.reject_note, d.created_at, d.classes, "
                  "u.name, u.phone FROM drivers d LEFT JOIN users u ON u.uid=d.uid "
                  "ORDER BY d.status='pending' DESC, d.rides_done DESC", (), "all")
 
