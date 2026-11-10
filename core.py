@@ -245,6 +245,10 @@ SCHEMA = [
         kind TEXT DEFAULT 'rider',      -- rider | driver | admin
         verified INTEGER DEFAULT 0,
         created_at REAL)""",
+    """CREATE TABLE IF NOT EXISTS promos (
+        code TEXT PRIMARY KEY, amount REAL, first_only INTEGER DEFAULT 1,
+        max_uses INTEGER DEFAULT 0,      -- 0 = чексиз
+        expires TEXT, active INTEGER DEFAULT 1, created_at REAL)""",
     """CREATE TABLE IF NOT EXISTS settings (
         key TEXT PRIMARY KEY, value TEXT)""",
     "CREATE INDEX IF NOT EXISTS idx_rides_status ON rides(status)",
@@ -260,7 +264,8 @@ NEW_COLUMNS = {
     "drivers": {"doc_license": "TEXT", "doc_techpass": "TEXT", "doc_car": "TEXT",
                 "reject_note": "TEXT"},
     "balance_tx": {"claimed": "REAL"},
-    "rides": {"note": "TEXT", "source": "TEXT"},   # source: web | phone (диспетчер)
+    "rides": {"note": "TEXT", "source": "TEXT",   # source: web | phone (диспетчер)
+              "promo": "TEXT", "discount": "REAL DEFAULT 0"},
 }
 
 
@@ -716,12 +721,13 @@ def fixed_route_for(lat, lon):
 # searching → accepted → arrived → in_trip → completed
 #                                            ↘ cancelled (каалаган кадамда)
 
-def create_ride(passenger, q, p_lat, p_lon, d_lat=None, d_lon=None, note=None, source="web"):
+def create_ride(passenger, q, p_lat, p_lon, d_lat=None, d_lon=None, note=None, source="web",
+                promo=None, discount=0):
     rid = query("INSERT INTO rides (passenger, city, p_lat, p_lon, d_lat, d_lon, dist_km, "
-                "price, surge, status, created_at, note, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, "
-                "'searching', ?, ?, ?)",
+                "price, surge, status, created_at, note, source, promo, discount) VALUES "
+                "(?, ?, ?, ?, ?, ?, ?, ?, ?, 'searching', ?, ?, ?, ?, ?)",
                 (passenger, q["city"], p_lat, p_lon, d_lat, d_lon, q["dist_km"],
-                 q["price"], q["surge"], now(), note, source), "id")
+                 q["price"], q["surge"], now(), note, source, promo, discount or 0), "id")
     log_event(rid, "searching", passenger)
     return rid
 
@@ -794,6 +800,9 @@ def advance(rid, driver):
 def _finish(rid, driver):
     r = get_ride(rid)
     query("UPDATE drivers SET busy_ride=NULL, rides_done=rides_done+1 WHERE uid=?", (driver,))
+    if r.get("discount"):
+        # промокод: жүргүнчү азыраак төлөдү — айырманы платформа айдоочуга кайтарат
+        add_tx(driver, r["discount"], "promo", ride_id=rid)
     pct = commission_pct()
     if pct > 0 and r["price"]:
         fee = math.floor(r["price"] * pct / 100.0 + 0.5)        # бүтүн сомго
@@ -1201,4 +1210,68 @@ def admin_finance():
                         "commission": round(-_tx_sum("commission", ps["month"], d["uid"]))})
     drivers.sort(key=lambda x: (-x["gross"], x["name"] or ""))
     return {"config": finance_config(), "mode": finance_mode_text(), "pct_now": commission_pct(),
-            "totals": totals, "months": months, "drivers": drivers}
+            "totals": totals, "months": months, "drivers": drivers, "promos": list_promos()}
+
+
+# ==================== Промокоддор ====================
+# Жүргүнчүгө арзандатуу (сом). Айдоочу толук бааны алат: айырма анын балансына
+# сапар бүткөндө кошулат (balance_tx kind='promo') — чыгым платформага.
+
+def promo_norm(code):
+    return "".join(c for c in (code or "").upper() if c.isalnum())[:20]
+
+
+def check_promo(code, uid, price=None):
+    """(арзандатуу_сом, None) же (0, 'себеби')."""
+    code = promo_norm(code)
+    p = query("SELECT * FROM promos WHERE code=?", (code,), "one") if code else None
+    if not p or not p["active"]:
+        return 0, "Мындай промокод жок"
+    if p["expires"] and now() >= _date_ts(p["expires"]) + 86400:
+        return 0, "Промокоддун мөөнөтү бүткөн"
+    if query("SELECT id FROM rides WHERE promo=? AND passenger=? AND status<>'cancelled'",
+             (code, uid), "one"):
+        return 0, "Бул промокодду колдонуп койгонсуз"
+    if p["max_uses"] and promo_uses(code) >= p["max_uses"]:
+        return 0, "Промокоддун саны бүттү"
+    if p["first_only"] and query("SELECT id FROM rides WHERE passenger=? AND status='completed'",
+                                 (uid,), "one"):
+        return 0, "Промокод биринчи сапар үчүн гана"
+    amount = float(p["amount"])
+    if price:
+        amount = min(amount, max(0, price - 10))      # кеминде 10 сом төлөйт
+    return amount, None
+
+
+def promo_uses(code):
+    return query("SELECT COUNT(*) AS n FROM rides WHERE promo=? AND status<>'cancelled'",
+                 (code,), "one")["n"]
+
+
+def list_promos():
+    rows = query("SELECT * FROM promos ORDER BY created_at DESC", (), "all")
+    for p in rows:
+        p["uses"] = promo_uses(p["code"])
+        p["spent"] = round(query("SELECT COALESCE(SUM(amount),0) AS s FROM balance_tx t JOIN rides r "
+                                 "ON r.id=t.ride_id WHERE t.kind='promo' AND r.promo=?",
+                                 (p["code"],), "one")["s"] or 0)
+    return rows
+
+
+def save_promo(code, amount, first_only=True, max_uses=0, expires=None, active=True):
+    code = promo_norm(code)
+    if len(code) < 3 or not (0 < amount <= 5000) or not (0 <= max_uses <= 100000):
+        return False
+    if expires:
+        try:
+            time.strptime(expires, "%Y-%m-%d")
+        except ValueError:
+            return False
+    if query("SELECT code FROM promos WHERE code=?", (code,), "one"):
+        query("UPDATE promos SET amount=?, first_only=?, max_uses=?, expires=?, active=? WHERE code=?",
+              (amount, 1 if first_only else 0, max_uses, expires or None, 1 if active else 0, code))
+    else:
+        query("INSERT INTO promos (code, amount, first_only, max_uses, expires, active, created_at) "
+              "VALUES (?, ?, ?, ?, ?, ?, ?)",
+              (code, amount, 1 if first_only else 0, max_uses, expires or None, 1 if active else 0, now()))
+    return True

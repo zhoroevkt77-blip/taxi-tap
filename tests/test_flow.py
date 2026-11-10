@@ -304,6 +304,37 @@ class Routes(unittest.TestCase):
         self.assertIsNone(core.fixed_route_for(40.9340, 73.0020))       # Манас өчүрүлдү
 
 
+class Promo(unittest.TestCase):
+    def setUp(self):
+        core.init_db(); offline_all()
+        core.query("DELETE FROM promos")
+
+    def test_first_ride_discount_paid_to_driver(self):
+        self.assertFalse(core.save_promo("AB", 50))                        # кыска
+        self.assertTrue(core.save_promo("тап50", 50, first_only=True, max_uses=2, expires="2099-01-01"))
+        p = rider("0555 000 091")
+        self.assertEqual(core.check_promo("ТАП50", p, 150), (50.0, None))
+        self.assertEqual(core.check_promo("tap50", p, 150)[1], "Мындай промокод жок")
+        self.assertEqual(core.check_promo("ТАП50", p, 40)[0], 30)           # кеминде 10 сом төлөйт
+        d = make_driver("0700 000 091", "Промо", NEAR, 0)
+        q = core.quote(*KARAKOL, *DEST)
+        rid = core.create_ride(p, q, *KARAKOL, *DEST, promo="ТАП50", discount=50)
+        self.assertEqual(core.check_promo("ТАП50", p)[1], "Бул промокодду колдонуп койгонсуз")
+        dispatch.tick(); flow.driver_accept(d, rid)
+        for _ in range(3):
+            flow.driver_step(d, rid)
+        fee = int(q["price"] * 0.10 + 0.5)                                    # COMMISSION_PCT=10
+        self.assertEqual(core.get_driver(d)["balance"], 50 - fee)            # +50 промо, −комиссия
+        self.assertEqual(web.ride_view(core.get_ride(rid))["pay"], q["price"] - 50)
+        p2 = rider("0555 000 092")
+        self.assertIsNone(core.check_promo("ТАП50", p2)[1])
+        p3 = rider("0555 000 093")
+        core.create_ride(p2, q, *KARAKOL, *DEST, promo="ТАП50", discount=50)
+        self.assertEqual(core.check_promo("ТАП50", p3)[1], "Промокоддун саны бүттү")
+        self.assertEqual(core.check_promo("ТАП50", p, 150)[1], "Бул промокодду колдонуп койгонсуз")
+        self.assertEqual(core.list_promos()[0]["spent"], 50)
+
+
 class Accounts(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

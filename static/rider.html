@@ -316,13 +316,26 @@ async function viewQuote() {
   const sub = q.price ? `${q.dist_km} км · ~${q.minutes} мүн` : `отуруу ${Math.round(q.tariff.base)} с + ${Math.round(q.tariff.per_km)} с/км`;
   render(`<div class="row"><span class="bul"></span><div><b>${esc(S.fromAddr)}</b></div></div>
     <div class="row"><span class="bul to"></span><div><b>${S.to ? esc(S.toAddr) : "Айдоочуга айтам"}</b></div></div>
-    <div class="tariff"><div><b>${q.fixed ? "Шаар аралык" : "Стандарт"}</b><div class="muted">${q.fixed ? "Белгиленген баа · " + q.dist_km + " км" : sub}${q.surge > 1 ? ` · ⚡ ×${q.surge}` : ""}</div></div><div class="price">${price}</div></div>
+    <div class="tariff"><div><b>${q.fixed ? "Шаар аралык" : "Стандарт"}</b><div class="muted">${q.fixed ? "Белгиленген баа · " + q.dist_km + " км" : sub}${q.surge > 1 ? ` · ⚡ ×${q.surge}` : ""}</div></div><div class="price" id="qp">${price}</div></div>
+    <div id="promoBox"><button class="btn ghost" id="promoOpen" style="padding:10px;font-size:14px;font-weight:600">🎁 Промокод бар</button></div>
     <button class="btn main" id="order">Чакыруу</button><button class="btn ghost" id="back">Артка</button>`);
+  S.promo = null;
+  $("#promoOpen").onclick = () => {
+    $("#promoBox").innerHTML = `<div class="two" style="margin-top:10px"><input class="f" id="pc" placeholder="ТАП50" style="margin:0;text-transform:uppercase">
+      <button class="btn ghost" id="pcGo" style="margin:0;flex:0 0 120px">Колдонуу</button></div><div class="err" id="pcEr"></div>`;
+    $("#pcGo").onclick = async () => {
+      const x = await api("/api/promo", {code:$("#pc").value, p:S.from, d:S.to});
+      if (x.error || !x.discount) { S.promo = null; return $("#pcEr").textContent = x.error || "Промокод туура эмес"; }
+      S.promo = x.code;
+      $("#pcEr").innerHTML = `<span style="color:var(--ok)">✓ ${Math.round(x.discount)} сом арзандатуу</span>`;
+      if (q.price) $("#qp").innerHTML = `<s style="font-size:16px;color:var(--soft);font-weight:500">${q.price}</s> ${q.price - Math.round(x.discount)} с`;
+    };
+  };
   $("#order").onclick = async () => {
     $("#order").disabled = true;
-    const r = await api("/api/order", {p:S.from, d:S.to});
+    const r = await api("/api/order", {p:S.from, d:S.to, promo:S.promo});
     if (r.ride) { S.ride = r.ride; viewRide(); poll(); }
-    else { $("#order").disabled = false; alertBox(r.error === "have_active" ? "Сизде активдүү заказ бар." : "Ката кетти, кайра аракет кылыңыз."); }
+    else { $("#order").disabled = false; alertBox(r.error === "have_active" ? "Сизде активдүү заказ бар." : r.message || "Ката кетти, кайра аракет кылыңыз."); }
   };
   $("#back").onclick = () => { map.setView(S.from, 15); viewIdle(); };
 }
@@ -400,7 +413,8 @@ function viewRide() {
   } else if (r.status === "completed") {
     clearInterval(S.timer);
     render(`<h2 style="text-align:center">Келдиңиз!</h2>
-      <p class="price" style="text-align:center;margin:4px 0">${r.price ? r.price + " сом" : "Тариф боюнча"}</p>
+      <p class="price" style="text-align:center;margin:4px 0">${r.pay ? r.pay + " сом" : "Тариф боюнча"}</p>
+      ${r.discount ? `<p class="muted" style="text-align:center">🎁 Промокод: −${Math.round(r.discount)} сом</p>` : ""}
       ${r.rated ? "" : `<p class="muted" style="text-align:center">Айдоочуну баалаңыз</p><div class="stars" id="stars">${[1,2,3,4,5].map(n => `<span data-n="${n}">★</span>`).join("")}</div>`}
       <button class="btn main" id="again">Даяр</button>`);
     $("#stars") && $("#stars").querySelectorAll("span").forEach(s => s.onclick = async () => {

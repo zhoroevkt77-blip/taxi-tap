@@ -68,6 +68,8 @@ def ride_view(r):
     v = {k: r[k] for k in ("id", "status", "city", "price", "dist_km", "surge",
                            "p_lat", "p_lon", "d_lat", "d_lon", "cancel_by")}
     v["rated"] = core.rated(r["id"])
+    v["discount"] = r.get("discount") or 0
+    v["pay"] = max(0, (r["price"] or 0) - v["discount"]) if r["price"] else None
     v["cancel_by_me"] = r["cancel_by"] == r["passenger"]
     if r["status"] == "searching":
         v["search_sec"] = int(core.now() - (r["created_at"] or core.now()))
@@ -111,6 +113,7 @@ def driver_state(uid):
                        "to_pickup_km": round(core.haversine_km(d["lat"], d["lon"],
                                                                o["p_lat"], o["p_lon"]), 1),
                        "has_dest": o["d_lat"] is not None, "note": o.get("note"),
+                       "discount": o.get("discount") or 0,
                        "left": max(0, int(core.OFFER_SEC - (t - (o["offered_at"] or t)))),
                        "total": int(core.OFFER_SEC)}
     if d.get("busy_ride"):
@@ -120,7 +123,7 @@ def driver_state(uid):
             st["ride"] = {"id": r["id"], "status": r["status"], "price": r["price"],
                           "dist_km": r["dist_km"], "passenger": p.get("name") or "",
                           "phone": p.get("phone") or "", "p": [r["p_lat"], r["p_lon"]],
-                          "note": r.get("note"),
+                          "note": r.get("note"), "discount": r.get("discount") or 0,
                           "d": [r["d_lat"], r["d_lon"]] if r["d_lat"] is not None else None}
     return st
 
@@ -315,6 +318,11 @@ class H(BaseHTTPRequestHandler):
                                "minutes": q.get("minutes"), "surge": q["surge"], "fixed": q.get("fixed"),
                                "route": (q.get("route") or {}).get("coords"),
                                "tariff": {k: t[k] for k in ("base", "per_km", "min_price")}})
+        if path == "/api/promo":
+            p, d = _point(b.get("p")), _point(b.get("d"))
+            price = core.quote(p[0], p[1], *(d or (None, None)))["price"] if p else None
+            amount, err = core.check_promo(b.get("code"), uid, price)
+            return self._json({"discount": amount, "error": err, "code": core.promo_norm(b.get("code"))})
         if path == "/api/order":
             p, d = _point(b.get("p")), _point(b.get("d"))
             if not p:
@@ -324,7 +332,13 @@ class H(BaseHTTPRequestHandler):
             q = core.quote(p[0], p[1], *(d or (None, None)))
             if not q["city"]:
                 return self._json({"error": "no_city"}, 400)
-            rid = core.create_ride(uid, q, p[0], p[1], *(d or (None, None)))
+            promo, disc = None, 0
+            if b.get("promo"):
+                disc, err = core.check_promo(b.get("promo"), uid, q["price"])
+                if err:
+                    return self._json({"error": "promo", "message": err}, 400)
+                promo = core.promo_norm(b.get("promo"))
+            rid = core.create_ride(uid, q, p[0], p[1], *(d or (None, None)), promo=promo, discount=disc)
             return self._json({"ride": ride_view(core.get_ride(rid))})
         if path == "/api/cancel":
             r = core.active_ride_of(uid)
@@ -411,6 +425,8 @@ class H(BaseHTTPRequestHandler):
             return self._json({"drivers": rows})
         if action == "rides":
             return self._json({"rides": core.admin_rides()})
+        if action == "promos":
+            return self._json({"promos": core.list_promos()})
         if action == "tariffs":
             return self._json({"tariffs": core.all_tariffs(), "routes": core.get_routes(),
                                "places": core.KNOWN_PLACES})
@@ -459,6 +475,13 @@ class H(BaseHTTPRequestHandler):
                 return self._json({"error": "bad"}, 400)
             core.set_tariff(city, *vals)
             return self._json({"ok": True})
+        if action == "promo":
+            ok = core.save_promo(_txt(b.get("code"), 20), _num(b.get("amount")) or 0,
+                                 bool(b.get("first_only")), int(_num(b.get("max_uses")) or 0),
+                                 _txt(b.get("expires"), 10) or None, b.get("active", True) is not False)
+            if not ok:
+                return self._json({"error": "bad"}, 400)
+            return self._json({"promos": core.list_promos()})
         if action == "routes":
             if not core.set_routes(b.get("routes")):
                 return self._json({"error": "bad"}, 400)

@@ -275,6 +275,7 @@ function viewRide() {
     <div class="row"><span class="bul"></span><div style="flex:1"><b>${esc(r.passenger)}</b><div class="muted">${r.price ? r.price + " сом" : "Тариф боюнча"}${r.dist_km ? " · ~" + r.dist_km + " км" : ""}</div></div></div>
     ${r.d ? "" : `<div class="row"><span class="bul to"></span><div class="muted">Бара турган жерин жүргүнчү өзү айтат</div></div>`}
     ${r.note ? `<div class="note">📝 ${esc(r.note)}</div>` : ""}
+    ${r.discount ? `<div class="note">🎁 Промокод: жүргүнчү <b>${r.price - Math.round(r.discount)} с</b> төлөйт, ${Math.round(r.discount)} с сапар бүткөндө балансыңызга кошулат</div>` : ""}
     <div class="two"><a class="btn ghost" href="tel:${esc(r.phone)}">📞 Чалуу</a>${target ? `<a class="btn ghost" href="${navUrl(target)}" target="_blank">🧭 Навигатор</a>` : ""}</div>
     <button class="btn ${next[1]}" id="step">${next[0]}</button>
     ${r.status !== "in_trip" ? `<button class="btn red" id="cx">Жокко чыгаруу</button>` : ""}`);
@@ -286,8 +287,9 @@ function viewRide() {
 function done(r) {
   layer.clearLayers();
   lastView = D.online ? "on" : "off";
-  render(`<h2 style="text-align:center">Сапар бүттү</h2><p class="oprice" style="text-align:center;margin:0">${r.price ? r.price + " сом" : "Тариф боюнча"}</p>
-    <p class="muted" style="text-align:center">Жүргүнчүдөн акчаны алыңыз</p><button class="btn main" id="ok">Улантуу</button>`);
+  const pay = r.price ? r.price - Math.round(r.discount || 0) : 0;
+  render(`<h2 style="text-align:center">Сапар бүттү</h2><p class="oprice" style="text-align:center;margin:0">${pay ? pay + " сом" : "Тариф боюнча"}</p>
+    <p class="muted" style="text-align:center">Жүргүнчүдөн акчаны алыңыз${r.discount ? ` · +${Math.round(r.discount)} с промокод балансыңызга кошулду` : ""}</p><button class="btn main" id="ok">Улантуу</button>`);
   $("#ok").onclick = () => { lastView = ""; show(); };
 }
 
@@ -300,6 +302,7 @@ function showOffer() {
   $("#ocard").innerHTML = `<div style="display:flex;align-items:center;gap:14px">
       <div style="flex:1"><div class="muted">Жаңы заказ</div><div class="oprice">${o.price ? o.price + " с" : "Тариф"}</div>
       <div class="muted">Сизден ${o.to_pickup_km} км${o.has_dest ? " · сапар ~" + o.dist_km + " км" : " · багыты айтылат"}</div>
+      ${o.discount ? `<div class="muted">🎁 Жүргүнчү ${o.price - Math.round(o.discount)} с төлөйт, +${Math.round(o.discount)} с балансыңызга</div>` : ""}
       ${o.note ? `<div class="muted">📝 ${esc(o.note)}</div>` : ""}</div>
       <div class="ring"><svg width="74" height="74"><circle cx="37" cy="37" r="32" stroke="#E1E7F1" stroke-width="7" fill="none"/>
       <circle cx="37" cy="37" r="32" stroke="#C9A03A" stroke-width="7" fill="none" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - frac)}"/></svg><span>${o.left}</span></div></div>

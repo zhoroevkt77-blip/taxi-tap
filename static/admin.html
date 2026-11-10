@@ -321,6 +321,20 @@ async function viewFinance() {
       <div class="bars">${F.months.map(m => `<div><b>${m[key] ? m[key].toLocaleString("ru-RU") : ""}</b>
         <i style="height:${Math.round(100 * (m[key] || 0) / mx)}%"></i>${MN[+m.month.slice(5)]}</div>`).join("")}</div>
       <div style="height:12px"></div></div>
+    <div class="panel"><h3>🎁 Промокоддор</h3><div class="scroll"><table>
+      <tr><th>Код</th><th>Арзандатуу</th><th>Шарт</th><th>Колдонулду</th><th>Чыгым</th><th>Мөөнөтү</th><th></th></tr>
+      ${(F.promos || []).map(p => `<tr><td><b>${esc(p.code)}</b></td><td>${Math.round(p.amount)} с</td>
+        <td>${p.first_only ? "биринчи сапар" : "ар ким бир жолу"}</td><td>${p.uses}${p.max_uses ? " / " + p.max_uses : ""}</td>
+        <td>${money(p.spent)}</td><td>${p.expires || "—"}</td>
+        <td><button class="btn ${p.active ? "bad" : "ok"}" data-pt="${esc(p.code)}">${p.active ? "Өчүрүү" : "Күйгүзүү"}</button></td></tr>`).join("")}
+    </table>${(F.promos || []).length ? "" : `<div class="empty">Промокод жок.</div>`}</div>
+    <div class="fset"><div><label>Код</label><input class="f" id="pcC" placeholder="ТАП50" style="text-transform:uppercase"></div>
+      <div><label>Арзандатуу, сом</label><input class="f" id="pcA" inputmode="numeric" placeholder="50"></div>
+      <div><label>Канча жолу (0 = чексиз)</label><input class="f" id="pcM" inputmode="numeric" value="0"></div>
+      <div><label>Мөөнөтү (бош = чексиз)</label><input class="f" id="pcE" type="date"></div>
+      <div><label><input type="checkbox" id="pcF" checked> Биринчи сапар үчүн гана</label></div></div>
+    <div style="padding:0 14px 14px"><button class="btn gold" id="pcSave">Промокод түзүү</button> <span class="muted" id="pcMsg"></span>
+      <p class="muted">Жүргүнчү азыраак төлөйт; айырманы сапар бүткөндө система айдоочунун балансына кошот — чыгым сиздики.</p></div></div>
     <div class="panel"><h3>Камдык көчүрмө</h3><div class="item"><div class="main"><span class="muted">Күн сайын 03:00дө автоматтык түрдө жасалат жана Telegram'ыңызга файл болуп келет. Азыр жүктөп алуу:</span></div>
       <a class="btn" href="/api/a/backup">💾 Жүктөп алуу</a></div></div>
     <div class="panel"><h3>Айдоочулар — ушул ай</h3><div class="scroll"><table>
@@ -328,6 +342,17 @@ async function viewFinance() {
       ${F.drivers.map(d => `<tr><td>${esc(d.name)}<div class="muted">${esc(d.phone)}</div></td><td>${d.rides}</td><td>${money(d.gross)}</td>
         <td>${money(d.commission)}</td><td style="color:${d.balance < c.min_balance ? "var(--bad)" : "inherit"}"><b>${money(d.balance)}</b></td></tr>`).join("")}
     </table>${F.drivers.length ? "" : `<div class="empty">Азырынча активдүү айдоочу жок.</div>`}</div></div>`;
+  const PR = F.promos || [];
+  $("#pcSave").onclick = async () => {
+    const r = await api("/api/a/promo", {code:$("#pcC").value, amount:$("#pcA").value, max_uses:$("#pcM").value,
+      expires:$("#pcE").value, first_only:$("#pcF").checked});
+    if (r.error) return $("#pcMsg").textContent = "Текшериңиз: код 3+ тамга/сан, арзандатуу 1–5000 сом.";
+    viewFinance();
+  };
+  $("#main").querySelectorAll("[data-pt]").forEach(b => b.onclick = async () => {
+    const p = PR.find(x => x.code === b.dataset.pt);
+    await api("/api/a/promo", {...p, active:!p.active}); viewFinance();
+  });
   $("#fsave").onclick = async () => {
     const r = await api("/api/a/finance", {percent:$("#fp").value, free_until:$("#ff").value, min_balance:$("#fm").value});
     if (r.error) return $("#fmsg").textContent = "Текшериңиз: комиссия 0–30%, күн туура болушу керек.";
