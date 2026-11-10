@@ -130,6 +130,8 @@ def driver_state(uid):
           "home": {"set": d.get("home_lat") is not None, "on": bool(d.get("home_on")),
                    "left": core.home_uses_left(d) if d else 0,
                    "p": [d["home_lat"], d["home_lon"]] if d.get("home_lat") is not None else None},
+          "in_area": (core.in_area(d["lat"], d["lon"]) if d and d.get("lat") is not None and core.AREA_ON else None),
+          "area_name": core.AREA_CITY if core.AREA_ON else "",
           "notify": bool(u.get("notify", 1)), "tg": bool(u.get("tg_uid")),
           "pending_topup": bool(d and core.query(
               "SELECT id FROM balance_tx WHERE driver=? AND status='pending'", (uid,), "one"))}

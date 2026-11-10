@@ -243,6 +243,12 @@ function viewAddAddr() {
   $("#an").focus();
 }
 
+function outHTML() {
+  if (D.in_area !== false) return "";
+  return `<div class="note" style="background:#fdecef!important;border-color:#f5c2cb!important">⚠️ <b>Сиз ${esc(D.area_name || "иштөө аймагынан")} районунан сырткарыдасыз.</b>
+    Такси ТАП! ушул райондун ичинде гана иштейт — бул жерде заказ келбейт. Аймакка киргенде заказдар өзү келе баштайт.</div>`;
+}
+
 function viewHome() {
   const low = D.balance < D.min_balance;
   const stats = `<div class="grid">
@@ -255,13 +261,13 @@ function viewHome() {
   const sw = D.tg ? `<div class="sw"><div><b>Telegram билдирүүлөрү</b><div class="muted">Сайт жабык болсо да жаңы заказ жөнүндө кабар келет</div></div>
     <input type="checkbox" id="nt" ${D.notify ? "checked" : ""} style="width:24px;height:24px"></div>` : "";
   if (D.online) {
-    render(`<div class="wait"><div class="blink"></div><div><b>Заказ күтүлүүдө${D.home && D.home.on ? " · 🏠 үйгө карай" : ""}</b><div class="muted">Экранды өчүрбөңүз — GPS иштеп турат</div></div></div>
+    render(`${outHTML()}<div class="wait"><div class="blink"${D.in_area === false ? ' style="background:var(--bad)"' : ""}></div><div><b>${D.in_area === false ? "Заказ келбейт — аймактан сырткарыдасыз" : "Заказ күтүлүүдө"}${D.home && D.home.on ? " · 🏠 үйгө карай" : ""}</b><div class="muted">Экранды өчүрбөңүз — GPS иштеп турат</div></div></div>
       ${stats}${homeHTML()}<button class="btn ghost" id="addAddr">📍 Дарек кошуу</button><button class="btn red" id="off">Линиядан чыгуу</button>`);
     bindHome(); $("#addAddr").onclick = viewAddAddr;
     $("#off").onclick = async () => { D = await api("/api/d/online", {on:false}); wake(false); lastView = ""; show(); };
   } else {
     render(`<h2>Салам, ${esc(D.name || "айдоочу")}!</h2><p class="muted">${esc(D.car_color)} ${esc(D.car_model)}, ${esc(D.car_plate)}</p>
-      ${low ? `<p class="err">Баланс жетишсиз — заказдар келбейт.</p>` : ""}
+      ${low ? `<p class="err">Баланс жетишсиз — заказдар келбейт.</p>` : ""}${outHTML()}
       <button class="btn go" id="on">Линияга чыгуу</button>
       <div class="err" id="er"></div>${stats}${topup}
       <button class="btn ghost" id="cab">💼 Менин кабинетим</button>
@@ -531,7 +537,7 @@ function show() {
   showOffer();
   if (chatOpen && D.ride) return unread();
   chatOpen = false;
-  const key = D.ride ? "ride" + D.ride.id + D.ride.status + (D.next ? D.next.id : "") : D.online ? "on" : "off";
+  const key = D.ride ? "ride" + D.ride.id + D.ride.status + (D.next ? D.next.id : "") : (D.online ? "on" : "off") + (D.in_area === false ? "x" : "");
   if (key !== lastView) { lastView = key; D.ride ? viewRide() : viewHome(); }
   else if (D.ride) unread();
   if (!D.ride) layer.clearLayers();

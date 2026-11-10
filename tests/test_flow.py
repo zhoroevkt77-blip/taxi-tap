@@ -487,6 +487,18 @@ class DestOut(unittest.TestCase):
             self.assertTrue(core.quote(*bk, 40.5283, 72.7985).get("dest_out"))   # Ош
             q = core.quote(*bk, 41.03, 72.74)
             self.assertFalse(q.get("dest_out")); self.assertTrue(q["price"])
+            # айдоочу аймактан сырткары (Манас) — заказ берилбейт, сайтта эскертүү
+            offline_all()
+            d = make_driver("0700 000 091", "Манаста", (40.9333, 73.0000), 0)
+            self.assertFalse(web.driver_state(d)["in_area"])
+            p = rider("0555 000 091")
+            rid = core.create_ride(p, q, *bk, 41.03, 72.74)
+            r = core.get_ride(rid)
+            self.assertEqual(dispatch.candidates(r, 100), [])
+            core.driver_location(d, 41.036, 72.746, live_period=3600)
+            self.assertTrue(web.driver_state(d)["in_area"])
+            self.assertEqual(len(dispatch.candidates(core.get_ride(rid), 100)), 1)
+            core.cancel(rid, p)
         finally:
             core.reset_area(); core.AREA_ON = old
 

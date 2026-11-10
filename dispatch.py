@@ -38,6 +38,8 @@ def candidates(ride, radius_km):
             and core.can_take(d, ride.get("cls")) and core.toward_home(d, ride)
 
     for d in core.online_drivers():
+        if core.AREA_ON and not core.in_area(d["lat"], d["lon"]):
+            continue                    # иштөө аймагынан сырткары — заказ берилбейт
         if not ok(d):
             continue
         dist = core.haversine_km(ride["p_lat"], ride["p_lon"], d["lat"], d["lon"])
