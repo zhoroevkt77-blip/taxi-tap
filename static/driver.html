@@ -81,7 +81,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=2">
+<link rel="stylesheet" href="/static/theme.css?v=3">
 </head>
 <body>
 <div id="map"></div>
@@ -242,7 +242,7 @@ function viewHome() {
       <div class="err" id="er"></div>${stats}${topup}
       <button class="btn ghost" id="cab">💼 Менин кабинетим</button>
       <button class="btn ghost" id="hist">Сапарлардын тарыхы</button>${homeHTML()}${sw}
-      ${installHTML()}<a class="btn ghost" href="/">🚕 Такси чакыруу (жүргүнчү)</a><button class="btn ghost" id="out">Чыгуу</button>`);
+      ${installHTML()}<button class="btn ghost" id="out">Чыгуу</button>`);
     bindInstall();
     $("#top") && ($("#top").onclick = viewTopup);
     $("#cab").onclick = viewCabinet;
@@ -454,7 +454,7 @@ function viewRegister() {
     </div>
     <p class="muted">Документтерди админ гана көрөт.</p>
     <div class="err" id="er"></div><button class="btn main" id="send">Арызды жөнөтүү</button>
-    <a class="btn ghost" href="/">🚕 Такси чакыруу (жүргүнчү)</a>`);
+    `);
   docInput($("#dl"), docs, "license"); docInput($("#dt"), docs, "techpass"); docInput($("#dc"), docs, "car");
   $("#send").onclick = async () => {
     const body = {name:$("#rn").value, model:$("#rm").value, color:$("#rc").value, plate:$("#rp").value, ...docs};
@@ -500,7 +500,7 @@ function show() {
     if (D.status === "pending") return render(`<h2>Арызыңыз текшерилүүдө</h2>
       <p class="muted">Админ документтериңизди карап чыгып, ырастайт. Адатта бир нече саат ичинде.${D.tg ? " Жыйынтыгы Telegram'га келет." : ""}</p>
       <div class="note">🚗 ${esc(D.car_color)} ${esc(D.car_model)}, <b>${esc(D.car_plate)}</b></div>
-      <button class="btn ghost" id="edit">Арызды оңдоо</button><a class="btn ghost" href="/">🚕 Такси чакыруу (жүргүнчү)</a>`) || ($("#edit").onclick = viewRegister);
+      <button class="btn ghost" id="edit">Арызды оңдоо</button>`) || ($("#edit").onclick = viewRegister);
     return render(`<h2>Аккаунт бөгөттөлгөн</h2><p class="muted">Админ менен байланышыңыз.</p>`);
   }
   showOffer();

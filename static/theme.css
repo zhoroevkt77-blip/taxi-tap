@@ -69,3 +69,5 @@ body.adm .bars i{background:var(--grad)!important}
 .role{display:flex;background:#fff;border-radius:22px;padding:4px;box-shadow:var(--sh)}
 .role a{padding:8px 12px;border-radius:18px;font-size:13px;font-weight:800;color:var(--soft);text-decoration:none;white-space:nowrap;cursor:pointer}
 .role a.on{background:var(--grad);color:var(--navy);box-shadow:var(--glow)}
+/* барак өйдө чыкканда логотип жана которгуч жабылбасын */
+.sheet{max-height:calc(100dvh - 150px - env(safe-area-inset-top))!important}
