@@ -71,3 +71,25 @@ body.adm .bars i{background:var(--grad)!important}
 .role a.on{background:var(--grad);color:var(--navy);box-shadow:var(--glow)}
 /* барак өйдө чыкканда логотип жана которгуч жабылбасын */
 .sheet{max-height:calc(100dvh - 150px - env(safe-area-inset-top))!important}
+
+/* v4: энсиз баскычтар жана карточкалар, четтеринде ичке сызык */
+:root{--edge:1px solid #e6e6eb}
+.btn{padding:11px 14px!important;font-size:16px!important;margin-top:8px!important;border:var(--edge)!important}
+.btn.main,.btn.gold{border:1px solid rgba(190,130,0,.35)!important}
+.btn.go{padding:13px 14px!important;font-size:17px!important;border:1px solid rgba(20,110,60,.35)!important}
+.btn.dark{border:1px solid #000!important}
+.btn.red,.btn.bad{border:1px solid rgba(224,52,74,.25)!important}
+.btn.ok{border:1px solid rgba(20,110,60,.35)!important}
+.btn.ghost{box-shadow:0 2px 8px rgba(20,20,30,.05)!important}
+.stat{padding:9px 14px!important;border:var(--edge)}
+.stat b{font-size:20px!important}
+.grid{gap:8px!important}
+.car,.wait,.chips button,.quick button,.cls>div,.role,.logo,.pill,.state,.round,.chip,.search,body.adm .panel,body.adm .card,body.adm nav button{border:var(--edge)!important}
+.wait{padding:10px 14px!important}
+.chips button{padding:8px 12px!important}
+.cls>div.on{border:1px solid rgba(190,130,0,.35)!important}
+.role a.on{border:1px solid rgba(190,130,0,.3)}
+.wbox,.note{border:1px solid #f5e3b0}
+input.f{border:var(--edge)!important;padding:11px 14px!important}
+input.f:focus{border-color:var(--gold2)!important}
+.sw{padding:9px 0!important}
