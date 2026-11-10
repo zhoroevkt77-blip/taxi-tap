@@ -11,7 +11,7 @@ function Map(id){this.el=document.getElementById(id);this.el.style.background="#
  this.el.appendChild(this.bg);this.ov=document.createElement("div");this.ov.style.cssText="position:absolute;inset:0";this.el.appendChild(this.ov);}
 Map.prototype={setView(c,z){this.c=[c[0],c[1]];if(z)this.z=z;this.draw();this.fire("movestart");setTimeout(()=>this.fire("moveend"),10);return this},
  getCenter(){return{lat:this.c[0],lng:this.c[1]}},getZoom(){return this.z},on(e,f){(this.h[e]=this.h[e]||[]).push(f);return this},
- fire(e){(this.h[e]||[]).forEach(f=>f())},
+ fire(e,a){(this.h[e]||[]).forEach(f=>f(a))},panTo(ll){return this.setView([ll.lat,ll.lng])},
  fitBounds(b){const a=b.a,c=b.b;this.c=[(a[0]+c[0])/2+(a[0]-c[0])*0.0-0.006,(a[1]+c[1])/2];this.z=14;this.draw();},
  xy(p){const w=this.el.clientWidth,h=this.el.clientHeight;const o=px(this.c[0],this.c[1],this.z),q=px(p[0],p[1],this.z);return[q[0]-o[0]+w/2,q[1]-o[1]+h/2]},
  draw(){const w=this.el.clientWidth,h=this.el.clientHeight;let s="";

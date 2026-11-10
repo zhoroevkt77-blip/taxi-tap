@@ -113,11 +113,39 @@ async function reverse(lat, lon) {
     return (street ? street + (a.house_number ? " " + a.house_number : "") : (j.display_name || "").split(",")[0]) || "Картадагы чекит";
   } catch (e) { return "Картадагы чекит"; }
 }
+// Издөө: адегенде Photon (ката жазылса да табат), анан Nominatim.
+// Жыйынтык: [{name, sub, lat, lon}]
+function cleanQuery(q) {
+  return q.replace(/(^|[\s,])(улица|ул|просп|пр|мкр)\.?(?=[А-ЯЁӨҮҢA-Z])/gu, "$1$2 ")   // «улБерикбаева» → «ул Берикбаева»
+          .replace(/\s+/g, " ").trim();
+}
 async function search(q) {
-  const c = map.getCenter(), d = 0.25;
-  const vb = [c.lng - d, c.lat + d, c.lng + d, c.lat - d].join(",");
-  const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=7&countrycodes=kg&accept-language=ky,ru&viewbox=${vb}&q=${encodeURIComponent(q)}`);
-  return r.json();
+  q = cleanQuery(q);
+  const c = map.getCenter(), out = [], seen = new Set();
+  const add = (name, sub, lat, lon) => {
+    const k = name + "|" + (+lat).toFixed(4);
+    if (!name || seen.has(k)) return; seen.add(k); out.push({name, sub, lat:+lat, lon:+lon});
+  };
+  try {
+    const r = await (await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lat=${c.lat}&lon=${c.lng}&limit=8`)).json();
+    (r.features || []).forEach(f => {
+      const p = f.properties || {}, g = f.geometry.coordinates;
+      if (p.countrycode && p.countrycode !== "KG") return;
+      const street = p.street ? p.street + (p.housenumber ? " " + p.housenumber : "") : "";
+      const name = p.name && p.name !== p.street ? p.name : street || p.name;
+      add(name, [p.name && p.name !== p.street ? street : "", p.district, p.city || p.county].filter(Boolean).join(", "), g[1], g[0]);
+    });
+  } catch (e) {}
+  if (out.length < 3) {
+    try {
+      const d = 0.4, vb = [c.lng - d, c.lat + d, c.lng + d, c.lat - d].join(",");
+      const r = await (await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=7&countrycodes=kg&accept-language=ky,ru&viewbox=${vb}&q=${encodeURIComponent(q)}`)).json();
+      r.forEach(x => { const parts = x.display_name.split(","); add(parts[0], parts.slice(1, 3).join(","), x.lat, x.lon); });
+    } catch (e) {}
+  }
+  // жакынкылар биринчи
+  out.sort((a, b) => Math.hypot(a.lat - c.lat, a.lon - c.lng) - Math.hypot(b.lat - c.lat, b.lon - c.lng));
+  return out.slice(0, 7);
 }
 
 // ---------- пин жана карта ----------
@@ -130,6 +158,11 @@ map.on("moveend", () => {
   moveTimer = setTimeout(onPinMoved, 250);
 });
 const pinActive = () => S.mode === "idle" || S.mode === "pickDest";
+// Картаны басса — пин ошол жерге барат (жылдырбай эле тандаса болот)
+map.on("click", e => {
+  if (S.mode === "search") { viewPickDest(); }
+  if (pinActive()) map.panTo(e.latlng);
+});
 async function onPinMoved() {
   const c = map.getCenter();
   $("#chipAddr").textContent = "…";
@@ -211,7 +244,8 @@ function viewIdle() {
 function viewSearch() {
   S.mode = "search";
   render(`<input class="f" id="q" placeholder="Көчө, үй же жай" autocomplete="off">
-    <div id="list"><div class="res" id="pickMap"><b>📍 Картадан тандоо</b><span class="muted">Пинди жылдырып белгилеңиз</span></div></div>
+    <div class="res" id="pickMap"><b>📍 Картадан тандоо</b><span class="muted">Картаны басыңыз же жылдырыңыз</span></div>
+    <div id="list"></div>
     <button class="btn ghost" id="back">Артка</button>`);
   const q = $("#q"); q.focus();
   $("#pickMap").onclick = viewPickDest;
@@ -219,20 +253,21 @@ function viewSearch() {
   let t = null;
   q.oninput = () => { clearTimeout(t); t = setTimeout(async () => {
     if (q.value.trim().length < 3) return;
+    $("#list").innerHTML = `<p class="muted">Изделүүдө…</p>`;
     const res = await search(q.value.trim());
     $("#list").innerHTML = res.length ? res.map((r, i) =>
-      `<div class="res" data-i="${i}"><b>${esc(r.display_name.split(",")[0])}</b><span class="muted">${esc(r.display_name.split(",").slice(1, 3).join(","))}</span></div>`).join("")
-      : `<p class="muted">Табылган жок. Картадан тандап көрүңүз.</p>`;
+      `<div class="res" data-i="${i}"><b>${esc(r.name)}</b><span class="muted">${esc(r.sub)}</span></div>`).join("")
+      : `<p class="muted">Табылган жок. Көчөнүн атын гана жазып көрүңүз же «Картадан тандоо» басыңыз.</p>`;
     $("#list").querySelectorAll(".res").forEach(el => el.onclick = () => {
       const r = res[+el.dataset.i];
-      S.to = [+r.lat, +r.lon]; S.toAddr = r.display_name.split(",")[0]; viewQuote();
+      S.to = [r.lat, r.lon]; S.toAddr = r.name; viewQuote();
     });
   }, 450); };
 }
 
 function viewPickDest() {
   S.mode = "pickDest"; setPin("to");
-  render(`<h2>Кайда?</h2><p class="muted">Картаны жылдырып, пинди бара турган жерге коюңуз.</p>
+  render(`<h2>Кайда?</h2><p class="muted">Картаны басыңыз же жылдырыңыз — сары пин бара турган жерди көрсөтөт.</p>
     <button class="btn main" id="ok">Даяр</button><button class="btn ghost" id="back">Артка</button>`);
   $("#ok").onclick = () => { const c = map.getCenter(); S.to = [c.lat, c.lng]; S.toAddr = $("#chipAddr").textContent; viewQuote(); };
   $("#back").onclick = () => { map.setView(S.from, map.getZoom()); viewIdle(); };
