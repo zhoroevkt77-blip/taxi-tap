@@ -155,3 +155,8 @@ input.f::placeholder{color:#8a8a95}
 .grab:before{top:12px!important}
 .grab:after{content:"▼ Жабуу";position:absolute;right:0;top:0;font-size:15px;font-weight:800;color:#3a3a44;background:#f1f1f4;border:1px solid #e6e6eb;border-radius:14px;padding:4px 12px;line-height:1.2}
 .grab.down:after{content:"▲ Ачуу"!important;font-size:15px!important;color:#16161a!important;background:linear-gradient(135deg,#ffc61a,#ffb703)!important;border-color:rgba(190,130,0,.35)!important;right:0!important;top:0!important}
+/* v10: А / Б точкалар */
+.bul.lt{width:22px!important;height:22px!important;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:900;color:#fff;font-style:normal;line-height:1;flex:none}
+.bul.lt.to{color:#16161a}
+.head:after{content:"А"!important;width:auto!important;height:auto!important;background:none!important;color:#fff;font-weight:900;font-size:19px}
+.head.to:after{content:"Б"!important;color:#16161a}

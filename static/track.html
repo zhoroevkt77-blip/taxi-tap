@@ -22,7 +22,7 @@ h2{font-size:20px;margin:0 0 8px}
 .carm{width:30px;height:30px;border-radius:50%;background:var(--navy);border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3);display:grid;place-items:center;color:#fff;font-size:14px}
 .carm.g{background:var(--gold);color:#16161a}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=9">
+<link rel="stylesheet" href="/static/theme.css?v=10">
 </head>
 <body>
 <div id="map"></div>
@@ -45,8 +45,8 @@ async function load() {
   if (r.error) { document.getElementById("v").innerHTML = `<h2>Шилтеме табылган жок</h2>`; return clearInterval(timer); }
   if (!drawn) {
     drawn = true;
-    L.marker(r.p, {icon:ic("", "●")}).addTo(map);
-    if (r.d) { L.marker(r.d, {icon:ic("g", "■")}).addTo(map); map.fitBounds(L.latLngBounds([r.p, r.d]), {padding:[60, 60]}); } else map.setView(r.p, 15);
+    L.marker(r.p, {icon:ic("", "А")}).addTo(map);
+    if (r.d) { L.marker(r.d, {icon:ic("g", "Б")}).addTo(map); map.fitBounds(L.latLngBounds([r.p, r.d]), {padding:[60, 60]}); } else map.setView(r.p, 15);
   }
   const d = r.driver;
   if (d && d.pos) { if (!car) car = L.marker(d.pos, {icon:ic("g", "🚕")}).addTo(map); else car.setLatLng(d.pos); }

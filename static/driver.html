@@ -81,7 +81,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=9">
+<link rel="stylesheet" href="/static/theme.css?v=10">
 </head>
 <body>
 <div id="map"></div>
@@ -325,7 +325,7 @@ function viewRide() {
   if (seenRide !== r.id) { seenRide = r.id; seen = 0; unread.last = 0; }
   layer.clearLayers();
   L.marker(r.p, {icon:icon("", "👤"), interactive:false}).addTo(layer);
-  if (r.d) L.marker(r.d, {icon:icon("to", "■"), interactive:false}).addTo(layer);
+  if (r.d) L.marker(r.d, {icon:icon("to", "Б"), interactive:false}).addTo(layer);
   const target = r.status === "in_trip" ? r.d : r.p;
   if (lastRide !== r.id + r.status && myPos && target) {
     // жол боюнча маршрут: айдоочудан → жүргүнчүгө, сапарда → бара турган жерге
@@ -347,9 +347,9 @@ function viewRide() {
   const who = r.other_name || r.other_phone ? `${esc(r.other_name || "Башка адам")}<div class="muted">Заказ берген: ${esc(r.passenger)}</div>` : esc(r.passenger);
   const callPh = !del && r.other_phone ? r.other_phone : r.phone;
   render(`<h2>${clsTag(r.cls)}${title}</h2><div class="muted" id="rinfo" style="margin:-6px 0 6px"></div>
-    <div class="row"><span class="bul"></span><div style="flex:1"><b>${who}</b>${r.p_rating ? `<span class="muted"> · ★ ${r.p_rating}</span>` : ""}
+    <div class="row"><span class="bul lt">А</span><div style="flex:1"><b>${who}</b>${r.p_rating ? `<span class="muted"> · ★ ${r.p_rating}</span>` : ""}
       <div class="muted">${r.price ? r.price + " сом" : "Тариф боюнча"}${r.dist_km ? " · ~" + r.dist_km + " км" : ""}${r.p_addr ? " · " + esc(r.p_addr) : ""}</div></div></div>
-    ${r.d ? (r.d_addr ? `<div class="row"><span class="bul to"></span><div>${esc(r.d_addr)}</div></div>` : "") : `<div class="row"><span class="bul to"></span><div class="muted">Бара турган жерин жүргүнчү өзү айтат</div></div>`}
+    ${r.d ? (r.d_addr ? `<div class="row"><span class="bul to lt">Б</span><div>${esc(r.d_addr)}</div></div>` : "") : `<div class="row"><span class="bul to lt">Б</span><div class="muted">Бара турган жерин жүргүнчү өзү айтат</div></div>`}
     ${del && r.other_phone ? `<div class="note">📦 Алуучу: <a href="tel:${esc(r.other_phone)}">${esc(r.other_phone)}</a></div>` : ""}
     ${r.note ? `<div class="note">📝 ${esc(r.note)}</div>` : ""}
     ${r.status === "arrived" ? `<div class="note" id="wt">${waitText(r)}</div>` : r.wait && r.wait.fee ? `<div class="note">⏳ Күтүү акысы: +${r.wait.fee} сом (баага кошулду)</div>` : ""}
