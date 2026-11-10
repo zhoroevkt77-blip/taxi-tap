@@ -230,7 +230,7 @@ function viewAddAddr() {
     <select class="f" id="ak" style="width:100%">${K.map(([k, t]) => `<option value="${k}">${t}</option>`).join("")}</select>
     <div class="err" id="ae"></div>
     <button class="btn main" id="as">Кошуу</button><button class="btn ghost" id="ab">Артка</button>`);
-  $("#ab").onclick = () => { lastView = ""; show(); };
+  $("#ab").onclick = viewCabinet;
   $("#as").onclick = async () => {
     const nm = $("#an").value.trim(); if (nm.length < 2) return $("#ae").textContent = "Атын жазыңыз.";
     $("#as").disabled = true;
@@ -239,7 +239,7 @@ function viewAddAddr() {
     if (r.error) { $("#as").disabled = false; return $("#ae").textContent = "Кошулган жок: жер иштөө аймагынын ичинде болушу керек."; }
     render(`<h2>✓ Рахмат!</h2><p class="muted">«${esc(nm)}» сунушталды. Админ ырастагандан кийин (же дагы бир адам ушул жерди белгилесе) тизмеге кошулат.</p>
       <button class="btn main" id="more">Дагы кошуу</button><button class="btn ghost" id="ab">Артка</button>`);
-    $("#more").onclick = viewAddAddr; $("#ab").onclick = () => { lastView = ""; show(); };
+    $("#more").onclick = viewAddAddr; $("#ab").onclick = viewCabinet;
   };
   $("#an").focus();
 }
@@ -263,8 +263,8 @@ function viewHome() {
     <input type="checkbox" id="nt" ${D.notify ? "checked" : ""} style="width:24px;height:24px"></div>` : "";
   if (D.online) {
     render(`${outHTML()}<div class="wait"><div class="blink"${D.in_area === false ? ' style="background:var(--bad)"' : ""}></div><div><b>${D.in_area === false ? "Заказ келбейт — аймактын сыртындасыз" : "Заказ күтүлүүдө"}${D.home && D.home.on ? " · 🏠 үйгө карай" : ""}</b><div class="muted">Экранды өчүрбөңүз — GPS иштеп турат</div></div></div>
-      ${stats}${homeHTML()}<button class="btn ghost" id="addAddr">📍 Дарек кошуу</button><button class="btn red" id="off">Линиядан чыгуу</button>`);
-    bindHome(); $("#addAddr").onclick = viewAddAddr;
+      ${stats}${homeHTML()}<button class="btn red" id="off">Линиядан чыгуу</button>`);
+    bindHome();
     $("#off").onclick = async () => { D = await api("/api/d/online", {on:false}); wake(false); lastView = ""; show(); };
   } else {
     render(`<h2>Салам, ${esc(D.name || "айдоочу")}!</h2><p class="muted">${esc(D.car_color)} ${esc(D.car_model)}, ${esc(D.car_plate)}</p>
@@ -272,7 +272,7 @@ function viewHome() {
       <button class="btn go" id="on">Линияга чыгуу</button>
       <div class="err" id="er"></div>${stats}${topup}
       <button class="btn ghost" id="cab">💼 Менин кабинетим</button>
-      <button class="btn ghost" id="hist">Сапарлардын тарыхы</button><button class="btn ghost" id="addAddr">📍 Дарек кошуу</button>${homeHTML()}${sw}
+      ${homeHTML()}${sw}
       ${installHTML()}<button class="btn ghost" id="out">Чыгуу</button>`);
     bindInstall();
     $("#top") && ($("#top").onclick = viewTopup);
@@ -287,8 +287,6 @@ function viewHome() {
       D = await api("/api/d/online", {on:true, p});
       startGps(); wake(true); lastView = ""; show();
     };
-    $("#hist").onclick = viewHistory;
-    $("#addAddr").onclick = viewAddAddr;
     bindHome();
   }
 }
@@ -306,11 +304,15 @@ function viewCabinet() {
     <p class="muted">Сумма сом менен. «Колуңузда» — жүргүнчүлөр төлөгөн акчадан комиссия кемитилгени.
     ${D.min_balance > 0 ? `Баланс ${D.min_balance} сомдон аз болсо, заказ келбейт.` : ""}</p>
     ${D.pending_topup ? `<div class="note">🕓 Чегиңиз текшерилүүдө.</div>` : `<button class="btn main" id="top">➕ Балансты толуктоо</button>`}
+    <button class="btn ghost" id="hist">🧾 Сапарлардын тарыхы</button>
+    <button class="btn ghost" id="addAddr">📍 Дарек кошуу</button>
+    <p class="muted" style="margin-top:-2px">Жергиликтүү жерлердин аттарын (той-кана, дүкөн, көчө) кошуңуз — жүргүнчүлөр дарек жазганда табылат.</p>
     ${linksHTML(D.bot)}
     <p class="muted">Жүргүнчүлөргө жүргүнчүнүн шилтемесин, тааныш айдоочуларга айдоочунун шилтемесин жөнөтүңүз.</p>
     <button class="btn ghost" id="back">Артка</button>`);
   bindLinks(); window.SHEET && SHEET.expand();
   $("#top") && ($("#top").onclick = viewTopup);
+  $("#hist").onclick = viewHistory; $("#addAddr").onclick = viewAddAddr;
   $("#back").onclick = () => { lastView = ""; show(); };
 }
 
@@ -320,7 +322,7 @@ async function viewHistory() {
   render(`<h2>Сапарлар</h2><div class="hist">${(h.rides || []).map(r =>
     `<div class="row"><span>${name[r.status] || ""}</span><div style="flex:1">№${r.id} · ${new Date(r.created_at * 1000).toLocaleString("ky-KG", {day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit"})}</div><b>${r.price ? r.price + " с" : "—"}</b></div>`).join("") || `<p class="muted">Азырынча сапар жок.</p>`}</div>
     <button class="btn ghost" id="back">Артка</button>`);
-  $("#back").onclick = () => { lastView = ""; show(); };
+  $("#back").onclick = viewCabinet;
 }
 
 let seenRide = null;
