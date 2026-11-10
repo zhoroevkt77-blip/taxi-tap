@@ -173,3 +173,25 @@ class Flow(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Web(unittest.TestCase):
+    def test_phone_uid(self):
+        self.assertEqual(core.phone_uid("0555 111 222"), "ph:+996555111222")
+        self.assertEqual(core.phone_uid("+996 555 111 222"), "ph:+996555111222")
+        self.assertIsNone(core.phone_uid("123"))
+
+    def test_session_verify_needs_same_phone(self):
+        core.init_db()
+        tok = core.web_session_new("0700 999 888", "Жаңыл")
+        self.assertIsNone(core.web_session_verify(tok, "+996700000000"))
+        self.assertEqual(core.web_session_verify(tok, "996700999888"), "ph:+996700999888")
+        self.assertTrue(core.web_session(tok)["verified"])
+
+    def test_telegram_confirms_web_login(self):
+        tok = core.web_session_new("0700 111 333", "Мирлан")
+        out = flow.on_text("tg:77", "/start web_" + tok, "Мирлан")
+        self.assertTrue(any(b.get("contact") for o in out for r in o.get("keyboard", []) for b in r))
+        out = flow.on_contact("tg:77", "996700111333")
+        self.assertIn("ырасталды", out[0]["text"])
+        self.assertEqual(core.web_session(tok)["uid"], "ph:+996700111333")

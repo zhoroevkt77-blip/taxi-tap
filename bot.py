@@ -22,6 +22,7 @@ import urllib.request
 import core
 import dispatch
 import flow
+import web
 
 TOKEN_FILE = os.path.join(core.BASE, "token.txt")
 TICK_SEC = 2
@@ -149,11 +150,15 @@ def main():
         if me.get("ok"):
             break
         time.sleep(5)
-    print("\n  Такси ТАП! иштеп жатат: @%s" % (me.get("result") or {}).get("username", "?"),
-          flush=True)
+    uname = (me.get("result") or {}).get("username", "")
+    if uname and not web.BOT_USERNAME:
+        web.BOT_USERNAME = uname            # сайттан кирүү шилтемеси үчүн
+    print("\n  Такси ТАП! иштеп жатат: @%s" % (uname or "?"), flush=True)
     print("  База: %s" % ("Postgres" if core.IS_PG else "SQLite"), flush=True)
     print("  Админдер: %s" % (", ".join(flow.ADMINS) or "жок (ADMIN_IDS кой)"), flush=True)
 
+    web.deliver = deliver
+    web.start()
     threading.Thread(target=dispatch_worker, daemon=True).start()
 
     offset = 0

@@ -208,6 +208,12 @@ SCHEMA = [
         ride_id INTEGER PRIMARY KEY, stars INTEGER, at REAL)""",
     """CREATE TABLE IF NOT EXISTS tariffs (
         city TEXT PRIMARY KEY, base REAL, per_km REAL, per_min REAL, min_price REAL)""",
+    """CREATE TABLE IF NOT EXISTS web_sessions (
+        token TEXT PRIMARY KEY,         -- браузердеги cookie
+        uid TEXT,                       -- ырасталгандан кийин: 'ph:+996...'
+        phone TEXT, name TEXT,
+        verified INTEGER DEFAULT 0,
+        created_at REAL)""",
     "CREATE INDEX IF NOT EXISTS idx_rides_status ON rides(status)",
     "CREATE INDEX IF NOT EXISTS idx_drivers_online ON drivers(online, status)",
 ]
@@ -509,3 +515,60 @@ def rate(rid, passenger, stars):
 
 def searching_rides():
     return query("SELECT * FROM rides WHERE status='searching' ORDER BY id", (), "all")
+
+
+# ==================== Сайт: кирүү ====================
+# SMS акчалуу, ошондуктан номер Telegram бот аркылуу ырасталат:
+# сайт токен берет → t.me/<бот>?start=web_<токен> → бот номерди сурайт →
+# номер дал келсе, сессия ырасталат.
+
+def phone_uid(phone):
+    d = "".join(c for c in phone or "" if c.isdigit())
+    if d.startswith("0") and len(d) == 10:
+        d = "996" + d[1:]
+    if len(d) == 9:
+        d = "996" + d
+    return "ph:+" + d if len(d) >= 11 else None
+
+
+def web_session_new(phone, name):
+    import secrets
+    tok = secrets.token_urlsafe(18)
+    query("INSERT INTO web_sessions (token, phone, name, created_at) VALUES (?, ?, ?, ?)",
+          (tok, phone, name, now()))
+    return tok
+
+
+def web_session(tok):
+    if not tok:
+        return None
+    return query("SELECT * FROM web_sessions WHERE token=?", (tok,), "one")
+
+
+def web_session_verify(tok, phone_seen=None):
+    """Номер дал келсе, сессияны ырастайт жана колдонуучуну түзөт."""
+    s = web_session(tok)
+    if not s:
+        return None
+    uid = phone_uid(s["phone"])
+    if not uid:
+        return None
+    if phone_seen is not None and phone_uid(phone_seen) != uid:
+        return None
+    ensure_user(uid, s["name"] or "")
+    set_user(uid, phone=uid[3:], name=s["name"] or "")
+    query("UPDATE web_sessions SET verified=1, uid=? WHERE token=?", (uid, tok))
+    return uid
+
+
+def last_ride_of(uid, within_sec=900):
+    """Активдүү сапар, же жакында бүткөнү (баалоо үчүн)."""
+    r = active_ride_of(uid)
+    if r:
+        return r
+    return query("SELECT * FROM rides WHERE passenger=? AND status IN ('completed','cancelled') "
+                 "AND created_at>? ORDER BY id DESC LIMIT 1", (uid, now() - within_sec), "one")
+
+
+def rated(rid):
+    return query("SELECT ride_id FROM ratings WHERE ride_id=?", (rid,), "one") is not None

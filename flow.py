@@ -387,10 +387,24 @@ def admin_command(uid, text):
     return None
 
 
+def web_login_start(uid, name, tok):
+    """Сайттан келген колдонуучу: номерин ырастайт."""
+    core.ensure_user(uid, name)
+    lang = lang_of(uid)
+    if not core.web_session(tok):
+        return menu(uid, L("web_bad", lang))
+    core.set_state(uid, {"s": "phone", "after": "web:" + tok})
+    return [msg(uid, L("web_confirm", lang),
+                keyboard=[[{"text": L("btn_share_phone", lang), "contact": True}],
+                          [{"text": L("btn_cancel", lang)}]])]
+
+
 # ==================== Кириш чекиттери (ооздор чакырат) ====================
 
 def on_text(uid, text, name=""):
     text = (text or "").strip()
+    if text.startswith("/start web_"):
+        return web_login_start(uid, name, text.split("web_", 1)[1].strip())
     if text.startswith("/start"):
         return on_start(uid, name)
     core.ensure_user(uid, name)
@@ -427,8 +441,12 @@ def on_text(uid, text, name=""):
 def on_contact(uid, phone, name=""):
     core.ensure_user(uid, name)
     core.set_user(uid, phone=phone if phone.startswith("+") else "+" + phone)
-    after = core.get_state(uid).get("after")
+    after = core.get_state(uid).get("after") or ""
     core.set_state(uid, {})
+    if after.startswith("web:"):
+        ok = core.web_session_verify(after[4:], phone)
+        lang = lang_of(uid)
+        return menu(uid, L("web_ok" if ok else "web_bad", lang))
     if after == "driver":
         return become_driver(uid)
     return start_order(uid)
