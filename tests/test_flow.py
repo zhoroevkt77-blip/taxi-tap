@@ -335,6 +335,37 @@ class Promo(unittest.TestCase):
         self.assertEqual(core.list_promos()[0]["spent"], 50)
 
 
+class Scheduled(unittest.TestCase):
+    def setUp(self):
+        core.init_db(); offline_all()
+
+    def test_scheduled_then_activates(self):
+        p = rider("0555 000 081")
+        d = make_driver("0700 000 081", "Алдын", NEAR, 0)
+        q = core.quote(*KARAKOL, *DEST)
+        rid = core.create_ride(p, q, *KARAKOL, *DEST, scheduled_at=core.now() + 3600)
+        self.assertEqual(core.get_ride(rid)["status"], "scheduled")
+        self.assertEqual(core.active_ride_of(p)["id"], rid)
+        dispatch.tick()
+        self.assertEqual(core.get_ride(rid)["status"], "scheduled")       # азырынча эрте
+        core.query("UPDATE rides SET scheduled_at=? WHERE id=?", (core.now() + 300, rid))
+        out = dispatch.tick()
+        self.assertEqual(core.get_ride(rid)["status"], "searching")
+        self.assertTrue(any(o["to"] == p for o in out))
+        self.assertEqual(core.get_ride(rid)["offered_to"], d)
+
+    def test_cancel_scheduled_and_lost(self):
+        p = rider("0555 000 082")
+        q = core.quote(*KARAKOL, *DEST)
+        rid = core.create_ride(p, q, *KARAKOL, *DEST, scheduled_at=core.now() + 7200)
+        self.assertTrue(core.cancel(rid, "passenger"))
+        self.assertEqual(core.get_ride(rid)["status"], "cancelled")
+        rid2 = core.create_ride(p, q, *KARAKOL, *DEST)
+        core.query("UPDATE rides SET status='cancelled', cancel_by='system' WHERE id=?", (rid2,))
+        self.assertIn(rid2, [x["id"] for x in core.lost_orders(7)])
+        self.assertNotIn(rid, [x["id"] for x in core.lost_orders(7)])
+
+
 class Accounts(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

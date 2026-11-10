@@ -50,7 +50,7 @@ def tick():
     Ар 2 секундда. Telegram билдирүүлөрүн (Out) кайтарат — заказдын өзү
     айдоочунун сайтында /api/d/state аркылуу көрүнөт.
     """
-    out = []
+    out = [note(r["passenger"], "p_scheduled_go") for r in core.activate_scheduled()]
     t = core.now()
     for r in core.searching_rides():
         rid = r["id"]

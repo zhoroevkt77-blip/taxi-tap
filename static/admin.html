@@ -33,7 +33,7 @@ main{padding:12px;max-width:1100px;margin:0 auto}
 .btn{border:0;border-radius:10px;padding:8px 12px;font-size:13px;font-weight:700;cursor:pointer;background:var(--paper);color:var(--ink)}
 .btn.ok{background:var(--ok);color:#fff}.btn.bad{background:#FCEBEB;color:var(--bad)}.btn.gold{background:var(--gold);color:#14243F}
 .tag{font-size:12px;font-weight:700;padding:3px 8px;border-radius:8px;white-space:nowrap}
-.t-searching{background:#FAEEDA;color:#854F0B}.t-accepted,.t-arrived{background:#E6F1FB;color:#0C447C}
+.t-searching{background:#FAEEDA;color:#854F0B}.t-scheduled{background:#EEEDFE;color:#3C3489}.t-accepted,.t-arrived{background:#E6F1FB;color:#0C447C}
 .t-in_trip{background:#E1F5EE;color:#085041}.t-completed{background:#EAF3DE;color:#27500A}.t-cancelled{background:#F1EFE8;color:#5F5E5A}
 .t-active{background:#E1F5EE;color:#085041}.t-pending{background:#FAEEDA;color:#854F0B}.t-blocked,.t-rejected{background:#FCEBEB;color:#A32D2D}
 .empty{padding:18px 14px;color:var(--soft);font-size:14px}
@@ -86,7 +86,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const api = async (p, b) => (await fetch(p, b === undefined ? {credentials:"same-origin"} :
   {method:"POST", credentials:"same-origin", headers:{"Content-Type":"application/json"}, body:JSON.stringify(b)})).json();
-const ST = {searching:"Изделүүдө", accepted:"Айдоочу жолдо", arrived:"Күтүүдө", in_trip:"Жолдо", completed:"Бүттү", cancelled:"Жабылды",
+const ST = {scheduled:"Алдын ала", searching:"Изделүүдө", accepted:"Айдоочу жолдо", arrived:"Күтүүдө", in_trip:"Жолдо", completed:"Бүттү", cancelled:"Жабылды",
             active:"Активдүү", pending:"Текшерүүдө", blocked:"Бөгөттөлгөн", rejected:"Четке кагылды"};
 const tag = s => `<span class="tag t-${s}">${ST[s] || s}</span>`;
 const when = t => t ? new Date(t * 1000).toLocaleString("ru-RU", {day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit"}) : "";
@@ -121,13 +121,22 @@ function viewMap() {
       <span class="muted">Кардар чалса — номерин жазып, картадан жерин басыңыз. Заказ жакынкы айдоочуга кетет, айдоочу кардарга өзү чалат.</span></div>
       <button class="btn gold" id="poOpen">Жаңы заказ</button></div><div id="poForm"></div></div>
     <div id="map"></div>
-    <div class="legend"><span><i style="background:var(--ok)"></i>Бош айдоочу</span><span><i style="background:var(--navy)"></i>Сапардагы айдоочу</span><span><i style="background:var(--gold)"></i>Айдоочу изделүүдө</span><span><i style="background:#378ADD"></i>Жүргүнчү күтүп турат</span></div>
+    <div class="legend"><label style="cursor:pointer"><input type="checkbox" id="lostT"> <i style="background:#D8443A"></i>Айдоочусуз калгандар (7 күн)</label><span><i style="background:var(--ok)"></i>Бош айдоочу</span><span><i style="background:var(--navy)"></i>Сапардагы айдоочу</span><span><i style="background:var(--gold)"></i>Айдоочу изделүүдө</span><span><i style="background:#378ADD"></i>Жүргүнчү күтүп турат</span></div>
     <div class="panel"><h3>Активдүү заказдар</h3><div id="act"></div></div>`;
   map = L.map("map", {zoomControl:true}).setView([41.0377, 72.7470], 12);
   setupArea(map, {minZoom:9, center:false});
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:"© OpenStreetMap"}).addTo(map);
   lyr = L.layerGroup().addTo(map); fitted = false; drawMap();
   PO.lyr = L.layerGroup().addTo(map);
+  const lostL = L.layerGroup().addTo(map);
+  $("#lostT").onchange = async e => {
+    lostL.clearLayers();
+    if (!e.target.checked) return;
+    const {lost} = await api("/api/a/lost?days=7");
+    lost.forEach(x => L.circleMarker([x.p_lat, x.p_lon], {radius:7, color:"#D8443A", fillColor:"#D8443A", fillOpacity:.45, weight:1})
+      .bindTooltip(new Date(x.created_at * 1000).toLocaleString("ru-RU", {day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit"})).addTo(lostL));
+    if (!lost.length) alert("Акыркы 7 күндө айдоочусуз калган заказ жок.");
+  };
   map.on("click", e => { if (!PO.pick) return; PO[PO.pick] = [e.latlng.lat, e.latlng.lng]; PO.pick = null; phoneForm(); });
   $("#poOpen").onclick = () => { Object.assign(PO, {open:true, p:null, d:null, pick:"p"}); phoneForm(); };
 }
@@ -179,6 +188,7 @@ function drawMap() {
   const act = $("#act");
   if (act) act.innerHTML = O.rides.length ? O.rides.map(r => `<div class="item"><div class="main"><b>${r.source === "phone" ? "📞 " : ""}№${r.id} · ${esc(r.passenger || "")} ${tag(r.status)}</b>
       ${r.note ? `<span class="muted">📝 ${esc(r.note)}</span>` : ""}
+      ${r.scheduled_at ? `<span class="muted">🕐 ${new Date(r.scheduled_at * 1000).toLocaleString("ru-RU", {day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit"})}</span>` : ""}
       <span class="muted">${esc(r.city)} · ${r.price ? r.price + " с" : "тариф"} · ${Math.floor(r.age / 60)} мүн мурун · ${esc(r.phone || "")}</span></div>
       <button class="btn bad" data-cx="${r.id}">Жокко чыгаруу</button></div>`).join("") : `<div class="empty">Азыр активдүү заказ жок.</div>`;
   act && act.querySelectorAll("[data-cx]").forEach(b => b.onclick = async () => {

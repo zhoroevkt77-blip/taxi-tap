@@ -68,6 +68,7 @@ def ride_view(r):
     v = {k: r[k] for k in ("id", "status", "city", "price", "dist_km", "surge",
                            "p_lat", "p_lon", "d_lat", "d_lon", "cancel_by")}
     v["rated"] = core.rated(r["id"])
+    v["scheduled_at"] = r.get("scheduled_at")
     v["discount"] = r.get("discount") or 0
     v["pay"] = max(0, (r["price"] or 0) - v["discount"]) if r["price"] else None
     v["cancel_by_me"] = r["cancel_by"] == r["passenger"]
@@ -338,7 +339,11 @@ class H(BaseHTTPRequestHandler):
                 if err:
                     return self._json({"error": "promo", "message": err}, 400)
                 promo = core.promo_norm(b.get("promo"))
-            rid = core.create_ride(uid, q, p[0], p[1], *(d or (None, None)), promo=promo, discount=disc)
+            at = _num(b.get("at"))
+            if at is not None and not (core.now() + core.SCHEDULE_MIN - 120 <= at <= core.now() + core.SCHEDULE_MAX):
+                return self._json({"error": "bad_time"}, 400)
+            rid = core.create_ride(uid, q, p[0], p[1], *(d or (None, None)), promo=promo, discount=disc,
+                                   scheduled_at=at)
             return self._json({"ride": ride_view(core.get_ride(rid))})
         if path == "/api/cancel":
             r = core.active_ride_of(uid)
@@ -425,6 +430,8 @@ class H(BaseHTTPRequestHandler):
             return self._json({"drivers": rows})
         if action == "rides":
             return self._json({"rides": core.admin_rides()})
+        if action == "lost":
+            return self._json({"lost": core.lost_orders(int((q.get("days") or ["7"])[0]))})
         if action == "promos":
             return self._json({"promos": core.list_promos()})
         if action == "tariffs":

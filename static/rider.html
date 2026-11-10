@@ -317,9 +317,18 @@ async function viewQuote() {
   render(`<div class="row"><span class="bul"></span><div><b>${esc(S.fromAddr)}</b></div></div>
     <div class="row"><span class="bul to"></span><div><b>${S.to ? esc(S.toAddr) : "Айдоочуга айтам"}</b></div></div>
     <div class="tariff"><div><b>${q.fixed ? "Шаар аралык" : "Стандарт"}</b><div class="muted">${q.fixed ? "Белгиленген баа · " + q.dist_km + " км" : sub}${q.surge > 1 ? ` · ⚡ ×${q.surge}` : ""}</div></div><div class="price" id="qp">${price}</div></div>
-    <div id="promoBox"><button class="btn ghost" id="promoOpen" style="padding:10px;font-size:14px;font-weight:600">🎁 Промокод бар</button></div>
+    <div class="two"><div id="promoBox"><button class="btn ghost" id="promoOpen" style="padding:10px;font-size:14px;font-weight:600">🎁 Промокод</button></div>
+      <div id="whenBox"><button class="btn ghost" id="whenOpen" style="padding:10px;font-size:14px;font-weight:600">🕐 Алдын ала</button></div></div>
     <button class="btn main" id="order">Чакыруу</button><button class="btn ghost" id="back">Артка</button>`);
-  S.promo = null;
+  S.promo = null; S.at = null;
+  $("#whenOpen").onclick = () => {
+    const pad = n => String(n).padStart(2, "0"), fmt = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    const min = new Date(Date.now() + 25 * 60000), max = new Date(Date.now() + 3 * 86400000);
+    $("#whenBox").innerHTML = `<input class="f" type="datetime-local" id="when" min="${fmt(min)}" max="${fmt(max)}" value="${fmt(new Date(Date.now() + 60 * 60000))}" style="margin:10px 0 0;padding:10px">`;
+    const upd = () => { const t = new Date($("#when").value).getTime(); S.at = t ? Math.round(t / 1000) : null;
+      $("#order").textContent = S.at ? "Алдын ала заказ берүү" : "Чакыруу"; };
+    $("#when").onchange = upd; upd();
+  };
   $("#promoOpen").onclick = () => {
     $("#promoBox").innerHTML = `<div class="two" style="margin-top:10px"><input class="f" id="pc" placeholder="ТАП50" style="margin:0;text-transform:uppercase">
       <button class="btn ghost" id="pcGo" style="margin:0;flex:0 0 120px">Колдонуу</button></div><div class="err" id="pcEr"></div>`;
@@ -333,9 +342,10 @@ async function viewQuote() {
   };
   $("#order").onclick = async () => {
     $("#order").disabled = true;
-    const r = await api("/api/order", {p:S.from, d:S.to, promo:S.promo});
+    const r = await api("/api/order", {p:S.from, d:S.to, promo:S.promo, at:S.at});
     if (r.ride) { S.ride = r.ride; viewRide(); poll(); }
-    else { $("#order").disabled = false; alertBox(r.error === "have_active" ? "Сизде активдүү заказ бар." : r.message || "Ката кетти, кайра аракет кылыңыз."); }
+    else { $("#order").disabled = false; alertBox(r.error === "have_active" ? "Сизде активдүү заказ бар."
+      : r.error === "bad_time" ? "Убакытты 25 мүнөттөн 3 күнгө чейинки аралыкта тандаңыз." : r.message || "Ката кетти, кайра аракет кылыңыз."); }
   };
   $("#back").onclick = () => { map.setView(S.from, 15); viewIdle(); };
 }
@@ -400,7 +410,12 @@ function viewRide() {
   if (!rideLayer.getLayers().length) drawRoute();
   updateDriver();
   const cancelBtn = `<button class="btn ghost" id="cx">Заказды жокко чыгаруу</button>`;
-  if (r.status === "searching") {
+  if (r.status === "scheduled") {
+    const t = new Date(r.scheduled_at * 1000);
+    render(`<h2>🕐 Алдын ала заказ</h2>
+      <p class="price" style="margin:4px 0">${t.toLocaleDateString("ru-RU", {day:"numeric", month:"long"})}, ${t.toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"})}</p>
+      <p class="muted">Убактысынан 10 мүнөт мурун айдоочу изделе баштайт. Айдоочу табылганда кабар келет.</p>${cancelBtn}`);
+  } else if (r.status === "searching") {
     render(`<div class="pulse"></div><h2 style="text-align:center">Айдоочу изделүүдө</h2>
       <div class="bar"><i id="bar" style="width:0"></i></div>
       <p class="muted" style="text-align:center">Эң жакынкы айдоочуга сунуш кетти</p>${cancelBtn}`);
@@ -459,7 +474,7 @@ async function boot() {
   await areaReady;
   if (!me.auth) return viewLogin(me.pending, me.link);
   const r = await api("/api/ride");
-  if (r.ride && ["searching", "accepted", "arrived", "in_trip"].includes(r.ride.status)) {
+  if (r.ride && ["scheduled", "searching", "accepted", "arrived", "in_trip"].includes(r.ride.status)) {
     S.ride = r.ride; drawRoute(); viewRide(); poll();
   } else { viewIdle(); locate(false); }
 }

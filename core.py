@@ -265,7 +265,8 @@ NEW_COLUMNS = {
                 "reject_note": "TEXT"},
     "balance_tx": {"claimed": "REAL"},
     "rides": {"note": "TEXT", "source": "TEXT",   # source: web | phone (диспетчер)
-              "promo": "TEXT", "discount": "REAL DEFAULT 0"},
+              "promo": "TEXT", "discount": "REAL DEFAULT 0",
+              "scheduled_at": "REAL"},                     # алдын ала заказ
 }
 
 
@@ -722,13 +723,15 @@ def fixed_route_for(lat, lon):
 #                                            ↘ cancelled (каалаган кадамда)
 
 def create_ride(passenger, q, p_lat, p_lon, d_lat=None, d_lon=None, note=None, source="web",
-                promo=None, discount=0):
+                promo=None, discount=0, scheduled_at=None):
+    status = "scheduled" if scheduled_at else "searching"
     rid = query("INSERT INTO rides (passenger, city, p_lat, p_lon, d_lat, d_lon, dist_km, "
-                "price, surge, status, created_at, note, source, promo, discount) VALUES "
-                "(?, ?, ?, ?, ?, ?, ?, ?, ?, 'searching', ?, ?, ?, ?, ?)",
+                "price, surge, status, created_at, note, source, promo, discount, scheduled_at) VALUES "
+                "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (passenger, q["city"], p_lat, p_lon, d_lat, d_lon, q["dist_km"],
-                 q["price"], q["surge"], now(), note, source, promo, discount or 0), "id")
-    log_event(rid, "searching", passenger)
+                 q["price"], q["surge"], status, now(), note, source, promo,
+                 discount or 0, scheduled_at), "id")
+    log_event(rid, status, passenger)
     return rid
 
 
@@ -738,8 +741,33 @@ def get_ride(rid):
 
 def active_ride_of(uid):
     return query("SELECT * FROM rides WHERE (passenger=? OR driver=?) AND status IN "
-                 "('searching','accepted','arrived','in_trip') ORDER BY id DESC LIMIT 1",
+                 "('scheduled','searching','accepted','arrived','in_trip') ORDER BY id DESC LIMIT 1",
                  (uid, uid), "one")
+
+
+# Алдын ала заказ: убактысынан SCHEDULE_LEAD мүнөт мурун издөө башталат.
+SCHEDULE_LEAD = 10 * 60
+SCHEDULE_MIN, SCHEDULE_MAX = 20 * 60, 3 * 86400
+
+
+def activate_scheduled():
+    """Убактысы жеткен алдын ала заказдарды издөөгө чыгарат. Ошол заказдарды кайтарат."""
+    out = []
+    for r in query("SELECT * FROM rides WHERE status='scheduled' AND scheduled_at<=?",
+                   (now() + SCHEDULE_LEAD,), "all"):
+        n = query("UPDATE rides SET status='searching', created_at=? WHERE id=? AND status='scheduled'",
+                  (now(), r["id"]), "count")
+        if n:
+            log_event(r["id"], "searching", "system")
+            out.append(r)
+    return out
+
+
+def lost_orders(days=7):
+    """Айдоочу табылбай калган заказдар — кайсы жерде айдоочу жетишпейт."""
+    return query("SELECT id, p_lat, p_lon, created_at FROM rides WHERE status='cancelled' "
+                 "AND cancel_by='system' AND created_at>=? ORDER BY id DESC LIMIT 500",
+                 (now() - days * 86400,), "all")
 
 
 def log_event(rid, status, actor):
@@ -810,7 +838,7 @@ def _finish(rid, driver):
             add_tx(driver, -fee, "commission", ride_id=rid)
 
 
-def cancel(rid, by, allowed=("searching", "accepted", "arrived")):
+def cancel(rid, by, allowed=("scheduled", "searching", "accepted", "arrived")):
     r = get_ride(rid)
     if not r or r["status"] not in allowed:
         return None
@@ -1000,7 +1028,7 @@ def admin_overview():
     online = [d for d in drivers if is_available(d) or d["busy_ride"]]
     rides = query("SELECT r.*, u.name AS p_name, u.phone AS p_phone FROM rides r "
                   "LEFT JOIN users u ON u.uid=r.passenger WHERE r.status IN "
-                  "('searching','accepted','arrived','in_trip') ORDER BY r.id DESC", (), "all")
+                  "('scheduled','searching','accepted','arrived','in_trip') ORDER BY r.id DESC", (), "all")
     today = query("SELECT COUNT(*) AS n, COALESCE(SUM(price),0) AS s FROM rides "
                   "WHERE status='completed' AND completed_at>=?", (t0,), "one")
     lost = query("SELECT COUNT(*) AS n FROM rides WHERE status='cancelled' AND cancel_by='system' "
@@ -1021,6 +1049,7 @@ def admin_overview():
                    "d": [r["d_lat"], r["d_lon"]] if r["d_lat"] is not None else None,
                    "price": r["price"], "city": r["city"], "passenger": r["p_name"],
                    "note": r.get("note"), "source": r.get("source") or "web",
+                   "scheduled_at": r.get("scheduled_at"),
                    "phone": r["p_phone"], "driver": r["driver"],
                    "age": int(now() - (r["created_at"] or now()))} for r in rides],
         "pending_drivers": [{"uid": d["uid"], "name": d["name"], "phone": d["phone"],
