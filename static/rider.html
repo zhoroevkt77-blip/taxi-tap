@@ -98,7 +98,7 @@ input.f:focus{border-color:var(--navy)}
 .quick{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=7">
+<link rel="stylesheet" href="/static/theme.css?v=8">
 </head>
 <body>
 <div id="map"></div>
@@ -206,9 +206,10 @@ function locate(force) {
 }
 
 // ---------- көрүнүштөр ----------
-function render(html) { $("#view").innerHTML = html; positionLocate(); }
+function render(html) { $("#view").innerHTML = html; window.SHEET && SHEET.refresh(); positionLocate(); }
+window.addEventListener("sheetmove", () => positionLocate());
 function positionLocate() {
-  requestAnimationFrame(() => { $("#locBtn").style.bottom = ($("#sheet").offsetHeight + 14) + "px"; });
+  requestAnimationFrame(() => { $("#locBtn").style.bottom = ((window.SHEET ? SHEET.visible() : $("#sheet").offsetHeight) + 14) + "px"; });
 }
 
 function viewLogin(pending, link) {
@@ -474,6 +475,7 @@ function poll() {
     const changed = !S.ride || r.ride.status !== S.ride.status || !!r.ride.chained !== !!S.ride.chained;
     S.ride = r.ride; updateDriver();
     const live = ["accepted", "arrived", "in_trip"].includes(r.ride.status);
+    if (changed && window.SHEET) SHEET.expand();
     if (changed && (S.mode !== "chat" || !live)) viewRide(); else tickRide();
   }, 2000);
 }

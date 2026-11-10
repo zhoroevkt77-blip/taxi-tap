@@ -81,7 +81,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=7">
+<link rel="stylesheet" href="/static/theme.css?v=8">
 </head>
 <body>
 <div id="map"></div>
@@ -158,7 +158,7 @@ function beep() {
 }
 
 // ---------- көрүнүштөр ----------
-const render = h => $("#view").innerHTML = h;
+const render = h => { $("#view").innerHTML = h; window.SHEET && SHEET.refresh(); };
 const navUrl = p => `https://www.google.com/maps/dir/?api=1&destination=${p[0]},${p[1]}`;
 
 function viewLogin(pending, link, err) {
@@ -538,7 +538,7 @@ function show() {
   if (chatOpen && D.ride) return unread();
   chatOpen = false;
   const key = D.ride ? "ride" + D.ride.id + D.ride.status + (D.next ? D.next.id : "") : (D.online ? "on" : "off") + (D.in_area === false ? "x" : "");
-  if (key !== lastView) { lastView = key; D.ride ? viewRide() : viewHome(); }
+  if (key !== lastView) { if (D.ride && window.SHEET) SHEET.expand(); lastView = key; D.ride ? viewRide() : viewHome(); }
   else if (D.ride) unread();
   if (!D.ride) layer.clearLayers();
 }

@@ -144,3 +144,9 @@ body.adm th,body.adm .fset label{color:#3a3a44!important}
 .cls>div .muted{color:#3a3a44!important;font-weight:600}
 .search{color:#5a5a65!important}
 input.f::placeholder{color:#8a8a95}
+
+/* v8: барактын туткасы — чоңураак басылуучу аймак, ылдый/өйдө сүрүлөт */
+.grab{position:relative;width:100%!important;height:22px!important;margin:-6px auto 6px!important;background:transparent!important;cursor:grab;touch-action:none}
+.grab:before{content:"";position:absolute;left:50%;top:8px;width:44px;height:5px;margin-left:-22px;border-radius:3px;background:#d4d4db}
+.grab.down:after{content:"▲ Ачуу";position:absolute;right:4px;top:2px;font-size:11px;font-weight:800;color:#8a8a95}
+.sheet{will-change:transform}

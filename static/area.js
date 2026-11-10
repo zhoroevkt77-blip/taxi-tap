@@ -55,3 +55,47 @@ function bindInstall() {
   const b = document.getElementById("instBtn");
   if (b) b.onclick = async () => { window.INSTALL.prompt(); await window.INSTALL.userChoice; window.INSTALL = null; b.remove(); };
 }
+
+// ---------- Төмөнкү барак: өйдө-ылдый сүрүү (картаны көрүү үчүн) ----------
+// Тутканы (сызыкча) ылдый сүрсөңүз — барак жыйылып, карта көрүнөт; өйдө сүрсөңүз же бассаңыз — ачылат.
+window.SHEET = (function () {
+  let sheet = null, grab = null, cur = 0, collapsed = false, start = null, base = 0, moved = false;
+  const PEEK = 110;                                       // жыйылганда көрүнүп турган бөлүгү (px)
+  const max = () => sheet ? Math.max(0, sheet.offsetHeight - PEEK) : 0;
+  function set(y, anim) {
+    cur = Math.max(0, Math.min(max(), y));
+    sheet.style.transition = anim ? "transform .25s ease" : "none";
+    sheet.style.transform = cur ? `translateY(${cur}px)` : "";
+    window.dispatchEvent(new Event("sheetmove"));
+  }
+  function snap(c) { collapsed = c; set(c ? max() : 0, true); grab && grab.classList.toggle("down", c); }
+  function down(y) { start = y; base = cur; moved = false; }
+  function move(y, e) {
+    if (start === null) return;
+    const dy = y - start;
+    if (Math.abs(dy) > 5) moved = true;
+    if (moved) { e && e.cancelable && e.preventDefault(); set(base + dy, false); }
+  }
+  function up() {
+    if (start === null) return;
+    start = null;
+    if (!moved) return snap(!collapsed);                 // жөн эле басса — которуштурат
+    snap(cur > max() / 2);
+  }
+  function init(el) {
+    sheet = el; grab = el.querySelector(".grab"); if (!grab) return;
+    grab.addEventListener("touchstart", e => down(e.touches[0].clientY), {passive:true});
+    grab.addEventListener("touchmove", e => move(e.touches[0].clientY, e), {passive:false});
+    grab.addEventListener("touchend", up);
+    grab.addEventListener("mousedown", e => { down(e.clientY); e.preventDefault(); });
+    window.addEventListener("mousemove", e => move(e.clientY, e));
+    window.addEventListener("mouseup", up);
+  }
+  return {
+    init,
+    refresh() { if (sheet && collapsed) set(max(), false); },       // мазмун өзгөргөндө
+    expand() { if (sheet && collapsed) snap(false); },
+    visible() { return sheet ? window.innerHeight - sheet.getBoundingClientRect().top : 0; },
+  };
+})();
+document.addEventListener("DOMContentLoaded", () => { const s = document.querySelector(".sheet"); if (s && s.querySelector(".grab")) SHEET.init(s); });
