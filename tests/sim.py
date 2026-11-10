@@ -43,7 +43,9 @@ def frame(rp, dp, step, title, sub, wait=900):
     W = 400; ra, db = Image.open(a).resize((W, 866)), Image.open(b).resize((W, 866))
     c = Image.new("RGB", (W * 2 + 60, 866 + 190), "#fafafa"); d = ImageDraw.Draw(c)
     d.rounded_rectangle([20, 18, 20 + 56, 18 + 56], 16, fill="#ffc61a")
-    d.text((48, 46), str(step), font=F_B, fill="#16161a", anchor="mm")
+    import re as _re
+    title = _re.sub(r"[^\w\s«»—,.!?:/()+-]", "", title).strip()
+    d.text((48, 46), str(N[0] + 1), font=F_B, fill="#16161a", anchor="mm")
     d.text((92, 16), title, font=F_B, fill="#1b1b20")
     d.text((92, 62), sub, font=F_M, fill="#5f5f6a")
     for i, (im, lab) in enumerate([(ra, "🧳 ЖҮРГҮНЧҮ"), (db, "🚗 АЙДООЧУ")]):
@@ -94,6 +96,9 @@ try:
         for k in (0.35, 0.7):
             move(dc, DSTART, A, k)
         frame(r, dv, 5, "Айдоочу жүргүнчүгө келе жатат", "Картада унаа жылып, келүү убактысы азаят", 3000)
+        dv.click("#navGo")
+        frame(r, dv, "5б", "Айдоочу навигаторду тандайт", "Яндекс Навигатор / 2ГИС / Google — бир жолу тандалат, эстеп калат", 800)
+        dv.click("#ovlX")
         move(dc, DSTART, A, 1.0)
         dv.click("#step")
         rid = core.active_ride_of(DRV)["id"]
@@ -113,7 +118,23 @@ try:
         r.click("#stars span >> nth=4"); dv.click("#stars span >> nth=4")
         frame(r, dv, 11, "Бири-бирин баалашты", "Айдоочу кайра линияда — кийинки заказды күтөт", 800)
         dv.click("#ok"); dv.wait_for_timeout(1200)
-        frame(r, dv, 12, "Айдоочунун кабинети", "Бүгүнкү сапар, киреше жана баланс жаңыланды", 800)
+        frame(r, dv, 12, "Айдоочу кайра линияда", "Бүгүнкү сапар, киреше, баланс жана ⚡ активдүүлүк жаңыланды", 800)
+        # Яндекс Pro'догудай кошумчалар
+        for i, (la, lo) in enumerate([(41.0380, 72.7465), (41.0383, 72.7472), (41.0378, 72.7468), (41.0420, 72.7520), (41.0423, 72.7517), (41.0330, 72.7420)]):
+            u = core.phone_uid("0555 300 %03d" % i); core.ensure_user(u, "Ж%d" % i)
+            qq = core.quote(la, lo, 41.03, 72.756); x = core.create_ride(u, qq, la, lo, 41.03, 72.756); core.cancel(x, "system")
+        dv.evaluate("SHEET.collapse()")
+        dv.click("#heatBtn")
+        frame(r, dv, 13, "🔥 Заказ көп жерлер", "Акыркы 2 саатта заказ болгон жерлер — кызыл: эң көп, айдоочу ошол жакка барат", 2200)
+        dv.click("#sosBtn")
+        frame(r, dv, 14, "🆘 SOS баскычы", "112ге чалуу же админге жерин жана сапарын жөнөтүү", 800)
+        dv.click("#sosSend"); dv.wait_for_timeout(600)
+        frame(r, dv, 15, "Админге шашылыш кабар кетти", "Telegram'га: айдоочу, унаа, жүргүнчү жана картадагы жери", 600)
+        dv.click("#ovlX"); dv.evaluate("SHEET.expand()"); dv.wait_for_timeout(400)
+        dv.click("#stBadge"); dv.wait_for_timeout(1500)
+        dv.click("#cab"); dv.wait_for_timeout(1200)
+        dv.evaluate("document.querySelector('#chart').scrollIntoView({block:'start'})")
+        frame(r, dv, 16, "📊 Киреше графиги", "Акыркы 7 күн: киреше, сапар, орточо баа жана сааттык киреше", 800)
         br.close()
     ride = core.get_ride(rid); d = core.get_driver(DRV)
     print("RIDE", ride["status"], ride["price"], "balance", d["balance"])

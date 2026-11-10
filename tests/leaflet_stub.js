@@ -33,6 +33,10 @@ Line.prototype={addTo(g){g.items.push(this);this.m=g.m;this.el=document.createEl
  this.el.setAttribute("style","position:absolute;inset:0;width:100%;height:100%;pointer-events:none");this.m.ov.prepend(this.el);this.m.layers.push(this);this._draw();return this},
  remove(){this.el&&this.el.remove()},_draw(){if(!this.el)return;const d=this.pts.map((p,i)=>(i?"L":"M")+this.m.xy(p).join(" ")).join(" ");
  this.el.innerHTML=`<path d="${d}" stroke="${this.o.color}" stroke-width="${this.o.weight}" stroke-dasharray="${this.o.dashArray||""}" fill="none" stroke-linecap="round"/>`}};
-window.L={map:id=>new Map(id),tileLayer:()=>({addTo(){}}),layerGroup:()=>new Group(),marker:(p,o)=>new Marker(p,o),
+function Circ(c,o){this.p=c;this.o=o}
+Circ.prototype={addTo(g){if(g instanceof Group){g.items.push(this);this.m=g.m;}else this.m=g;this.el=document.createElement("div");this.m.ov.prepend(this.el);this.m.layers.push(this);this._draw();return this},
+ remove(){this.el&&this.el.remove()},_draw(){if(!this.el)return;const [x,y]=this.m.xy(this.p);const mpp=156543*Math.cos(this.p[0]*Math.PI/180)/Math.pow(2,this.m.z);const r=this.o.radius/mpp;
+ this.el.style.cssText=`position:absolute;left:${x-r}px;top:${y-r}px;width:${2*r}px;height:${2*r}px;border-radius:50%;background:${this.o.fillColor};opacity:${this.o.fillOpacity};pointer-events:none`}};
+window.L={circle:(c,o)=>new Circ(c,o),map:id=>new Map(id),tileLayer:()=>({addTo(){}}),layerGroup:()=>new Group(),marker:(p,o)=>new Marker(p,o),
  divIcon:o=>o,polyline:(p,o)=>new Line(p,o),latLngBounds:a=>({a:a[0],b:a[1]})};
 })();

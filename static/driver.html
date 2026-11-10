@@ -197,7 +197,7 @@ function header() {
   $("#earn").classList.toggle("hide", !act); $("#stBadge").classList.toggle("hide", !act); $("#tools").classList.toggle("hide", !act);
   if (!act) return;
   $("#earnV").textContent = D.today.earned + " с";
-  $("#stBadge").innerHTML = D.ride ? "🚕 Сапарда" : D.online ? "🟢 Линияда" : "⚪ Офлайн · <u>чыгуу</u>";
+  $("#stBadge").innerHTML = D.ride ? "🚕 Сапарда" : D.online ? "🟢 Линияда" : "▶ Линияга чыгуу";
   $("#stBadge").classList.toggle("on", D.online || !!D.ride);
   $("#sosBtn").classList.toggle("hide", !(D.online || D.ride));
 }
