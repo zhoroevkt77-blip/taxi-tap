@@ -43,7 +43,27 @@ async function setupArea(map, opts = {}) {
 // ---------- тиркеме катары орнотуу (PWA) ----------
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
 window.INSTALL = null;
-window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); window.INSTALL = e; });
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); window.INSTALL = e; instBar(); });
+window.addEventListener("appinstalled", () => { window.INSTALL = null; const x = document.getElementById("instBar"); if (x) x.remove(); });
+// Сайт ачылганда эле өйдө жакта «Орнотуу» тилкеси чыгат (жапса — 3 күн чыкпайт)
+function instBar() {
+  if (window.matchMedia("(display-mode: standalone)").matches || navigator.standalone) return;
+  try { if (Date.now() - (+localStorage.getItem("instNo") || 0) < 3 * 864e5) return; } catch (e) {}
+  if (document.getElementById("instBar") || !document.body) return;
+  const ios = /iphone|ipad/i.test(navigator.userAgent);
+  const can = !!window.INSTALL;
+  const d = document.createElement("div"); d.id = "instBar";
+  d.innerHTML = `<img src="/static/icon-192.png" alt=""><div><b>Такси ТАП! тиркемеси</b><small>${can ? "Телефонго орнотуп алыңыз — бир басуу менен ачылат"
+    : ios ? "Safari: «Бөлүшүү» ⬆️ → «На экран „Домой“»" : "Браузердин менюсу ⋮ → «Башкы экранга кошуу»"}</small></div>
+    ${can ? `<button id="instGo">Орнотуу</button>` : ""}<button id="instX" aria-label="Жабуу">✕</button>`;
+  document.body.appendChild(d);
+  d.querySelector("#instX").onclick = () => { try { localStorage.setItem("instNo", Date.now()); } catch (e) {} d.remove(); };
+  const g = d.querySelector("#instGo");
+  if (g) g.onclick = async () => { if (!window.INSTALL) return d.remove(); window.INSTALL.prompt(); const r = await window.INSTALL.userChoice; window.INSTALL = null; d.remove();
+    if (r && r.outcome !== "accepted") try { localStorage.setItem("instNo", Date.now()); } catch (e) {} };
+}
+// Браузер өзү сунуштабаса (Яндекс, Samsung, iPhone) — 4 секунддан кийин колдонмо көрсөтөбүз
+window.addEventListener("load", () => setTimeout(() => { if (!window.INSTALL && /android|iphone|ipad/i.test(navigator.userAgent)) instBar(); }, 4000));
 function installHTML() {
   if (window.matchMedia("(display-mode: standalone)").matches) return "";
   const ios = /iphone|ipad/i.test(navigator.userAgent);
