@@ -14,7 +14,7 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--paper);overflow:hidden}
 #map{position:fixed;inset:0;z-index:1}
-.top{position:fixed;top:max(12px,env(safe-area-inset-top));left:12px;right:12px;z-index:5;display:flex;justify-content:space-between;align-items:center;pointer-events:none}
+.top{position:fixed;top:max(12px,env(safe-area-inset-top));left:12px;right:12px;z-index:5;display:flex;justify-content:space-between;align-items:flex-start;pointer-events:none}
 .logo{pointer-events:auto;background:var(--navy);color:#fff;font-weight:800;font-size:16px;padding:10px 14px;border-radius:14px;letter-spacing:.2px}
 .logo b{color:var(--gold2)}
 .round{pointer-events:auto;width:46px;height:46px;border-radius:50%;background:#fff;border:0;box-shadow:0 2px 10px rgba(20,20,30,.15);display:grid;place-items:center;font-size:20px;cursor:pointer}
@@ -81,13 +81,14 @@ input.f:focus{border-color:var(--navy)}
 .quick{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=1">
+<link rel="stylesheet" href="/static/theme.css?v=2">
 </head>
 <body>
 <div id="map"></div>
 
 <div class="top">
-  <div class="logo"><img src="/static/icon-192.png" alt="">Такси <b>ТАП!</b></div>
+  <div class="lcol"><div class="logo"><img src="/static/icon-192.png" alt="">Такси <b>ТАП!</b></div>
+    <div class="role"><a class="on">🧳 Жүргүнчүмүн</a><a href="/driver">🚗 Айдоочумун</a></div></div>
   <button class="round" id="menuBtn" aria-label="Меню">☰</button>
 </div>
 

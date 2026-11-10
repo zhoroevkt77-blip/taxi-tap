@@ -13,11 +13,12 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--paper);overflow:hidden}
 #map{position:fixed;inset:0;z-index:1}
-.top{position:fixed;top:max(12px,env(safe-area-inset-top));left:12px;right:12px;z-index:5;display:flex;gap:8px;align-items:center}
+.top{position:fixed;top:max(12px,env(safe-area-inset-top));left:12px;right:12px;z-index:5;display:flex;gap:8px;align-items:flex-start}
 .logo{background:var(--navy);color:#fff;font-weight:800;font-size:15px;padding:10px 12px;border-radius:14px}
 .logo b{color:var(--gold2)}
 .pill{background:#fff;border-radius:14px;padding:8px 12px;box-shadow:0 2px 10px rgba(20,20,30,.15);font-size:13px;line-height:1.2}
-.pill b{display:block;font-size:16px}
+.pill b{display:block;font-size:16px;white-space:nowrap}
+.rcol{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:8px}.rcol .state{margin-left:0}
 .state{margin-left:auto;font-weight:700;font-size:13px;padding:10px 12px;border-radius:14px;background:#fff;box-shadow:0 2px 10px rgba(20,20,30,.15)}
 .state.on{background:var(--ok);color:#fff}
 .sheet{position:fixed;left:0;right:0;bottom:0;z-index:6;background:#fff;border-radius:22px 22px 0 0;padding:10px 16px calc(16px + env(safe-area-inset-bottom));box-shadow:0 -6px 24px rgba(20,20,30,.12);max-height:86vh;overflow:auto}
@@ -80,14 +81,15 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=1">
+<link rel="stylesheet" href="/static/theme.css?v=2">
 </head>
 <body>
 <div id="map"></div>
 <div class="top">
-  <div class="logo"><img src="/static/icon-192.png" alt=""><b>ТАП!</b><span class="ver">Айдоочу</span></div>
-  <div class="pill hide" id="earn"><span class="muted">Бүгүн</span><b id="earnV">0 с</b></div>
-  <div class="state hide" id="stBadge">Офлайн</div>
+  <div class="lcol"><div class="logo"><img src="/static/icon-192.png" alt="">Такси <b>ТАП!</b></div>
+    <div class="role"><a href="/">🧳 Жүргүнчүмүн</a><a class="on">🚗 Айдоочумун</a></div></div>
+  <div class="rcol"><div class="state hide" id="stBadge">Офлайн</div>
+    <div class="pill hide" id="earn"><span class="muted">Бүгүн</span><b id="earnV">0 с</b></div></div>
 </div>
 <div class="sheet"><div class="grab"></div><div id="view"></div></div>
 <div class="offer hide" id="offer"><div class="ocard" id="ocard"></div></div>
@@ -201,7 +203,7 @@ const clsTag = c => c && c !== "econom" ? `<span class="tag g">${ICON[c] || ""} 
 function homeHTML() {
   const h = D.home || {};
   if (!h.set) return `<div class="sw"><div><b>🏠 Үйгө карай</b><div class="muted">Үйүңүздүн жагына бара турган заказдар гана келет. Адегенде үйүңүздү белгилеңиз.</div></div>
-    <button class="btn ghost" id="hset" style="width:auto;margin:0;padding:10px 12px;font-size:14px">Ушул жер — үйүм</button></div>`;
+    <button class="btn ghost" id="hset" style="width:auto;margin:0;padding:10px 12px;font-size:14px;white-space:nowrap;flex:none">Ушул жер — үйүм</button></div>`;
   return `<div class="sw"><div><b>🏠 Үйгө карай</b><div class="muted">${h.on ? "Күйүк: үйүңүздүн жагына заказдар гана келет" : `Бүгүн дагы ${h.left} жолу күйгүзсө болот`}</div>
     <a href="#" id="hset" class="muted" style="font-size:12px">Үйдүн жерин жаңыртуу (азыркы жериңиз)</a></div>
     <input type="checkbox" id="hon" ${h.on ? "checked" : ""} ${!h.on && !h.left ? "disabled" : ""} style="width:24px;height:24px"></div>`;
