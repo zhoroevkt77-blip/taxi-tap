@@ -272,6 +272,7 @@ function viewRide() {
   render(`<h2>${title}</h2><div class="muted" id="rinfo" style="margin:-6px 0 6px"></div>
     <div class="row"><span class="bul"></span><div style="flex:1"><b>${esc(r.passenger)}</b><div class="muted">${r.price ? r.price + " сом" : "Тариф боюнча"}${r.dist_km ? " · ~" + r.dist_km + " км" : ""}</div></div></div>
     ${r.d ? "" : `<div class="row"><span class="bul to"></span><div class="muted">Бара турган жерин жүргүнчү өзү айтат</div></div>`}
+    ${r.note ? `<div class="note">📝 ${esc(r.note)}</div>` : ""}
     <div class="two"><a class="btn ghost" href="tel:${esc(r.phone)}">📞 Чалуу</a>${target ? `<a class="btn ghost" href="${navUrl(target)}" target="_blank">🧭 Навигатор</a>` : ""}</div>
     <button class="btn ${next[1]}" id="step">${next[0]}</button>
     ${r.status !== "in_trip" ? `<button class="btn red" id="cx">Жокко чыгаруу</button>` : ""}`);
@@ -296,7 +297,8 @@ function showOffer() {
   const C = 2 * Math.PI * 32, frac = o.left / o.total;
   $("#ocard").innerHTML = `<div style="display:flex;align-items:center;gap:14px">
       <div style="flex:1"><div class="muted">Жаңы заказ</div><div class="oprice">${o.price ? o.price + " с" : "Тариф"}</div>
-      <div class="muted">Сизден ${o.to_pickup_km} км${o.has_dest ? " · сапар ~" + o.dist_km + " км" : " · багыты айтылат"}</div></div>
+      <div class="muted">Сизден ${o.to_pickup_km} км${o.has_dest ? " · сапар ~" + o.dist_km + " км" : " · багыты айтылат"}</div>
+      ${o.note ? `<div class="muted">📝 ${esc(o.note)}</div>` : ""}</div>
       <div class="ring"><svg width="74" height="74"><circle cx="37" cy="37" r="32" stroke="#E1E7F1" stroke-width="7" fill="none"/>
       <circle cx="37" cy="37" r="32" stroke="#C9A03A" stroke-width="7" fill="none" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - frac)}"/></svg><span>${o.left}</span></div></div>
     <button class="btn go" id="acc">Алам</button><button class="btn ghost" id="dec">Жок</button>`;

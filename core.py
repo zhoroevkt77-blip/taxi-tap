@@ -260,6 +260,7 @@ NEW_COLUMNS = {
     "drivers": {"doc_license": "TEXT", "doc_techpass": "TEXT", "doc_car": "TEXT",
                 "reject_note": "TEXT"},
     "balance_tx": {"claimed": "REAL"},
+    "rides": {"note": "TEXT", "source": "TEXT"},   # source: web | phone (диспетчер)
 }
 
 
@@ -657,12 +658,12 @@ def quote(p_lat, p_lon, d_lat=None, d_lon=None):
 # searching → accepted → arrived → in_trip → completed
 #                                            ↘ cancelled (каалаган кадамда)
 
-def create_ride(passenger, q, p_lat, p_lon, d_lat=None, d_lon=None):
+def create_ride(passenger, q, p_lat, p_lon, d_lat=None, d_lon=None, note=None, source="web"):
     rid = query("INSERT INTO rides (passenger, city, p_lat, p_lon, d_lat, d_lon, dist_km, "
-                "price, surge, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, "
-                "'searching', ?)",
+                "price, surge, status, created_at, note, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, "
+                "'searching', ?, ?, ?)",
                 (passenger, q["city"], p_lat, p_lon, d_lat, d_lon, q["dist_km"],
-                 q["price"], q["surge"], now()), "id")
+                 q["price"], q["surge"], now(), note, source), "id")
     log_event(rid, "searching", passenger)
     return rid
 
@@ -952,6 +953,7 @@ def admin_overview():
         "rides": [{"id": r["id"], "status": r["status"], "p": [r["p_lat"], r["p_lon"]],
                    "d": [r["d_lat"], r["d_lon"]] if r["d_lat"] is not None else None,
                    "price": r["price"], "city": r["city"], "passenger": r["p_name"],
+                   "note": r.get("note"), "source": r.get("source") or "web",
                    "phone": r["p_phone"], "driver": r["driver"],
                    "age": int(now() - (r["created_at"] or now()))} for r in rides],
         "pending_drivers": [{"uid": d["uid"], "name": d["name"], "phone": d["phone"],

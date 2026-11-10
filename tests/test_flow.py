@@ -428,6 +428,19 @@ class Http(unittest.TestCase):
         self.assertEqual(adm("/api/a/area", {"points": pts})["source"], "custom")
         self.assertEqual(adm("/api/a/area", {"points": pts[:2]})["error"], "bad_points")
         adm("/api/a/area", {"reset": True})
+        # диспетчер: телефон заказ
+        r = adm("/api/a/order", {"phone": "0555 999 000", "name": "Чалган эже", "note": "базардын жанында",
+                                 "p": list(KARAKOL)})
+        self.assertEqual(r["ride"]["status"], "searching")
+        self.assertEqual(adm("/api/a/order", {"phone": "0555 999 000", "p": list(KARAKOL)})["error"], "have_active")
+        self.assertEqual(drv("/api/a/order", {"phone": "0555 999 001", "p": list(KARAKOL)})["error"], "auth")
+        ov = adm("/api/a/overview")
+        self.assertTrue(any(x["source"] == "phone" and x["note"] == "базардын жанында" for x in ov["rides"]))
+        dispatch.tick()
+        st = drv("/api/d/state")
+        if st["offer"]:
+            self.assertEqual(st["offer"]["note"], "базардын жанында")
+        adm("/api/a/cancel", {"id": r["ride"]["id"]})
         # каржы: админ гана өзгөртөт
         self.assertEqual(drv("/api/a/finance", {"percent": 1})["error"], "auth")
         self.assertEqual(adm("/api/a/finance", {"percent": 5, "free_until": "2099-01-01"})["pct_now"], 0)

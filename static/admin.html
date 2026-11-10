@@ -117,6 +117,9 @@ function viewMap() {
     <div class="card"><span>Активдүү заказ</span><b>${s.active}</b><span>${s.searching} изделүүдө</span></div>
     <div class="card"><span>Бүгүн бүттү</span><b>${s.done_today}</b><span>${s.lost_today} айдоочусуз калды</span></div>
     <div class="card"><span>Бүгүнкү жүгүртүү</span><b>${s.gross_today.toLocaleString("ru-RU")} с</b><span>комиссия ${s.fee_today} с</span></div></div>
+    <div class="panel" id="po"><div class="item"><div class="main"><b>📞 Телефон аркылуу заказ</b>
+      <span class="muted">Кардар чалса — номерин жазып, картадан жерин басыңыз. Заказ жакынкы айдоочуга кетет, айдоочу кардарга өзү чалат.</span></div>
+      <button class="btn gold" id="poOpen">Жаңы заказ</button></div><div id="poForm"></div></div>
     <div id="map"></div>
     <div class="legend"><span><i style="background:var(--ok)"></i>Бош айдоочу</span><span><i style="background:var(--navy)"></i>Сапардагы айдоочу</span><span><i style="background:var(--gold)"></i>Айдоочу изделүүдө</span><span><i style="background:#378ADD"></i>Жүргүнчү күтүп турат</span></div>
     <div class="panel"><h3>Активдүү заказдар</h3><div id="act"></div></div>`;
@@ -124,6 +127,44 @@ function viewMap() {
   setupArea(map, {minZoom:9, center:false});
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:"© OpenStreetMap"}).addTo(map);
   lyr = L.layerGroup().addTo(map); fitted = false; drawMap();
+  PO.lyr = L.layerGroup().addTo(map);
+  map.on("click", e => { if (!PO.pick) return; PO[PO.pick] = [e.latlng.lat, e.latlng.lng]; PO.pick = null; phoneForm(); });
+  $("#poOpen").onclick = () => { Object.assign(PO, {open:true, p:null, d:null, pick:"p"}); phoneForm(); };
+}
+
+// ---------- телефон заказ (диспетчер) ----------
+const PO = {open:false, p:null, d:null, pick:null, lyr:null};
+async function phoneForm() {
+  const box = $("#poForm"); if (!box) return;
+  PO.lyr && PO.lyr.clearLayers();
+  if (!PO.open) { box.innerHTML = ""; return; }
+  if (PO.p) L.marker(PO.p, {icon:dot("#378ADD")}).addTo(PO.lyr);
+  if (PO.d) L.marker(PO.d, {icon:dot("#C9A03A")}).addTo(PO.lyr);
+  const keep = id => ($("#" + id) || {}).value || "";
+  const vals = {ph:keep("poPh"), nm:keep("poNm"), nt:keep("poNt")};
+  let price = "";
+  if (PO.p) { const q = await api("/api/a/quote", {p:PO.p, d:PO.d});
+    price = !q.city ? `<span class="err">Бул жер иштөө аймагынан сырткары</span>`
+      : `Баасы: <b>${q.price ? q.price + " сом" : "тариф боюнча"}</b>${q.dist_km ? " · ~" + q.dist_km + " км" : ""}`; }
+  const pickTxt = k => PO.pick === k ? "👆 Картадан басыңыз…" : PO[k] ? "✓ Белгиленди (өзгөртүү)" : (k === "p" ? "Картадан белгилөө" : "Белгилөө (милдеттүү эмес)");
+  box.innerHTML = `<div class="fset">
+      <div><label>Телефон</label><input class="f" id="poPh" inputmode="tel" placeholder="0700 123 456" value="${esc(vals.ph)}"></div>
+      <div><label>Аты</label><input class="f" id="poNm" placeholder="Айгүл эже" value="${esc(vals.nm)}"></div>
+      <div><label>Кайдан</label><button class="btn" id="poP" style="width:100%">${pickTxt("p")}</button></div>
+      <div><label>Кайда</label><button class="btn" id="poD" style="width:100%">${pickTxt("d")}</button></div>
+      <div style="grid-column:1/-1"><label>Белги (айдоочуга көрүнөт)</label><input class="f" id="poNt" placeholder="Базардын жанында, көк дарбаза" value="${esc(vals.nt)}"></div>
+    </div><div style="padding:0 14px 14px"><div class="muted" style="margin-bottom:8px">${price}</div>
+      <button class="btn ok" id="poGo">Заказ берүү</button> <button class="btn" id="poX">Жабуу</button> <span class="err" id="poEr"></span></div>`;
+  $("#poP").onclick = () => { PO.pick = "p"; phoneForm(); };
+  $("#poD").onclick = () => { PO.pick = "d"; phoneForm(); };
+  $("#poX").onclick = () => { PO.open = false; phoneForm(); };
+  $("#poGo").onclick = async () => {
+    if (!PO.p) return $("#poEr").textContent = "Кайдан экенин картадан басыңыз.";
+    const r = await api("/api/a/order", {phone:$("#poPh").value, name:$("#poNm").value, note:$("#poNt").value, p:PO.p, d:PO.d});
+    if (r.error) return $("#poEr").textContent = {bad_phone:"Номерди толук жазыңыз.", have_active:"Бул номерде активдүү заказ бар.",
+      no_city:"Бул жер иштөө аймагынан сырткары.", bad_point:"Жерди белгилеңиз."}[r.error] || "Ката.";
+    PO.open = false; phoneForm(); refresh();
+  };
 }
 const dot = c => L.divIcon({className:"", html:`<div class="mk" style="background:${c}"></div>`, iconSize:[24,24], iconAnchor:[12,12]});
 function drawMap() {
@@ -136,7 +177,8 @@ function drawMap() {
   });
   if (!fitted && pts.length) { map.fitBounds(L.latLngBounds(pts.length > 1 ? pts : [pts[0], pts[0]]), {padding:[40, 40], maxZoom:15}); fitted = true; }
   const act = $("#act");
-  if (act) act.innerHTML = O.rides.length ? O.rides.map(r => `<div class="item"><div class="main"><b>№${r.id} · ${esc(r.passenger || "")} ${tag(r.status)}</b>
+  if (act) act.innerHTML = O.rides.length ? O.rides.map(r => `<div class="item"><div class="main"><b>${r.source === "phone" ? "📞 " : ""}№${r.id} · ${esc(r.passenger || "")} ${tag(r.status)}</b>
+      ${r.note ? `<span class="muted">📝 ${esc(r.note)}</span>` : ""}
       <span class="muted">${esc(r.city)} · ${r.price ? r.price + " с" : "тариф"} · ${Math.floor(r.age / 60)} мүн мурун · ${esc(r.phone || "")}</span></div>
       <button class="btn bad" data-cx="${r.id}">Жокко чыгаруу</button></div>`).join("") : `<div class="empty">Азыр активдүү заказ жок.</div>`;
   act && act.querySelectorAll("[data-cx]").forEach(b => b.onclick = async () => {

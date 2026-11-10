@@ -110,7 +110,7 @@ def driver_state(uid):
         st["offer"] = {"id": o["id"], "price": o["price"], "dist_km": o["dist_km"],
                        "to_pickup_km": round(core.haversine_km(d["lat"], d["lon"],
                                                                o["p_lat"], o["p_lon"]), 1),
-                       "has_dest": o["d_lat"] is not None,
+                       "has_dest": o["d_lat"] is not None, "note": o.get("note"),
                        "left": max(0, int(core.OFFER_SEC - (t - (o["offered_at"] or t)))),
                        "total": int(core.OFFER_SEC)}
     if d.get("busy_ride"):
@@ -120,6 +120,7 @@ def driver_state(uid):
             st["ride"] = {"id": r["id"], "status": r["status"], "price": r["price"],
                           "dist_km": r["dist_km"], "passenger": p.get("name") or "",
                           "phone": p.get("phone") or "", "p": [r["p_lat"], r["p_lon"]],
+                          "note": r.get("note"),
                           "d": [r["d_lat"], r["d_lon"]] if r["d_lat"] is not None else None}
     return st
 
@@ -452,6 +453,31 @@ class H(BaseHTTPRequestHandler):
                 return self._json({"error": "bad"}, 400)
             core.set_tariff(city, *vals)
             return self._json({"ok": True})
+        if action == "order":
+            # Диспетчер: телефон аркылуу келген заказ
+            phone, name, note = _txt(b.get("phone"), 20), _txt(b.get("name"), 40), _txt(b.get("note"), 200)
+            uid = core.phone_uid(phone)
+            p, d = _point(b.get("p")), _point(b.get("d"))
+            if not uid:
+                return self._json({"error": "bad_phone"}, 400)
+            if not p:
+                return self._json({"error": "bad_point"}, 400)
+            if core.active_ride_of(uid):
+                return self._json({"error": "have_active"}, 409)
+            q = core.quote(p[0], p[1], *(d or (None, None)))
+            if not q["city"]:
+                return self._json({"error": "no_city"}, 400)
+            u = core.ensure_user(uid, name)
+            core.set_user(uid, phone=uid[3:], **({"name": name} if name and not u.get("name") else {}))
+            rid = core.create_ride(uid, q, p[0], p[1], *(d or (None, None)), note=note or None,
+                                   source="phone")
+            return self._json({"ride": ride_view(core.get_ride(rid))})
+        if action == "quote":
+            p, d = _point(b.get("p")), _point(b.get("d"))
+            if not p:
+                return self._json({"error": "bad_point"}, 400)
+            q = core.quote(p[0], p[1], *(d or (None, None)))
+            return self._json({"city": q["city"], "price": q["price"], "dist_km": q["dist_km"]})
         if action == "finance":
             pct, mb = _num(b.get("percent")), _num(b.get("min_balance") or 0)
             fu = _txt(b.get("free_until"), 10) or None
