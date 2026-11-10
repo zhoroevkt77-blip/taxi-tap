@@ -57,6 +57,10 @@ TRAFFIC_FACTOR = _env_num("TRAFFIC_FACTOR", 1.3)   # OSRM убактысы бо�
 OSRM_URL = (os.environ.get("OSRM_URL") or "https://router.project-osrm.org").rstrip("/")
 
 # Радиус издөө убактысына жараша кеңейет: (секунд, км)
+# Сыноо үчүн гана: бир номер өзүнүн заказын айдоочу катары ала алат.
+# Чыныгы иште 0 болушу керек (жалган сапар, рейтинг топтоонун алдын алат).
+TEST_SELF_ORDER = os.environ.get("TEST_SELF_ORDER") == "1"
+
 RADIUS_STEPS = [(60, 3.0), (120, 5.0), (10 ** 9, 8.0)]
 
 # Мисал тарифтер — /tarif буйругу менен ар шаарга өзүнчө коюлат.

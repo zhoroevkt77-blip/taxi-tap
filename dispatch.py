@@ -29,7 +29,7 @@ def candidates(ride, radius_km):
     tried = set(json.loads(ride["tried"] or "[]"))
     out = []
     for d in core.online_drivers():
-        if d["uid"] in tried or d["uid"] == ride["passenger"]:
+        if d["uid"] in tried or (d["uid"] == ride["passenger"] and not core.TEST_SELF_ORDER):
             continue
         dist = core.haversine_km(ride["p_lat"], ride["p_lon"], d["lat"], d["lon"])
         if dist <= radius_km:

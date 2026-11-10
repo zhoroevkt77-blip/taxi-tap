@@ -114,6 +114,18 @@ class Ride(unittest.TestCase):
         self.assertEqual(core.get_ride(rid)["status"], "cancelled")
         self.assertEqual(out[0]["to"], p)
 
+    def test_self_order_only_in_test_mode(self):
+        d = make_driver("0700 000 051", "Өзү", NEAR)
+        rid = order(d)
+        dispatch.tick()
+        self.assertIsNone(core.get_ride(rid)["offered_to"])
+        core.TEST_SELF_ORDER = True
+        try:
+            dispatch.tick()
+            self.assertEqual(core.get_ride(rid)["offered_to"], d)
+        finally:
+            core.TEST_SELF_ORDER = False
+
     def test_cancel_notifies_driver(self):
         d = make_driver("0700 000 031", "В", NEAR)
         p = rider("0555 000 031")
