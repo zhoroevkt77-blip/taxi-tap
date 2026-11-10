@@ -35,7 +35,7 @@ main{padding:12px;max-width:1100px;margin:0 auto}
 .tag{font-size:12px;font-weight:700;padding:3px 8px;border-radius:8px;white-space:nowrap}
 .t-searching{background:#FAEEDA;color:#854F0B}.t-accepted,.t-arrived{background:#E6F1FB;color:#0C447C}
 .t-in_trip{background:#E1F5EE;color:#085041}.t-completed{background:#EAF3DE;color:#27500A}.t-cancelled{background:#F1EFE8;color:#5F5E5A}
-.t-active{background:#E1F5EE;color:#085041}.t-pending{background:#FAEEDA;color:#854F0B}.t-blocked{background:#FCEBEB;color:#A32D2D}
+.t-active{background:#E1F5EE;color:#085041}.t-pending{background:#FAEEDA;color:#854F0B}.t-blocked,.t-rejected{background:#FCEBEB;color:#A32D2D}
 .empty{padding:18px 14px;color:var(--soft);font-size:14px}
 input.f{font-size:15px;padding:9px 10px;border-radius:10px;border:1px solid var(--line);background:var(--paper);width:100%;color:var(--ink)}
 table{width:100%;border-collapse:collapse;font-size:14px}
@@ -49,6 +49,8 @@ td input.f{padding:7px 8px;max-width:90px}
 .proof{width:64px;height:64px;object-fit:cover;border-radius:8px;background:var(--paper);cursor:zoom-in}
 .mk{width:24px;height:24px;border-radius:50%;border:3px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.35)}
 .hide{display:none!important}
+.docs{display:flex;gap:8px;margin-top:8px}.docs a{display:block}.docs img{width:92px;height:68px;object-fit:cover;border-radius:8px;border:1px solid var(--line);background:var(--paper)}
+.docs span{display:block;font-size:11px;color:var(--soft);text-align:center;margin-top:2px}
 </style>
 </head>
 <body>
@@ -69,7 +71,7 @@ const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;
 const api = async (p, b) => (await fetch(p, b === undefined ? {credentials:"same-origin"} :
   {method:"POST", credentials:"same-origin", headers:{"Content-Type":"application/json"}, body:JSON.stringify(b)})).json();
 const ST = {searching:"Изделүүдө", accepted:"Айдоочу жолдо", arrived:"Күтүүдө", in_trip:"Жолдо", completed:"Бүттү", cancelled:"Жабылды",
-            active:"Активдүү", pending:"Текшерүүдө", blocked:"Бөгөттөлгөн"};
+            active:"Активдүү", pending:"Текшерүүдө", blocked:"Бөгөттөлгөн", rejected:"Четке кагылды"};
 const tag = s => `<span class="tag t-${s}">${ST[s] || s}</span>`;
 const when = t => t ? new Date(t * 1000).toLocaleString("ru-RU", {day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit"}) : "";
 let tab = "map", O = null, map = null, lyr = null, fitted = false, timer = null;
@@ -80,10 +82,10 @@ function login(pending, link) {
   $("#main").innerHTML = pending
     ? `<div class="login"><h2>Номерди ырастаңыз</h2><p class="muted">Telegram'да ботко өтүп, номериңизди жөнөтүңүз.</p>
        ${link ? `<a href="${esc(link)}" target="_blank"><button class="btn gold">Telegram'да ырастоо</button></a>` : ""}</div>`
-    : `<div class="login"><h2>Админ панели</h2><p class="muted">ADMIN_IDS'теги Telegram аккаунтуңуздун номери.</p>
+    : `<div class="login"><h2>Админ панели</h2><p class="muted">Админдин номери (ADMIN_PHONES же ADMIN_IDS).</p>
        <input class="f" id="ph" placeholder="+996 700 123 456" inputmode="tel"><div class="err" id="er"></div>
        <button class="btn gold" id="go">Кирүү</button></div>`;
-  if (pending) { const t = setInterval(async () => { if ((await api("/api/me?kind=admin")).auth) { clearInterval(t); boot(); } }, 2500); return; }
+  if (pending) { const t = setInterval(async () => { if ((await api("/api/me")).auth) { clearInterval(t); boot(); } }, 2500); return; }
   $("#go").onclick = async () => {
     const r = await api("/api/login", {phone:$("#ph").value, kind:"admin"});
     if (r.error) return $("#er").textContent = r.error === "not_admin" ? "Бул номер админ эмес." : "Номерди толук жазыңыз.";
@@ -130,16 +132,22 @@ function drawMap() {
 async function viewDrivers() {
   const {drivers} = await api("/api/a/drivers");
   const pend = drivers.filter(d => d.status === "pending"), rest = drivers.filter(d => d.status !== "pending");
+  const file = n => n ? `/api/a/file?n=${encodeURIComponent(n)}` : "";
+  const docs = d => `<div class="docs">${[["doc_license", "Күбөлүк"], ["doc_techpass", "Техпаспорт"], ["doc_car", "Унаа"]].map(([k, t]) =>
+      d[k] ? `<a href="${file(d[k])}" target="_blank"><img src="${file(d[k])}" alt="${t}" loading="lazy"><span>${t}</span></a>` : "").join("")}</div>`;
   const row = d => `<div class="item"><div class="main"><b>${esc(d.name)} ${tag(d.status)} ${d.is_online ? '<span class="tag t-in_trip">онлайн</span>' : ""}</b>
-      <span class="muted">${esc(d.phone)} · ${esc(d.car_color)} ${esc(d.car_model)}, ${esc(d.car_plate)}${d.status !== "pending" ? ` · ★ ${d.rating} · ${d.rides_done} сапар · баланс <b>${Math.round(d.balance)} с</b>` : ""}</span></div>
+      <span class="muted">${esc(d.phone)} · ${esc(d.car_color)} ${esc(d.car_model)}, ${esc(d.car_plate)}${d.status === "active" || d.status === "blocked" ? ` · ★ ${d.rating} · ${d.rides_done} сапар · баланс <b>${Math.round(d.balance)} с</b>` : ""}</span>
+      ${d.status === "rejected" && d.reject_note ? `<span class="muted">Себеби: ${esc(d.reject_note)}</span>` : ""}${d.status === "pending" ? docs(d) : ""}</div>
       ${d.status === "pending" ? `<button class="btn ok" data-a="approve" data-u="${esc(d.uid)}">Ырастоо</button><button class="btn bad" data-a="reject" data-u="${esc(d.uid)}">Баш тартуу</button>`
         : `<button class="btn" data-bal="${esc(d.uid)}">± Баланс</button>` + (d.status === "blocked"
           ? `<button class="btn ok" data-a="unblock" data-u="${esc(d.uid)}">Ачуу</button>` : `<button class="btn bad" data-a="block" data-u="${esc(d.uid)}">Бөгөттөө</button>`)}</div>`;
   $("#main").innerHTML = (pend.length ? `<div class="panel"><h3>Ырастоону күткөндөр (${pend.length})</h3>${pend.map(row).join("")}</div>` : "")
     + `<div class="panel"><h3>Бардык айдоочулар (${rest.length})</h3>${rest.map(row).join("") || `<div class="empty">Айдоочу жок.</div>`}</div>`;
   $("#main").querySelectorAll("[data-a]").forEach(b => b.onclick = async () => {
+    let reason = "";
     if (b.dataset.a === "block" && !confirm("Бөгөттөйсүзбү?")) return;
-    await api("/api/a/driver", {uid:b.dataset.u, action:b.dataset.a}); viewDrivers(); refresh();
+    if (b.dataset.a === "reject") { reason = prompt("Себеби (айдоочуга көрүнөт):", "Документтин сүрөтү бүдөмүк"); if (reason === null) return; }
+    await api("/api/a/driver", {uid:b.dataset.u, action:b.dataset.a, reason}); viewDrivers(); refresh();
   });
   $("#main").querySelectorAll("[data-bal]").forEach(b => b.onclick = async () => {
     const v = prompt("Канча сом кошуу (+) же кемитүү (−)? Мис: 500 же -100");
@@ -152,11 +160,11 @@ async function viewDrivers() {
 function viewTopups() {
   const t = O.pending_topups;
   $("#main").innerHTML = `<div class="panel"><h3>Текшерүүнү күткөн скриншоттор</h3>${t.length ? t.map(x => `<div class="item">
-      <a href="/api/a/proof?id=${x.id}" target="_blank"><img class="proof" src="/api/a/proof?id=${x.id}" alt="Чек" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'muted',textContent:'Сүрөт ботто'}))"></a>
-      <div class="main"><b>${esc(x.name)}</b><span class="muted">${esc(x.phone)} · ${when(x.at)} · #${x.id}</span></div>
-      <input class="f" style="max-width:110px" placeholder="Сумма" inputmode="numeric" id="am${x.id}">
+      <a href="/api/a/file?n=${encodeURIComponent(x.proof || "")}" target="_blank"><img class="proof" src="/api/a/file?n=${encodeURIComponent(x.proof || "")}" alt="Чек"></a>
+      <div class="main"><b>${esc(x.name)}</b><span class="muted">${esc(x.phone)} · ${when(x.at)} · айдоочу жазды: <b>${Math.round(x.claimed || 0)} с</b></span></div>
+      <input class="f" style="max-width:110px" placeholder="Сумма" inputmode="numeric" id="am${x.id}" value="${Math.round(x.claimed || 0) || ""}">
       <button class="btn ok" data-ok="${x.id}">Кошуу</button><button class="btn bad" data-no="${x.id}">Жок</button></div>`).join("")
-    : `<div class="empty">Азыр текшерүүнү күткөн чек жок. Айдоочулар скриншотту ботко жиберет.</div>`}</div>`;
+    : `<div class="empty">Азыр текшерүүнү күткөн чек жок.</div>`}</div>`;
   $("#main").querySelectorAll("[data-ok]").forEach(b => b.onclick = async () => {
     const v = +$("#am" + b.dataset.ok).value;
     if (!(v > 0)) { $("#am" + b.dataset.ok).style.borderColor = "var(--bad)"; return; }
@@ -211,8 +219,10 @@ function show(t) {
 }
 document.querySelectorAll("nav button").forEach(b => b.onclick = () => show(b.dataset.t));
 async function boot() {
-  const m = await api("/api/me?kind=admin");
+  const m = await api("/api/me");
   if (!m.auth) return login(m.pending, m.link);
+  if (!m.admin) { $("#main").innerHTML = `<div class="login"><h2>Кирүүгө уруксат жок</h2><p class="muted">Бул номер админ эмес.</p><button class="btn" id="lo">Башка номер</button></div>`;
+    $("#lo").onclick = async () => { await api("/api/logout", {}); location.reload(); }; return; }
   $("#nav").classList.remove("hide");
   await refresh(); show("map");
   clearInterval(timer); timer = setInterval(refresh, 4000);

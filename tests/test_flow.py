@@ -1,230 +1,292 @@
 # -*- coding: utf-8 -*-
 """
-Толук сценарий: жүргүнчү заказ берет, айдоочу алат, сапар бүтөт.
-Иштетүү: python -m unittest discover tests
+Такси ТАП! сыноолору. Иштетүү: python -m unittest discover tests
 """
+import base64
+import http.cookiejar
+import json
 import os
+import shutil
 import sys
 import tempfile
 import unittest
+import urllib.request
 
-_db = tempfile.mktemp(suffix=".db")
-os.environ.update(SQLITE_PATH=_db, ADMIN_IDS="900", COMMISSION_PCT="10", DATABASE_URL="")
+_tmp = tempfile.mkdtemp()
+os.environ.update(SQLITE_PATH=os.path.join(_tmp, "t.db"), DATA_DIR=_tmp, DATABASE_URL="",
+                  ADMIN_IDS="900", ADMIN_PHONES="0700 111 000", COMMISSION_PCT="10",
+                  WEB_DEV_LOGIN="1", SITE_URL="https://taxi.example.kg")
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import bot       # noqa: E402
 import core      # noqa: E402
 import dispatch  # noqa: E402
 import flow      # noqa: E402
+import web       # noqa: E402
 
 KARAKOL = (42.4907, 78.3936)
 NEAR = (42.4950, 78.3990)       # ~0.6 км
 FAR = (42.5300, 78.4500)        # ~6 км
 DEST = (42.4700, 78.4100)
-
-P, D1, D2, ADMIN = "tg:1", "tg:2", "tg:3", "tg:900"
-
-
-def texts(outs, to=None):
-    return [o.get("text", "") for o in outs if to is None or o["to"] == to]
+PNG = "data:image/png;base64," + base64.b64encode(
+    bytes.fromhex("89504e470d0a1a0a0000000d4948445200000001000000010806000000"
+                  "1f15c4890000000d49444154789c6360000002000154a24f5d0000000049454e44ae426082")).decode()
 
 
-def btn(outs, to, prefix):
-    for o in outs:
-        if o["to"] == to:
-            for row in o.get("buttons") or []:
-                for _, data in row:
-                    if data.startswith(prefix):
-                        return data
-    return None
+def make_driver(phone, name, pos=None, balance=0):
+    uid = core.phone_uid(phone)
+    core.ensure_user(uid, name)
+    core.set_user(uid, phone=uid[3:])
+    flow.register_driver(uid, name, "Camry", "Ак", "01 123 ABC",
+                         {"license": "a.jpg", "techpass": "b.jpg", "car": "c.jpg"})
+    flow.admin_driver(uid, "approve")
+    if balance:
+        core.add_tx(uid, balance, "topup")
+    if pos:
+        core.driver_location(uid, *pos, live_period=3600)
+    return uid
 
 
-class Flow(unittest.TestCase):
+def rider(phone, name="Жүргүнчү"):
+    uid = core.phone_uid(phone)
+    core.ensure_user(uid, name)
+    core.set_user(uid, phone=uid[3:])
+    return uid
+
+
+def order(uid, p=KARAKOL, d=DEST):
+    q = core.quote(p[0], p[1], *(d or (None, None)))
+    return core.create_ride(uid, q, p[0], p[1], *(d or (None, None)))
+
+
+def offline_all():
+    core.query("UPDATE drivers SET online=0, live_until=NULL, busy_ride=NULL")
+    core.query("UPDATE rides SET status='cancelled' WHERE status IN "
+               "('searching','accepted','arrived','in_trip')")
+
+
+class Ride(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         core.init_db()
 
-    def _driver(self, uid, name, pos):
-        flow.on_start(uid, name)
-        flow.on_button(uid, "lang:ky")
-        flow.on_text(uid, "🚗 Айдоочу болуу")
-        flow.on_contact(uid, "996700000%s" % uid[-1])
-        flow.on_text(uid, "Toyota Camry")
-        flow.on_text(uid, "ак")
-        out = flow.on_text(uid, "01 123 ABC")
-        data = btn(out, ADMIN, "adm:ok:")
-        self.assertEqual(data, "adm:ok:" + uid)
-        flow.on_button(ADMIN, data)
-        self.assertEqual(core.get_driver(uid)["status"], "active")
-        out = flow.on_location(uid, *pos, live_period=28800, date=core.now())
-        self.assertIn("онлайн", texts(out, uid)[0])
+    def setUp(self):
+        offline_all()
 
     def test_full_ride(self):
-        flow.on_start(ADMIN, "Админ")
-        self._driver(D1, "Асан", NEAR)
-        self._driver(D2, "Үсөн", FAR)
-        core.add_tx(D1, 1000, "topup")
-
-        # жүргүнчү
-        self.assertIn("Тилди", texts(flow.on_start(P, "Айгүл"))[0])
-        flow.on_button(P, "lang:ky")
-        flow.on_text(P, "🚕 Такси чакыруу")
-        out = flow.on_contact(P, "996555111222")
-        self.assertIn("Кайдан", texts(out)[0])
-        flow.on_location(P, *KARAKOL)
-        out = flow.on_location(P, *DEST)
-        self.assertIn("Каракол", texts(out)[0])
-        self.assertIn("сом", texts(out)[0])
-        out = flow.on_button(P, "ord:ok")
-        rid = core.active_ride_of(P)["id"]
-
-        # dispatch: эң жакын айдоочу (Асан) биринчи алат, Үсөн 5 км'ден ары
+        d1 = make_driver("0700 000 001", "Асан", NEAR, 1000)
+        make_driver("0700 000 002", "Үсөн", FAR)
+        p = rider("0555 000 001", "Айгүл")
+        rid = order(p)
         out = dispatch.tick()
-        self.assertEqual(btn(out, D1, "acc:"), "acc:%d" % rid)
-        self.assertIsNone(btn(out, D2, "acc:"))
-
-        # экинчи айдоочу ала албайт (сунуш ага эмес)
-        self.assertFalse(core.accept(rid, D2))
-
-        out = flow.on_button(D1, "acc:%d" % rid)
-        self.assertIn("Айдоочу табылды", "".join(texts(out, P)))
-        self.assertTrue(any(o.get("location") for o in out if o["to"] == D1))
-        self.assertEqual(core.get_driver(D1)["busy_ride"], rid)
-
-        flow.on_button(D1, "arr:%d" % rid)
-        flow.on_button(D1, "go:%d" % rid)
-        out = flow.on_button(D1, "fin:%d" % rid)
-        self.assertEqual(core.get_ride(rid)["status"], "completed")
+        self.assertEqual(core.get_ride(rid)["offered_to"], d1)          # эң жакыны
+        self.assertEqual([o["to"] for o in out], [d1])
+        self.assertEqual(out[0]["path"], "/driver")
+        self.assertIsNone(flow.driver_accept(core.phone_uid("0700 000 002"), rid))  # сунуш ага эмес
+        out = flow.driver_accept(d1, rid)
+        self.assertEqual(out[0]["to"], p)
+        self.assertIn("01 123 ABC", out[0]["text"])
+        self.assertIn("Айдоочу келди", flow.driver_step(d1, rid)[0]["text"])
+        self.assertEqual(flow.driver_step(d1, rid), [])                 # сапар башталды
+        self.assertIn("бүттү", flow.driver_step(d1, rid)[0]["text"])
         price = core.get_ride(rid)["price"]
-        self.assertAlmostEqual(core.get_driver(D1)["balance"], 1000 - price * 0.10, places=2)
-        self.assertIsNone(core.get_driver(D1)["busy_ride"])
+        self.assertAlmostEqual(core.get_driver(d1)["balance"], 1000 - price * 0.1, places=2)
+        self.assertTrue(core.rate(rid, p, 4))
+        self.assertFalse(core.rate(rid, p, 1))
+        self.assertEqual(core.get_driver(d1)["rating"], 4.0)
 
-        out = flow.on_button(P, "rate:%d:4" % rid)
-        self.assertEqual(core.get_driver(D1)["rating"], 4.0)
-        self.assertEqual(flow.on_button(P, "rate:%d:1" % rid), [])   # экинчи жолу болбойт
-
-    def test_timeout_then_next_driver(self):
-        u = "tg:5"
-        flow.on_start(u, "Бакыт")
-        core.set_user(u, phone="+996555000005")
-        flow.on_text(u, "🚕 Такси чакыруу")
-        flow.on_location(u, *KARAKOL)
-        flow.on_button(u, "skipdest")
-        flow.on_button(u, "ord:ok")
-        rid = core.active_ride_of(u)["id"]
-        # эки айдоочуну тең жакын, бош кылып коёбуз
-        for d, pos in ((D1, NEAR), (D2, (42.4920, 78.3950))):
-            core.set_driver(d, busy_ride=None, balance=500)
-            core.driver_location(d, *pos, live_period=3600)
-        first = core.get_ride(rid)
-        out = dispatch.tick()
-        offered = core.get_ride(rid)["offered_to"]
-        self.assertIn(offered, (D1, D2))
-        # мөөнөт өттү
+    def test_timeout_moves_to_next(self):
+        a = make_driver("0700 000 011", "А", NEAR)
+        b = make_driver("0700 000 012", "Б", (42.4920, 78.3950))
+        rid = order(rider("0555 000 011"), d=None)
+        dispatch.tick()
+        first = core.get_ride(rid)["offered_to"]
+        self.assertIn(first, (a, b))
         core.query("UPDATE rides SET offered_at=? WHERE id=?", (core.now() - 60, rid))
-        out = dispatch.tick()
-        self.assertIn("убактысы өттү", "".join(texts(out, offered)))
-        other = D2 if offered == D1 else D1
-        self.assertEqual(core.get_ride(rid)["offered_to"], other)
-        # жүргүнчү жокко чыгарат
-        out = flow.on_button(u, "pcx:%d" % rid)
-        self.assertEqual(core.get_ride(rid)["status"], "cancelled")
-        self.assertIsNotNone(first)
+        dispatch.tick()
+        self.assertEqual(core.get_ride(rid)["offered_to"], b if first == a else a)
 
-    def test_no_driver_after_max(self):
-        u = "tg:6"
-        flow.on_start(u, "Нурлан")
-        core.set_user(u, phone="+996555000006")
-        flow.on_text(u, "🚕 Такси чакыруу")
-        flow.on_location(u, 40.5283, 72.7985)   # Ош — айдоочу жок
-        flow.on_button(u, "skipdest")
-        flow.on_button(u, "ord:ok")
-        rid = core.active_ride_of(u)["id"]
+    def test_no_driver(self):
+        p = rider("0555 000 021")
+        rid = order(p, p=(40.5283, 72.7985))
         core.query("UPDATE rides SET created_at=? WHERE id=?", (core.now() - 999, rid))
         out = dispatch.tick()
-        self.assertIn("табылган жок", "".join(texts(out, u)))
         self.assertEqual(core.get_ride(rid)["status"], "cancelled")
+        self.assertEqual(out[0]["to"], p)
 
-    def test_outside_city(self):
-        u = "tg:7"
-        flow.on_start(u, "Т")
-        core.set_user(u, phone="+996555000007")
-        flow.on_text(u, "🚕 Такси чакыруу")
-        flow.on_location(u, 41.0, 78.0)
-        out = flow.on_button(u, "skipdest")
-        self.assertIn("иштебейт", texts(out)[0])
-
-    def test_topup(self):
-        core.set_state(D2, {})
-        flow.on_text(D2, "➕ Балансты толуктоо")
-        out = flow.on_photo(D2, "FILEID")
-        data = btn(out, ADMIN, "top:")
-        before = core.get_driver(D2)["balance"]
-        tx = data.split(":")[1]
-        flow.on_button(ADMIN, "top:%s:500" % tx)
-        flow.on_button(ADMIN, "top:%s:500" % tx)            # экинчи жолу кошулбайт
-        self.assertEqual(core.get_driver(D2)["balance"], before + 500)
+    def test_cancel_notifies_driver(self):
+        d = make_driver("0700 000 031", "В", NEAR)
+        p = rider("0555 000 031")
+        rid = order(p)
+        dispatch.tick()
+        out = flow.passenger_cancel(p, rid)
+        self.assertEqual(out[0]["to"], d)
 
     def test_quote(self):
         q = core.quote(*KARAKOL, *DEST)
         self.assertEqual(q["city"], "Каракол")
-        self.assertGreaterEqual(q["price"], 100)
         self.assertEqual(q["price"] % 10, 0)
+        self.assertIsNone(core.quote(41.0, 78.0)["city"])
 
 
-if __name__ == "__main__":
-    unittest.main()
+class Accounts(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        core.init_db()
 
-
-class Web(unittest.TestCase):
     def test_phone_uid(self):
         self.assertEqual(core.phone_uid("0555 111 222"), "ph:+996555111222")
         self.assertEqual(core.phone_uid("+996 555 111 222"), "ph:+996555111222")
         self.assertIsNone(core.phone_uid("123"))
 
-    def test_session_verify_needs_same_phone(self):
-        core.init_db()
+    def test_verify_links_telegram(self):
         tok = core.web_session_new("0700 999 888", "Жаңыл")
-        self.assertIsNone(core.web_session_verify(tok, "+996700000000"))
-        self.assertEqual(core.web_session_verify(tok, "996700999888"), "ph:+996700999888")
-        self.assertTrue(core.web_session(tok)["verified"])
+        self.assertIsNone(core.web_session_verify(tok, "+996700000000", "tg:5"))
+        uid = core.web_session_verify(tok, "996700999888", "tg:5")
+        self.assertEqual(uid, "ph:+996700999888")
+        self.assertEqual(core.tg_of(uid), "tg:5")
+        core.set_user(uid, notify=0)
+        self.assertIsNone(core.tg_of(uid))
 
-    def test_telegram_confirms_web_login(self):
-        tok = core.web_session_new("0700 111 333", "Мирлан")
-        out = flow.on_text("tg:77", "/start web_" + tok, "Мирлан")
-        self.assertTrue(any(b.get("contact") for o in out for r in o.get("keyboard", []) for b in r))
-        out = flow.on_contact("tg:77", "996700111333")
-        self.assertIn("ырасталды", out[0]["text"])
-        self.assertEqual(core.web_session(tok)["uid"], "ph:+996700111333")
+    def test_admin_gate(self):
+        tok = core.web_session_new("0700 222 333", "", "admin")
+        self.assertIsNone(core.web_session_verify(tok, None, "tg:6"))      # админ эмес
+        tok = core.web_session_new("0700 222 333", "", "admin")
+        self.assertEqual(core.web_session_verify(tok, None, "tg:900"), "ph:+996700222333")  # ADMIN_IDS
+        tok = core.web_session_new("0700 111 000", "", "admin")
+        self.assertTrue(core.is_admin(core.web_session_verify(tok)))        # ADMIN_PHONES
+
+    def test_topup_once(self):
+        d = make_driver("0700 000 041", "Г")
+        before = core.get_driver(d)["balance"]
+        outs = flow.request_topup(d, 500, "x.jpg")
+        self.assertTrue(all(o["path"] == "/admin" for o in outs))
+        tx = core.query("SELECT id FROM balance_tx WHERE driver=? AND status='pending'", (d,), "one")["id"]
+        self.assertEqual(flow.admin_topup("ph:+996700111000", tx, 500)[0]["to"], d)
+        self.assertIsNone(flow.admin_topup("ph:+996700111000", tx, 500))
+        self.assertEqual(core.get_driver(d)["balance"], before + 500)
+
+    def test_upload_safe(self):
+        name = core.save_upload(PNG)
+        self.assertTrue(core.upload_path(name))
+        self.assertIsNone(core.upload_path("../t.db"))
+        self.assertIsNone(core.save_upload("data:text/html;base64,PGI+"))
 
 
-class DriverWeb(unittest.TestCase):
-    def test_driver_login_and_state(self):
-        import web
+class Bot(unittest.TestCase):
+    def setUp(self):
         core.init_db()
-        core.ensure_user("tg:88", "Эрлан"); core.set_user("tg:88", phone="+996700888888")
-        core.add_driver("tg:88", "Honda Fit", "Көк", "08 888 KG")
-        core.set_driver("tg:88", status="active")
-        self.assertEqual(core.driver_by_phone("0700 888 888"), "tg:88")
-        self.assertIsNone(core.driver_by_phone("0700 000 001"))
-        tok = core.web_session_new("0700 888 888", "", "driver")
-        self.assertEqual(core.web_session_verify(tok, "996700888888"), "tg:88")
-        core.driver_location("tg:88", *NEAR, live_period=60)
-        st = web.driver_state("tg:88")
-        self.assertTrue(st["online"])
-        self.assertIsNone(st["offer"])
-        self.assertEqual(st["today"]["rides"], 0)
-        core.set_driver("tg:88", online=0, live_until=None)   # башка сыноолорго тийбесин
+        self.sent = []
+        bot.API = "x"
+        bot.api = lambda m, **p: self.sent.append((m, p)) or {"ok": True}
+
+    def test_verify_and_notify(self):
+        tok = core.web_session_new("0555 777 000", "Бакыт")
+        bot.handle_update({"message": {"chat": {"id": 70, "type": "private"}, "from": {"id": 70},
+                                       "text": "/start web_" + tok}})
+        self.assertTrue(self.sent[-1][1]["reply_markup"]["keyboard"][0][0]["request_contact"])
+        bot.handle_update({"message": {"chat": {"id": 70, "type": "private"}, "from": {"id": 70},
+                                       "contact": {"user_id": 70, "phone_number": "996555777000"}}})
+        self.assertIn("ырасталды", self.sent[-2][1]["text"])
+        uid = "ph:+996555777000"
+        self.assertEqual(core.get_user(uid)["tg_uid"], "tg:70")
+        self.sent.clear()
+        bot.deliver([{"to": uid, "text": "салам", "path": "/"}])
+        self.assertEqual(self.sent[0][1]["chat_id"], "70")
+        self.assertEqual(self.sent[0][1]["reply_markup"]["inline_keyboard"][0][0]["url"],
+                         "https://taxi.example.kg/")
+        bot.handle_update({"callback_query": {"id": "c", "from": {"id": 70}, "data": "notify:0",
+                                              "message": {"chat": {"id": 70}, "message_id": 1}}})
+        self.sent.clear()
+        bot.deliver([{"to": uid, "text": "салам"}])
+        self.assertEqual(self.sent, [])
+
+    def test_foreign_contact_rejected(self):
+        tok = core.web_session_new("0555 777 111", "")
+        bot.handle_update({"message": {"chat": {"id": 71, "type": "private"}, "from": {"id": 71},
+                                       "text": "/start web_" + tok}})
+        bot.handle_update({"message": {"chat": {"id": 71, "type": "private"}, "from": {"id": 71},
+                                       "contact": {"user_id": 99, "phone_number": "996555777111"}}})
+        self.assertFalse(core.web_session(tok)["verified"])
 
 
-class AdminWeb(unittest.TestCase):
-    def test_admin_login_and_overview(self):
+class Http(unittest.TestCase):
+    """Сайттын API'си чыныгы HTTP аркылуу: каттоо → ырастоо → линия → заказ."""
+
+    @classmethod
+    def setUpClass(cls):
         core.init_db()
-        core.ensure_user(ADMIN, "Админ"); core.set_user(ADMIN, phone="+996700900900")
-        self.assertEqual(core.admin_by_phone("0700 900 900"), ADMIN)
-        self.assertIsNone(core.admin_by_phone("0555 111 222"))
-        tok = core.web_session_new("0700 900 900", "", "admin")
-        self.assertEqual(core.web_session_verify(tok, "+996700900900"), ADMIN)
-        o = core.admin_overview()
-        for k in ("stats", "drivers", "rides", "pending_drivers", "pending_topups"):
-            self.assertIn(k, o)
-        self.assertEqual(len(core.all_tariffs()), len(core.CITIES))
+        offline_all()
+        cls.srv = web.start(0)
+        cls.base = "http://127.0.0.1:%d" % cls.srv.server_address[1]
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.srv.shutdown()
+
+    def client(self):
+        op = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+
+        def call(path, body=None):
+            req = urllib.request.Request(self.base + path, data=None if body is None else
+                                         json.dumps(body).encode(),
+                                         headers={"Content-Type": "application/json"})
+            try:
+                return json.loads(op.open(req).read())
+            except urllib.error.HTTPError as e:
+                return json.loads(e.read())
+        call.raw = lambda path: op.open(self.base + path)
+        return call
+
+    def test_driver_journey(self):
+        offline_all()
+        drv, adm, pas = self.client(), self.client(), self.client()
+        self.assertTrue(drv("/api/login", {"phone": "0700 444 555", "name": "Нурбек", "kind": "driver"})["auth"])
+        st = drv("/api/d/state")
+        self.assertIsNone(st["status"])
+        self.assertEqual(drv("/api/d/register", {"name": "Нурбек", "model": "Fit", "color": "Боз",
+                                                 "plate": "01 777 kga", "license": PNG})["error"], "doc_techpass")
+        st = drv("/api/d/register", {"name": "Нурбек", "model": "Fit", "color": "Боз", "plate": "01 777 kga",
+                                     "license": PNG, "techpass": PNG, "car": PNG})
+        self.assertEqual(st["status"], "pending")
+        self.assertEqual(drv("/api/d/online", {"on": True, "p": list(NEAR)})["error"], "not_active")
+        # админ
+        self.assertEqual(adm("/api/login", {"phone": "0700 123 123", "kind": "admin"})["error"], "not_admin")
+        self.assertTrue(adm("/api/login", {"phone": "0700 111 000", "kind": "admin"})["auth"])
+        ov = adm("/api/a/overview")
+        pend = [d for d in ov["pending_drivers"] if d["name"] == "Нурбек"][0]
+        ds = [d for d in adm("/api/a/drivers")["drivers"] if d["uid"] == pend["uid"]][0]
+        with self.assertRaises(urllib.error.HTTPError):                    # кирбеген адам көрбөйт
+            urllib.request.urlopen(self.base + "/api/a/file?n=" + ds["doc_license"])
+        self.assertEqual(adm.raw("/api/a/file?n=" + ds["doc_license"]).headers["Content-Type"],
+                         "image/png")
+        self.assertEqual(drv("/api/a/overview")["error"], "auth")          # айдоочу админ эмес
+        adm("/api/a/driver", {"uid": pend["uid"], "action": "approve"})
+        # линия, заказ
+        self.assertTrue(drv("/api/d/online", {"on": True, "p": list(NEAR)})["online"])
+        pas("/api/login", {"phone": "0555 444 555", "name": "Айгүл"})
+        self.assertEqual(pas("/api/order", {"p": list(KARAKOL), "d": list(DEST)})["ride"]["status"], "searching")
+        dispatch.tick()
+        st = drv("/api/d/state")
+        self.assertTrue(st["offer"])
+        st = drv("/api/d/accept", {"id": st["offer"]["id"]})
+        self.assertEqual(st["ride"]["status"], "accepted")
+        self.assertEqual(pas("/api/ride")["ride"]["driver"]["plate"], "01 777 KGA")
+        for _ in range(3):
+            st = drv("/api/d/step", {"id": st["ride"]["id"]})
+        self.assertIsNone(st["ride"])
+        self.assertEqual(st["today"]["rides"], 1)
+        # толуктоо
+        st = drv("/api/d/topup", {"amount": 300, "proof": PNG})
+        self.assertTrue(st["pending_topup"])
+        tx = adm("/api/a/overview")["pending_topups"][0]
+        self.assertEqual(tx["claimed"], 300)
+        adm("/api/a/topup", {"id": tx["id"], "amount": 300})
+        self.assertFalse(drv("/api/d/state")["pending_topup"])
+
+
+if __name__ == "__main__":
+    try:
+        unittest.main()
+    finally:
+        shutil.rmtree(_tmp, ignore_errors=True)

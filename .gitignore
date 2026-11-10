@@ -4,3 +4,4 @@ __pycache__/
 *.db-*
 token.txt
 tests/shots/
+data/

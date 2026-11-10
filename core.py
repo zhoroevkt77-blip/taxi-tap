@@ -10,14 +10,26 @@
 Код өзгөрбөй эле экөөндө тең иштейт.
 """
 
+import base64
 import json
 import math
 import os
+import secrets
 import sqlite3
 import threading
 import time
 
 BASE = os.path.dirname(os.path.abspath(__file__))
+
+# Туруктуу диск (документтер, чектер). Railway'де Volume тиркелет.
+DATA_DIR = (os.environ.get("DATA_DIR") or os.environ.get("RAILWAY_VOLUME_MOUNT_PATH")
+            or os.path.join(BASE, "data"))
+UPLOADS = os.path.join(DATA_DIR, "uploads")
+SITE_URL = (os.environ.get("SITE_URL") or "").rstrip("/")
+PAY_INFO = os.environ.get("PAY_INFO") or "MBank: +996 ___ ___ ___ (аты-жөнү)"
+
+ADMIN_IDS = ["tg:" + x.strip() for x in (os.environ.get("ADMIN_IDS") or "").split(",") if x.strip()]
+ADMIN_PHONES = [x.strip() for x in (os.environ.get("ADMIN_PHONES") or "").split(",") if x.strip()]
 
 DATABASE_URL = (os.environ.get("DATABASE_URL") or "").strip()
 IS_PG = DATABASE_URL.startswith(("postgres://", "postgresql://"))
@@ -169,11 +181,11 @@ _PK = "SERIAL PRIMARY KEY" if IS_PG else "INTEGER PRIMARY KEY AUTOINCREMENT"
 
 SCHEMA = [
     """CREATE TABLE IF NOT EXISTS users (
-        uid TEXT PRIMARY KEY,           -- 'tg:123', кийин 'wa:996...'
+        uid TEXT PRIMARY KEY,           -- 'ph:+996555123456' — номер = аккаунт
         name TEXT, phone TEXT,
         lang TEXT DEFAULT 'ky',
-        role TEXT DEFAULT 'passenger',  -- passenger | driver
-        state TEXT DEFAULT '{}',        -- сүйлөшүүнүн абалы (JSON)
+        tg_uid TEXT,                    -- номерди ырастаган Telegram ('tg:123')
+        notify INTEGER DEFAULT 1,       -- Telegram'га билдирүү жиберилсинби
         created_at REAL)""",
     """CREATE TABLE IF NOT EXISTS drivers (
         uid TEXT PRIMARY KEY,
@@ -185,6 +197,8 @@ SCHEMA = [
         online INTEGER DEFAULT 0,
         lat REAL, lon REAL, loc_at REAL, live_until REAL,
         busy_ride INTEGER,
+        doc_license TEXT, doc_techpass TEXT, doc_car TEXT,   -- сүрөт файлдары
+        reject_note TEXT,
         created_at REAL)""",
     f"""CREATE TABLE IF NOT EXISTS rides (
         id {_PK},
@@ -203,6 +217,7 @@ SCHEMA = [
         id {_PK}, driver TEXT, amount REAL,
         kind TEXT,                      -- topup | commission
         status TEXT DEFAULT 'done',     -- pending | done | rejected
+        claimed REAL,                   -- айдоочу жазган сумма (чек боюнча)
         ride_id INTEGER, proof TEXT, approved_by TEXT, at REAL)""",
     """CREATE TABLE IF NOT EXISTS ratings (
         ride_id INTEGER PRIMARY KEY, stars INTEGER, at REAL)""",
@@ -220,10 +235,26 @@ SCHEMA = [
 ]
 
 
+# Эски базага жаңы тилкелер (таблица мурун түзүлгөн болсо)
+NEW_COLUMNS = {
+    "users": {"tg_uid": "TEXT", "notify": "INTEGER DEFAULT 1"},
+    "drivers": {"doc_license": "TEXT", "doc_techpass": "TEXT", "doc_car": "TEXT",
+                "reject_note": "TEXT"},
+    "balance_tx": {"claimed": "REAL"},
+}
+
+
 def init_db():
     """Таблицаларды түзөт. Кайра-кайра чакырса коопсуз."""
     for sql in SCHEMA:
         query(sql)
+    for table, cols in NEW_COLUMNS.items():
+        for col, typ in cols.items():
+            try:
+                query("ALTER TABLE %s ADD COLUMN %s %s" % (table, col, typ))
+            except Exception:
+                pass                      # тилке мурунтан бар
+    os.makedirs(UPLOADS, exist_ok=True)
 
 
 def now():
@@ -251,16 +282,19 @@ def set_user(uid, **fields):
     query("UPDATE users SET %s WHERE uid=?" % cols, tuple(fields.values()) + (uid,))
 
 
-def get_state(uid):
-    u = get_user(uid)
-    try:
-        return json.loads((u or {}).get("state") or "{}")
-    except ValueError:
-        return {}
+def is_admin(uid):
+    u = get_user(uid) or {}
+    return bool(u) and (u.get("tg_uid") in ADMIN_IDS
+                        or (u.get("phone") or "") in [phone_uid(p)[3:] for p in ADMIN_PHONES
+                                                      if phone_uid(p)])
 
 
-def set_state(uid, st):
-    set_user(uid, state=json.dumps(st, ensure_ascii=False))
+def tg_of(uid):
+    """Билдирүү кайда барат: Telegram чаты (же None)."""
+    if uid.startswith("tg:"):
+        return uid
+    u = get_user(uid) or {}
+    return u.get("tg_uid") if u.get("notify", 1) else None
 
 
 # ==================== Айдоочу ====================
@@ -323,6 +357,13 @@ def add_tx(driver, amount, kind, status="done", ride_id=None, proof=None):
     if status == "done":
         query("UPDATE drivers SET balance=balance+? WHERE uid=?", (amount, driver))
     return tx
+
+
+def request_topup(driver, claimed, proof):
+    """Айдоочу чектин сүрөтүн жүктөдү → админ текшерет."""
+    return query("INSERT INTO balance_tx (driver, amount, kind, status, claimed, proof, at) "
+                 "VALUES (?, 0, 'topup', 'pending', ?, ?, ?)",
+                 (driver, claimed, proof, now()), "id")
 
 
 def approve_tx(tx_id, amount, admin):
@@ -533,31 +574,10 @@ def phone_uid(phone):
 
 
 def web_session_new(phone, name, kind="rider"):
-    import secrets
     tok = secrets.token_urlsafe(18)
     query("INSERT INTO web_sessions (token, phone, name, kind, created_at) VALUES (?, ?, ?, ?, ?)",
           (tok, phone, name, kind, now()))
     return tok
-
-
-def user_by_phone(phone, ok=lambda uid: True):
-    """Номер боюнча Telegram'дагы аккаунтту табат (айдоочу же админ үчүн)."""
-    uid = phone_uid(phone)
-    if not uid:
-        return None
-    for u in query("SELECT uid, phone FROM users WHERE phone IS NOT NULL", (), "all"):
-        if phone_uid(u["phone"]) == uid and ok(u["uid"]):
-            return u["uid"]
-    return None
-
-
-def driver_by_phone(phone):
-    return user_by_phone(phone, lambda uid: get_driver(uid) is not None)
-
-
-def admin_by_phone(phone):
-    admins = ["tg:" + x.strip() for x in (os.environ.get("ADMIN_IDS") or "").split(",") if x.strip()]
-    return user_by_phone(phone, lambda uid: uid in admins)
 
 
 def web_session(tok):
@@ -566,8 +586,12 @@ def web_session(tok):
     return query("SELECT * FROM web_sessions WHERE token=?", (tok,), "one")
 
 
-def web_session_verify(tok, phone_seen=None):
-    """Номер дал келсе, сессияны ырастайт жана колдонуучуну түзөт."""
+def web_session_verify(tok, phone_seen=None, tg_uid=None):
+    """
+    Номер дал келсе, сессияны ырастайт. Аккаунт = номер ('ph:+996...').
+    tg_uid — ырастаган Telegram аккаунту: ага кийин билдирүүлөр барат.
+    Админ сессиясы админ болбосо ырасталбайт.
+    """
     s = web_session(tok)
     if not s:
         return None
@@ -576,16 +600,72 @@ def web_session_verify(tok, phone_seen=None):
         return None
     if phone_seen is not None and phone_uid(phone_seen) != uid:
         return None
-    if s.get("kind") in ("driver", "admin"):
-        duid = (driver_by_phone if s["kind"] == "driver" else admin_by_phone)(s["phone"])
-        if not duid:
-            return None
-        query("UPDATE web_sessions SET verified=1, uid=? WHERE token=?", (duid, tok))
-        return duid
-    ensure_user(uid, s["name"] or "")
-    set_user(uid, phone=uid[3:], name=s["name"] or "")
+    u = ensure_user(uid, s["name"] or "")
+    fields = {"phone": uid[3:]}
+    if s["name"] and not u.get("name"):
+        fields["name"] = s["name"]
+    if tg_uid:
+        fields["tg_uid"] = tg_uid
+    set_user(uid, **fields)
+    if s.get("kind") == "admin" and not is_admin(uid):
+        return None
     query("UPDATE web_sessions SET verified=1, uid=? WHERE token=?", (uid, tok))
     return uid
+
+
+def admins():
+    """Билдирүү алуучу админдер (Telegram)."""
+    out = list(ADMIN_IDS)
+    for p in ADMIN_PHONES:
+        t = tg_of(phone_uid(p) or "")
+        if t and t not in out:
+            out.append(t)
+    return out
+
+
+# ==================== Файлдар ====================
+
+MAX_UPLOAD = 4 * 1024 * 1024
+
+
+def save_upload(data_url):
+    """'data:image/jpeg;base64,...' → файлдын аты. Сүрөт браузерде кичирейтилет."""
+    if not isinstance(data_url, str) or not data_url.startswith("data:image/"):
+        return None
+    head, _, b64 = data_url.partition(",")
+    ext = "png" if "png" in head else "webp" if "webp" in head else "jpg"
+    try:
+        raw = base64.b64decode(b64, validate=True)
+    except ValueError:
+        return None
+    if not raw or len(raw) > MAX_UPLOAD:
+        return None
+    name = "%d_%s.%s" % (int(now()), secrets.token_hex(8), ext)
+    os.makedirs(UPLOADS, exist_ok=True)
+    with open(os.path.join(UPLOADS, name), "wb") as f:
+        f.write(raw)
+    return name
+
+
+def upload_path(name):
+    """Коопсуз жол: папкадан чыгып кетпейт."""
+    name = os.path.basename(name or "")
+    p = os.path.join(UPLOADS, name)
+    return p if name and os.path.isfile(p) else None
+
+
+def register_driver(uid, name, model, color, plate, docs):
+    """Сайттан айдоочу болуу арызы. docs: {'license','techpass','car'} → файл аттары."""
+    if name:
+        set_user(uid, name=name)
+    fields = dict(car_model=model, car_color=color, car_plate=plate, status="pending",
+                  reject_note=None, doc_license=docs.get("license"),
+                  doc_techpass=docs.get("techpass"), doc_car=docs.get("car"))
+    if get_driver(uid):
+        set_driver(uid, **fields)
+    else:
+        query("INSERT INTO drivers (uid, created_at) VALUES (?, ?)", (uid, now()))
+        set_driver(uid, **fields)
 
 
 def last_ride_of(uid, within_sec=900):
@@ -661,13 +741,15 @@ def admin_overview():
                              "car": "%s %s" % (d["car_color"] or "", d["car_model"] or ""),
                              "plate": d["car_plate"]} for d in drivers if d["status"] == "pending"],
         "pending_topups": [{"id": t["id"], "uid": t["driver"], "name": t["name"],
-                            "phone": t["phone"], "at": t["at"]} for t in pend_tx],
+                            "phone": t["phone"], "at": t["at"], "claimed": t["claimed"],
+                            "proof": t["proof"]} for t in pend_tx],
     }
 
 
 def admin_drivers():
     return query("SELECT d.uid, d.status, d.balance, d.rating, d.rides_done, d.car_model, "
                  "d.car_color, d.car_plate, d.online, d.busy_ride, d.loc_at, d.live_until, d.lat, d.lon, "
+                 "d.doc_license, d.doc_techpass, d.doc_car, d.reject_note, d.created_at, "
                  "u.name, u.phone FROM drivers d LEFT JOIN users u ON u.uid=d.uid "
                  "ORDER BY d.status='pending' DESC, d.rides_done DESC", (), "all")
 

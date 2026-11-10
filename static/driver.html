@@ -55,6 +55,14 @@ input.f{width:100%;font-size:17px;padding:14px;border-radius:14px;border:1px sol
 @keyframes b{50%{opacity:.25}}
 .hist{font-size:14px}
 .hide{display:none!important}
+.docs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:4px 0 6px}
+.doc{border:1.5px dashed var(--line);border-radius:14px;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;color:var(--soft);text-align:center;padding:6px;cursor:pointer;background:var(--paper) center/cover no-repeat;position:relative}
+.doc.ok{border:2px solid var(--ok);color:transparent}
+.doc input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.doc i{font-style:normal;font-size:24px;display:block;margin-bottom:4px}
+label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
+.note{background:#FBF5E6;border-radius:14px;padding:12px;font-size:14px;margin:6px 0}
+.sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
 </head>
 <body>
@@ -139,25 +147,27 @@ function viewLogin(pending, link, err) {
       ${link ? `<a class="btn dark" href="${esc(link)}" target="_blank">Telegram'да ырастоо</a>` : ""}
       <button class="btn ghost" id="relog">Артка</button>`);
     $("#relog").onclick = () => viewLogin(false);
-    const t = setInterval(async () => { const m = await api("/api/me?kind=driver"); if (m.auth) { clearInterval(t); boot(); } }, 2500);
+    const t = setInterval(async () => { const m = await api("/api/me"); if (m.auth) { clearInterval(t); boot(); } }, 2500);
     return;
   }
   render(`<h2>Айдоочунун кабинети</h2>
-    <p class="muted">Telegram ботто айдоочу катары катталган номериңизди жазыңыз.</p>
+    <p class="muted">Номериңиз менен кириңиз. Айдоочу эмес болсоңуз — кийинки кадамда арыз толтурасыз.</p>
+    <input class="f" id="nm" placeholder="Атыңыз" autocomplete="given-name">
     <input class="f" id="ph" placeholder="+996 700 123 456" inputmode="tel" autocomplete="tel">
     <div class="err" id="er">${esc(err || "")}</div>
     <button class="btn main" id="go">Кирүү</button>`);
   $("#ph").oninput = () => $("#er").textContent = "";
   $("#go").onclick = async () => {
-    const r = await api("/api/login", {phone:$("#ph").value, kind:"driver"});
-    if (r.error === "not_driver") return $("#er").textContent = "Бул номер айдоочу катары катталган эмес. Адегенде ботто катталыңыз.";
+    const r = await api("/api/login", {phone:$("#ph").value, name:$("#nm").value, kind:"driver"});
     if (r.error) return $("#er").textContent = "Номерди толук жазыңыз: +996 700 123 456";
     r.auth ? boot() : viewLogin(true, r.link);
   };
 }
 
 function header() {
-  $("#earn").classList.remove("hide"); $("#stBadge").classList.remove("hide");
+  const act = D.status === "active";
+  $("#earn").classList.toggle("hide", !act); $("#stBadge").classList.toggle("hide", !act);
+  if (!act) return;
   $("#earnV").textContent = D.today.earned + " с";
   $("#stBadge").textContent = D.ride ? "Сапарда" : D.online ? "Онлайн" : "Офлайн";
   $("#stBadge").classList.toggle("on", D.online || !!D.ride);
@@ -170,7 +180,10 @@ function viewHome() {
       <div class="stat"><span class="muted">Баланс</span><b style="color:${low ? "var(--bad)" : "inherit"}">${D.balance} с</b></div>
       <div class="stat"><span class="muted">Рейтинг</span><b>★ ${D.rating ?? "5.0"}</b></div>
       <div class="stat"><span class="muted">Бардык сапар</span><b>${D.rides_done ?? 0}</b></div></div>`;
-  const topup = D.bot ? `<a class="btn ghost" href="https://t.me/${esc(D.bot)}" target="_blank">➕ Балансты толуктоо (бот)</a>` : "";
+  const topup = D.pending_topup ? `<div class="note">🕓 Чегиңиз текшерилүүдө. Ырасталганда балансыңызга кошулат.</div>`
+    : `<button class="btn ghost" id="top">➕ Балансты толуктоо</button>`;
+  const sw = D.tg ? `<div class="sw"><div><b>Telegram билдирүүлөрү</b><div class="muted">Сайт жабык болсо да жаңы заказ жөнүндө кабар келет</div></div>
+    <input type="checkbox" id="nt" ${D.notify ? "checked" : ""} style="width:24px;height:24px"></div>` : "";
   if (D.online) {
     render(`<div class="wait"><div class="blink"></div><div><b>Заказ күтүлүүдө</b><div class="muted">Экранды өчүрбөңүз — GPS иштеп турат</div></div></div>
       ${stats}<button class="btn red" id="off">Линиядан чыгуу</button>`);
@@ -180,7 +193,11 @@ function viewHome() {
       ${low ? `<p class="err">Баланс жетишсиз — заказдар келбейт.</p>` : ""}
       <button class="btn go" id="on">Линияга чыгуу</button>
       <div class="err" id="er"></div>${stats}${topup}
-      <button class="btn ghost" id="hist">Сапарлардын тарыхы</button>`);
+      <button class="btn ghost" id="hist">Сапарлардын тарыхы</button>${sw}
+      <a class="btn ghost" href="/">🚕 Такси чакыруу (жүргүнчү)</a><button class="btn ghost" id="out">Чыгуу</button>`);
+    $("#top") && ($("#top").onclick = viewTopup);
+    $("#nt") && ($("#nt").onchange = () => api("/api/notify", {on:$("#nt").checked}));
+    $("#out").onclick = async () => { await api("/api/logout", {}); location.reload(); };
     $("#on").onclick = async () => {
       beep();                                   // үн браузерде ушул басуу менен ачылат
       $("#on").disabled = true;
@@ -244,8 +261,87 @@ function showOffer() {
       <div class="ring"><svg width="74" height="74"><circle cx="37" cy="37" r="32" stroke="#E1E7F1" stroke-width="7" fill="none"/>
       <circle cx="37" cy="37" r="32" stroke="#C9A03A" stroke-width="7" fill="none" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - frac)}"/></svg><span>${o.left}</span></div></div>
     <button class="btn go" id="acc">Алам</button><button class="btn ghost" id="dec">Жок</button>`;
-  $("#acc").onclick = async () => { $("#acc").disabled = true; D = await api("/api/d/accept", {id:o.id}); box.classList.add("hide"); show(); };
+  $("#acc").onclick = async () => { $("#acc").disabled = true; D = await api("/api/d/accept", {id:o.id}); box.classList.add("hide");
+    if (D.error === "too_late") alert("Кечигип калдыңыз — заказ башка айдоочуга кетти."); show(); };
   $("#dec").onclick = async () => { D = await api("/api/d/decline", {id:o.id}); box.classList.add("hide"); show(); };
+}
+
+// ---------- сүрөттү кичирейтүү (браузерде) ----------
+function shrink(file, max = 1600, q = 0.72) {
+  return new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const k = Math.min(1, max / Math.max(img.width, img.height));
+        const c = document.createElement("canvas");
+        c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        res(c.toDataURL("image/jpeg", q));
+      };
+      img.onerror = rej; img.src = fr.result;
+    };
+    fr.onerror = rej; fr.readAsDataURL(file);
+  });
+}
+function docInput(el, store, key) {
+  el.querySelector("input").onchange = async e => {
+    const f = e.target.files[0]; if (!f) return;
+    store[key] = await shrink(f);
+    el.style.backgroundImage = `url(${store[key]})`; el.classList.add("ok");
+  };
+}
+
+function viewRegister() {
+  $("#earn").classList.add("hide");
+  const again = D.status === "rejected" || D.status === "pending";
+  const docs = {};
+  render(`<h2>${again ? "Арызды оңдоо" : "Айдоочу болуу"}</h2>
+    ${D.status === "rejected" ? `<div class="note">Арыз кабыл алынган жок.${D.reject_note ? " Себеби: " + esc(D.reject_note) : ""}</div>` : ""}
+    <label class="l">Аты-жөнүңүз</label><input class="f" id="rn" value="${esc(D.name || "")}" autocomplete="name">
+    <label class="l">Унаа (марка, модель)</label><input class="f" id="rm" placeholder="Toyota Camry" value="${esc(D.car_model || "")}">
+    <div class="two"><div><label class="l">Түсү</label><input class="f" id="rc" placeholder="Ак" value="${esc(D.car_color || "")}"></div>
+    <div><label class="l">Мамлекеттик номери</label><input class="f" id="rp" placeholder="01 123 ABC" value="${esc(D.car_plate || "")}" style="text-transform:uppercase"></div></div>
+    <label class="l">Документтердин сүрөтү${again ? " (өзгөрбөсө жүктөбөй эле коюңуз)" : ""}</label>
+    <div class="docs">
+      <div class="doc" id="dl"><i>🪪</i>Айдоочулук күбөлүк<input type="file" accept="image/*"></div>
+      <div class="doc" id="dt"><i>📄</i>Техпаспорт<input type="file" accept="image/*"></div>
+      <div class="doc" id="dc"><i>🚗</i>Унаанын сүрөтү<input type="file" accept="image/*"></div>
+    </div>
+    <p class="muted">Документтерди админ гана көрөт.</p>
+    <div class="err" id="er"></div><button class="btn main" id="send">Арызды жөнөтүү</button>
+    <a class="btn ghost" href="/">🚕 Такси чакыруу (жүргүнчү)</a>`);
+  docInput($("#dl"), docs, "license"); docInput($("#dt"), docs, "techpass"); docInput($("#dc"), docs, "car");
+  $("#send").onclick = async () => {
+    const body = {name:$("#rn").value, model:$("#rm").value, color:$("#rc").value, plate:$("#rp").value, ...docs};
+    if (!body.name.trim() || !body.model.trim() || !body.color.trim() || !body.plate.trim()) return $("#er").textContent = "Бардык талааларды толтуруңуз.";
+    if (!again && Object.keys(docs).length < 3) return $("#er").textContent = "Үч сүрөттү тең жүктөңүз.";
+    $("#send").disabled = true; $("#send").textContent = "Жөнөтүлүүдө…";
+    const r = await api("/api/d/register", body);
+    if (r.error) { $("#send").disabled = false; $("#send").textContent = "Арызды жөнөтүү";
+      return $("#er").textContent = r.error.startsWith("doc_") ? "Документтин сүрөтүн жүктөңүз." : "Ката. Талааларды текшериңиз."; }
+    D = r; lastView = ""; show();
+  };
+}
+
+function viewTopup() {
+  let proof = null;
+  render(`<h2>Балансты толуктоо</h2>
+    <div class="note">1. Төмөнкү реквизитке акча которуңуз:<br><b>${esc(D.pay_info)}</b><br>2. Чектин скриншотун жүктөп, сумманы жазыңыз.</div>
+    <label class="l">Сумма (сом)</label><input class="f" id="am" inputmode="numeric" placeholder="500">
+    <div class="docs" style="grid-template-columns:1fr"><div class="doc" id="pf" style="aspect-ratio:2"><i>🧾</i>Чектин скриншоту<input type="file" accept="image/*"></div></div>
+    <div class="err" id="er"></div><button class="btn main" id="send">Жөнөтүү</button><button class="btn ghost" id="back">Артка</button>`);
+  const box = {}; docInput($("#pf"), box, "proof");
+  $("#back").onclick = () => { lastView = ""; show(); };
+  $("#send").onclick = async () => {
+    const am = +$("#am").value;
+    if (!(am > 0)) return $("#er").textContent = "Сумманы жазыңыз.";
+    if (!box.proof) return $("#er").textContent = "Чектин скриншотун жүктөңүз.";
+    $("#send").disabled = true;
+    const r = await api("/api/d/topup", {amount:am, proof:box.proof});
+    if (r.error) { $("#send").disabled = false; return $("#er").textContent = "Ката, кайра аракет кылыңыз."; }
+    D = r; lastView = ""; show();
+  };
 }
 
 let lastView = "";
@@ -253,8 +349,15 @@ function show() {
   if (!D || D.error) return;
   header();
   if (D.status !== "active") {
-    render(`<h2>${D.status === "pending" ? "Арызыңыз текшерилүүдө" : "Аккаунт бөгөттөлгөн"}</h2><p class="muted">Админ менен байланышыңыз.</p>`);
-    return;
+    const k = "st" + D.status;
+    if (k === lastView) return;
+    lastView = k;
+    if (!D.status || D.status === "rejected") return viewRegister();
+    if (D.status === "pending") return render(`<h2>Арызыңыз текшерилүүдө</h2>
+      <p class="muted">Админ документтериңизди карап чыгып, ырастайт. Адатта бир нече саат ичинде.${D.tg ? " Жыйынтыгы Telegram'га келет." : ""}</p>
+      <div class="note">🚗 ${esc(D.car_color)} ${esc(D.car_model)}, <b>${esc(D.car_plate)}</b></div>
+      <button class="btn ghost" id="edit">Арызды оңдоо</button><a class="btn ghost" href="/">🚕 Такси чакыруу (жүргүнчү)</a>`) || ($("#edit").onclick = viewRegister);
+    return render(`<h2>Аккаунт бөгөттөлгөн</h2><p class="muted">Админ менен байланышыңыз.</p>`);
   }
   showOffer();
   const key = D.ride ? "ride" + D.ride.id + D.ride.status : D.online ? "on" : "off";
@@ -270,7 +373,7 @@ async function refresh() {
 }
 
 async function boot() {
-  const m = await api("/api/me?kind=driver");
+  const m = await api("/api/me");
   if (!m.auth) return viewLogin(m.pending, m.link);
   await refresh();
   if (D.online || D.ride) { startGps(); wake(true); }

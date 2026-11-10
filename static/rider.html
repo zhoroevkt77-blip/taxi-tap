@@ -194,7 +194,7 @@ function viewLogin(pending, link) {
 let mePoll = null;
 function pollMe() {
   clearInterval(mePoll);
-  mePoll = setInterval(async () => { const m = await api("/api/me?kind=rider"); if (m.auth) { clearInterval(mePoll); boot(); } }, 2500);
+  mePoll = setInterval(async () => { const m = await api("/api/me"); if (m.auth) { clearInterval(mePoll); boot(); } }, 2500);
 }
 
 function viewIdle() {
@@ -344,13 +344,26 @@ function viewRide() {
   tickRide();
 }
 
+let prevView = null;
 $("#menuBtn").onclick = async () => {
-  if (S.mode === "login") return;
-  if (confirm("Аккаунттан чыгасызбы?")) { await api("/api/logout", {}); location.reload(); }
+  if (S.mode === "login" || S.mode === "menu") return;
+  const me = await api("/api/me");
+  if (!me.auth) return;
+  prevView = S.mode; S.mode = "menu";
+  const drv = {active:"Айдоочу кабинети", pending:"Арызыңыз текшерилүүдө", rejected:"Арызды оңдоо", blocked:"Айдоочу кабинети"}[me.driver] || "Айдоочу болуу";
+  render(`<h2>${esc(me.name || "Профиль")}</h2><p class="muted">${esc(me.phone)}</p>
+    <div class="row" style="justify-content:space-between"><div><b>Telegram билдирүүлөрү</b><div class="muted">${me.tg ? "Айдоочу табылганда, келгенде кабар берет" : "Telegram туташкан эмес"}</div></div>
+    ${me.tg ? `<input type="checkbox" id="nt" ${me.notify ? "checked" : ""} style="width:24px;height:24px">` : ""}</div>
+    <a href="/driver"><button class="btn ghost">🚗 ${drv}</button></a>
+    ${me.admin ? `<a href="/admin"><button class="btn ghost">🛠 Админ панели</button></a>` : ""}
+    <button class="btn ghost" id="out">Чыгуу</button><button class="btn main" id="close">Жабуу</button>`);
+  const nt = $("#nt"); if (nt) nt.onchange = () => api("/api/notify", {on:nt.checked});
+  $("#out").onclick = async () => { await api("/api/logout", {}); location.reload(); };
+  $("#close").onclick = () => { S.ride ? viewRide() : viewIdle(); };
 };
 
 async function boot() {
-  const me = await api("/api/me?kind=rider");
+  const me = await api("/api/me");
   if (!me.auth) return viewLogin(me.pending, me.link);
   const r = await api("/api/ride");
   if (r.ride && ["searching", "accepted", "arrived", "in_trip"].includes(r.ride.status)) {
