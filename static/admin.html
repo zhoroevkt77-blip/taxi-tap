@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="ky">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#17365C">
+<title>Такси ТАП! — Админ</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{--navy:#17365C;--gold:#C9A03A;--gold2:#E3C368;--ink:#152741;--soft:#5A6880;--paper:#F1F4F9;--line:#E1E7F1;--ok:#1D9E75;--bad:#D8443A;--warn:#BA7517}
+*{box-sizing:border-box}
+html,body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--paper)}
+header{background:var(--navy);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10}
+header .logo{font-weight:800;font-size:17px}header .logo b{color:var(--gold2)}
+header .live{margin-left:auto;font-size:12px;opacity:.8}
+nav{display:flex;gap:6px;padding:10px 12px;overflow-x:auto;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:46px;z-index:9}
+nav button{border:0;background:var(--paper);color:var(--ink);padding:9px 14px;border-radius:12px;font-size:14px;font-weight:600;white-space:nowrap;cursor:pointer;position:relative}
+nav button.on{background:var(--navy);color:#fff}
+nav .badge{background:var(--bad);color:#fff;border-radius:10px;font-size:11px;padding:1px 6px;margin-left:5px}
+main{padding:12px;max-width:1100px;margin:0 auto}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px}
+.card{background:#fff;border-radius:14px;padding:12px 14px;border:1px solid var(--line)}
+.card span{font-size:12px;color:var(--soft)}.card b{display:block;font-size:24px;margin-top:2px}
+#map{height:420px;border-radius:14px;border:1px solid var(--line);overflow:hidden;position:relative;background:#EDEAE2}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--soft);margin:8px 2px 14px;flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+.panel{background:#fff;border-radius:14px;border:1px solid var(--line);overflow:hidden;margin-bottom:12px}
+.panel h3{margin:0;padding:12px 14px;font-size:15px;border-bottom:1px solid var(--line)}
+.item{display:flex;gap:10px;align-items:center;padding:11px 14px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.item:last-child{border:0}
+.item .main{flex:1;min-width:170px}.item .main b{display:block}
+.muted{color:var(--soft);font-size:13px}
+.btn{border:0;border-radius:10px;padding:8px 12px;font-size:13px;font-weight:700;cursor:pointer;background:var(--paper);color:var(--ink)}
+.btn.ok{background:var(--ok);color:#fff}.btn.bad{background:#FCEBEB;color:var(--bad)}.btn.gold{background:var(--gold);color:#14243F}
+.tag{font-size:12px;font-weight:700;padding:3px 8px;border-radius:8px;white-space:nowrap}
+.t-searching{background:#FAEEDA;color:#854F0B}.t-accepted,.t-arrived{background:#E6F1FB;color:#0C447C}
+.t-in_trip{background:#E1F5EE;color:#085041}.t-completed{background:#EAF3DE;color:#27500A}.t-cancelled{background:#F1EFE8;color:#5F5E5A}
+.t-active{background:#E1F5EE;color:#085041}.t-pending{background:#FAEEDA;color:#854F0B}.t-blocked{background:#FCEBEB;color:#A32D2D}
+.empty{padding:18px 14px;color:var(--soft);font-size:14px}
+input.f{font-size:15px;padding:9px 10px;border-radius:10px;border:1px solid var(--line);background:var(--paper);width:100%;color:var(--ink)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;font-size:12px;color:var(--soft);font-weight:600;padding:10px 8px;border-bottom:1px solid var(--line)}
+td{padding:8px;border-bottom:1px solid var(--line)}
+td input.f{padding:7px 8px;max-width:90px}
+.scroll{overflow-x:auto}
+.login{max-width:380px;margin:60px auto;background:#fff;border-radius:18px;padding:22px;border:1px solid var(--line)}
+.login h2{margin:0 0 12px}.login .btn{width:100%;padding:14px;font-size:16px;margin-top:10px}
+.err{color:var(--bad);font-size:13px;min-height:18px;margin-top:6px}
+.proof{width:64px;height:64px;object-fit:cover;border-radius:8px;background:var(--paper);cursor:zoom-in}
+.mk{width:24px;height:24px;border-radius:50%;border:3px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.35)}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+<header><div class="logo">Такси <b>ТАП!</b> · Админ</div><div class="live" id="live"></div></header>
+<nav id="nav" class="hide">
+  <button data-t="map" class="on">Карта</button>
+  <button data-t="drivers">Айдоочулар<span class="badge hide" id="bD"></span></button>
+  <button data-t="topups">Толуктоо<span class="badge hide" id="bT"></span></button>
+  <button data-t="rides">Сапарлар</button>
+  <button data-t="tariffs">Тарифтер</button>
+</nav>
+<main id="main"></main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const api = async (p, b) => (await fetch(p, b === undefined ? {credentials:"same-origin"} :
+  {method:"POST", credentials:"same-origin", headers:{"Content-Type":"application/json"}, body:JSON.stringify(b)})).json();
+const ST = {searching:"Изделүүдө", accepted:"Айдоочу жолдо", arrived:"Күтүүдө", in_trip:"Жолдо", completed:"Бүттү", cancelled:"Жабылды",
+            active:"Активдүү", pending:"Текшерүүдө", blocked:"Бөгөттөлгөн"};
+const tag = s => `<span class="tag t-${s}">${ST[s] || s}</span>`;
+const when = t => t ? new Date(t * 1000).toLocaleString("ru-RU", {day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit"}) : "";
+let tab = "map", O = null, map = null, lyr = null, fitted = false, timer = null;
+
+// ---------- кирүү ----------
+function login(pending, link) {
+  $("#nav").classList.add("hide");
+  $("#main").innerHTML = pending
+    ? `<div class="login"><h2>Номерди ырастаңыз</h2><p class="muted">Telegram'да ботко өтүп, номериңизди жөнөтүңүз.</p>
+       ${link ? `<a href="${esc(link)}" target="_blank"><button class="btn gold">Telegram'да ырастоо</button></a>` : ""}</div>`
+    : `<div class="login"><h2>Админ панели</h2><p class="muted">ADMIN_IDS'теги Telegram аккаунтуңуздун номери.</p>
+       <input class="f" id="ph" placeholder="+996 700 123 456" inputmode="tel"><div class="err" id="er"></div>
+       <button class="btn gold" id="go">Кирүү</button></div>`;
+  if (pending) { const t = setInterval(async () => { if ((await api("/api/me?kind=admin")).auth) { clearInterval(t); boot(); } }, 2500); return; }
+  $("#go").onclick = async () => {
+    const r = await api("/api/login", {phone:$("#ph").value, kind:"admin"});
+    if (r.error) return $("#er").textContent = r.error === "not_admin" ? "Бул номер админ эмес." : "Номерди толук жазыңыз.";
+    r.auth ? boot() : login(true, r.link);
+  };
+}
+
+// ---------- карта ----------
+function viewMap() {
+  const s = O.stats;
+  $("#main").innerHTML = `<div class="cards">
+    <div class="card"><span>Онлайн айдоочу</span><b>${s.online}</b><span>${s.busy} сапарда</span></div>
+    <div class="card"><span>Активдүү заказ</span><b>${s.active}</b><span>${s.searching} изделүүдө</span></div>
+    <div class="card"><span>Бүгүн бүттү</span><b>${s.done_today}</b><span>${s.lost_today} айдоочусуз калды</span></div>
+    <div class="card"><span>Бүгүнкү жүгүртүү</span><b>${s.gross_today.toLocaleString("ru-RU")} с</b><span>комиссия ${s.fee_today} с</span></div></div>
+    <div id="map"></div>
+    <div class="legend"><span><i style="background:var(--ok)"></i>Бош айдоочу</span><span><i style="background:var(--navy)"></i>Сапардагы айдоочу</span><span><i style="background:var(--gold)"></i>Айдоочу изделүүдө</span><span><i style="background:#378ADD"></i>Жүргүнчү күтүп турат</span></div>
+    <div class="panel"><h3>Активдүү заказдар</h3><div id="act"></div></div>`;
+  map = L.map("map", {zoomControl:true}).setView([42.8746, 74.5698], 13);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:"© OpenStreetMap"}).addTo(map);
+  lyr = L.layerGroup().addTo(map); fitted = false; drawMap();
+}
+const dot = c => L.divIcon({className:"", html:`<div class="mk" style="background:${c}"></div>`, iconSize:[24,24], iconAnchor:[12,12]});
+function drawMap() {
+  if (!lyr) return;
+  lyr.clearLayers();
+  const pts = [];
+  O.drivers.forEach(d => { pts.push(d.pos); L.marker(d.pos, {icon:dot(d.busy ? "#17365C" : "#1D9E75")}).bindTooltip(`${esc(d.name)} · ${esc(d.plate)}`).addTo(lyr); });
+  O.rides.forEach(r => {
+    if (["searching", "accepted", "arrived"].includes(r.status)) { pts.push(r.p); L.marker(r.p, {icon:dot(r.status === "searching" ? "#C9A03A" : "#378ADD")}).bindTooltip(`№${r.id} · ${esc(r.passenger)}`).addTo(lyr); }
+  });
+  if (!fitted && pts.length) { map.fitBounds(L.latLngBounds(pts.length > 1 ? pts : [pts[0], pts[0]]), {padding:[40, 40], maxZoom:15}); fitted = true; }
+  const act = $("#act");
+  if (act) act.innerHTML = O.rides.length ? O.rides.map(r => `<div class="item"><div class="main"><b>№${r.id} · ${esc(r.passenger || "")} ${tag(r.status)}</b>
+      <span class="muted">${esc(r.city)} · ${r.price ? r.price + " с" : "тариф"} · ${Math.floor(r.age / 60)} мүн мурун · ${esc(r.phone || "")}</span></div>
+      <button class="btn bad" data-cx="${r.id}">Жокко чыгаруу</button></div>`).join("") : `<div class="empty">Азыр активдүү заказ жок.</div>`;
+  act && act.querySelectorAll("[data-cx]").forEach(b => b.onclick = async () => {
+    if (!confirm("№" + b.dataset.cx + " заказды жокко чыгарасызбы?")) return;
+    await api("/api/a/cancel", {id:+b.dataset.cx}); refresh();
+  });
+}
+
+// ---------- айдоочулар ----------
+async function viewDrivers() {
+  const {drivers} = await api("/api/a/drivers");
+  const pend = drivers.filter(d => d.status === "pending"), rest = drivers.filter(d => d.status !== "pending");
+  const row = d => `<div class="item"><div class="main"><b>${esc(d.name)} ${tag(d.status)} ${d.is_online ? '<span class="tag t-in_trip">онлайн</span>' : ""}</b>
+      <span class="muted">${esc(d.phone)} · ${esc(d.car_color)} ${esc(d.car_model)}, ${esc(d.car_plate)}${d.status !== "pending" ? ` · ★ ${d.rating} · ${d.rides_done} сапар · баланс <b>${Math.round(d.balance)} с</b>` : ""}</span></div>
+      ${d.status === "pending" ? `<button class="btn ok" data-a="approve" data-u="${esc(d.uid)}">Ырастоо</button><button class="btn bad" data-a="reject" data-u="${esc(d.uid)}">Баш тартуу</button>`
+        : `<button class="btn" data-bal="${esc(d.uid)}">± Баланс</button>` + (d.status === "blocked"
+          ? `<button class="btn ok" data-a="unblock" data-u="${esc(d.uid)}">Ачуу</button>` : `<button class="btn bad" data-a="block" data-u="${esc(d.uid)}">Бөгөттөө</button>`)}</div>`;
+  $("#main").innerHTML = (pend.length ? `<div class="panel"><h3>Ырастоону күткөндөр (${pend.length})</h3>${pend.map(row).join("")}</div>` : "")
+    + `<div class="panel"><h3>Бардык айдоочулар (${rest.length})</h3>${rest.map(row).join("") || `<div class="empty">Айдоочу жок.</div>`}</div>`;
+  $("#main").querySelectorAll("[data-a]").forEach(b => b.onclick = async () => {
+    if (b.dataset.a === "block" && !confirm("Бөгөттөйсүзбү?")) return;
+    await api("/api/a/driver", {uid:b.dataset.u, action:b.dataset.a}); viewDrivers(); refresh();
+  });
+  $("#main").querySelectorAll("[data-bal]").forEach(b => b.onclick = async () => {
+    const v = prompt("Канча сом кошуу (+) же кемитүү (−)? Мис: 500 же -100");
+    if (!v || isNaN(+v) || +v === 0) return;
+    await api("/api/a/balance", {uid:b.dataset.bal, amount:+v}); viewDrivers();
+  });
+}
+
+// ---------- толуктоо ----------
+function viewTopups() {
+  const t = O.pending_topups;
+  $("#main").innerHTML = `<div class="panel"><h3>Текшерүүнү күткөн скриншоттор</h3>${t.length ? t.map(x => `<div class="item">
+      <a href="/api/a/proof?id=${x.id}" target="_blank"><img class="proof" src="/api/a/proof?id=${x.id}" alt="Чек" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'muted',textContent:'Сүрөт ботто'}))"></a>
+      <div class="main"><b>${esc(x.name)}</b><span class="muted">${esc(x.phone)} · ${when(x.at)} · #${x.id}</span></div>
+      <input class="f" style="max-width:110px" placeholder="Сумма" inputmode="numeric" id="am${x.id}">
+      <button class="btn ok" data-ok="${x.id}">Кошуу</button><button class="btn bad" data-no="${x.id}">Жок</button></div>`).join("")
+    : `<div class="empty">Азыр текшерүүнү күткөн чек жок. Айдоочулар скриншотту ботко жиберет.</div>`}</div>`;
+  $("#main").querySelectorAll("[data-ok]").forEach(b => b.onclick = async () => {
+    const v = +$("#am" + b.dataset.ok).value;
+    if (!(v > 0)) { $("#am" + b.dataset.ok).style.borderColor = "var(--bad)"; return; }
+    await api("/api/a/topup", {id:+b.dataset.ok, amount:v}); await refresh(); viewTopups();
+  });
+  $("#main").querySelectorAll("[data-no]").forEach(b => b.onclick = async () => { await api("/api/a/topup", {id:+b.dataset.no, reject:true}); await refresh(); viewTopups(); });
+}
+
+// ---------- сапарлар ----------
+async function viewRides() {
+  const {rides} = await api("/api/a/rides");
+  $("#main").innerHTML = `<div class="panel"><h3>Акыркы сапарлар</h3><div class="scroll"><table>
+    <tr><th>№</th><th>Убакыт</th><th>Шаар</th><th>Жүргүнчү</th><th>Айдоочу</th><th>Баа</th><th>Абалы</th></tr>
+    ${rides.map(r => `<tr><td>${r.id}</td><td>${when(r.created_at)}</td><td>${esc(r.city)}</td><td>${esc(r.p_name)}<div class="muted">${esc(r.p_phone)}</div></td>
+      <td>${esc(r.d_name || "—")}</td><td>${r.price ? r.price + " с" : "тариф"}</td><td>${tag(r.status)}${r.status === "cancelled" ? `<div class="muted">${r.cancel_by === "system" ? "айдоочу табылган жок" : r.cancel_by === "admin" ? "админ" : r.cancel_by === r.driver ? "айдоочу" : "жүргүнчү"}</div>` : ""}</td></tr>`).join("")}
+    </table>${rides.length ? "" : `<div class="empty">Сапар жок.</div>`}</div></div>`;
+}
+
+// ---------- тарифтер ----------
+async function viewTariffs() {
+  const {tariffs} = await api("/api/a/tariffs");
+  $("#main").innerHTML = `<div class="panel"><h3>Тарифтер (сом)</h3><div class="scroll"><table>
+    <tr><th>Шаар</th><th>Отуруу</th><th>1 км</th><th>1 мүнөт</th><th>Минимум</th><th></th></tr>
+    ${tariffs.map((t, i) => `<tr><td><b>${esc(t.city)}</b>${t.saved ? "" : `<div class="muted">демейки</div>`}</td>
+      ${["base", "per_km", "per_min", "min_price"].map(k => `<td><input class="f" inputmode="decimal" id="t${i}${k}" value="${+t[k]}"></td>`).join("")}
+      <td><button class="btn gold" data-i="${i}">Сактоо</button></td></tr>`).join("")}</table></div></div>
+    <p class="muted">Баа = max(минимум, отуруу + км × 1 км баасы + мүнөт × 1 мүнөт баасы) × талап коэффициенти, 10 сомго тегеректелет.</p>`;
+  $("#main").querySelectorAll("[data-i]").forEach(b => b.onclick = async () => {
+    const i = +b.dataset.i, v = k => $(`#t${i}${k}`).value;
+    const r = await api("/api/a/tariff", {city:tariffs[i].city, base:v("base"), per_km:v("per_km"), per_min:v("per_min"), min_price:v("min_price")});
+    b.textContent = r.ok ? "✓ Сакталды" : "Ката"; setTimeout(() => viewTariffs(), 900);
+  });
+}
+
+// ---------- жалпы ----------
+function badges() {
+  const d = O.pending_drivers.length, t = O.pending_topups.length;
+  $("#bD").textContent = d; $("#bD").classList.toggle("hide", !d);
+  $("#bT").textContent = t; $("#bT").classList.toggle("hide", !t);
+  $("#live").textContent = "Жаңыланды " + new Date().toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit", second:"2-digit"});
+}
+async function refresh() {
+  const r = await api("/api/a/overview");
+  if (r.error) { clearInterval(timer); return login(false); }
+  O = r; badges();
+  if (tab === "map") drawMap();
+}
+function show(t) {
+  tab = t; lyr = null;
+  document.querySelectorAll("nav button").forEach(b => b.classList.toggle("on", b.dataset.t === t));
+  ({map:viewMap, drivers:viewDrivers, topups:viewTopups, rides:viewRides, tariffs:viewTariffs})[t]();
+}
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => show(b.dataset.t));
+async function boot() {
+  const m = await api("/api/me?kind=admin");
+  if (!m.auth) return login(m.pending, m.link);
+  $("#nav").classList.remove("hide");
+  await refresh(); show("map");
+  clearInterval(timer); timer = setInterval(refresh, 4000);
+}
+boot();
+</script>
+</body>
+</html>

@@ -214,3 +214,17 @@ class DriverWeb(unittest.TestCase):
         self.assertIsNone(st["offer"])
         self.assertEqual(st["today"]["rides"], 0)
         core.set_driver("tg:88", online=0, live_until=None)   # башка сыноолорго тийбесин
+
+
+class AdminWeb(unittest.TestCase):
+    def test_admin_login_and_overview(self):
+        core.init_db()
+        core.ensure_user(ADMIN, "Админ"); core.set_user(ADMIN, phone="+996700900900")
+        self.assertEqual(core.admin_by_phone("0700 900 900"), ADMIN)
+        self.assertIsNone(core.admin_by_phone("0555 111 222"))
+        tok = core.web_session_new("0700 900 900", "", "admin")
+        self.assertEqual(core.web_session_verify(tok, "+996700900900"), ADMIN)
+        o = core.admin_overview()
+        for k in ("stats", "drivers", "rides", "pending_drivers", "pending_topups"):
+            self.assertIn(k, o)
+        self.assertEqual(len(core.all_tariffs()), len(core.CITIES))

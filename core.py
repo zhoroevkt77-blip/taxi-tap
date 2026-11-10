@@ -212,7 +212,7 @@ SCHEMA = [
         token TEXT PRIMARY KEY,         -- браузердеги cookie
         uid TEXT,                       -- ырасталгандан кийин: 'ph:+996...'
         phone TEXT, name TEXT,
-        kind TEXT DEFAULT 'rider',      -- rider | driver
+        kind TEXT DEFAULT 'rider',      -- rider | driver | admin
         verified INTEGER DEFAULT 0,
         created_at REAL)""",
     "CREATE INDEX IF NOT EXISTS idx_rides_status ON rides(status)",
@@ -540,15 +540,24 @@ def web_session_new(phone, name, kind="rider"):
     return tok
 
 
-def driver_by_phone(phone):
-    """Сайттан кирген айдоочу: номери боюнча Telegram'дагы аккаунтун табат."""
+def user_by_phone(phone, ok=lambda uid: True):
+    """Номер боюнча Telegram'дагы аккаунтту табат (айдоочу же админ үчүн)."""
     uid = phone_uid(phone)
     if not uid:
         return None
     for u in query("SELECT uid, phone FROM users WHERE phone IS NOT NULL", (), "all"):
-        if phone_uid(u["phone"]) == uid and get_driver(u["uid"]):
+        if phone_uid(u["phone"]) == uid and ok(u["uid"]):
             return u["uid"]
     return None
+
+
+def driver_by_phone(phone):
+    return user_by_phone(phone, lambda uid: get_driver(uid) is not None)
+
+
+def admin_by_phone(phone):
+    admins = ["tg:" + x.strip() for x in (os.environ.get("ADMIN_IDS") or "").split(",") if x.strip()]
+    return user_by_phone(phone, lambda uid: uid in admins)
 
 
 def web_session(tok):
@@ -567,8 +576,8 @@ def web_session_verify(tok, phone_seen=None):
         return None
     if phone_seen is not None and phone_uid(phone_seen) != uid:
         return None
-    if s.get("kind") == "driver":
-        duid = driver_by_phone(s["phone"])
+    if s.get("kind") in ("driver", "admin"):
+        duid = (driver_by_phone if s["kind"] == "driver" else admin_by_phone)(s["phone"])
         if not duid:
             return None
         query("UPDATE web_sessions SET verified=1, uid=? WHERE token=?", (duid, tok))
@@ -615,3 +624,62 @@ def driver_history(uid, limit=20):
 def offer_for(uid):
     return query("SELECT * FROM rides WHERE status='searching' AND offered_to=? LIMIT 1",
                  (uid,), "one")
+
+
+# ==================== Админ панели ====================
+
+def admin_overview():
+    t0 = day_start()
+    drivers = query("SELECT d.*, u.name, u.phone FROM drivers d LEFT JOIN users u ON u.uid=d.uid",
+                    (), "all")
+    online = [d for d in drivers if is_available(d) or d["busy_ride"]]
+    rides = query("SELECT r.*, u.name AS p_name, u.phone AS p_phone FROM rides r "
+                  "LEFT JOIN users u ON u.uid=r.passenger WHERE r.status IN "
+                  "('searching','accepted','arrived','in_trip') ORDER BY r.id DESC", (), "all")
+    today = query("SELECT COUNT(*) AS n, COALESCE(SUM(price),0) AS s FROM rides "
+                  "WHERE status='completed' AND completed_at>=?", (t0,), "one")
+    lost = query("SELECT COUNT(*) AS n FROM rides WHERE status='cancelled' AND cancel_by='system' "
+                 "AND created_at>=?", (t0,), "one")
+    fee = query("SELECT COALESCE(SUM(-amount),0) AS s FROM balance_tx WHERE kind='commission' "
+                "AND at>=?", (t0,), "one")
+    pend_tx = query("SELECT t.*, u.name, u.phone FROM balance_tx t LEFT JOIN users u ON "
+                    "u.uid=t.driver WHERE t.status='pending' ORDER BY t.id", (), "all")
+    return {
+        "stats": {"online": len(online), "busy": sum(1 for d in online if d["busy_ride"]),
+                  "active": len(rides), "searching": sum(1 for r in rides if r["status"] == "searching"),
+                  "done_today": today["n"], "gross_today": int(today["s"] or 0),
+                  "fee_today": round(fee["s"] or 0), "lost_today": lost["n"]},
+        "drivers": [{"uid": d["uid"], "name": d["name"], "pos": [d["lat"], d["lon"]],
+                     "busy": bool(d["busy_ride"]), "plate": d["car_plate"]}
+                    for d in online if d["lat"] is not None],
+        "rides": [{"id": r["id"], "status": r["status"], "p": [r["p_lat"], r["p_lon"]],
+                   "d": [r["d_lat"], r["d_lon"]] if r["d_lat"] is not None else None,
+                   "price": r["price"], "city": r["city"], "passenger": r["p_name"],
+                   "phone": r["p_phone"], "driver": r["driver"],
+                   "age": int(now() - (r["created_at"] or now()))} for r in rides],
+        "pending_drivers": [{"uid": d["uid"], "name": d["name"], "phone": d["phone"],
+                             "car": "%s %s" % (d["car_color"] or "", d["car_model"] or ""),
+                             "plate": d["car_plate"]} for d in drivers if d["status"] == "pending"],
+        "pending_topups": [{"id": t["id"], "uid": t["driver"], "name": t["name"],
+                            "phone": t["phone"], "at": t["at"]} for t in pend_tx],
+    }
+
+
+def admin_drivers():
+    return query("SELECT d.uid, d.status, d.balance, d.rating, d.rides_done, d.car_model, "
+                 "d.car_color, d.car_plate, d.online, d.busy_ride, d.loc_at, d.live_until, d.lat, d.lon, "
+                 "u.name, u.phone FROM drivers d LEFT JOIN users u ON u.uid=d.uid "
+                 "ORDER BY d.status='pending' DESC, d.rides_done DESC", (), "all")
+
+
+def admin_rides(limit=60):
+    return query("SELECT r.id, r.status, r.city, r.price, r.dist_km, r.created_at, r.cancel_by, "
+                 "r.driver, p.name AS p_name, p.phone AS p_phone, du.name AS d_name "
+                 "FROM rides r LEFT JOIN users p ON p.uid=r.passenger "
+                 "LEFT JOIN users du ON du.uid=r.driver ORDER BY r.id DESC LIMIT ?",
+                 (limit,), "all")
+
+
+def all_tariffs():
+    saved = {t["city"]: t for t in query("SELECT * FROM tariffs", (), "all")}
+    return [dict(saved.get(c) or dict(DEFAULT_TARIFF, city=c), saved=c in saved) for c in CITIES]

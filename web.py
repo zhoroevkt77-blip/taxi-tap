@@ -170,6 +170,10 @@ class H(BaseHTTPRequestHandler):
                 return self._file(os.path.join(STATIC, "rider.html"))
             if u.path in ("/driver", "/driver/"):
                 return self._file(os.path.join(STATIC, "driver.html"))
+            if u.path in ("/admin", "/admin/"):
+                return self._file(os.path.join(STATIC, "admin.html"))
+            if u.path.startswith("/api/a/"):
+                return self._admin_get(u.path[7:], parse_qs(u.query))
             if u.path == "/api/d/state":
                 uid = self._uid("driver")
                 if not uid:
@@ -237,6 +241,8 @@ class H(BaseHTTPRequestHandler):
                 return self._json({"ok": True}, cookie="")
             if path.startswith("/api/d/"):
                 return self._driver_post(path[7:], b)
+            if path.startswith("/api/a/"):
+                return self._admin_post(path[7:], b)
             uid = self._uid()
             if not uid:
                 return self._json({"error": "auth"}, 401)
@@ -310,6 +316,88 @@ class H(BaseHTTPRequestHandler):
         deliver([o for o in outs if o.get("to") != uid])   # айдоочу сайтта көрүп турат
         return self._json(driver_state(uid))
 
+    # ---------- админ ----------
+
+    def _admin_get(self, action, q):
+        uid = self._uid("admin")
+        if not uid:
+            return self._json({"error": "auth"}, 401)
+        if action == "overview":
+            return self._json(core.admin_overview())
+        if action == "drivers":
+            t = core.now()
+            rows = core.admin_drivers()
+            for d in rows:
+                d["is_online"] = bool(d["busy_ride"]) or core.is_available(d, t)
+            return self._json({"drivers": rows})
+        if action == "rides":
+            return self._json({"rides": core.admin_rides()})
+        if action == "tariffs":
+            return self._json({"tariffs": core.all_tariffs()})
+        if action == "proof":
+            tx = core.query("SELECT proof FROM balance_tx WHERE id=?",
+                            (int((q.get("id") or ["0"])[0]),), "one")
+            data = tg_file(tx and tx["proof"])
+            if not data:
+                return self._json({"error": "no_proof"}, 404)
+            self.send_response(200)
+            self.send_header("Content-Type", "image/jpeg")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+            return None
+        return self._json({"error": "not_found"}, 404)
+
+    def _admin_post(self, action, b):
+        uid = self._uid("admin")
+        if not uid:
+            return self._json({"error": "auth"}, 401)
+        if action == "driver":
+            target, act = str(b.get("uid") or ""), b.get("action")
+            if not core.get_driver(target):
+                return self._json({"error": "no_driver"}, 404)
+            if act in ("approve", "reject"):
+                outs = flow.admin_button(uid, "adm:%s:%s" % ("ok" if act == "approve" else "no", target))
+                deliver([o for o in outs if o["to"] != uid])
+            elif act == "block":
+                core.set_driver(target, status="blocked", online=0)
+            elif act == "unblock":
+                core.set_driver(target, status="active")
+            return self._json({"ok": True})
+        if action == "topup":
+            tx = int(b.get("id") or 0)
+            data = "topno:%d" % tx if b.get("reject") else "top:%d:%d" % (tx, int(b.get("amount") or 0))
+            if not b.get("reject") and int(b.get("amount") or 0) <= 0:
+                return self._json({"error": "bad_amount"}, 400)
+            outs = flow.admin_button(uid, data)
+            deliver([o for o in outs if o["to"] != uid])
+            return self._json({"ok": True})
+        if action == "balance":
+            target, amount = str(b.get("uid") or ""), _num(b.get("amount"))
+            if not core.get_driver(target) or not amount:
+                return self._json({"error": "bad"}, 400)
+            core.add_tx(target, amount, "manual")
+            return self._json({"ok": True, "balance": core.get_driver(target)["balance"]})
+        if action == "tariff":
+            city = str(b.get("city") or "")
+            vals = [_num(b.get(k)) for k in ("base", "per_km", "per_min", "min_price")]
+            if city not in core.CITIES or any(v is None or v < 0 for v in vals):
+                return self._json({"error": "bad"}, 400)
+            core.set_tariff(city, *vals)
+            return self._json({"ok": True})
+        if action == "cancel":
+            r = core.cancel(int(b.get("id") or 0), "admin",
+                            allowed=("searching", "accepted", "arrived", "in_trip"))
+            if not r:
+                return self._json({"error": "no_ride"}, 404)
+            outs = [flow.msg(r["passenger"], "Заказ админ тарабынан жокко чыгарылды.")]
+            for who in (r["driver"], r["offered_to"]):
+                if who:
+                    outs.append(flow.msg(who, "Заказ №%d админ тарабынан жокко чыгарылды." % r["id"]))
+            deliver(outs)
+            return self._json({"ok": True})
+        return self._json({"error": "not_found"}, 404)
+
     def _tg_link(self, tok):
         return "https://t.me/%s?start=web_%s" % (BOT_USERNAME, tok) if BOT_USERNAME else None
 
@@ -319,6 +407,10 @@ class H(BaseHTTPRequestHandler):
         kind = "driver" if b.get("kind") == "driver" else "rider"
         if not core.phone_uid(phone):
             return self._json({"error": "bad_phone"}, 400)
+        if b.get("kind") == "admin":
+            kind = "admin"
+            if not core.admin_by_phone(phone):
+                return self._json({"error": "not_admin"}, 404)
         if kind == "driver" and not core.driver_by_phone(phone):
             return self._json({"error": "not_driver"}, 404)
         tok = core.web_session_new(phone, name, kind)
@@ -327,6 +419,29 @@ class H(BaseHTTPRequestHandler):
             return self._json({"auth": True}, cookie=tok)
         return self._json({"auth": False, "pending": True, "link": self._tg_link(tok)},
                           cookie=tok)
+
+
+def tg_file(file_id):
+    """Telegram'дагы сүрөттү (баланс скриншоту) админ панелине алып келет."""
+    if not file_id:
+        return None
+    tok = (os.environ.get("TELEGRAM_BOT_TOKEN") or "").strip()
+    path = os.path.join(core.BASE, "token.txt")
+    if not tok and os.path.exists(path):
+        tok = open(path, encoding="utf-8").read().strip()
+    if not tok:
+        return None
+    import urllib.request
+    try:
+        with urllib.request.urlopen("https://api.telegram.org/bot%s/getFile?file_id=%s"
+                                    % (tok, file_id), timeout=20) as r:
+            fp = json.loads(r.read().decode())["result"]["file_path"]
+        with urllib.request.urlopen("https://api.telegram.org/file/bot%s/%s" % (tok, fp),
+                                    timeout=30) as r:
+            return r.read()
+    except Exception as e:
+        print("  tg_file:", e, flush=True)
+        return None
 
 
 # Out'тор: Telegram'дагы колдонуучуларга bot.py жөнөтөт. Сайттагы жүргүнчү
