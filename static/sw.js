@@ -1,6 +1,6 @@
 // Такси ТАП! — service worker: тиркеме катары орнотуу жана интернет жок болсо жөнөкөй бет.
 // API'лер жана карта кэштелбейт — абал ар дайым жаңы болушу керек.
-const SHELL = "taxitap-v36";
+const SHELL = "taxitap-v37";
 const PAGES = ["/", "/driver", "/static/area.js", "/static/manifest.json", "/static/icon-192.png"];
 self.addEventListener("install", e => e.waitUntil(caches.open(SHELL).then(c => c.addAll(PAGES)).then(() => self.skipWaiting())));
 self.addEventListener("activate", e => e.waitUntil(

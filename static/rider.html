@@ -296,7 +296,8 @@ function viewIdle() {
   $("#tOther").onclick = () => { S.openOther = true; go("econom"); };
   $("#home").querySelectorAll(".rec").forEach(b => b.onclick = () => { const r = rec[+b.dataset.i];
     S.cls = "econom"; S.to = [r.lat, r.lon]; S.toAddr = r.name === "Үй" || r.name === "Иш" ? r.name : r.name; picked("Б"); viewQuote(); });
-  if (!PLACES) loadPlaces().then(() => { if (S.mode === "idle") viewIdle(); });
+  const sig = JSON.stringify(PLACES && PLACES.recent || null);
+  loadPlaces(true).then(() => { if (S.mode === "idle" && JSON.stringify(PLACES && PLACES.recent || null) !== sig) viewIdle(); });
   onPinMoved();
 }
 const homeEta = () => { const n = S.near; return !n ? "Айдоочу изделүүдө…" : !n.city ? "Бул жерде иштебейбиз" : n.eta_min ? `${n.eta_min} мүнөттө келет` : "Бош айдоочу азыр жок"; };
@@ -380,7 +381,7 @@ function viewSearch(field) {
         items = x.items || [];
         quick = quick.filter(r => !r.gps && (r.name + " " + r.area).toLowerCase().includes(q.toLowerCase()));
       }
-      const all = quick.concat(items);
+      const seenN = new Set(), all = quick.concat(items).filter(r => { const k = (r.name || "").toLowerCase(); if (seenN.has(k)) return false; seenN.add(k); return true; });
       $("#list").innerHTML = all.length ? all.map((r, i) =>
         `<div class="res" data-i="${i}"><span class="ri">${r.icon}</span><div style="flex:1;min-width:0"><b>${esc(r.name)}</b>${r.area ? `<span class="muted">${esc(r.area)}</span>` : ""}</div>${act === "to" && r.lat != null ? `<span class="rt2">${minsTo(r)}</span>` : ""}</div>`).join("")
         : q.length >= 2 ? `<p class="muted">«${esc(q)}» табылган жок. Башкача жазып көрүңүз (мис. көчөнүн атын гана) же «Картадан белгилөө» басыңыз.</p>` : "";
