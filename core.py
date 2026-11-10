@@ -53,6 +53,8 @@ SEARCH_MAX_SEC = _env_num("SEARCH_MAX_SEC", 180)   # андан кийин из�
 LOC_TTL_SEC = _env_num("LOC_TTL_SEC", 600)         # координат ушунча эскирсе — офлайн
 ROAD_FACTOR = _env_num("ROAD_FACTOR", 1.3)         # түз сызык → жол аралыгы
 AVG_SPEED_KMH = _env_num("AVG_SPEED_KMH", 25)
+TRAFFIC_FACTOR = _env_num("TRAFFIC_FACTOR", 1.3)   # OSRM убактысы бош жол үчүн — шаарда көбүрөөк
+OSRM_URL = (os.environ.get("OSRM_URL") or "https://router.project-osrm.org").rstrip("/")
 
 # Радиус издөө убактысына жараша кеңейет: (секунд, км)
 RADIUS_STEPS = [(60, 3.0), (120, 5.0), (10 ** 9, 8.0)]
@@ -91,7 +93,7 @@ _local = threading.local()
 def _new_conn():
     if IS_PG:
         import psycopg2
-        return psycopg2.connect(DATABASE_URL, sslmode=os.environ.get("PGSSLMODE", "require"))
+        return psycopg2.connect(DATABASE_URL, sslmode=os.environ.get("PGSSLMODE", "prefer"))
     conn = sqlite3.connect(SQLITE_PATH, timeout=10)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
@@ -423,8 +425,51 @@ def surge_k(city):
 
 
 def road_km(lat1, lon1, lat2, lon2):
-    """Азырынча түз сызык × коэффициент. Кийин OSRM/2GIS маршруту коюлат."""
+    """Тез баалоо (маршрутсуз): түз сызык × коэффициент. ETA жана радиус үчүн."""
     return haversine_km(lat1, lon1, lat2, lon2) * ROAD_FACTOR
+
+
+_ROUTES = {}
+_ROUTES_LOCK = threading.Lock()
+
+
+def route(lat1, lon1, lat2, lon2):
+    """
+    Жол боюнча маршрут (OSRM): {"km", "min", "coords": [[lat, lon], ...], "real": bool}.
+    OSRM жооп бербесе — түз сызык (real=False), сервис токтобойт.
+    """
+    key = tuple(round(x, 4) for x in (lat1, lon1, lat2, lon2))
+    with _ROUTES_LOCK:
+        hit = _ROUTES.get(key)
+    if hit:
+        return hit
+    out = None
+    if OSRM_URL:
+        import urllib.request
+        url = "%s/route/v1/driving/%.6f,%.6f;%.6f,%.6f?overview=full&geometries=geojson" % (
+            OSRM_URL, lon1, lat1, lon2, lat2)
+        try:
+            with urllib.request.urlopen(url, timeout=4) as r:
+                j = json.loads(r.read().decode())
+            rt = j["routes"][0]
+            pts = [[c[1], c[0]] for c in rt["geometry"]["coordinates"]]
+            step = max(1, len(pts) // 400)              # картага 400 чекит жетиштүү
+            pts = pts[::step] + ([pts[-1]] if (len(pts) - 1) % step else [])
+            out = {"km": round(rt["distance"] / 1000.0, 2),
+                   "min": round(rt["duration"] / 60.0 * TRAFFIC_FACTOR, 1),
+                   "coords": pts, "real": True}
+        except Exception as e:
+            print("  OSRM:", e, flush=True)
+    if not out:
+        km = road_km(lat1, lon1, lat2, lon2)
+        out = {"km": round(km, 2), "min": round(km / AVG_SPEED_KMH * 60, 1),
+               "coords": [[lat1, lon1], [lat2, lon2]], "real": False}
+    with _ROUTES_LOCK:
+        if len(_ROUTES) > 2000:
+            _ROUTES.clear()
+        if out["real"]:
+            _ROUTES[key] = out
+    return out
 
 
 def quote(p_lat, p_lon, d_lat=None, d_lon=None):
@@ -434,11 +479,11 @@ def quote(p_lat, p_lon, d_lat=None, d_lon=None):
     k = surge_k(city)
     if d_lat is None:
         return {"city": city, "dist_km": None, "price": None, "surge": k, "tariff": t}
-    km = road_km(p_lat, p_lon, d_lat, d_lon)
-    minutes = km / AVG_SPEED_KMH * 60
+    rt = route(p_lat, p_lon, d_lat, d_lon)
+    km, minutes = rt["km"], rt["min"]
     raw = max(t["min_price"], t["base"] + t["per_km"] * km + t["per_min"] * minutes) * k
-    return {"city": city, "dist_km": round(km, 1), "price": int(math.ceil(raw / 10.0) * 10),
-            "surge": k, "tariff": t}
+    return {"city": city, "dist_km": round(km, 1), "minutes": round(minutes),
+            "price": int(math.ceil(raw / 10.0) * 10), "surge": k, "tariff": t, "route": rt}
 
 
 # ==================== Сапар ====================

@@ -225,12 +225,22 @@ function viewRide() {
   L.marker(r.p, {icon:icon("", "👤"), interactive:false}).addTo(layer);
   if (r.d) L.marker(r.d, {icon:icon("to", "■"), interactive:false}).addTo(layer);
   const target = r.status === "in_trip" ? r.d : r.p;
-  if (myPos && target) L.polyline([myPos, target], {color:"#17365C", weight:4, dashArray:"6 8"}).addTo(layer);
-  if (lastRide !== r.id + r.status && myPos && target) map.fitBounds(L.latLngBounds([myPos, target]), {paddingTopLeft:[40, 90], paddingBottomRight:[40, 360]});
+  if (lastRide !== r.id + r.status && myPos && target) {
+    // жол боюнча маршрут: айдоочудан → жүргүнчүгө, сапарда → бара турган жерге
+    const line = L.polyline([myPos, target], {color:"#17365C", weight:4, dashArray:"6 8"}).addTo(layer);
+    map.fitBounds(L.latLngBounds([myPos, target]), {paddingTopLeft:[40, 90], paddingBottomRight:[40, 360]});
+    api(`/api/route?a=${myPos[0]},${myPos[1]}&b=${target[0]},${target[1]}`).then(rt => {
+      if (!rt.coords || rt.coords.length < 3) return;
+      line.remove ? line.remove() : null;
+      L.polyline(rt.coords, {color:"#17365C", weight:5, opacity:.85}).addTo(layer);
+      map.fitBounds(L.latLngBounds(rt.coords), {paddingTopLeft:[40, 90], paddingBottomRight:[40, 360]});
+      const el = $("#rinfo"); if (el) el.textContent = `${rt.km} км · ~${rt.min} мүн`;
+    });
+  }
   lastRide = r.id + r.status;
   const title = {accepted:"Жүргүнчүгө барыңыз", arrived:"Жүргүнчүнү күтүңүз", in_trip:"Сапар жүрүп жатат"}[r.status];
   const next = {accepted:["📍 Келдим", "main"], arrived:["▶️ Сапарды баштоо", "go"], in_trip:["🏁 Сапарды бүтүрүү", "dark"]}[r.status];
-  render(`<h2>${title}</h2>
+  render(`<h2>${title}</h2><div class="muted" id="rinfo" style="margin:-6px 0 6px"></div>
     <div class="row"><span class="bul"></span><div style="flex:1"><b>${esc(r.passenger)}</b><div class="muted">${r.price ? r.price + " сом" : "Тариф боюнча"}${r.dist_km ? " · ~" + r.dist_km + " км" : ""}</div></div></div>
     ${r.d ? "" : `<div class="row"><span class="bul to"></span><div class="muted">Бара турган жерин жүргүнчү өзү айтат</div></div>`}
     <div class="two"><a class="btn ghost" href="tel:${esc(r.phone)}">📞 Чалуу</a>${target ? `<a class="btn ghost" href="${navUrl(target)}" target="_blank">🧭 Навигатор</a>` : ""}</div>

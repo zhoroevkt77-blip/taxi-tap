@@ -290,3 +290,43 @@ if __name__ == "__main__":
         unittest.main()
     finally:
         shutil.rmtree(_tmp, ignore_errors=True)
+
+
+class Routing(unittest.TestCase):
+    def test_osrm_parsed_and_cached(self):
+        calls = []
+
+        class R:
+            def __init__(self, b): self.b = b
+            def read(self): return self.b
+            def __enter__(self): return self
+            def __exit__(self, *a): pass
+        body = json.dumps({"routes": [{"distance": 4200, "duration": 600,
+                                       "geometry": {"coordinates": [[78.39, 42.49], [78.40, 42.48], [78.41, 42.47]]}}]}).encode()
+        orig = urllib.request.urlopen
+        urllib.request.urlopen = lambda url, timeout=0: calls.append(url) or R(body)
+        try:
+            rt = core.route(42.49, 78.39, 42.47, 78.41)
+            core.route(42.49, 78.39, 42.47, 78.41)
+        finally:
+            urllib.request.urlopen = orig
+        self.assertTrue(rt["real"])
+        self.assertEqual(rt["km"], 4.2)
+        self.assertEqual(rt["min"], round(10 * core.TRAFFIC_FACTOR, 1))
+        self.assertEqual(rt["coords"][0], [42.49, 78.39])
+        self.assertEqual(len(calls), 1)                      # экинчиси кэштен
+
+    def test_fallback_without_network(self):
+        orig = urllib.request.urlopen
+
+        def boom(*a, **k):
+            raise OSError("no network")
+        urllib.request.urlopen = boom
+        try:
+            rt = core.route(42.40, 78.30, 42.41, 78.31)
+        finally:
+            urllib.request.urlopen = orig
+        self.assertFalse(rt["real"])
+        self.assertEqual(len(rt["coords"]), 2)
+        q = core.quote(42.40, 78.30, 42.41, 78.31)
+        self.assertIn("minutes", q)

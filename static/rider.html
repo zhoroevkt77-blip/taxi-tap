@@ -276,13 +276,14 @@ function viewPickDest() {
 
 async function viewQuote() {
   S.mode = "quote"; setPin(null);
-  drawRoute();
-  render(`<p class="muted">Баа эсептелүүдө…</p>`);
+  drawRoute(null, false);
+  render(`<p class="muted">Маршрут жана баа эсептелүүдө…</p>`);
   const q = await api("/api/quote", {p:S.from, d:S.to});
+  if (q.route) { routeSeq++; drawRoute(q.route); }
   if (q.error) { render(`<h2>Кечиресиз</h2><p class="muted">Бул жерде Такси ТАП! азырынча иштебейт.</p><button class="btn ghost" id="back">Артка</button>`); $("#back").onclick = viewIdle; return; }
   S.quote = q;
   const price = q.price ? `${q.price} с` : `${Math.round(q.tariff.min_price)} с+`;
-  const sub = q.price ? `~${q.dist_km} км` : `отуруу ${Math.round(q.tariff.base)} с + ${Math.round(q.tariff.per_km)} с/км`;
+  const sub = q.price ? `${q.dist_km} км · ~${q.minutes} мүн` : `отуруу ${Math.round(q.tariff.base)} с + ${Math.round(q.tariff.per_km)} с/км`;
   render(`<div class="row"><span class="bul"></span><div><b>${esc(S.fromAddr)}</b></div></div>
     <div class="row"><span class="bul to"></span><div><b>${S.to ? esc(S.toAddr) : "Айдоочуга айтам"}</b></div></div>
     <div class="tariff"><div><b>Стандарт</b><div class="muted">${sub}${q.surge > 1 ? ` · ⚡ ×${q.surge}` : ""}</div></div><div class="price">${price}</div></div>
@@ -297,16 +298,27 @@ async function viewQuote() {
 }
 function alertBox(t) { const e = document.createElement("p"); e.className = "err"; e.textContent = t; $("#view").appendChild(e); }
 
-function drawRoute() {
-  rideLayer.clearLayers(); nearLayer.clearLayers();
+// А → Б маршруту: адегенде түз сызык (дароо), анан жол боюнча (сервер OSRM'ден алат)
+let routeLine = null, routeSeq = 0;
+function drawRoute(coords, fetchIt = true) {
+  rideLayer.clearLayers(); nearLayer.clearLayers(); driverMarker = null; routeLine = null;
   const a = S.ride ? [S.ride.p_lat, S.ride.p_lon] : S.from;
   const b = S.ride ? (S.ride.d_lat != null ? [S.ride.d_lat, S.ride.d_lon] : null) : S.to;
   L.marker(a, {icon:icon("", "●"), interactive:false}).addTo(rideLayer);
-  if (b) {
-    L.marker(b, {icon:icon("mine", "■"), interactive:false}).addTo(rideLayer);
-    L.polyline([a, b], {color:"#17365C", weight:4, dashArray:"6 8"}).addTo(rideLayer);
-    map.fitBounds(L.latLngBounds([a, b]), {paddingTopLeft:[40, 90], paddingBottomRight:[40, 340]});
-  } else map.setView(a, 16);
+  if (!b) { map.setView(a, 16); return; }
+  L.marker(b, {icon:icon("mine", "■"), interactive:false}).addTo(rideLayer);
+  const show = pts => {
+    if (routeLine) routeLine.remove();
+    const real = pts && pts.length > 2;
+    routeLine = L.polyline(real ? pts : [a, b], real ? {color:"#17365C", weight:5, opacity:.85}
+                                                    : {color:"#17365C", weight:4, dashArray:"6 8"}).addTo(rideLayer);
+    map.fitBounds(L.latLngBounds(real ? pts : [a, b]), {paddingTopLeft:[40, 90], paddingBottomRight:[40, 340]});
+  };
+  if (coords) return show(coords);
+  show(null);
+  if (!fetchIt) return;
+  const my = ++routeSeq;
+  api(`/api/route?a=${a[0]},${a[1]}&b=${b[0]},${b[1]}`).then(r => { if (my === routeSeq && r.coords) show(r.coords); });
 }
 
 // ---------- сапар ----------

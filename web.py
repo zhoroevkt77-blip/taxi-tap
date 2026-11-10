@@ -191,6 +191,18 @@ class H(BaseHTTPRequestHandler):
                 return self._me()
             if u.path == "/api/near":
                 return self._near(q)
+            if u.path == "/api/route":
+                if not self._uid():
+                    return self._json({"error": "auth"}, 401)
+                a = _point((q.get("a") or [""])[0].split(","))
+                z = _point((q.get("b") or [""])[0].split(","))
+                if not a or not z:
+                    return self._json({"error": "bad_point"}, 400)
+                if core.haversine_km(a[0], a[1], z[0], z[1]) > 600:
+                    return self._json({"error": "too_far"}, 400)
+                rt = core.route(a[0], a[1], z[0], z[1])
+                return self._json({"coords": rt["coords"], "km": rt["km"],
+                                   "min": round(rt["min"]), "real": rt["real"]})
             uid = self._uid()
             if not uid:
                 return self._json({"error": "auth"}, 401)
@@ -287,7 +299,8 @@ class H(BaseHTTPRequestHandler):
                 return self._json({"error": "no_city"})
             t = q["tariff"]
             return self._json({"city": q["city"], "price": q["price"], "dist_km": q["dist_km"],
-                               "surge": q["surge"],
+                               "minutes": q.get("minutes"), "surge": q["surge"],
+                               "route": (q.get("route") or {}).get("coords"),
                                "tariff": {k: t[k] for k in ("base", "per_km", "min_price")}})
         if path == "/api/order":
             p, d = _point(b.get("p")), _point(b.get("d"))
