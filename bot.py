@@ -17,6 +17,7 @@ import ssl
 import threading
 import time
 import traceback
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -51,6 +52,13 @@ def api(method, **params):
         with urllib.request.urlopen(urllib.request.Request(API + method, data=data),
                                     timeout=70, context=_ctx) as r:
             return json.loads(r.read().decode())
+    except urllib.error.HTTPError as e:
+        try:
+            desc = json.loads(e.read().decode()).get("description")
+        except Exception:
+            desc = ""
+        print("  API катасы:", method, e.code, desc, flush=True)
+        return {"ok": False, "code": e.code, "description": desc}
     except Exception as e:
         print("  API катасы:", method, e, flush=True)
         return {"ok": False}
@@ -172,6 +180,7 @@ def main():
             if me.get("ok"):
                 break
             time.sleep(5)
+        api("deleteWebhook")            # webhook турса getUpdates 409 берет
         uname = (me.get("result") or {}).get("username", "")
         if uname and not web.BOT_USERNAME:
             web.BOT_USERNAME = uname
@@ -196,7 +205,8 @@ def main():
         r = api("getUpdates", offset=offset, timeout=50,
                 allowed_updates=["message", "callback_query"])
         if not r.get("ok"):
-            time.sleep(3)
+            # 409: бул токен менен башка жерде да бот иштеп жатат
+            time.sleep(10 if r.get("code") == 409 else 3)
             continue
         for up in r.get("result", []):
             offset = up["update_id"] + 1
