@@ -248,11 +248,26 @@ function viewIdle() {
   S.mode = "idle"; S.to = null; S.quote = null; setPin("from");
   rideLayer.clearLayers(); driverMarker = null;
   render(`<button class="search" id="where">🔍&nbsp; Кайда бара жатабыз?</button>
-    <div class="two"><button class="btn ghost" id="mapTo">📍 Картадан</button><button class="btn ghost" id="noTo">Айдоочуга айтам</button></div>`);
+    <div class="two"><button class="btn ghost" id="mapTo">📍 Картадан</button><button class="btn ghost" id="noTo">Айдоочуга айтам</button></div>
+    <div id="routes"></div>`);
+  loadRoutes();
   $("#where").onclick = viewSearch;
   $("#mapTo").onclick = viewPickDest;
   $("#noTo").onclick = () => { S.to = null; S.toAddr = ""; viewQuote(); };
   onPinMoved();
+}
+
+let ROUTES = null;
+async function loadRoutes() {
+  if (!ROUTES) ROUTES = (await api("/api/routes")).routes || [];
+  const box = $("#routes");
+  if (!box || !ROUTES.length) return;
+  box.innerHTML = `<p class="muted" style="margin:14px 0 6px">Шаар аралык — белгиленген баа</p>
+    <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:4px">${ROUTES.map((r, i) =>
+      `<button class="btn ghost" data-r="${i}" style="width:auto;flex:none;margin:0;padding:12px 14px;font-size:15px">${esc(r.name)} · <b>${Math.round(r.price)} с</b></button>`).join("")}</div>`;
+  box.querySelectorAll("[data-r]").forEach(b => b.onclick = () => {
+    const r = ROUTES[+b.dataset.r]; S.to = [r.lat, r.lon]; S.toAddr = r.name; viewQuote();
+  });
 }
 
 function viewSearch() {
@@ -300,7 +315,7 @@ async function viewQuote() {
   const sub = q.price ? `${q.dist_km} км · ~${q.minutes} мүн` : `отуруу ${Math.round(q.tariff.base)} с + ${Math.round(q.tariff.per_km)} с/км`;
   render(`<div class="row"><span class="bul"></span><div><b>${esc(S.fromAddr)}</b></div></div>
     <div class="row"><span class="bul to"></span><div><b>${S.to ? esc(S.toAddr) : "Айдоочуга айтам"}</b></div></div>
-    <div class="tariff"><div><b>Стандарт</b><div class="muted">${sub}${q.surge > 1 ? ` · ⚡ ×${q.surge}` : ""}</div></div><div class="price">${price}</div></div>
+    <div class="tariff"><div><b>${q.fixed ? "Шаар аралык" : "Стандарт"}</b><div class="muted">${q.fixed ? "Белгиленген баа · " + q.dist_km + " км" : sub}${q.surge > 1 ? ` · ⚡ ×${q.surge}` : ""}</div></div><div class="price">${price}</div></div>
     <button class="btn main" id="order">Чакыруу</button><button class="btn ghost" id="back">Артка</button>`);
   $("#order").onclick = async () => {
     $("#order").disabled = true;

@@ -195,6 +195,9 @@ class H(BaseHTTPRequestHandler):
                 return self._me()
             if u.path == "/api/area":
                 return self._json(core.area_info())
+            if u.path == "/api/routes":
+                return self._json({"routes": [{k: r[k] for k in ("name", "lat", "lon", "price")}
+                                              for r in core.get_routes()]})
             if u.path == "/api/near":
                 return self._near(q)
             if u.path == "/api/route":
@@ -307,7 +310,7 @@ class H(BaseHTTPRequestHandler):
                 return self._json({"error": "no_city"})
             t = q["tariff"]
             return self._json({"city": q["city"], "price": q["price"], "dist_km": q["dist_km"],
-                               "minutes": q.get("minutes"), "surge": q["surge"],
+                               "minutes": q.get("minutes"), "surge": q["surge"], "fixed": q.get("fixed"),
                                "route": (q.get("route") or {}).get("coords"),
                                "tariff": {k: t[k] for k in ("base", "per_km", "min_price")}})
         if path == "/api/order":
@@ -407,7 +410,8 @@ class H(BaseHTTPRequestHandler):
         if action == "rides":
             return self._json({"rides": core.admin_rides()})
         if action == "tariffs":
-            return self._json({"tariffs": core.all_tariffs()})
+            return self._json({"tariffs": core.all_tariffs(), "routes": core.get_routes(),
+                               "places": core.KNOWN_PLACES})
         if action == "finance":
             return self._json(core.admin_finance())
         if action == "backup":
@@ -453,6 +457,10 @@ class H(BaseHTTPRequestHandler):
                 return self._json({"error": "bad"}, 400)
             core.set_tariff(city, *vals)
             return self._json({"ok": True})
+        if action == "routes":
+            if not core.set_routes(b.get("routes")):
+                return self._json({"error": "bad"}, 400)
+            return self._json({"routes": core.get_routes()})
         if action == "order":
             # Диспетчер: телефон аркылуу келген заказ
             phone, name, note = _txt(b.get("phone"), 20), _txt(b.get("name"), 40), _txt(b.get("note"), 200)

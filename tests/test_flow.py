@@ -287,6 +287,23 @@ class Ops(unittest.TestCase):
             ops.send_text = None
 
 
+class Routes(unittest.TestCase):
+    def tearDown(self):
+        core.query("DELETE FROM settings"); core._settings_cache.clear()
+
+    def test_fixed_price(self):
+        core.init_db()
+        self.assertEqual([r["name"] for r in core.get_routes()][0], "Манас (Жалал-Абад)")
+        bk = (41.0377, 72.7470)
+        q = core.quote(*bk, 40.9340, 73.0020)                         # Манас
+        self.assertEqual((q["price"], q["fixed"]), (500, "Манас (Жалал-Абад)"))
+        self.assertIsNone(core.quote(*bk, 41.03, 72.74).get("fixed"))   # шаар ичинде — тариф
+        self.assertFalse(core.set_routes([{"name": "Х", "lat": 55, "lon": 37, "price": 100}]))
+        self.assertTrue(core.set_routes([{"name": "Ош", "lat": 40.5283, "lon": 72.7985, "price": 1600, "radius": 8}]))
+        self.assertEqual(core.quote(*bk, 40.53, 72.80)["price"], 1600)
+        self.assertIsNone(core.fixed_route_for(40.9340, 73.0020))       # Манас өчүрүлдү
+
+
 class Accounts(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

@@ -650,8 +650,66 @@ def quote(p_lat, p_lon, d_lat=None, d_lon=None):
         return {"city": city, "dist_km": None, "price": None, "surge": k, "tariff": t}
     rt = route(p_lat, p_lon, d_lat, d_lon)
     km, minutes = rt["km"], rt["min"]
+    fixed = fixed_route_for(d_lat, d_lon) if city else None
+    if fixed and (not in_area(d_lat, d_lon) or km > 15):
+        # шаар аралык: белгиленген баа, талап коэффициентисиз
+        return {"city": city, "dist_km": round(km, 1), "minutes": round(minutes),
+                "price": int(fixed["price"]), "surge": 1.0, "tariff": t, "route": rt,
+                "fixed": fixed["name"]}
     return {"city": city, "dist_km": round(km, 1), "minutes": round(minutes),
             "price": price_of(t, km, minutes, k), "surge": k, "tariff": t, "route": rt}
+
+
+# ==================== Шаар аралык каттамдар ====================
+# Админ белгилеген багыттар: бара турган жер ушул чекиттен radius км ичинде болсо —
+# баа белгиленген (price). Демейки баалар мисал гана — админ панелинен текшериңиз.
+
+KNOWN_PLACES = {
+    "Манас (Жалал-Абад)": (40.9333, 73.0017),
+    "Ош": (40.5283, 72.7985),
+    "Арстанбап": (41.3378, 72.9405),
+    "Кара-Көл": (41.6270, 72.6697),
+    "Бишкек": (42.8746, 74.5698),
+}
+DEFAULT_ROUTES = [
+    {"name": "Манас (Жалал-Абад)", "price": 500, "radius": 6},
+    {"name": "Арстанбап", "price": 700, "radius": 4},
+    {"name": "Ош", "price": 1800, "radius": 8},
+]
+
+
+def get_routes():
+    rows = get_setting("routes")
+    if rows is None:
+        rows = [dict(r, lat=KNOWN_PLACES[r["name"]][0], lon=KNOWN_PLACES[r["name"]][1])
+                for r in DEFAULT_ROUTES]
+    return rows
+
+
+def set_routes(rows):
+    clean = []
+    for r in rows or []:
+        try:
+            name = str(r["name"]).strip()[:40]
+            lat, lon = float(r["lat"]), float(r["lon"])
+            price, radius = float(r["price"]), float(r.get("radius") or 5)
+        except (KeyError, TypeError, ValueError):
+            return False
+        if not name or not (39 <= lat <= 44 and 69 <= lon <= 81) or not (0 < price <= 20000) \
+                or not (0.5 <= radius <= 30):
+            return False
+        clean.append({"name": name, "lat": lat, "lon": lon, "price": price, "radius": radius})
+    set_setting("routes", clean)
+    return True
+
+
+def fixed_route_for(lat, lon):
+    best = None
+    for r in get_routes():
+        dist = haversine_km(lat, lon, r["lat"], r["lon"])
+        if dist <= r["radius"] and (best is None or dist < best[0]):
+            best = (dist, r)
+    return best[1] if best else None
 
 
 # ==================== Сапар ====================
