@@ -39,3 +39,19 @@ async function setupArea(map, opts = {}) {
     return a;
   } catch (err) { return null; }
 }
+
+// ---------- тиркеме катары орнотуу (PWA) ----------
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
+window.INSTALL = null;
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); window.INSTALL = e; });
+function installHTML() {
+  if (window.matchMedia("(display-mode: standalone)").matches) return "";
+  const ios = /iphone|ipad/i.test(navigator.userAgent);
+  if (window.INSTALL) return `<button class="btn ghost" id="instBtn">📲 Телефонго тиркеме катары орнотуу</button>`;
+  if (ios) return `<p class="muted" style="margin-top:10px">📲 Орнотуу: Safari'де «Бөлүшүү» → «На экран „Домой“».</p>`;
+  return "";
+}
+function bindInstall() {
+  const b = document.getElementById("instBtn");
+  if (b) b.onclick = async () => { window.INSTALL.prompt(); await window.INSTALL.userChoice; window.INSTALL = null; b.remove(); };
+}

@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#17365C">
 <title>Такси ТАП!</title>
 <link rel="manifest" href="/static/manifest.json">
+<link rel="apple-touch-icon" href="/static/icon-192.png">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 :root{--navy:#17365C;--navy2:#1E4574;--gold:#C9A03A;--gold2:#E3C368;--ink:#152741;--soft:#5A6880;
@@ -432,7 +433,8 @@ $("#menuBtn").onclick = async () => {
     ${me.tg ? `<input type="checkbox" id="nt" ${me.notify ? "checked" : ""} style="width:24px;height:24px">` : ""}</div>
     <a href="/driver"><button class="btn ghost">🚗 ${drv}</button></a>
     ${me.admin ? `<a href="/admin"><button class="btn ghost">🛠 Админ панели</button></a>` : ""}
-    <button class="btn ghost" id="out">Чыгуу</button><button class="btn main" id="close">Жабуу</button>`);
+    ${installHTML()}<button class="btn ghost" id="out">Чыгуу</button><button class="btn main" id="close">Жабуу</button>`);
+  bindInstall();
   const nt = $("#nt"); if (nt) nt.onchange = () => api("/api/notify", {on:nt.checked});
   $("#out").onclick = async () => { await api("/api/logout", {}); location.reload(); };
   $("#close").onclick = () => { S.ride ? viewRide() : viewIdle(); };

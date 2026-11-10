@@ -1,3 +1,36 @@
-{"name":"Такси ТАП!","short_name":"Такси ТАП!","start_url":"/","display":"standalone",
- "background_color":"#F1F4F9","theme_color":"#17365C",
- "icons":[{"src":"/static/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]}
+{
+ "name": "Такси ТАП!",
+ "short_name": "Такси ТАП!",
+ "start_url": "/",
+ "display": "standalone",
+ "background_color": "#F1F4F9",
+ "theme_color": "#17365C",
+ "icons": [
+  {
+   "src": "/static/icon-192.png",
+   "sizes": "192x192",
+   "type": "image/png"
+  },
+  {
+   "src": "/static/icon-512.png",
+   "sizes": "512x512",
+   "type": "image/png"
+  },
+  {
+   "src": "/static/icon-maskable.png",
+   "sizes": "512x512",
+   "type": "image/png",
+   "purpose": "maskable"
+  }
+ ],
+ "id": "/",
+ "scope": "/",
+ "lang": "ky",
+ "description": "Такси чакыруу — Базар-Коргон",
+ "shortcuts": [
+  {
+   "name": "Айдоочу",
+   "url": "/driver"
+  }
+ ]
+}

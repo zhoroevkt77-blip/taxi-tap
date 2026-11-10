@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#17365C">
 <title>Такси ТАП! — Айдоочу</title>
 <link rel="manifest" href="/static/manifest.json">
+<link rel="apple-touch-icon" href="/static/icon-192.png">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 :root{--navy:#17365C;--gold:#C9A03A;--gold2:#E3C368;--ink:#152741;--soft:#5A6880;--paper:#F1F4F9;--line:#E1E7F1;--ok:#1D9E75;--bad:#D8443A}
@@ -205,7 +206,8 @@ function viewHome() {
       <div class="err" id="er"></div>${stats}${topup}
       <button class="btn ghost" id="cab">💼 Менин кабинетим</button>
       <button class="btn ghost" id="hist">Сапарлардын тарыхы</button>${sw}
-      <a class="btn ghost" href="/">🚕 Такси чакыруу (жүргүнчү)</a><button class="btn ghost" id="out">Чыгуу</button>`);
+      ${installHTML()}<a class="btn ghost" href="/">🚕 Такси чакыруу (жүргүнчү)</a><button class="btn ghost" id="out">Чыгуу</button>`);
+    bindInstall();
     $("#top") && ($("#top").onclick = viewTopup);
     $("#cab").onclick = viewCabinet;
     $("#nt") && ($("#nt").onchange = () => api("/api/notify", {on:$("#nt").checked}));

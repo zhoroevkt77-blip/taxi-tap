@@ -187,6 +187,8 @@ class H(BaseHTTPRequestHandler):
             q = parse_qs(u.query)
             if u.path in PAGES:
                 return self._file(os.path.join(STATIC, PAGES[u.path]))
+            if u.path == "/sw.js":          # service worker бүт сайтка иштеши үчүн тамырда
+                return self._file(os.path.join(STATIC, "sw.js"))
             if u.path.startswith("/static/"):
                 return self._file(os.path.join(STATIC, os.path.basename(u.path)))
             if u.path == "/health":
