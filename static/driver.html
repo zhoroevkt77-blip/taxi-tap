@@ -81,18 +81,20 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=17">
+<link rel="stylesheet" href="/static/theme.css?v=18">
 </head>
 <body>
 <div id="map"></div>
 <div class="top">
   <div class="lcol"><div class="logo"><img src="/static/icon-192.png" alt="">Такси <b>ТАП!</b></div>
     <div class="role"><a href="/">🧳 Жүргүнчүмүн</a><a class="on">🚗 Айдоочумун</a></div></div>
-  <div class="rcol"><div class="state hide" id="stBadge">Офлайн</div>
-    <div class="pill hide" id="earn"><span class="muted">Бүгүн</span><b id="earnV">0 с</b></div></div>
+  <div class="rcol"><button class="state hide" id="stBadge">Офлайн</button>
+    <div class="pill hide" id="earn"><span class="muted">Бүгүн</span><b id="earnV">0 с</b></div>
+    <div class="tools hide" id="tools"><button class="tbtn" id="heatBtn" aria-label="Заказ көп жерлер">🔥</button><button class="tbtn sos" id="sosBtn" aria-label="SOS">🆘</button></div></div>
 </div>
 <div class="sheet"><div class="grab"></div><div id="view"></div></div>
 <div class="offer hide" id="offer"><div class="ocard" id="ocard"></div></div>
+<div class="offer hide" id="ovl"><div class="ocard" id="ovlc"></div></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="/static/area.js"></script>
@@ -192,11 +194,12 @@ function viewLogin(pending, link, err) {
 
 function header() {
   const act = D.status === "active";
-  $("#earn").classList.toggle("hide", !act); $("#stBadge").classList.toggle("hide", !act);
+  $("#earn").classList.toggle("hide", !act); $("#stBadge").classList.toggle("hide", !act); $("#tools").classList.toggle("hide", !act);
   if (!act) return;
   $("#earnV").textContent = D.today.earned + " с";
-  $("#stBadge").textContent = D.ride ? "Сапарда" : D.online ? "Онлайн" : "Офлайн";
+  $("#stBadge").innerHTML = D.ride ? "🚕 Сапарда" : D.online ? "🟢 Линияда" : "⚪ Офлайн · <u>чыгуу</u>";
   $("#stBadge").classList.toggle("on", D.online || !!D.ride);
+  $("#sosBtn").classList.toggle("hide", !(D.online || D.ride));
 }
 
 const ICON = {econom:"🚕", comfort:"🚘", minivan:"🚐", delivery:"📦"};
@@ -256,7 +259,7 @@ function viewHome() {
       <div class="stat"><span class="muted">Бүгүн сапар</span><b>${D.today.rides}</b></div>
       <div class="stat"><span class="muted">Баланс</span><b style="color:${low ? "var(--bad)" : "inherit"}">${D.balance} с</b></div>
       <div class="stat"><span class="muted">Рейтинг</span><b>★ ${D.rating ?? "5.0"}</b></div>
-      <div class="stat"><span class="muted">Бардык сапар</span><b>${D.rides_done ?? 0}</b></div></div>`;
+      <div class="stat" id="actSt"><span class="muted">Активдүүлүк</span><b style="color:${actColor(D.activity)}">⚡ ${D.activity ?? 100}</b></div></div>`;
   const topup = D.pending_topup ? `<div class="note">🕓 Чегиңиз текшерилүүдө. Ырасталганда балансыңызга кошулат.</div>`
     : `<button class="btn ghost" id="top">➕ Балансты толуктоо</button>`;
   const sw = D.tg ? `<div class="sw"><div><b>Telegram билдирүүлөрү</b><div class="muted">Сайт жабык болсо да жаңы заказ жөнүндө кабар келет</div></div>
@@ -265,7 +268,7 @@ function viewHome() {
     render(`${outHTML()}<div class="wait"><div class="blink"${D.in_area === false ? ' style="background:var(--bad)"' : ""}></div><div><b>${D.in_area === false ? "Заказ келбейт — аймактын сыртындасыз" : "Заказ күтүлүүдө"}${D.home && D.home.on ? " · 🏠 үйгө карай" : ""}</b><div class="muted">${D.in_area === false ? "1 сааттын ичинде аймакка кирбесеңиз, линиядан өзү чыгарылат" : "Экранды өчүрбөңүз — GPS иштеп турат"}</div></div></div>
       ${stats}${homeHTML()}<button class="btn red" id="off">Линиядан чыгуу</button>`);
     bindHome();
-    $("#off").onclick = async () => { D = await api("/api/d/online", {on:false}); wake(false); lastView = ""; show(); };
+    $("#off").onclick = goOffline;
   } else {
     render(`<h2>Салам, ${esc(D.name || "айдоочу")}!</h2><p class="muted">${esc(D.car_color)} ${esc(D.car_model)}, ${esc(D.car_plate)}</p>
       ${low ? `<p class="err">Баланс жетишсиз — заказдар келбейт.</p>` : ""}${outHTML()}
@@ -279,14 +282,7 @@ function viewHome() {
     $("#cab").onclick = viewCabinet;
     $("#nt") && ($("#nt").onchange = () => api("/api/notify", {on:$("#nt").checked}));
     $("#out").onclick = async () => { await api("/api/logout", {}); location.reload(); };
-    $("#on").onclick = async () => {
-      beep();                                   // үн браузерде ушул басуу менен ачылат
-      $("#on").disabled = true;
-      const p = await getPos();
-      if (!p) { $("#on").disabled = false; return $("#er").textContent = "GPS'ке уруксат бериңиз (браузердин жөндөөлөрүнөн)."; }
-      D = await api("/api/d/online", {on:true, p});
-      startGps(); wake(true); lastView = ""; show();
-    };
+    $("#on").onclick = () => goOnline($("#on"));
     bindHome();
   }
 }
@@ -304,6 +300,14 @@ function viewCabinet() {
     <p class="muted">Сумма сом менен. «Колуңузда» — жүргүнчүлөр төлөгөн акчадан комиссия кемитилгени.
     ${D.min_balance > 0 ? `Баланс ${D.min_balance} сомдон аз болсо, заказ келбейт.` : ""}</p>
     ${D.pending_topup ? `<div class="note">🕓 Чегиңиз текшерилүүдө.</div>` : `<button class="btn main" id="top">➕ Балансты толуктоо</button>`}
+    <h3 style="margin:16px 0 6px">📊 Акыркы 7 күн</h3><div id="chart" class="chart"><p class="muted">Жүктөлүүдө…</p></div>
+    <div class="note"><b style="color:${actColor(D.activity)}">⚡ Активдүүлүк: ${D.activity ?? 100} / 100</b><br>
+      <span class="muted">Заказ алсаңыз жана бүтүрсөңүз +1, сунушка жооп бербесеңиз же «Жок» десеңиз −3, кабыл алгандан кийин жокко чыгарсаңыз −10.
+      Активдүүлүгү жогору айдоочуга заказ биринчи келет.</span></div>
+    <div class="sw"><div><b>🔊 Заказды үн менен айтуу</b><div class="muted">«Жаңы заказ, 80 сом, 1,2 километр»</div></div>
+      <input type="checkbox" id="vc" ${voiceOn() ? "checked" : ""} style="width:24px;height:24px"></div>
+    <div class="sw"><div><b>🧭 Навигатор</b><div class="muted">${esc((NAVS[navPref()] || {t:"Тандала элек"}).t)}</div></div>
+      <button class="btn ghost" id="navCh" style="width:auto;margin:0;padding:10px 14px;font-size:14px">Өзгөртүү</button></div>
     <button class="btn ghost" id="hist">🧾 Сапарлардын тарыхы</button>
     <button class="btn ghost" id="addAddr">📍 Дарек кошуу</button>
     <p class="muted" style="margin-top:-2px">Жергиликтүү жерлердин аттарын (той-кана, дүкөн, көчө) кошуңуз — жүргүнчүлөр дарек жазганда табылат.</p>
@@ -313,6 +317,20 @@ function viewCabinet() {
   bindLinks(); window.SHEET && SHEET.expand();
   $("#top") && ($("#top").onclick = viewTopup);
   $("#hist").onclick = viewHistory; $("#addAddr").onclick = viewAddAddr;
+  $("#vc").onchange = e => { try { localStorage.setItem("voice", e.target.checked ? "on" : "off"); } catch (x) {} if (e.target.checked) say("Үн күйгүзүлдү"); };
+  $("#navCh").onclick = () => openNav(null, true);
+  api("/api/d/daily").then(x => {
+    const ds = x.days || [], mx = Math.max(1, ...ds.map(d => d.earned)), el = $("#chart"); if (!el) return;
+    const wd = ["Жк", "Дш", "Шй", "Шр", "Бш", "Жм", "Иш"];
+    const tot = ds.reduce((a, d) => ({r:a.r + d.rides, e:a.e + d.earned, m:a.m + d.min}), {r:0, e:0, m:0});
+    el.innerHTML = `<div class="bars">${ds.map(d => { const dt = new Date((d.day + 6 * 3600) * 1000);
+      return `<div class="bar"><small>${d.earned || ""}</small><i style="height:${Math.round(d.earned / mx * 100)}%"></i><span>${wd[dt.getUTCDay()]}</span></div>`; }).join("")}</div>
+      <div class="grid" style="margin-top:8px"><div class="stat"><span class="muted">7 күндө</span><b>${tot.e} с</b></div>
+      <div class="stat"><span class="muted">Сапар</span><b>${tot.r}</b></div>
+      <div class="stat"><span class="muted">Орточо сапар</span><b>${tot.r ? Math.round(tot.e / tot.r) : 0} с</b></div>
+      <div class="stat"><span class="muted">Сааттык киреше</span><b>${tot.m >= 10 ? Math.round(tot.e / (tot.m / 60)) : "—"} с</b></div></div>
+      <p class="muted">Сааттык киреше — заказ алгандан сапар бүткөнгө чейинки убакыт боюнча.</p>`;
+  });
   $("#back").onclick = () => { lastView = ""; show(); };
 }
 
@@ -362,10 +380,12 @@ function viewRide() {
     ${r.discount ? `<div class="note">🎁 Промокод: жүргүнчү <b>${r.price - Math.round(r.discount)} с</b> төлөйт, ${Math.round(r.discount)} с сапар бүткөндө балансыңызга кошулат</div>` : ""}
     ${D.next ? `<div class="note">🔁 <b>Кийинки заказ:</b> ${esc(D.next.p_addr || "жүргүнчү")}${D.next.price ? " · " + D.next.price + " с" : ""}. Ушул сапардан кийин барасыз.
       <a href="#" id="nx" style="color:var(--bad)">Баш тартуу</a></div>` : ""}
-    <div class="two"><a class="btn ghost" href="tel:${esc(callPh)}">📞 Чалуу</a><button class="btn ghost chatb" id="chat">💬 Чат<em id="chatN" class="hide"></em></button>${target ? `<a class="btn ghost" href="${navUrl(target)}" target="_blank">🧭</a>` : ""}</div>
+    <div class="two"><a class="btn ghost" href="tel:${esc(callPh)}">📞 Чалуу</a><button class="btn ghost chatb" id="chat">💬 Чат<em id="chatN" class="hide"></em></button></div>
+    ${target ? `<button class="btn main" id="navGo">🧭 ${r.status === "in_trip" ? "Б точкага" : "Жүргүнчүгө"} жол — ${esc((NAVS[navPref()] || {t:"навигатор"}).t)}</button>` : ""}
     <button class="btn ${next[1]}" id="step">${next[0]}</button>
     ${r.status !== "in_trip" ? `<button class="btn red" id="cx">Жокко чыгаруу</button>` : ""}`);
   $("#chat").onclick = viewChat;
+  if ($("#navGo")) $("#navGo").onclick = () => openNav(target);
   const nx = $("#nx"); if (nx) nx.onclick = async e => { e.preventDefault(); if (!confirm("Кийинки заказдан баш тартасызбы?")) return;
     D = await api("/api/d/cancel", {id:D.next.id}); lastView = ""; show(); };
   unread();
@@ -430,9 +450,13 @@ function viewChat() {
 function showOffer() {
   const o = D.offer, box = $("#offer");
   if (!o) { box.classList.add("hide"); lastOffer = null; return; }
-  if (lastOffer !== o.id) { lastOffer = o.id; beep(); }
-  box.classList.remove("hide");
   const C = 2 * Math.PI * 32, frac = o.left / o.total;
+  if (lastOffer === o.id && $("#oRing")) {               // ошол эле заказ — убакытты гана жаңыртабыз (сүрүү үзүлбөсүн)
+    $("#oRing").setAttribute("stroke-dashoffset", C * (1 - frac)); $("#oLeft").textContent = o.left; return;
+  }
+  lastOffer = o.id; beep();
+  say(`Жаңы заказ. ${o.price ? o.price + " сом." : ""} ${o.to_pickup_km} километр.`);
+  box.classList.remove("hide");
   $("#ocard").innerHTML = `<div style="display:flex;align-items:center;gap:14px">
       <div style="flex:1"><div class="muted">${clsTag(o.cls)}${o.chained ? "🔁 Кийинки заказ" : "Жаңы заказ"}${o.p_rating ? " · ★ " + o.p_rating : ""}</div><div class="oprice">${o.price ? o.price + " с" : "Тариф"}</div>
       <div class="muted">${o.chained ? "Азыркы сапардан кийин · " : "Сизден "}${o.to_pickup_km} км${o.has_dest ? " · сапар ~" + o.dist_km + " км" : " · багыты айтылат"}</div>
@@ -440,12 +464,113 @@ function showOffer() {
       ${o.discount ? `<div class="muted">🎁 Жүргүнчү ${o.price - Math.round(o.discount)} с төлөйт, +${Math.round(o.discount)} с балансыңызга</div>` : ""}
       ${o.note ? `<div class="muted">📝 ${esc(o.note)}</div>` : ""}</div>
       <div class="ring"><svg width="74" height="74"><circle cx="37" cy="37" r="32" stroke="#E1E7F1" stroke-width="7" fill="none"/>
-      <circle cx="37" cy="37" r="32" stroke="#C9A03A" stroke-width="7" fill="none" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - frac)}"/></svg><span>${o.left}</span></div></div>
-    <button class="btn go" id="acc">Алам</button><button class="btn ghost" id="dec">Жок</button>`;
-  $("#acc").onclick = async () => { $("#acc").disabled = true; D = await api("/api/d/accept", {id:o.id}); box.classList.add("hide");
-    if (D.error === "too_late") alert("Кечигип калдыңыз — заказ башка айдоочуга кетти."); show(); };
-  $("#dec").onclick = async () => { D = await api("/api/d/decline", {id:o.id}); box.classList.add("hide"); show(); };
+      <circle id="oRing" cx="37" cy="37" r="32" stroke="#C9A03A" stroke-width="7" fill="none" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - frac)}"/></svg><span id="oLeft">${o.left}</span></div></div>
+    <div class="slide" id="acc"><div class="knob" id="knob">➜</div><span>Оңго сүрүңүз — АЛАМ</span></div>
+    <button class="btn ghost" id="dec">Жок</button>`;
+  const accept = async () => { D = await api("/api/d/accept", {id:o.id}); box.classList.add("hide"); say("");
+    if (D.error === "too_late") alert("Кечигип калдыңыз — заказ башка айдоочуга кетти."); lastOffer = null; show(); };
+  swipe($("#acc"), $("#knob"), accept);
+  $("#dec").onclick = async () => { say(""); D = await api("/api/d/decline", {id:o.id}); box.classList.add("hide"); lastOffer = null; show(); };
 }
+// Сүрүп кабыл алуу: кокус басылып кетпейт
+function swipe(track, knob, done) {
+  let x0 = null, x = 0, fired = false;
+  const max = () => track.clientWidth - knob.offsetWidth - 8;
+  const setX = v => { x = Math.max(0, Math.min(max(), v)); knob.style.transform = `translateX(${x}px)`; track.style.setProperty("--p", x / max()); };
+  knob.addEventListener("pointerdown", e => { x0 = e.clientX - x; knob.setPointerCapture(e.pointerId); knob.style.transition = "none"; });
+  knob.addEventListener("pointermove", e => { if (x0 !== null) setX(e.clientX - x0); });
+  const end = () => { if (x0 === null) return; x0 = null;
+    if (!fired && x > max() * 0.8) { fired = true; setX(max()); track.classList.add("ok"); try { navigator.vibrate && navigator.vibrate(40); } catch (e) {} done(); }
+    else { knob.style.transition = "transform .2s"; setX(0); } };
+  knob.addEventListener("pointerup", end); knob.addEventListener("pointercancel", end);
+}
+
+// ---------- Линия: чыгуу / токтотуу (баракта да, өйдөкү тилкеде да) ----------
+async function goOnline(btn) {
+  beep(); say("");                              // үн браузерде ушул басуу менен ачылат
+  if (btn) btn.disabled = true;
+  const p = await getPos();
+  if (!p) { if (btn) btn.disabled = false; const e = $("#er"); if (e) e.textContent = "GPS'ке уруксат бериңиз (браузердин жөндөөлөрүнөн)."; else alert("GPS'ке уруксат бериңиз."); return; }
+  D = await api("/api/d/online", {on:true, p});
+  startGps(); wake(true); lastView = ""; show();
+  if (window.SHEET && !D.ride) setTimeout(() => SHEET.collapse(), 400);   // карта толук көрүнсүн
+}
+async function goOffline() {
+  D = await api("/api/d/online", {on:false}); wake(false); lastView = ""; show(); window.SHEET && SHEET.expand();
+}
+$("#stBadge").onclick = () => {
+  if (!D || D.status !== "active" || D.ride) return;
+  if (D.online) { if (confirm("Линиядан чыгасызбы?")) goOffline(); }
+  else goOnline(null);
+};
+
+// ---------- Үн менен айтуу (жаңы заказ) ----------
+const voiceOn = () => { try { return localStorage.getItem("voice") !== "off"; } catch (e) { return true; } };
+function say(text) {
+  if (!("speechSynthesis" in window) || !voiceOn()) return;
+  try {
+    speechSynthesis.cancel();
+    if (!text) return;
+    const u = new SpeechSynthesisUtterance(text);
+    const v = speechSynthesis.getVoices().find(x => /^ky/i.test(x.lang)) || speechSynthesis.getVoices().find(x => /^ru/i.test(x.lang));
+    if (v) u.voice = v; u.lang = v ? v.lang : "ru-RU"; u.rate = 1.0;
+    speechSynthesis.speak(u);
+  } catch (e) {}
+}
+
+// ---------- Навигатор: Яндекс / 2ГИС / Google ----------
+const NAVS = {
+  yandex: {t:"Яндекс Навигатор", u:p => `yandexnavi://build_route_on_map?lat_to=${p[0]}&lon_to=${p[1]}`},
+  yamaps: {t:"Яндекс Карталар", u:p => `https://yandex.ru/maps/?rtext=~${p[0]},${p[1]}&rtt=auto`},
+  dgis:   {t:"2ГИС", u:p => `dgis://2gis.ru/routeSearch/rsType/car/to/${p[1]},${p[0]}`},
+  google: {t:"Google Maps", u:p => `https://www.google.com/maps/dir/?api=1&destination=${p[0]},${p[1]}&travelmode=driving`},
+};
+const navPref = () => { try { return localStorage.getItem("nav") || ""; } catch (e) { return ""; } };
+function openNav(p, choose) {
+  const k = navPref();
+  if (k && NAVS[k] && !choose) return void (location.href = NAVS[k].u(p));
+  overlay(`<h2>🧭 Кайсы навигатор менен барасыз?</h2>
+    ${Object.entries(NAVS).map(([k, n]) => `<button class="btn ghost" data-nav="${k}">${n.t}</button>`).join("")}
+    <label class="muted" style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="navRem" checked style="width:20px;height:20px"> Эстеп калсын (кабинеттен өзгөртсө болот)</label>
+    <button class="btn ghost" id="ovlX">Жабуу</button>`);
+  document.querySelectorAll("[data-nav]").forEach(b => b.onclick = () => {
+    const k = b.dataset.nav; try { if ($("#navRem").checked) localStorage.setItem("nav", k); } catch (e) {}
+    closeOverlay(); if (p) location.href = NAVS[k].u(p);
+  });
+}
+function overlay(html) { $("#ovlc").innerHTML = html; $("#ovl").classList.remove("hide"); const x = $("#ovlX"); if (x) x.onclick = closeOverlay; }
+function closeOverlay() { $("#ovl").classList.add("hide"); }
+$("#ovl").onclick = e => { if (e.target.id === "ovl") closeOverlay(); };
+
+// ---------- SOS ----------
+$("#sosBtn").onclick = () => {
+  overlay(`<h2 style="color:var(--bad)">🆘 Шашылыш жардам</h2>
+    <p class="muted">Коркунуч болсо — дароо 112ге чалыңыз. «Админге билдирүү» басылса, админге жериңиз жана сапарыңыз жөнөтүлөт.</p>
+    <a class="btn red" href="tel:112" style="font-size:19px">📞 112ге чалуу</a>
+    <button class="btn dark" id="sosSend">🚨 Админге билдирүү</button>
+    <button class="btn ghost" id="ovlX">Жабуу</button>`);
+  $("#sosSend").onclick = async () => { $("#sosSend").disabled = true; await api("/api/d/sos", {p:myPos});
+    $("#sosSend").textContent = "✓ Админге жөнөтүлдү"; };
+};
+
+// ---------- Заказ көп жерлер (жылуулук картасы) ----------
+const heatLayer = L.layerGroup().addTo(map);
+let heatOn = false, heatT = null;
+async function loadHeat() {
+  const x = await api("/api/d/heat"); heatLayer.clearLayers();
+  if (!heatOn || !x.cells) return;
+  x.cells.forEach(c => {
+    const w = c.n + c.lost * 2, col = w >= 5 ? "#e5383b" : w >= 3 ? "#ff8c1a" : "#ffc61a";
+    if (L.circle) L.circle([c.lat, c.lon], {radius:230, stroke:false, fillColor:col, fillOpacity:Math.min(.55, .2 + w * .06), interactive:false}).addTo(heatLayer);
+  });
+  if (!x.cells.length) toast("Акыркы 2 саатта заказ болгон жок — картада көрсөтө турган эч нерсе жок.", 3000);
+}
+$("#heatBtn").onclick = () => {
+  heatOn = !heatOn; $("#heatBtn").classList.toggle("on", heatOn); clearInterval(heatT);
+  if (heatOn) { loadHeat(); heatT = setInterval(loadHeat, 60000); toast("🔥 Акыркы 2 саатта заказ көп болгон жерлер. Кызыл — эң көп.", 3000); }
+  else heatLayer.clearLayers();
+};
+const actColor = a => (a ?? 100) >= 70 ? "var(--ok)" : (a ?? 100) >= 40 ? "#d18a00" : "var(--bad)";
 
 // ---------- сүрөттү кичирейтүү (браузерде) ----------
 function shrink(file, max = 1600, q = 0.72) {

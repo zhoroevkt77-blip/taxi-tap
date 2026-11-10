@@ -65,6 +65,20 @@ def send_message(uid, rid, text):
                  text=html.escape((text or "").strip()[:120]))]
 
 
+def driver_sos(uid, p):
+    """Айдоочу 🆘 басты: бардык админдерге шашылыш кабар + жери + сапары."""
+    d = core.get_driver(uid) or {}
+    u = core.get_user(uid) or {}
+    r = core.get_ride(d["busy_ride"]) if d.get("busy_ride") else None
+    where = ("https://maps.google.com/?q=%.6f,%.6f" % (p[0], p[1])) if p else "белгисиз"
+    ride = (" · сапар №%d, жүргүнчү %s" % (r["id"], (core.get_user(r["passenger"]) or {}).get("phone") or "")) if r else ""
+    if r:
+        core.log_event(r["id"], "sos", uid)
+    return [note(a, "a_sos", "/admin", name=u.get("name") or "", phone=u.get("phone") or "",
+                 car="%s %s, %s" % (d.get("car_color") or "", d.get("car_model") or "", d.get("car_plate") or ""),
+                 where=where, ride=ride) for a in core.admins()]
+
+
 def driver_decline(uid, rid):
     r = core.get_ride(rid)
     if r and r["offered_to"] == uid:
@@ -93,6 +107,8 @@ def driver_cancel(uid, rid):
     if not r or r["driver"] != uid:
         return None
     old = core.cancel(rid, uid, allowed=("accepted", "arrived"))
+    if old:
+        core.add_activity(uid, core.ACT_CANCEL)
     return [note(old["passenger"], "p_driver_cancel")] if old else None
 
 

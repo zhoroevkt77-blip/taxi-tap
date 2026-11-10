@@ -819,3 +819,19 @@ class Routing(unittest.TestCase):
         self.assertEqual(len(rt["coords"]), 2)
         q = core.quote(42.40, 78.30, 42.41, 78.31)
         self.assertIn("minutes", q)
+
+
+class ProFeatures(unittest.TestCase):
+    def test_activity_heat_sos_daily(self):
+        core.init_db(); offline_all()
+        d = make_driver("0700 000 121", "Про", (41.0380, 72.7470), 0)
+        p = rider("0555 000 121")
+        q = core.quote(41.0377, 72.7470, 41.0300, 72.7560)
+        rid = core.create_ride(p, q, 41.0377, 72.7470, 41.0300, 72.7560)
+        core.offer(rid, d); flow.driver_decline(d, rid)
+        self.assertEqual(core.get_driver(d)["activity"], 97)                 # −3
+        self.assertTrue(any(c["n"] >= 1 for c in core.demand_heat()))
+        outs = flow.driver_sos(d, (41.04, 72.75))
+        self.assertTrue(all("🆘" in o["text"] for o in outs))
+        self.assertEqual(len(core.driver_daily(d)), 7)
+        core.cancel(rid, p)

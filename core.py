@@ -280,7 +280,8 @@ NEW_COLUMNS = {
                 "next_ride": "INTEGER",            # сапар бүтө электе алган кийинки заказ
                 "home_lat": "REAL", "home_lon": "REAL", "home_on": "INTEGER DEFAULT 0",
                 "home_day": "TEXT", "home_uses": "INTEGER DEFAULT 0",
-                "out_since": "REAL"},              # аймактан сыртка чыккан убакыт
+                "out_since": "REAL",
+                "activity": "INTEGER DEFAULT 100"},   # активдүүлүк 0..100 (Яндекс Pro'догудай)              # аймактан сыртка чыккан убакыт
     "balance_tx": {"claimed": "REAL"},
     "rides": {"note": "TEXT", "source": "TEXT",   # source: web | phone (диспетчер)
               "promo": "TEXT", "discount": "REAL DEFAULT 0",
@@ -858,8 +859,10 @@ def mark_tried(rid, driver):
     tried = json.loads(r["tried"] or "[]")
     if driver not in tried:
         tried.append(driver)
-    query("UPDATE rides SET tried=?, offered_to=NULL, offered_at=NULL WHERE id=? "
-          "AND offered_to=?", (json.dumps(tried), rid, driver))
+    n = query("UPDATE rides SET tried=?, offered_to=NULL, offered_at=NULL WHERE id=? "
+              "AND offered_to=?", (json.dumps(tried), rid, driver), "count")
+    if n:
+        add_activity(driver, ACT_SKIP)             # сунуштан баш тартты / жооп бербеди
 
 
 def accept(rid, driver):
@@ -878,6 +881,7 @@ def accept(rid, driver):
     else:
         set_driver(driver, busy_ride=rid)
     log_event(rid, "accepted", driver)
+    add_activity(driver, ACT_ACCEPT)
     return True
 
 
@@ -909,7 +913,17 @@ def advance(rid, driver):
     return new
 
 
+# ==================== Активдүүлүк ====================
+ACT_ACCEPT, ACT_DONE, ACT_SKIP, ACT_CANCEL = 1, 1, -3, -10
+
+
+def add_activity(uid, delta):
+    query("UPDATE drivers SET activity=MAX(0, MIN(100, COALESCE(activity,100)+?)) WHERE uid=?" if not IS_PG else
+          "UPDATE drivers SET activity=GREATEST(0, LEAST(100, COALESCE(activity,100)+?)) WHERE uid=?", (delta, uid))
+
+
 def _finish(rid, driver):
+    add_activity(driver, ACT_DONE)
     r = get_ride(rid)
     d = get_driver(driver) or {}
     query("UPDATE drivers SET busy_ride=next_ride, next_ride=NULL, rides_done=rides_done+1 WHERE uid=?",
@@ -1249,6 +1263,42 @@ def driver_today(uid):
               "WHERE driver=? AND status='completed' AND completed_at>=?",
               (uid, day_start()), "one")
     return {"rides": r["n"], "earned": int(r["s"] or 0)}
+
+
+def driver_daily(uid, days=7):
+    """Акыркы 7 күн: ар күнү канча сапар, канча сом, сапарда өткөн убакыт (мүн)."""
+    t0 = day_start() - (days - 1) * 86400
+    rows = query("SELECT price, completed_at, accepted_at FROM rides WHERE driver=? AND status='completed' "
+                 "AND completed_at>=?", (uid, t0), "all")
+    out = [{"day": t0 + i * 86400, "rides": 0, "earned": 0, "min": 0} for i in range(days)]
+    for r in rows:
+        i = int((r["completed_at"] - t0) // 86400)
+        if 0 <= i < days:
+            out[i]["rides"] += 1
+            out[i]["earned"] += int(r["price"] or 0)
+            if r["accepted_at"]:
+                out[i]["min"] += max(0, (r["completed_at"] - r["accepted_at"]) / 60.0)
+    for o in out:
+        o["min"] = round(o["min"])
+    return out
+
+
+HEAT_CELL = 0.004          # ~400 м
+
+
+def demand_heat(minutes=120):
+    """Акыркы 2 саатта заказ көп болгон жерлер (айдоочуга «кайда барсам болот» картасы)."""
+    rows = query("SELECT p_lat, p_lon, status, cancel_by FROM rides WHERE created_at>? AND p_lat IS NOT NULL",
+                 (now() - minutes * 60,), "all")
+    cells = {}
+    for r in rows:
+        k = (round(r["p_lat"] / HEAT_CELL), round(r["p_lon"] / HEAT_CELL))
+        c = cells.setdefault(k, {"n": 0, "lost": 0})
+        c["n"] += 1
+        if r["status"] == "cancelled" and r["cancel_by"] == "system":
+            c["lost"] += 1                         # айдоочу табылбай калган — талап бар
+    return [{"lat": k[0] * HEAT_CELL, "lon": k[1] * HEAT_CELL, "n": v["n"], "lost": v["lost"]}
+            for k, v in cells.items()]
 
 
 def passenger_history(uid, limit=20):

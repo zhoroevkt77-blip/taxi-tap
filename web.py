@@ -123,6 +123,7 @@ def driver_state(uid):
           "tariff": core.finance_mode_text(), "pct_now": core.commission_pct(),
           "finance": core.driver_finance(uid) if d else None,
           "rating": d.get("rating"), "rides_done": d.get("rides_done"),
+          "activity": d.get("activity") if d and d.get("activity") is not None else 100,
           "today": core.driver_today(uid) if d else {"rides": 0, "earned": 0},
           "offer": None, "ride": None, "next": None, "pay_info": core.PAY_INFO,
           "classes": sorted(core.driver_classes(d)) if d else [],
@@ -304,6 +305,12 @@ class H(BaseHTTPRequestHandler):
                 return self._json(driver_state(uid))
             if u.path == "/api/d/history":
                 return self._json({"rides": core.driver_history(uid)})
+            if u.path == "/api/d/daily":
+                return self._json({"days": core.driver_daily(uid)})
+            if u.path == "/api/d/heat":
+                if not core.get_driver(uid):
+                    return self._json({"error": "auth"}, 401)
+                return self._json({"cells": core.demand_heat()})
             if u.path.startswith("/api/a/"):
                 if not core.is_admin(uid):
                     return self._json({"error": "auth"}, 401)
@@ -524,6 +531,10 @@ class H(BaseHTTPRequestHandler):
             else:
                 core.set_driver(uid, online=0, live_until=None)
             return self._json(driver_state(uid))
+        if action == "sos":
+            p = _point(b.get("p"))
+            deliver(flow.driver_sos(uid, p))
+            return self._json({"ok": True})
         if action == "msg":
             outs = flow.send_message(uid, int(b.get("id") or 0), _txt(b.get("text"), core.MSG_MAX))
             if outs is None:

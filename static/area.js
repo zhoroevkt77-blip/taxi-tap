@@ -137,6 +137,7 @@ window.SHEET = (function () {
     init,
     refresh() { if (sheet && collapsed) set(max(), false); },
     expand() { if (sheet && collapsed) snap(false); },
+    collapse() { if (sheet && !collapsed) snap(true); },
     visible() { return sheet ? window.innerHeight - sheet.getBoundingClientRect().top : 0; },
   };
 })();

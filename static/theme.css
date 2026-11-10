@@ -218,3 +218,23 @@ input.f::placeholder{color:#8a8a95}
 .grab:after{right:16px!important;top:5px!important}
 .grab.down:after{right:16px!important;top:5px!important}
 .sheet{overscroll-behavior:contain}
+/* v18: айдоочу — Яндекс Pro'догудай */
+button.state{white-space:nowrap;border:0;cursor:pointer;font-family:inherit;font-size:14px!important;padding:11px 14px!important}
+button.state u{text-decoration:none;color:#1D9E75;font-weight:800}
+button.state.on{background:#1D9E75!important;color:#fff!important}
+.tools{display:flex;gap:8px}
+.tbtn{width:46px;height:46px;border-radius:50%;border:0;background:#fff;box-shadow:0 3px 12px rgba(20,20,30,.2);font-size:21px;cursor:pointer;display:grid;place-items:center;padding:0}
+.tbtn.on{background:linear-gradient(135deg,#ffc61a,#ffb703);box-shadow:0 0 0 3px #fff,0 3px 12px rgba(160,110,0,.4)}
+.tbtn.sos{background:#e5383b;color:#fff}
+.slide{position:relative;height:66px;border-radius:33px;background:linear-gradient(90deg,#1D9E75 calc(var(--p,0)*100%),#e8f6ef 0);margin-top:14px;overflow:hidden;user-select:none;touch-action:none}
+.slide span{position:absolute;inset:0;display:grid;place-items:center;font-weight:900;font-size:17px;color:#16764f;pointer-events:none;padding-left:40px}
+.slide .knob{position:absolute;left:4px;top:4px;width:58px;height:58px;border-radius:50%;background:#1D9E75;color:#fff;display:grid;place-items:center;font-size:26px;font-weight:900;box-shadow:0 3px 10px rgba(0,0,0,.25);touch-action:none;cursor:grab;z-index:2}
+.slide.ok span{color:#fff}
+.slide:not(.ok) .knob{animation:nudge 1.6s ease-in-out infinite}
+@keyframes nudge{0%,60%,100%{margin-left:0}75%{margin-left:14px}}
+.oprice{font-size:42px!important}
+.chart .bars{display:flex;gap:6px;align-items:flex-end;height:130px;padding:8px 4px 0;background:#fafafb;border-radius:14px}
+.chart .bar{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px}
+.chart .bar i{width:100%;min-height:3px;border-radius:7px 7px 3px 3px;background:linear-gradient(180deg,#ffc61a,#ffb703)}
+.chart .bar small{font-size:10px;color:#6b6b76;font-weight:700}
+.chart .bar span{font-size:11px;color:#6b6b76;padding-bottom:4px}
