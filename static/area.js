@@ -1,7 +1,7 @@
 // Leaflet'тин демейки префиксинде желек бар — жөнөкөй «Leaflet» шилтемеси менен алмаштырылат.
 // OpenStreetMap'тин атрибуциясы калат (лицензия талап кылат).
 if (window.L && L.Control && L.Control.Attribution) {
-  L.Control.Attribution.prototype.options.prefix = '<a href="https://leafletjs.com" target="_blank">Leaflet</a>';
+  L.Control.Attribution.prototype.options.prefix = false;   // «Leaflet» жазуусу жок, «© OpenStreetMap» калат (лицензия талабы)
 }
 // Такси ТАП! — иштөө аймагы картада: чектен сырткары күңүрт, карта ошол жерден чыкпайт.
 function areaRings(gj) {
