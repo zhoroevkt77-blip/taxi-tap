@@ -216,7 +216,7 @@ def approve(aid):
 
 def seed_web():
     import addr_seed as S
-    have = {r["osm_key"] for r in core.query("SELECT osm_key FROM addresses WHERE osm_key LIKE 'web/%'", (), "all")}
+    have = {r["osm_key"] for r in core.query("SELECT osm_key FROM addresses WHERE osm_key LIKE ?", ("web/%",), "all")}
     names = {norm(r["name"]) for r in core.query("SELECT name FROM addresses", (), "all")}
     added = 0
     rows = [(n, "street", al) for n, al in S.STREETS] + list(S.PLACES)
