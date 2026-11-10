@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#17365C">
+<meta name="theme-color" content="#fafafa">
 <meta name="robots" content="noindex">
 <title>Такси ТАП! — сапар</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
@@ -14,18 +14,19 @@ html,body{margin:0;height:100%;font-family:system-ui,-apple-system,"Segoe UI",Ro
 #map{position:fixed;inset:0}
 .logo{position:fixed;top:12px;left:12px;z-index:5;background:var(--navy);color:#fff;font-weight:800;font-size:15px;padding:10px 12px;border-radius:14px}
 .logo b{color:var(--gold2)}
-.sheet{position:fixed;left:0;right:0;bottom:0;z-index:6;background:#fff;border-radius:22px 22px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom));box-shadow:0 -6px 24px rgba(21,39,65,.12)}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:6;background:#fff;border-radius:22px 22px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom));box-shadow:0 -6px 24px rgba(20,20,30,.12)}
 h2{font-size:20px;margin:0 0 8px}
 .muted{color:var(--soft);font-size:14px}
 .car{display:flex;gap:12px;align-items:center;background:var(--paper);border-radius:16px;padding:12px;margin-top:8px}
 .plate{border:2px solid var(--ink);border-radius:6px;padding:2px 8px;font-weight:800;background:#fff;margin-left:auto}
 .carm{width:30px;height:30px;border-radius:50%;background:var(--navy);border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3);display:grid;place-items:center;color:#fff;font-size:14px}
-.carm.g{background:var(--gold);color:#14243F}
+.carm.g{background:var(--gold);color:#16161a}
 </style>
+<link rel="stylesheet" href="/static/theme.css?v=1">
 </head>
 <body>
 <div id="map"></div>
-<div class="logo">Такси <b>ТАП!</b></div>
+<div class="logo"><img src="/static/icon-192.png" alt="">Такси <b>ТАП!</b></div>
 <div class="sheet" id="v"><p class="muted">Жүктөлүүдө…</p></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>

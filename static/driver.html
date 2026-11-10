@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#17365C">
+<meta name="theme-color" content="#fafafa">
 <title>Такси ТАП! — Айдоочу</title>
 <link rel="manifest" href="/static/manifest.json">
 <link rel="apple-touch-icon" href="/static/icon-192.png">
@@ -16,16 +16,16 @@ html,body{margin:0;height:100%;font-family:system-ui,-apple-system,"Segoe UI",Ro
 .top{position:fixed;top:max(12px,env(safe-area-inset-top));left:12px;right:12px;z-index:5;display:flex;gap:8px;align-items:center}
 .logo{background:var(--navy);color:#fff;font-weight:800;font-size:15px;padding:10px 12px;border-radius:14px}
 .logo b{color:var(--gold2)}
-.pill{background:#fff;border-radius:14px;padding:8px 12px;box-shadow:0 2px 10px rgba(21,39,65,.15);font-size:13px;line-height:1.2}
+.pill{background:#fff;border-radius:14px;padding:8px 12px;box-shadow:0 2px 10px rgba(20,20,30,.15);font-size:13px;line-height:1.2}
 .pill b{display:block;font-size:16px}
-.state{margin-left:auto;font-weight:700;font-size:13px;padding:10px 12px;border-radius:14px;background:#fff;box-shadow:0 2px 10px rgba(21,39,65,.15)}
+.state{margin-left:auto;font-weight:700;font-size:13px;padding:10px 12px;border-radius:14px;background:#fff;box-shadow:0 2px 10px rgba(20,20,30,.15)}
 .state.on{background:var(--ok);color:#fff}
-.sheet{position:fixed;left:0;right:0;bottom:0;z-index:6;background:#fff;border-radius:22px 22px 0 0;padding:10px 16px calc(16px + env(safe-area-inset-bottom));box-shadow:0 -6px 24px rgba(21,39,65,.12);max-height:86vh;overflow:auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:6;background:#fff;border-radius:22px 22px 0 0;padding:10px 16px calc(16px + env(safe-area-inset-bottom));box-shadow:0 -6px 24px rgba(20,20,30,.12);max-height:86vh;overflow:auto}
 .grab{width:38px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 12px}
 h2{font-size:20px;margin:2px 0 10px}
 .muted{color:var(--soft);font-size:13px}
 .btn{width:100%;border:0;border-radius:14px;padding:16px;font-size:17px;font-weight:700;cursor:pointer;margin-top:10px;display:block;text-align:center;text-decoration:none}
-.btn.main{background:var(--gold);color:#14243F}
+.btn.main{background:var(--gold);color:#16161a}
 .btn.go{background:var(--ok);color:#fff;font-size:19px;padding:20px}
 .btn.dark{background:var(--navy);color:#fff}
 .btn.ghost{background:var(--paper);color:var(--ink)}
@@ -36,7 +36,7 @@ input.f{width:100%;font-size:17px;padding:14px;border-radius:14px;border:1px sol
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:6px 0}
 .stat{background:var(--paper);border-radius:14px;padding:12px}
 .stat b{display:block;font-size:22px}
-.offer{position:fixed;inset:0;z-index:20;background:rgba(21,39,65,.55);display:flex;align-items:flex-end}
+.offer{position:fixed;inset:0;z-index:20;background:rgba(20,20,30,.55);display:flex;align-items:flex-end}
 .ocard{background:#fff;width:100%;border-radius:22px 22px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));animation:up .25s ease-out}
 @keyframes up{from{transform:translateY(40px);opacity:.5}to{transform:none;opacity:1}}
 .ring{width:74px;height:74px;flex:none;position:relative}
@@ -50,7 +50,7 @@ input.f{width:100%;font-size:17px;padding:14px;border-radius:14px;border:1px sol
 .two{display:flex;gap:10px}.two>*{flex:1}
 .carm{width:30px;height:30px;border-radius:50%;background:var(--navy);border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3);display:grid;place-items:center;color:#fff;font-size:14px}
 .carm.me{background:var(--ok)}
-.carm.to{background:var(--gold);color:#14243F}
+.carm.to{background:var(--gold);color:#16161a}
 .wait{display:flex;align-items:center;gap:12px;background:var(--paper);border-radius:14px;padding:14px}
 .blink{width:12px;height:12px;border-radius:50%;background:var(--ok);animation:b 1.2s infinite}
 @keyframes b{50%{opacity:.25}}
@@ -66,9 +66,9 @@ table.fin td:first-child,table.fin th:first-child{text-align:left}
 .doc input{position:absolute;inset:0;opacity:0;cursor:pointer}
 .doc i{font-style:normal;font-size:24px;display:block;margin-bottom:4px}
 label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
-.note{background:#FBF5E6;border-radius:14px;padding:12px;font-size:14px;margin:6px 0}
+.note{background:#fff8e6;border-radius:14px;padding:12px;font-size:14px;margin:6px 0}
 .tag{display:inline-block;background:var(--navy);color:#fff;border-radius:8px;padding:2px 8px;font-size:12px;font-weight:700;margin-right:4px}
-.tag.g{background:var(--gold);color:#14243F}
+.tag.g{background:var(--gold);color:#16161a}
 .stars{display:flex;justify-content:center;gap:6px;font-size:36px;margin:6px 0}
 .stars span{cursor:pointer;color:var(--line)}.stars span.on{color:var(--gold)}
 .chatb{position:relative}
@@ -80,11 +80,12 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
+<link rel="stylesheet" href="/static/theme.css?v=1">
 </head>
 <body>
 <div id="map"></div>
 <div class="top">
-  <div class="logo">ТАП! <b>Айдоочу</b></div>
+  <div class="logo"><img src="/static/icon-192.png" alt=""><b>ТАП!</b><span class="ver">Айдоочу</span></div>
   <div class="pill hide" id="earn"><span class="muted">Бүгүн</span><b id="earnV">0 с</b></div>
   <div class="state hide" id="stBadge">Офлайн</div>
 </div>

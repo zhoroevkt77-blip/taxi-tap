@@ -1,0 +1,65 @@
+/* Такси ТАП! — «ТАКСИ роБОТ» сайтынын стили: кара (тамга), сары (акцент), ак (карточкалар). */
+:root{--navy:#16161a;--navy2:#2a2a30;--gold:#ffc61a;--gold2:#ffb703;--ink:#1b1b20;--soft:#8a8a95;--paper:#f1f1f4;
+  --line:#f0f0f3;--ok:#2f9e5f;--bad:#e0344a;--bg:#fafafa;--ysoft:#fff8e6;
+  --grad:linear-gradient(135deg,#ffc61a 0%,#ffb703 100%);--glow:0 7px 20px rgba(255,183,3,.45);
+  --sh:0 5px 18px rgba(20,20,30,.10);--shl:0 12px 34px rgba(20,20,30,.18)}
+html,body{font-family:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+*{touch-action:manipulation}
+h1,h2,h3{font-weight:900;letter-spacing:-.4px}
+b,strong{font-weight:800}
+
+/* логотип */
+.logo{display:flex;align-items:center;gap:8px;background:#fff!important;color:var(--ink)!important;font-weight:900!important;
+  font-size:17px!important;letter-spacing:-.4px;text-transform:uppercase;padding:7px 12px 7px 7px!important;border-radius:16px!important;box-shadow:var(--sh)}
+.logo img{width:30px;height:30px;border-radius:9px;display:block;box-shadow:0 2px 7px rgba(20,20,30,.14)}
+.logo b{color:var(--gold2)!important}
+.ver{font-size:10px;font-weight:800;color:#9a7400;background:rgba(255,198,26,.22);border-radius:7px;padding:2px 6px;letter-spacing:.4px;text-transform:uppercase}
+
+/* баскычтар */
+.btn{border-radius:20px!important;font-weight:800!important;transition:transform .12s}
+.btn:active{transform:scale(.97)}
+.btn.main,.btn.gold{background:var(--grad)!important;color:var(--navy)!important;box-shadow:var(--glow)}
+.btn.dark{background:var(--navy)!important;color:#fff!important}
+.btn.ghost{background:#fff!important;color:var(--ink)!important;box-shadow:var(--sh)}
+.btn.go{background:var(--ok)!important;box-shadow:0 7px 20px rgba(47,158,95,.35)}
+.btn.red,.btn.bad{background:#fdecef!important;color:var(--bad)!important}
+.btn.ok{background:var(--ok)!important;color:#fff!important}
+.round{box-shadow:var(--sh)!important}
+
+/* карточкалар, талаалар */
+.sheet,.ocard{border-radius:28px 28px 0 0!important;box-shadow:0 -8px 30px rgba(20,20,30,.12)!important}
+.search{background:var(--paper)!important;border-radius:30px!important;font-weight:500}
+input.f,select.f,textarea.f{border-radius:16px!important;border:1.5px solid transparent!important;background:var(--paper)!important}
+input.f:focus{border-color:var(--gold2)!important;background:#fff!important}
+.chips button,.quick button{background:#fff!important;border:0!important;box-shadow:var(--sh);border-radius:16px!important;font-weight:700!important}
+.cls>div{border:0!important;box-shadow:var(--sh);border-radius:20px!important}
+.cls>div.on{background:var(--grad)!important;box-shadow:var(--glow)}
+.cls>div.on .muted{color:#7a5a00}
+.wbox,.note{background:var(--ysoft)!important;border-radius:18px!important}
+.car,.stat,.wait{background:#fff!important;box-shadow:var(--sh);border-radius:20px!important}
+.tariff{border:0!important;background:var(--grad)!important;box-shadow:var(--glow);border-radius:20px!important}
+.chip{border-radius:18px!important;box-shadow:var(--sh)!important}
+.chip small{color:#9a7400!important}
+.pill,.state{border-radius:16px!important;box-shadow:var(--sh)!important}
+.msgs div.me{background:var(--grad)!important;color:var(--navy)!important}
+.tag{border-radius:8px}
+.tag.g{background:var(--grad)!important;color:var(--navy)!important}
+.plate{border-radius:8px!important}
+.av{background:var(--grad)!important;color:var(--navy)!important}
+.carm{background:var(--navy)!important}
+.carm.mine,.carm.to,.carm.g{background:var(--grad)!important;color:var(--navy)!important}
+.head.to,.stick.to{background:var(--gold2)!important}
+.pulse{background:var(--grad)!important}
+
+/* админ */
+html:has(body.adm),body.adm{background:var(--bg)!important;min-height:100vh}
+body.adm header{background:var(--bg)!important;color:var(--ink)!important;padding:12px 16px!important}
+body.adm header .logo{box-shadow:none;padding-left:0!important;background:transparent!important}
+body.adm header .live{color:var(--soft);opacity:1!important}
+body.adm nav{background:var(--bg)!important;border-bottom:0!important;top:54px!important}
+body.adm nav button{background:#fff!important;box-shadow:var(--sh);border-radius:16px!important;font-weight:800!important}
+body.adm nav button.on{background:var(--grad)!important;color:var(--navy)!important;box-shadow:var(--glow)}
+body.adm .panel,body.adm .card,body.adm .login{border:0!important;box-shadow:var(--sh);border-radius:20px!important}
+body.adm .card b{font-weight:900}
+body.adm #map,body.adm #amap{border:0!important;border-radius:20px!important;box-shadow:var(--sh)}
+body.adm .bars i{background:var(--grad)!important}
