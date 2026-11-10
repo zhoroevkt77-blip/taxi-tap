@@ -100,7 +100,7 @@ input.f:focus{border-color:var(--navy)}
 .quick{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=18">
+<link rel="stylesheet" href="/static/theme.css?v=19">
 </head>
 <body>
 <div id="map"></div>
@@ -118,6 +118,7 @@ input.f:focus{border-color:var(--navy)}
 
 
 <div class="sheet" id="sheet"><div class="grab"></div><div id="view"></div></div>
+<div class="home hide" id="home"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="/static/area.js"></script>
@@ -195,6 +196,7 @@ async function loadNear() {
   $("#chipEta").textContent = n.city && n.eta_min ? `🚕 ${n.eta_min} мүн` : "";
   S.nearMsg = !n.city ? `📍 Биз ${(window.AREA && AREA.name) || "бул аймакта"} гана иштейбиз` : n.eta_min ? "" : "Азыр жакын арада бош айдоочу жок — заказ берсеңиз, табылганда кабар беребиз";
   if ($("#nearMsg")) $("#nearMsg").textContent = S.nearMsg;
+  if ($("#taxiEta")) $("#taxiEta").textContent = homeEta();
 }
 function setPin(kind) {
   const show = kind !== null;
@@ -219,7 +221,7 @@ function locate(force) {
 }
 
 // ---------- көрүнүштөр ----------
-function render(html) { $("#view").innerHTML = html; window.SHEET && SHEET.refresh(); positionLocate(); }
+function render(html) { if (S.mode !== "idle") homeOn(false); $("#sheet").classList.toggle("full", S.mode === "search"); $("#view").innerHTML = html; window.SHEET && SHEET.refresh(); positionLocate(); }
 window.addEventListener("sheetmove", () => positionLocate());
 function positionLocate() {
   requestAnimationFrame(() => NAV.place());
@@ -260,18 +262,54 @@ function pollMe() {
 
 function viewIdle() {
   S.mode = "idle"; S.to = null; S.quote = null; S.hnT = ""; S.lmT = ""; setPin("from"); showA(false);
+  S.openWhen = S.openOther = false;
   rideLayer.clearLayers(); driverMarker = null;
-  render(`<div class="ab">
-      <div class="abr abb" id="fromRow"><span class="bul lt">А</span><span class="abl"><small>А точка · каяктан <i class="chk" id="chkA">✓ тандалды</i></small><b id="fromTxt">${esc(S.fromAddr || "…")}</b></span><button class="mapb" id="mapA">🗺 Картадан<br>белгиле</button></div>
-      <div class="abr abb need" id="where"><span class="bul to lt">Б</span><span class="abl"><small>Б точка · каякка <i class="hint">— тандаңыз 👆</i></small><b class="ph">Каякка барасыз?</b></span><button class="mapb" id="mapB">🗺 Картадан<br>белгиле</button></div>
-    </div>
-    <div class="chips" id="places"></div><p class="muted" id="nearMsg" style="margin:4px 2px 0;font-size:13px">${esc(S.nearMsg || "")}</p>`);
-  loadPlaces();
-  $("#where").onclick = () => viewSearch("to");
-  $("#fromRow").onclick = () => viewSearch("from");
-  $("#mapA").onclick = e => { e.stopPropagation(); viewPickFrom(); };
-  $("#mapB").onclick = e => { e.stopPropagation(); viewPickDest(); };
+  render("");
+  homeOn(true);
+  const N = S.near || {}, has = c => (N.classes || ["econom", "delivery"]).includes(c);
+  const tile = (id, ico, t, sub, big) => `<button class="tile${big ? " big" : ""}" id="${id}"><b>${t}</b><small>${sub}</small><span class="ico">${ico}</span></button>`;
+  const P = PLACES && !PLACES.error ? PLACES : {recent:[]};
+  const rec = [];
+  if (P.home) rec.push({ico:"🏠", name:"Үй", sub:P.home.name || "", lat:P.home.lat, lon:P.home.lon});
+  if (P.work) rec.push({ico:"💼", name:"Иш", sub:P.work.name || "", lat:P.work.lat, lon:P.work.lon});
+  (P.recent || []).forEach(r => rec.push({ico:"🕘", name:r.name, sub:"Акыркы сапар", lat:r.lat, lon:r.lon}));
+  $("#home").innerHTML = `<div class="hh"><div class="logo"><img src="/static/icon-192.png" alt="">Такси <b>ТАП!</b></div><button class="round" id="hMenu" aria-label="Кабинет">👤</button></div>
+    <div class="role hrole"><a class="on">🧳 Жүргүнчүмүн</a><a href="/driver">🚗 Айдоочумун</a></div>
+    <button class="haddr" id="hAddr"><small>📍 Сиз турган жер</small><b id="fromTxt">${esc(S.fromAddr || "Аныкталууда…")}</b><span>›</span></button>
+    <div class="tiles">${tile("tTaxi", "🚕", "Такси", `<span id="taxiEta">${homeEta()}</span>`, true)}
+      ${has("delivery") ? tile("tDel", "📦", "Жеткирүү", "Буюм, документ") : tile("tWhen0", "🕐", "Алдын ала", "Убактысын тандаңыз")}</div>
+    <div class="tiles3"><button class="sm" id="tWhen"><span>🕐</span>Алдын ала</button><button class="sm" id="tOther"><span>👵</span>Башка адамга</button>
+      ${has("comfort") ? `<button class="sm" id="tComf"><span>🚘</span>Комфорт</button>` : has("minivan") ? `<button class="sm" id="tVan"><span>🚐</span>Минивэн</button>` : `<button class="sm" id="tMap"><span>🗺</span>Картадан</button>`}</div>
+    <button class="hsearch" id="hSearch">🔍 <span>Каякка барабыз?</span><em>›</em></button>
+    <div class="hrec">${rec.slice(0, 5).map((r, i) => `<button class="rec" data-i="${i}"><span class="pi">${r.ico}</span><span class="rt"><b>${esc(r.name)}</b><small>${esc(r.sub)}</small></span><span class="t">${minsTo(r)}</span></button>`).join("")}</div>
+    <p class="muted" id="nearMsg" style="margin:10px 4px 0;font-size:13px">${esc(S.nearMsg || "")}</p>`;
+  const go = (cls) => { if (cls) S.cls = cls; viewSearch("to"); };
+  $("#hSearch").onclick = () => go("econom");
+  $("#tTaxi").onclick = () => go("econom");
+  $("#hAddr").onclick = () => viewSearch("from");
+  $("#hMenu").onclick = viewCabinet;
+  if ($("#tDel")) $("#tDel").onclick = () => go("delivery");
+  if ($("#tComf")) $("#tComf").onclick = () => go("comfort");
+  if ($("#tVan")) $("#tVan").onclick = () => go("minivan");
+  if ($("#tMap")) $("#tMap").onclick = () => { S.cls = "econom"; viewPickDest(); };
+  ["#tWhen", "#tWhen0"].forEach(k => { if ($(k)) $(k).onclick = () => { S.openWhen = true; go("econom"); }; });
+  $("#tOther").onclick = () => { S.openOther = true; go("econom"); };
+  $("#home").querySelectorAll(".rec").forEach(b => b.onclick = () => { const r = rec[+b.dataset.i];
+    S.cls = "econom"; S.to = [r.lat, r.lon]; S.toAddr = r.name === "Үй" || r.name === "Иш" ? r.name : r.name; picked("Б"); viewQuote(); });
+  if (!PLACES) loadPlaces().then(() => { if (S.mode === "idle") viewIdle(); });
   onPinMoved();
+}
+const homeEta = () => { const n = S.near; return !n ? "Айдоочу изделүүдө…" : !n.city ? "Бул жерде иштебейбиз" : n.eta_min ? `${n.eta_min} мүнөттө келет` : "Бош айдоочу азыр жок"; };
+function minsTo(r) {
+  if (!S.from || r.lat == null) return "";
+  const R = 6371, dLa = (r.lat - S.from[0]) * Math.PI / 180, dLo = (r.lon - S.from[1]) * Math.PI / 180;
+  const a = Math.sin(dLa / 2) ** 2 + Math.cos(S.from[0] * Math.PI / 180) * Math.cos(r.lat * Math.PI / 180) * Math.sin(dLo / 2) ** 2;
+  const km = 2 * R * Math.asin(Math.sqrt(a)) * 1.3;
+  return km > 60 ? "" : `${Math.max(2, Math.round(km / 25 * 60))} мүн`;
+}
+function homeOn(on) {
+  $("#home").classList.toggle("hide", !on);
+  document.body.classList.toggle("athome", on);
 }
 
 // ---------- сакталган даректер ----------
@@ -344,7 +382,7 @@ function viewSearch(field) {
       }
       const all = quick.concat(items);
       $("#list").innerHTML = all.length ? all.map((r, i) =>
-        `<div class="res" data-i="${i}"><span class="ri">${r.icon}</span><div><b>${esc(r.name)}</b>${r.area ? `<span class="muted">${esc(r.area)}</span>` : ""}</div></div>`).join("")
+        `<div class="res" data-i="${i}"><span class="ri">${r.icon}</span><div style="flex:1;min-width:0"><b>${esc(r.name)}</b>${r.area ? `<span class="muted">${esc(r.area)}</span>` : ""}</div>${act === "to" && r.lat != null ? `<span class="rt2">${minsTo(r)}</span>` : ""}</div>`).join("")
         : q.length >= 2 ? `<p class="muted">«${esc(q)}» табылган жок. Башкача жазып көрүңүз (мис. көчөнүн атын гана) же «Картадан белгилөө» басыңыз.</p>` : "";
       $("#list").querySelectorAll(".res").forEach(el => el.onclick = () => {
         const r = all[+el.dataset.i];
@@ -354,6 +392,7 @@ function viewSearch(field) {
     }, 200);
   }
   inp.from.oninput = inp.to.oninput = run;
+  window.SHEET && SHEET.expand();
   (act === "from" ? inp.from : inp.to).focus();
 }
 
@@ -415,6 +454,7 @@ async function viewQuote() {
     <p class="muted" style="margin:6px 0 0">Айдоочу ${q.wait.free_min} мүнөт акысыз күтөт, андан кийин ${q.wait.per_min} сом/мүн.</p>
     <button class="btn main" id="order">Чакыруу</button><button class="btn ghost" id="back">Артка</button>`);
   S.promo = null; S.at = null; S.disc = 0; S.other = null; S.note = "";
+  setTimeout(() => { if (S.openWhen && $("#whenOpen")) $("#whenOpen").click(); if (S.openOther && $("#otherOpen")) $("#otherOpen").click(); S.openWhen = S.openOther = false; }, 0);
   $("#hnF").oninput = e => S.hnF = e.target.value; $("#hnT").oninput = e => S.hnT = e.target.value;
   $("#lmF").oninput = e => S.lmF = e.target.value; $("#lmT").oninput = e => S.lmT = e.target.value;
   const paint = () => {

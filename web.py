@@ -346,7 +346,8 @@ class H(BaseHTTPRequestHandler):
                 best = km if best is None else min(best, km)
         eta = None if best is None else max(1, round(best * core.ROAD_FACTOR
                                                      / core.AVG_SPEED_KMH * 60))
-        return self._json({"drivers": pts, "eta_min": eta, "city": core.city_of(*p)})
+        cls = [c for c, x in core.class_config().items() if x["on"]]
+        return self._json({"drivers": pts, "eta_min": eta, "city": core.city_of(*p), "classes": cls})
 
     # ---------- POST ----------
 
