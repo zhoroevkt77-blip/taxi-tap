@@ -14,6 +14,7 @@ for n, k, a, b, ar in [("Борбордук базар", "market", 41.0380, 72.7
                       ("Юбилейная көчөсү", "street", 41.0420, 72.7460, "Базар-Коргон"), ("Бешик-Жон", "village", 41.0500, 72.7800, ""),
                       ("Автовокзал", "bus", 41.0330, 72.7440, "Базар-Коргон")]:
     addrbook.save(n, k, a, b, area=ar, source="osm")
+addrbook.seed_web(); addrbook.suggest("Нурбек той-кана", 41.039, 72.749, by="ph:9")
 REV = {"address": {"road": "Айтматов көчөсү", "house_number": "50"}}
 def route(r):
     u = r.request.url
@@ -38,9 +39,14 @@ try:
         r.click("#list .res >> nth=0"); r.wait_for_timeout(500); r.fill("#qt", ""); r.type("#qt", "дамб", delay=60); r.wait_for_timeout(900)
         r.click("#list .res >> nth=0"); r.wait_for_timeout(1500); r.fill("#hnT", "15")
         r.screenshot(path=os.path.join(SHOTS, "a4_quote.png"))
+        r.click("#back"); r.wait_for_timeout(500); r.click("#where"); r.wait_for_timeout(300); r.type("#qt", "Ысмайыл дүкөн", delay=30); r.wait_for_timeout(900)
+        r.click("#pickMap"); r.wait_for_timeout(800); r.screenshot(path=os.path.join(SHOTS, "a8_pick.png"))
         a = b.new_context(viewport={"width": 1100, "height": 1000}).new_page(); a.route("**/*", route); a.on("pageerror", lambda e: print("JS:", e))
         a.goto(URL + "/admin"); a.fill("#ph", "0700 900 900"); a.click("#go"); a.wait_for_timeout(1500)
-        a.click("nav button[data-t='addr']"); a.wait_for_timeout(1000); a.click("#dNew"); a.wait_for_timeout(800)
+        a.click("nav button[data-t='addr']"); a.wait_for_timeout(1000)
+        a.click("[data-only=pending]"); a.wait_for_timeout(800); a.screenshot(path=os.path.join(SHOTS, "a6_pending.png"))
+        a.click("[data-only=approx]"); a.wait_for_timeout(800); a.screenshot(path=os.path.join(SHOTS, "a7_approx.png"))
+        a.click("[data-only='']"); a.wait_for_timeout(800); a.click("#dNew"); a.wait_for_timeout(800)
         a.fill("#dN", "Нурбек той-кана"); a.select_option("#dK", "food"); a.fill("#dAl", "нурбек, той кана")
         a.click("#dmap", position={"x": 300, "y": 150}); a.wait_for_timeout(400)
         a.screenshot(path=os.path.join(SHOTS, "a5_admin.png"), full_page=True)

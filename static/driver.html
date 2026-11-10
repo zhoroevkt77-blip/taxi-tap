@@ -219,6 +219,30 @@ function bindHome() {
     lastView = ""; show(); };
 }
 
+// ---------- айдоочу дарек сунуштайт (турган жеринен) ----------
+function viewAddAddr() {
+  const K = [["poi","📍 Белгилүү жер"],["shop","🏪 Дүкөн"],["food","🍽 Кафе / той-кана"],["school","🏫 Мектеп / бала бакча"],
+             ["health","🏥 Оорукана / дарыкана"],["mosque","🕌 Мечит"],["gov","🏛 Мекеме"],["bus","🚌 Бекет"],["street","🛣 Көчө"],["village","🏘 Айыл / кичи район"]];
+  render(`<h2>📍 Дарек кошуу</h2>
+    <p class="muted">Ушул жерде турганда атын жазыңыз — жайгашкан жериңиз GPS'тен алынат. Жүргүнчүлөр кийин бул жерди тизмеден табышат.</p>
+    <input class="f" id="an" maxlength="80" placeholder="Мис. Нурбек той-кана, Ак-Тилек дүкөнү">
+    <select class="f" id="ak" style="width:100%">${K.map(([k, t]) => `<option value="${k}">${t}</option>`).join("")}</select>
+    <div class="err" id="ae"></div>
+    <button class="btn main" id="as">Кошуу</button><button class="btn ghost" id="ab">Артка</button>`);
+  $("#ab").onclick = () => { lastView = ""; show(); };
+  $("#as").onclick = async () => {
+    const nm = $("#an").value.trim(); if (nm.length < 2) return $("#ae").textContent = "Атын жазыңыз.";
+    $("#as").disabled = true;
+    const p = await getPos(); if (!p) { $("#as").disabled = false; return $("#ae").textContent = "GPS'ке уруксат бериңиз."; }
+    const r = await api("/api/d/addr_suggest", {name:nm, kind:$("#ak").value, p});
+    if (r.error) { $("#as").disabled = false; return $("#ae").textContent = "Кошулган жок: жер иштөө аймагынын ичинде болушу керек."; }
+    render(`<h2>✓ Рахмат!</h2><p class="muted">«${esc(nm)}» сунушталды. Админ ырастагандан кийин (же дагы бир адам ушул жерди белгилесе) тизмеге кошулат.</p>
+      <button class="btn main" id="more">Дагы кошуу</button><button class="btn ghost" id="ab">Артка</button>`);
+    $("#more").onclick = viewAddAddr; $("#ab").onclick = () => { lastView = ""; show(); };
+  };
+  $("#an").focus();
+}
+
 function viewHome() {
   const low = D.balance < D.min_balance;
   const stats = `<div class="grid">
@@ -232,8 +256,8 @@ function viewHome() {
     <input type="checkbox" id="nt" ${D.notify ? "checked" : ""} style="width:24px;height:24px"></div>` : "";
   if (D.online) {
     render(`<div class="wait"><div class="blink"></div><div><b>Заказ күтүлүүдө${D.home && D.home.on ? " · 🏠 үйгө карай" : ""}</b><div class="muted">Экранды өчүрбөңүз — GPS иштеп турат</div></div></div>
-      ${stats}${homeHTML()}<button class="btn red" id="off">Линиядан чыгуу</button>`);
-    bindHome();
+      ${stats}${homeHTML()}<button class="btn ghost" id="addAddr">📍 Дарек кошуу</button><button class="btn red" id="off">Линиядан чыгуу</button>`);
+    bindHome(); $("#addAddr").onclick = viewAddAddr;
     $("#off").onclick = async () => { D = await api("/api/d/online", {on:false}); wake(false); lastView = ""; show(); };
   } else {
     render(`<h2>Салам, ${esc(D.name || "айдоочу")}!</h2><p class="muted">${esc(D.car_color)} ${esc(D.car_model)}, ${esc(D.car_plate)}</p>
@@ -241,7 +265,7 @@ function viewHome() {
       <button class="btn go" id="on">Линияга чыгуу</button>
       <div class="err" id="er"></div>${stats}${topup}
       <button class="btn ghost" id="cab">💼 Менин кабинетим</button>
-      <button class="btn ghost" id="hist">Сапарлардын тарыхы</button>${homeHTML()}${sw}
+      <button class="btn ghost" id="hist">Сапарлардын тарыхы</button><button class="btn ghost" id="addAddr">📍 Дарек кошуу</button>${homeHTML()}${sw}
       ${installHTML()}<button class="btn ghost" id="out">Чыгуу</button>`);
     bindInstall();
     $("#top") && ($("#top").onclick = viewTopup);
@@ -257,6 +281,7 @@ function viewHome() {
       startGps(); wake(true); lastView = ""; show();
     };
     $("#hist").onclick = viewHistory;
+    $("#addAddr").onclick = viewAddAddr;
     bindHome();
   }
 }

@@ -442,6 +442,30 @@ class AddrBook(unittest.TestCase):
         self.assertIsNone(addrbook.save("", "food", 42.49, 78.39))
         self.assertEqual(addrbook.count()["hidden"], 1)
 
+    def test_suggest_and_seed(self):
+        # жүргүнчү сунуштады — азырынча көрүнбөйт
+        a1 = addrbook.suggest("Нурбек той-кана", 42.4910, 78.3910, by="ph:1", weight=1)
+        self.assertEqual(addrbook.search("нурбек"), [])
+        self.assertEqual(addrbook.suggest("нурбек той кана", 42.4911, 78.3911, by="ph:1"), a1)   # ошол эле адам
+        self.assertEqual(addrbook.count()["pending"], 1)
+        addrbook.suggest("Нурбек той-кана", 42.4912, 78.3912, by="dr:2", weight=2)               # айдоочу: 1+2=3
+        self.assertEqual(addrbook.search("нурбек")[0]["id"], a1)
+        # админ ырастайт
+        a2 = addrbook.suggest("Ак-Тилек дүкөнү", 42.4920, 78.3920, by="ph:3")
+        addrbook.approve(a2)
+        self.assertTrue(addrbook.search("тилек"))
+        # интернеттен аттар: жери болжолдуу, кайталанбайт
+        n = addrbook.seed_web()
+        self.assertGreater(n, 10)
+        self.assertEqual(addrbook.seed_web(), 0)
+        r = addrbook.search("текебаев")
+        self.assertTrue(any(x["approx"] for x in r))
+        self.assertGreater(addrbook.count()["approx"], 10)
+        # жүргүнчү ошол аттуу жерди картадан белгилесе — жери такталат
+        cid = addrbook.suggest("Борбордук базар", 42.4950, 78.3950, by="ph:5")
+        row = core.query("SELECT * FROM addresses WHERE id=?", (cid,), "one")
+        self.assertEqual((row["approx"], round(row["lat"], 3)), (0, 42.495))
+
 
 class DestOut(unittest.TestCase):
     def test_intercity_refused(self):

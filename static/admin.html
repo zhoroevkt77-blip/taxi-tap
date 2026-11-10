@@ -436,20 +436,28 @@ function drawPreview() {
 }
 
 // ---------- даректер китепчеси ----------
-let dmap = null, dlyr = null, DF = null;
+let dmap = null, dlyr = null, DF = null, DONLY = "";
 async function viewAddr(q) {
-  const A = await api("/api/a/addr" + (q ? "?q=" + encodeURIComponent(q) : ""));
+  const A = await api("/api/a/addr?q=" + encodeURIComponent(q || "") + "&only=" + DONLY);
   const K = A.kinds, c = A.count, im = A.import;
   $("#main").innerHTML = `<div class="panel"><h3>Даректер тизмеси — жүргүнчүлөр «Кайдан / Кайда» жазганда ушундан сунуш чыгат</h3>
       <div class="item"><div class="main"><b>${c.total} дарек</b><span class="muted">${c.admin} — өзүңүз кошкон · ${c.hidden} жашырылган ·
         ${im.running ? "OpenStreetMap'тен жүктөлүүдө…" : im.error ? "OSM жүктөлбөдү: " + esc(im.error) : im.last ? "OSM акыркы жолу: +" + im.added + " жаңы" : "OSM'ден азырынча жүктөлө элек"}</span></div>
         <button class="btn" id="dImp" ${im.running ? "disabled" : ""}>↻ OpenStreetMap'тен жүктөө</button>
         <button class="btn gold" id="dNew">＋ Жаңы дарек</button></div>
+      <div class="item" style="gap:6px">
+        <button class="btn ${DONLY === "" ? "gold" : ""}" data-only="">Баары</button>
+        <button class="btn ${DONLY === "pending" ? "gold" : ""}" data-only="pending">🆕 Жаңы сунуштар (${c.pending})</button>
+        <button class="btn ${DONLY === "approx" ? "gold" : ""}" data-only="approx">📍 Жери болжолдуу (${c.approx})</button>
+        <span class="muted">${DONLY === "pending" ? "Жүргүнчүлөр жана айдоочулар сунуштаган жерлер. ✓ басыңыз — тизмеге кошулат. 3 добуш чогулса (айдоочу = 2) өзү кошулат."
+          : DONLY === "approx" ? "Аты интернеттен алынган, жери шаардын борбору коюлган. «Оңдоо» басып, картадан так жерин белгилеңиз." : ""}</span></div>
       <div id="dForm"></div></div>
     <div class="panel"><div style="padding:10px 14px"><input class="f" id="dQ" placeholder="Издөө: базар, мектеп, Ленина…" value="${esc(q || "")}"></div>
-      <div id="dList">${A.items.length ? A.items.map(x => `<div class="item"><div class="main"><b>${x.icon} ${esc(x.name)} ${x.hidden ? '<span class="tag t-cancelled">жашырылган</span>' : ""}</b>
-          <span class="muted">${esc(K[x.kind] ? K[x.kind].name : x.kind)}${x.area ? " · " + esc(x.area) : ""}${x.aliases ? " · башка аттары: " + esc(x.aliases) : ""} · ${x.source === "admin" ? "өзүңүз" : "OSM"}</span></div>
-          <button class="btn" data-ed="${x.id}">Оңдоо</button><button class="btn" data-hd="${x.id}" data-h="${x.hidden ? 0 : 1}">${x.hidden ? "Көрсөтүү" : "Жашыруу"}</button></div>`).join("")
+      <div id="dList">${A.items.length ? A.items.map(x => `<div class="item"><div class="main"><b>${x.icon} ${esc(x.name)} ${x.hidden ? '<span class="tag t-cancelled">жашырылган</span>' : ""}
+            ${x.pending ? `<span class="tag t-pending">сунуш · ${x.votes} добуш</span>` : ""}${x.approx ? '<span class="tag t-searching">жери болжолдуу</span>' : ""}</b>
+          <span class="muted">${esc(K[x.kind] ? K[x.kind].name : x.kind)}${x.area ? " · " + esc(x.area) : ""}${x.aliases ? " · башка аттары: " + esc(x.aliases) : ""} · ${{admin:"өзүңүз", osm:"OSM", web:"интернет", user:"жүргүнчү/айдоочу"}[x.source] || x.source}</span></div>
+          ${x.pending ? `<button class="btn ok" data-ap="${x.id}">✓ Кабыл алуу</button><button class="btn bad" data-rj="${x.id}">✕</button>` : ""}
+          <button class="btn" data-ed="${x.id}">Оңдоо</button>${x.pending ? "" : `<button class="btn" data-hd="${x.id}" data-h="${x.hidden ? 0 : 1}">${x.hidden ? "Көрсөтүү" : "Жашыруу"}</button>`}</div>`).join("")
         : `<div class="empty">${q ? "Табылган жок." : "Тизме бош. «OpenStreetMap'тен жүктөө» же «Жаңы дарек» басыңыз."}</div>`}</div></div>`;
   let t = null;
   $("#dQ").oninput = e => { clearTimeout(t); t = setTimeout(() => viewAddr(e.target.value.trim()), 400); };
@@ -459,6 +467,9 @@ async function viewAddr(q) {
   $("#dNew").onclick = () => addrForm({kind:"poi"}, K, q);
   document.querySelectorAll("[data-ed]").forEach(b => b.onclick = () => addrForm(A.items.find(x => x.id == b.dataset.ed), K, q));
   document.querySelectorAll("[data-hd]").forEach(b => b.onclick = async () => { await api("/api/a/addr_hide", {id:+b.dataset.hd, hidden:b.dataset.h === "1"}); viewAddr(q); });
+  document.querySelectorAll("[data-ap]").forEach(b => b.onclick = async () => { await api("/api/a/addr_approve", {id:+b.dataset.ap}); viewAddr(q); });
+  document.querySelectorAll("[data-rj]").forEach(b => b.onclick = async () => { if (!confirm("Бул сунушту өчүрөсүзбү?")) return; await api("/api/a/addr_delete", {id:+b.dataset.rj}); viewAddr(q); });
+  document.querySelectorAll("[data-only]").forEach(b => b.onclick = () => { DONLY = b.dataset.only; viewAddr(q); });
 }
 async function addrForm(x, K, q) {
   DF = {id:x.id || null, p:x.lat ? [x.lat, x.lon] : null};

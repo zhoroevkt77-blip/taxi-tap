@@ -64,9 +64,11 @@ def pretty(name):
 def _rows():
     with _lock:
         if _cache["rows"] is None:
-            _cache["rows"] = core.query("SELECT * FROM addresses WHERE hidden=0", (), "all")
+            _cache["rows"] = core.query("SELECT * FROM addresses WHERE hidden=0 AND "
+                                        "(status IS NULL OR status='ok')", (), "all")
             for r in _cache["rows"]:
                 r["_n"] = norm(r["name"] + " " + (r.get("aliases") or "")).split()
+                r["_a"] = set(norm(r.get("area") or "").split())
         return _cache["rows"]
 
 
@@ -77,8 +79,10 @@ def _reset():
 
 def count():
     r = core.query("SELECT COUNT(*) AS n, SUM(CASE WHEN source='admin' THEN 1 ELSE 0 END) AS a, "
-                   "SUM(hidden) AS h FROM addresses", (), "one")
-    return {"total": r["n"] or 0, "admin": r["a"] or 0, "hidden": r["h"] or 0}
+                   "SUM(hidden) AS h, SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) AS p, "
+                   "SUM(CASE WHEN approx=1 AND hidden=0 THEN 1 ELSE 0 END) AS x FROM addresses", (), "one")
+    return {"total": r["n"] or 0, "admin": r["a"] or 0, "hidden": r["h"] or 0,
+            "pending": r["p"] or 0, "approx": r["x"] or 0}
 
 
 def save(name, kind, lat, lon, aliases="", area="", aid=None, source="admin"):
@@ -90,11 +94,11 @@ def save(name, kind, lat, lon, aliases="", area="", aid=None, source="admin"):
     aliases = ", ".join(a.strip() for a in (aliases or "").split(",") if a.strip())[:200]
     area = (area or "").strip()[:60]
     if aid:
-        core.query("UPDATE addresses SET name=?, kind=?, lat=?, lon=?, aliases=?, area=?, source='admin' WHERE id=?",
-                   (name, kind, lat, lon, aliases, area, aid))
+        core.query("UPDATE addresses SET name=?, kind=?, lat=?, lon=?, aliases=?, area=?, source='admin', "
+                   "approx=0, status='ok' WHERE id=?", (name, kind, lat, lon, aliases, area, aid))
     else:
-        aid = core.query("INSERT INTO addresses (name, kind, lat, lon, aliases, area, source, hidden, osm_key, created_at) "
-                         "VALUES (?, ?, ?, ?, ?, ?, ?, 0, NULL, ?)",
+        aid = core.query("INSERT INTO addresses (name, kind, lat, lon, aliases, area, source, hidden, osm_key, created_at, "
+                         "approx, status, votes) VALUES (?, ?, ?, ?, ?, ?, ?, 0, NULL, ?, 0, 'ok', 0)",
                          (name, kind, lat, lon, aliases, area, source, core.now()), "id")
     _reset()
     return aid
@@ -114,7 +118,8 @@ def view(r):
     ico = KINDS.get(r["kind"], KINDS["poi"])[0]
     return {"id": r["id"], "name": r["name"], "kind": r["kind"], "icon": ico, "area": r.get("area") or "",
             "lat": r["lat"], "lon": r["lon"], "aliases": r.get("aliases") or "", "source": r.get("source"),
-            "hidden": bool(r.get("hidden"))}
+            "hidden": bool(r.get("hidden")), "approx": bool(r.get("approx")),
+            "pending": r.get("status") == "pending", "votes": r.get("votes") or 0}
 
 
 # ==================== Издөө ====================
@@ -126,6 +131,10 @@ def search(q, near=None, limit=8):
     scored = []
     for r in _rows():
         words = r["_n"]
+        # «Базар-Коргон №1 мектеп»: «базар» деп жазганда шаардын аты эсептелбейт (базардын өзү чыксын)
+        if r["_a"] and not r["_a"] <= set(toks):
+            rest = [w for w in words if w not in r["_a"]]
+            words = rest or words
         ok, score = True, 0
         for t in toks:
             if any(w == t for w in words):
@@ -149,14 +158,78 @@ def search(q, near=None, limit=8):
     return [view(r) for _, _, r in scored[:limit]]
 
 
-def admin_list(q="", limit=300):
+def admin_list(q="", limit=300, only=None):
+    rows = core.query("SELECT * FROM addresses ORDER BY id DESC", (), "all")
+    if only == "pending":
+        rows = [r for r in rows if r.get("status") == "pending"]
+    elif only == "approx":
+        rows = [r for r in rows if r.get("approx") and not r.get("hidden")]
     if q:
-        rows = core.query("SELECT * FROM addresses ORDER BY id DESC", (), "all")
         n = norm(q)
         rows = [r for r in rows if n in norm(r["name"] + " " + (r.get("aliases") or "") + " " + (r.get("area") or ""))]
-    else:
-        rows = core.query("SELECT * FROM addresses ORDER BY source='admin' DESC, id DESC LIMIT ?", (limit,), "all")
+    rows.sort(key=lambda r: (r.get("status") != "pending", r.get("source") != "admin"))
     return [view(r) for r in rows[:limit]]
+
+
+# ==================== Жүргүнчүлөр / айдоочулар сунуштаган даректер ====================
+VOTES_OK = 3          # ушунча «добуш» чогулса — тизмеге өзү кошулат (айдоочу = 2, жүргүнчү = 1)
+
+
+def suggest(name, lat, lon, by, weight=1, kind="poi"):
+    """Жаңы жер сунушу. Ошол эле ат жакын жерде бар болсо — добуш кошулат."""
+    name = (name or "").strip()[:80]
+    if len(name) < 2 or lat is None or (core.AREA_ON and not core.in_area(lat, lon)):
+        return None
+    if kind not in KINDS:
+        kind = "poi"
+    n = norm(name)
+    for r in core.query("SELECT * FROM addresses", (), "all"):
+        if norm(r["name"]) != n or core.haversine_km(lat, lon, r["lat"], r["lon"]) > 0.3:
+            continue
+        if r.get("status") == "pending":
+            if by and by == r.get("suggested_by"):
+                return r["id"]                       # бир эле адам эки жолу добуш бербейт
+            v = (r.get("votes") or 0) + weight
+            core.query("UPDATE addresses SET votes=?, status=? WHERE id=?",
+                       (v, "ok" if v >= VOTES_OK else "pending", r["id"]))
+            _reset()
+        return r["id"]
+    # аты бар, жери болжолдуу жазуу болсо — ошону тактайбыз
+    for r in core.query("SELECT * FROM addresses WHERE approx=1", (), "all"):
+        if norm(r["name"]) == n or n in norm(r.get("aliases") or "").split():
+            core.query("UPDATE addresses SET lat=?, lon=?, approx=0 WHERE id=?", (lat, lon, r["id"]))
+            _reset()
+            return r["id"]
+    aid = core.query("INSERT INTO addresses (name, kind, lat, lon, aliases, area, source, hidden, osm_key, created_at, "
+                     "approx, status, votes, suggested_by) VALUES (?, ?, ?, ?, '', '', 'user', 0, NULL, ?, 0, ?, ?, ?)",
+                     (name, kind, lat, lon, core.now(), "ok" if weight >= VOTES_OK else "pending", weight, by), "id")
+    _reset()
+    return aid
+
+
+def approve(aid):
+    core.query("UPDATE addresses SET status='ok' WHERE id=?", (aid,))
+    _reset()
+
+
+# ==================== Интернеттен чогултулган аттар (addr_seed.py) ====================
+
+def seed_web():
+    import addr_seed as S
+    have = {r["osm_key"] for r in core.query("SELECT osm_key FROM addresses WHERE osm_key LIKE 'web/%'", (), "all")}
+    names = {norm(r["name"]) for r in core.query("SELECT name FROM addresses", (), "all")}
+    added = 0
+    rows = [(n, "street", al) for n, al in S.STREETS] + list(S.PLACES)
+    for name, kind, al in rows:
+        key = "web/" + norm(name)
+        if key in have or norm(name) in names:
+            continue
+        core.query("INSERT INTO addresses (name, kind, lat, lon, aliases, area, source, hidden, osm_key, created_at, "
+                   "approx, status, votes) VALUES (?, ?, ?, ?, ?, ?, 'web', 0, ?, ?, 1, 'ok', 0)",
+                   (name, kind, S.CENTER[0], S.CENTER[1], al, S.TOWN, key, core.now()))
+        added += 1
+    _reset()
+    return added
 
 
 # ==================== OpenStreetMap'тен жүктөө ====================
@@ -271,8 +344,8 @@ def merge(items):
     for x in items:
         if x["key"] in have:
             continue
-        core.query("INSERT INTO addresses (name, kind, lat, lon, aliases, area, source, hidden, osm_key, created_at) "
-                   "VALUES (?, ?, ?, ?, '', ?, 'osm', 0, ?, ?)",
+        core.query("INSERT INTO addresses (name, kind, lat, lon, aliases, area, source, hidden, osm_key, created_at, "
+                   "approx, status, votes) VALUES (?, ?, ?, ?, '', ?, 'osm', 0, ?, ?, 0, 'ok', 0)",
                    (x["name"][:80], x["kind"], x["lat"], x["lon"], x["area"][:60], x["key"], core.now()))
         have.add(x["key"])
         added += 1
@@ -308,7 +381,12 @@ def import_osm():
 
 
 def ensure_seeded():
-    """Тизме бош болсо — бир жолу OSM'ден жүктөйт (фондо)."""
-    if core.AREA_ON and not count()["total"]:
+    """Тизме бош болсо — бир жолу OSM'ден жүктөйт (фондо), анан интернеттен чогултулган аттар."""
+    if not core.AREA_ON:
+        return
+    if not count()["total"]:
         time.sleep(5)                       # аймактын чеги жүктөлсүн
         import_osm()
+    n = seed_web()
+    if n:
+        print("  Даректер: интернеттен чогултулган %d ат кошулду (жери болжолдуу)" % n, flush=True)

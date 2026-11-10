@@ -443,6 +443,10 @@ class H(BaseHTTPRequestHandler):
             p = _point(b.get("p")) if b.get("p") else None
             ok = core.set_place(uid, b.get("kind"), *(p or (None, None)), name=_txt(b.get("name"), 80))
             return self._json(core.get_places(uid) if ok else {"error": "bad"}, 200 if ok else 400)
+        if path == "/api/addr_suggest":
+            p = _point(b.get("p"))
+            aid = addrbook.suggest(_txt(b.get("name"), 80), *(p or (None, None)), by=uid, weight=1)
+            return self._json({"id": aid} if aid else {"error": "bad"}, 200 if aid else 400)
         if path == "/api/msg":
             r = core.active_ride_of(uid)
             outs = flow.send_message(uid, r["id"], _txt(b.get("text"), core.MSG_MAX)) if r else None
@@ -517,6 +521,11 @@ class H(BaseHTTPRequestHandler):
         if action == "rate":
             stars = max(1, min(5, int(b.get("stars") or 0)))
             return self._json({"ok": core.rate_passenger(int(b.get("id") or 0), uid, stars)})
+        if action == "addr_suggest":
+            p = _point(b.get("p"))
+            aid = addrbook.suggest(_txt(b.get("name"), 80), *(p or (None, None)), by=uid, weight=2,
+                                   kind=b.get("kind") or "poi")
+            return self._json({"id": aid} if aid else {"error": "bad"}, 200 if aid else 400)
         if action == "home_set":
             p = _point(b.get("p"))
             if not p:
@@ -545,7 +554,8 @@ class H(BaseHTTPRequestHandler):
         if action == "overview":
             return self._json(core.admin_overview())
         if action == "addr":
-            return self._json({"items": addrbook.admin_list((q.get("q") or [""])[0][:60]),
+            return self._json({"items": addrbook.admin_list((q.get("q") or [""])[0][:60],
+                                                            only=(q.get("only") or [""])[0] or None),
                                "count": addrbook.count(), "import": addrbook.import_state,
                                "kinds": {k: {"icon": v[0], "name": v[1]} for k, v in addrbook.KINDS.items()}})
         if action == "drivers":
@@ -614,6 +624,9 @@ class H(BaseHTTPRequestHandler):
                                 aliases=_txt(b.get("aliases"), 200), area=_txt(b.get("area"), 60),
                                 aid=int(b.get("id") or 0) or None)
             return self._json({"id": aid} if aid else {"error": "bad"}, 200 if aid else 400)
+        if action == "addr_approve":
+            addrbook.approve(int(b.get("id") or 0))
+            return self._json({"ok": True})
         if action == "addr_hide":
             addrbook.set_hidden(int(b.get("id") or 0), bool(b.get("hidden")))
             return self._json({"ok": True})

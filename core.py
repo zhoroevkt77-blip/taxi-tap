@@ -267,6 +267,9 @@ SCHEMA = [
 
 # Эски базага жаңы тилкелер (таблица мурун түзүлгөн болсо)
 NEW_COLUMNS = {
+    "addresses": {"approx": "INTEGER DEFAULT 0",        # жери болжолдуу (аты гана белгилүү)
+                  "status": "TEXT DEFAULT 'ok'",        # ok | pending (жүргүнчү/айдоочу сунуштаган)
+                  "votes": "INTEGER DEFAULT 0", "suggested_by": "TEXT"},
     "users": {"tg_uid": "TEXT", "notify": "INTEGER DEFAULT 1", "terms_at": "REAL",
               "places": "TEXT",                              # {"home": {...}, "work": {...}}
               "p_rating": "REAL", "p_rated": "INTEGER DEFAULT 0"},   # айдоочулар берген баа

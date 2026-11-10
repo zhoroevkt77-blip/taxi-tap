@@ -288,7 +288,8 @@ function viewSearch(field) {
   const focus = k => { act = k; $("#rf").classList.toggle("on", k === "from"); $("#rt").classList.toggle("on", k === "to"); run(); };
   inp.from.onfocus = () => { inp.from.select(); focus("from"); };
   inp.to.onfocus = () => focus("to");
-  $("#pickMap").onclick = () => act === "from" ? (S.mode = "idle", viewIdle()) : viewPickDest();
+  $("#pickMap").onclick = () => { if (act === "from") { S.mode = "idle"; return viewIdle(); }
+    S.pendName = inp.to.value.trim(); viewPickDest(); };
   $("#back").onclick = viewIdle;
   let t = null, seq = 0;
   const choose = r => {
@@ -337,9 +338,13 @@ function viewPickDest(save) {
   S.mode = "pickDest"; setPin("to");
   const what = save === "home" ? "Үйүңүз кайда?" : save === "work" ? "Ишиңиз кайда?" : "Кайда?";
   render(`<h2>${what}</h2><p class="muted">Картаны басыңыз же жылдырыңыз — сары пин ${save ? "даректи" : "бара турган жерди"} көрсөтөт.</p>
+    ${save ? "" : `<input class="f" id="pn" maxlength="80" placeholder="Бул жердин аты (мис. Нурбек той-кана)" value="${esc(S.pendName || "")}">
+      <p class="muted" style="margin-top:-4px">Аты жазылса — тизмеге кошулуп, кийин башкалар да таба алат.</p>`}
     <button class="btn main" id="ok">${save ? "Сактоо" : "Даяр"}</button><button class="btn ghost" id="back">Артка</button>`);
   $("#ok").onclick = async () => { const c = map.getCenter(); S.to = [c.lat, c.lng]; S.toAddr = $("#chipAddr").textContent;
     if (save) { PLACES = await api("/api/place", {kind:save, p:S.to, name:S.toAddr}); map.setView(S.from, 15); return viewIdle(); }
+    const nm = ($("#pn").value || "").trim(); S.pendName = "";
+    if (nm.length >= 2) { S.toAddr = nm; api("/api/addr_suggest", {name:nm, p:S.to}); }
     viewQuote(); };
   $("#back").onclick = () => { map.setView(S.from, map.getZoom()); viewIdle(); };
   onPinMoved();
