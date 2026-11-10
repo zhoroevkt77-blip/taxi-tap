@@ -50,6 +50,11 @@ td input.f{padding:7px 8px;max-width:90px;min-width:58px}
 .proof{width:64px;height:64px;object-fit:cover;border-radius:8px;background:var(--paper);cursor:zoom-in}
 .mk{width:24px;height:24px;border-radius:50%;border:3px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.35)}
 .hide{display:none!important}
+#amap{height:min(62vh,520px);border-radius:14px;border:1px solid var(--line);overflow:hidden;position:relative;background:#EDEAE2}
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.tools .btn{padding:11px 14px;font-size:14px}
+.vx{width:16px;height:16px;border-radius:50%;background:#D8443A;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.vx.first{background:#1D9E75;width:20px;height:20px}
 .docs{display:flex;gap:8px;margin-top:8px}.docs a{display:block}.docs img{width:92px;height:68px;object-fit:cover;border-radius:8px;border:1px solid var(--line);background:var(--paper)}
 .docs span{display:block;font-size:11px;color:var(--soft);text-align:center;margin-top:2px}
 </style>
@@ -62,6 +67,7 @@ td input.f{padding:7px 8px;max-width:90px;min-width:58px}
   <button data-t="topups">Толуктоо<span class="badge hide" id="bT"></span></button>
   <button data-t="rides">Сапарлар</button>
   <button data-t="tariffs">Тарифтер</button>
+  <button data-t="area">Аймак</button>
 </nav>
 <main id="main"></main>
 
@@ -215,10 +221,60 @@ async function refresh() {
   O = r; badges();
   if (tab === "map") drawMap();
 }
+// ---------- аймак (иштөө чеги) ----------
+let amap = null, alyr = null, draw = null;
+async function viewArea() {
+  const a = await (await fetch("/api/area")).json();
+  const src = {custom:"өзүңүз тарткан чек", osm:"OpenStreetMap'теги райондун чеги", bbox:"болжолдуу төрт бурчтук"}[a.source] || a.source;
+  $("#main").innerHTML = `<div class="panel"><h3>Иштөө аймагы: ${esc(a.name)}</h3>
+      <div class="item"><div class="main"><span class="muted">Азыркы чек: <b>${esc(src)}</b>. Жүргүнчүлөр ушул чектин ичинде гана заказ бере алат.</span></div></div></div>
+    <div id="amap"></div>
+    <div class="tools" id="tools"></div>
+    <p class="muted" id="hint"></p>`;
+  amap = L.map("amap", {zoomControl:true}).setView(a.center, 11);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:"© OpenStreetMap"}).addTo(amap);
+  alyr = L.layerGroup().addTo(amap);
+  const rings = areaRings(a.geojson).map(r => r.map(([lon, lat]) => [lat, lon]));
+  rings.forEach(r => L.polygon(r, {color:"#17365C", weight:2, fillColor:"#1D9E75", fillOpacity:.12}).addTo(alyr));
+  if (rings.length) amap.fitBounds(L.latLngBounds(rings.flat()), {padding:[20, 20]});
+  draw = null; areaTools(a);
+  amap.on("click", e => { if (!draw) return; draw.push([e.latlng.lat, e.latlng.lng]); drawPreview(); });
+}
+function areaTools(a) {
+  const t = $("#tools");
+  if (!draw) {
+    t.innerHTML = `<button class="btn gold" id="aNew">✏️ Жаңы чек тартуу</button>
+      ${a.source === "custom" ? `<button class="btn" id="aReset">↺ Райондун чегине кайтаруу</button>` : ""}`;
+    $("#hint").textContent = "«Жаңы чек тартуу» басып, картаны аймактын четтери боюнча кезек-кезек басыңыз. Кеминде 3 чекит.";
+    $("#aNew").onclick = () => { draw = []; alyr.clearLayers(); drawPreview(); areaTools(a); };
+    const r = $("#aReset");
+    if (r) r.onclick = async () => { if (!confirm("Өзүңүз тарткан чекти өчүрүп, райондун чегине кайтасызбы?")) return;
+      await api("/api/a/area", {reset:true}); setTimeout(viewArea, 1500); };
+    return;
+  }
+  t.innerHTML = `<button class="btn ok" id="aSave">✓ Сактоо</button><button class="btn" id="aUndo">↶ Акыркы чекит</button>
+    <button class="btn bad" id="aCancel">Жокко чыгаруу</button>`;
+  $("#aSave").onclick = async () => {
+    if (draw.length < 3) return $("#hint").textContent = "Кеминде 3 чекит коюңуз.";
+    const r = await api("/api/a/area", {points:draw});
+    if (r.error) return $("#hint").textContent = "Сакталган жок: чекиттер Кыргызстандын ичинде болушу керек.";
+    draw = null; viewArea();
+  };
+  $("#aUndo").onclick = () => { draw.pop(); drawPreview(); };
+  $("#aCancel").onclick = () => { draw = null; viewArea(); };
+}
+function drawPreview() {
+  alyr.clearLayers();
+  if (draw.length > 1) L.polygon(draw, {color:"#D8443A", weight:3, dashArray:"8 6", fillColor:"#D8443A", fillOpacity:.1}).addTo(alyr);
+  draw.forEach((p, i) => L.marker(p, {icon:L.divIcon({className:"", html:`<div class="vx ${i ? "" : "first"}"></div>`,
+    iconSize:[20, 20], iconAnchor:[10, 10]}), interactive:false}).addTo(alyr));
+  $("#hint").textContent = draw.length ? `${draw.length} чекит. Аймакты толук айланып чыккандан кийин «Сактоо» басыңыз.` : "Картаны аймактын четтери боюнча басыңыз.";
+}
+
 function show(t) {
   tab = t; lyr = null;
   document.querySelectorAll("nav button").forEach(b => b.classList.toggle("on", b.dataset.t === t));
-  ({map:viewMap, drivers:viewDrivers, topups:viewTopups, rides:viewRides, tariffs:viewTariffs})[t]();
+  ({map:viewMap, drivers:viewDrivers, topups:viewTopups, rides:viewRides, tariffs:viewTariffs, area:viewArea})[t]();
 }
 document.querySelectorAll("nav button").forEach(b => b.onclick = () => show(b.dataset.t));
 async function boot() {

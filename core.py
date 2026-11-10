@@ -471,10 +471,55 @@ def area_info():
             "geojson": gj, "source": _area["source"]}
 
 
+def _custom_path():
+    return os.path.join(DATA_DIR, "area_custom.json")
+
+
+def set_custom_area(points):
+    """
+    Админ картага тарткан чек: [[lat, lon], ...] (кеминде 3 чекит).
+    OSM чегинин ордуна колдонулат; reset_area() менен OSM'ге кайтат.
+    """
+    pts = []
+    for p in points or []:
+        try:
+            lat, lon = float(p[0]), float(p[1])
+        except (TypeError, ValueError, IndexError):
+            return False
+        if not (39 <= lat <= 44 and 69 <= lon <= 81):      # Кыргызстандын чеги
+            return False
+        pts.append([round(lon, 6), round(lat, 6)])
+    if len(pts) < 3 or len(pts) > 500:
+        return False
+    if pts[0] != pts[-1]:
+        pts.append(pts[0])
+    gj = {"type": "Polygon", "coordinates": [pts]}
+    os.makedirs(DATA_DIR, exist_ok=True)
+    with open(_custom_path(), "w", encoding="utf-8") as f:
+        json.dump(gj, f)
+    _area.update(geojson=gj, source="custom")
+    return True
+
+
+def reset_area():
+    try:
+        os.remove(_custom_path())
+    except OSError:
+        pass
+    _area.update(geojson=None, source="bbox")
+    load_area(fetch=False)
+
+
 def load_area(fetch=True):
-    """Аймактын чегин окуйт: файлдан, болбосо OpenStreetMap'тен (Nominatim)."""
+    """Аймактын чеги: админ тарткан → сакталган OSM → OpenStreetMap'тен жүктөө."""
     if not AREA_ON:
         return
+    try:
+        with open(_custom_path(), encoding="utf-8") as f:
+            _area.update(geojson=json.load(f), source="custom")
+            return
+    except (OSError, ValueError):
+        pass
     path = os.path.join(DATA_DIR, "area_%s.json" % "".join(c for c in AREA_QUERY if c.isalnum()))
     try:
         with open(path, encoding="utf-8") as f:

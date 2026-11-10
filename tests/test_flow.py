@@ -177,6 +177,29 @@ class Area(unittest.TestCase):
         self.assertEqual(info["center"], list(core.CITIES["Базар-Коргон"]))
 
 
+class CustomArea(unittest.TestCase):
+    def setUp(self):
+        core.AREA_ON = True
+        core._area.update(geojson=None, source="bbox")
+
+    def tearDown(self):
+        core.reset_area()
+        core.AREA_ON = False
+
+    def test_draw_and_reset(self):
+        self.assertFalse(core.set_custom_area([[41.0, 72.7], [41.1, 72.8]]))        # 2 чекит аз
+        self.assertFalse(core.set_custom_area([[55.0, 37.0], [55.1, 37.1], [55.2, 37.0]]))  # Москва
+        self.assertTrue(core.set_custom_area([[41.10, 72.65], [41.10, 72.85], [40.98, 72.85], [40.98, 72.65]]))
+        self.assertEqual(core.area_info()["source"], "custom")
+        self.assertTrue(core.in_area(41.04, 72.75))
+        self.assertFalse(core.in_area(41.33, 72.94))                                # Арстанбап сыртта
+        core._area.update(geojson=None)
+        core.load_area(fetch=False)                                                 # файлдан окуйт
+        self.assertEqual(core.area_info()["source"], "custom")
+        core.reset_area()
+        self.assertNotEqual(core.area_info()["source"], "custom")
+
+
 class Accounts(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -310,6 +333,12 @@ class Http(unittest.TestCase):
                          "image/png")
         self.assertEqual(drv("/api/a/overview")["error"], "auth")          # айдоочу админ эмес
         adm("/api/a/driver", {"uid": pend["uid"], "action": "approve"})
+        # аймак: админ тартат, айдоочу тарта албайт
+        pts = [[41.10, 72.65], [41.10, 72.85], [40.98, 72.85], [40.98, 72.65]]
+        self.assertEqual(drv("/api/a/area", {"points": pts})["error"], "auth")
+        self.assertEqual(adm("/api/a/area", {"points": pts})["source"], "custom")
+        self.assertEqual(adm("/api/a/area", {"points": pts[:2]})["error"], "bad_points")
+        adm("/api/a/area", {"reset": True})
         # линия, заказ
         self.assertTrue(drv("/api/d/online", {"on": True, "p": list(NEAR)})["online"])
         pas("/api/login", {"phone": "0555 444 555", "name": "Айгүл"})

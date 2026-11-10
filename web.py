@@ -435,6 +435,14 @@ class H(BaseHTTPRequestHandler):
                 return self._json({"error": "bad"}, 400)
             core.set_tariff(city, *vals)
             return self._json({"ok": True})
+        if action == "area":
+            if b.get("reset"):
+                core.reset_area()
+                threading.Thread(target=core.load_area, daemon=True).start()
+                return self._json(core.area_info())
+            if not core.set_custom_area(b.get("points")):
+                return self._json({"error": "bad_points"}, 400)
+            return self._json(core.area_info())
         if action == "cancel":
             outs = flow.admin_cancel(int(b.get("id") or 0))
             if outs is None:
