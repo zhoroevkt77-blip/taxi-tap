@@ -80,7 +80,7 @@ CITIES = {
     "Токмок": (42.8417, 75.2911),
     "Нарын": (41.4287, 75.9911),
     "Талас": (42.5228, 72.2427),
-    "Жалал-Абад": (40.9333, 73.0017),
+    "Манас": (40.9333, 73.0017),          # мурунку Жалал-Абад шаары (2025-ж. сентябрь)
     "Баткен": (40.0629, 70.8194),
     "Балыкчы": (42.4600, 76.1870),
     "Кара-Балта": (42.8142, 73.8481),
@@ -971,6 +971,8 @@ def admin_rides(limit=60):
 
 
 def all_tariffs():
+    """Аймак күйүк болсо — ошол шаардын тарифи гана (башкалары колдонулбайт)."""
     saved = {t["city"]: t for t in query("SELECT * FROM tariffs", (), "all")}
+    cities = [AREA_CITY] if AREA_ON else list(CITIES)
     return [dict(saved.get(c) or dict(CITY_TARIFFS.get(c) or DEFAULT_TARIFF, city=c),
-                 saved=c in saved) for c in CITIES]
+                 saved=c in saved) for c in cities]

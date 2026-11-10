@@ -175,6 +175,9 @@ class Area(unittest.TestCase):
         info = core.area_info()
         self.assertEqual(info["bbox"], [41.0, 72.6, 41.1, 72.9])
         self.assertEqual(info["center"], list(core.CITIES["Базар-Коргон"]))
+        self.assertEqual([t["city"] for t in core.all_tariffs()], ["Базар-Коргон"])
+        self.assertIn("Манас", core.CITIES)
+        self.assertNotIn("Жалал-Абад", core.CITIES)
 
 
 class CustomArea(unittest.TestCase):
