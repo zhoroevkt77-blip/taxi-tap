@@ -396,6 +396,8 @@ class H(BaseHTTPRequestHandler):
             p, d = _point(b.get("p")), _point(b.get("d"))
             if not p:
                 return self._json({"error": "bad_point"}, 400)
+            if not d:
+                return self._json({"error": "need_dest"}, 400)     # баа алдын ала белгилүү болушу керек
             if core.active_ride_of(uid):
                 return self._json({"error": "have_active"}, 409)
             q = core.quote(p[0], p[1], *(d or (None, None)), cls=b.get("cls") or "econom")
@@ -629,6 +631,8 @@ class H(BaseHTTPRequestHandler):
                 return self._json({"error": "bad_phone"}, 400)
             if not p:
                 return self._json({"error": "bad_point"}, 400)
+            if not d:
+                return self._json({"error": "need_dest"}, 400)
             if core.active_ride_of(uid):
                 return self._json({"error": "have_active"}, 409)
             q = core.quote(p[0], p[1], *(d or (None, None)))

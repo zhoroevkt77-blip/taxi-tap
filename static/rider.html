@@ -267,11 +267,10 @@ function viewIdle() {
   rideLayer.clearLayers(); driverMarker = null;
   render(`<button class="search" id="where">🔍&nbsp; Кайда бара жатабыз?</button>
     <div class="chips" id="places"></div>
-    <div class="two"><button class="btn ghost" id="mapTo">📍 Картадан</button><button class="btn ghost" id="noTo">Айдоочуга айтам</button></div>`);
+    <button class="btn ghost" id="mapTo">📍 Картадан белгилөө</button>`);
   loadPlaces();
   $("#where").onclick = viewSearch;
   $("#mapTo").onclick = viewPickDest;
-  $("#noTo").onclick = () => { S.to = null; S.toAddr = ""; viewQuote(); };
   onPinMoved();
 }
 

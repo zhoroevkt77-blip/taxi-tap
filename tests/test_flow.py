@@ -621,9 +621,10 @@ class Http(unittest.TestCase):
         adm("/api/a/area", {"reset": True})
         # диспетчер: телефон заказ
         r = adm("/api/a/order", {"phone": "0555 999 000", "name": "Чалган эже", "note": "базардын жанында",
-                                 "p": list(KARAKOL)})
+                                 "p": list(KARAKOL), "d": list(DEST)})
         self.assertEqual(r["ride"]["status"], "searching")
-        self.assertEqual(adm("/api/a/order", {"phone": "0555 999 000", "p": list(KARAKOL)})["error"], "have_active")
+        self.assertEqual(adm("/api/a/order", {"phone": "0555 999 002", "p": list(KARAKOL)})["error"], "need_dest")
+        self.assertEqual(adm("/api/a/order", {"phone": "0555 999 000", "p": list(KARAKOL), "d": list(DEST)})["error"], "have_active")
         self.assertEqual(drv("/api/a/order", {"phone": "0555 999 001", "p": list(KARAKOL)})["error"], "auth")
         ov = adm("/api/a/overview")
         self.assertTrue(any(x["source"] == "phone" and x["note"] == "базардын жанында" for x in ov["rides"]))
@@ -640,6 +641,7 @@ class Http(unittest.TestCase):
         # линия, заказ
         self.assertTrue(drv("/api/d/online", {"on": True, "p": list(NEAR)})["online"])
         pas("/api/login", {"phone": "0555 444 555", "name": "Айгүл", "agree": True})
+        self.assertEqual(pas("/api/order", {"p": list(KARAKOL)}).get("error"), "need_dest")    # багытсыз болбойт
         self.assertEqual(pas("/api/order", {"p": list(KARAKOL), "d": list(DEST)})["ride"]["status"], "searching")
         dispatch.tick()
         st = drv("/api/d/state")

@@ -157,7 +157,7 @@ async function phoneForm() {
     price = !q.city ? `<span class="err">Бул жер иштөө аймагынан сырткары</span>`
       : q.dest_out ? `<span class="err">Бара турган жер райондон сырткары — шаар аралык каттам жок</span>`
       : `Баасы: <b>${q.price ? q.price + " сом" : "тариф боюнча"}</b>${q.dist_km ? " · ~" + q.dist_km + " км" : ""}`; }
-  const pickTxt = k => PO.pick === k ? "👆 Картадан басыңыз…" : PO[k] ? "✓ Белгиленди (өзгөртүү)" : (k === "p" ? "Картадан белгилөө" : "Белгилөө (милдеттүү эмес)");
+  const pickTxt = k => PO.pick === k ? "👆 Картадан басыңыз…" : PO[k] ? "✓ Белгиленди (өзгөртүү)" : "Картадан белгилөө";
   box.innerHTML = `<div class="fset">
       <div><label>Телефон</label><input class="f" id="poPh" inputmode="tel" placeholder="0700 123 456" value="${esc(vals.ph)}"></div>
       <div><label>Аты</label><input class="f" id="poNm" placeholder="Айгүл эже" value="${esc(vals.nm)}"></div>
@@ -171,9 +171,10 @@ async function phoneForm() {
   $("#poX").onclick = () => { PO.open = false; phoneForm(); };
   $("#poGo").onclick = async () => {
     if (!PO.p) return $("#poEr").textContent = "Кайдан экенин картадан басыңыз.";
+    if (!PO.d) return $("#poEr").textContent = "Кайда барарын картадан басыңыз.";
     const r = await api("/api/a/order", {phone:$("#poPh").value, name:$("#poNm").value, note:$("#poNt").value, p:PO.p, d:PO.d});
     if (r.error) return $("#poEr").textContent = {bad_phone:"Номерди толук жазыңыз.", have_active:"Бул номерде активдүү заказ бар.",
-      no_city:"Бул жер иштөө аймагынан сырткары.", dest_out:"Бара турган жер райондон сырткары.", bad_point:"Жерди белгилеңиз."}[r.error] || "Ката.";
+      no_city:"Бул жер иштөө аймагынан сырткары.", need_dest:"Кайда барарын картадан белгилеңиз.", dest_out:"Бара турган жер райондон сырткары.", bad_point:"Жерди белгилеңиз."}[r.error] || "Ката.";
     PO.open = false; phoneForm(); refresh();
   };
 }
