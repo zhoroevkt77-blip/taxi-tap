@@ -100,7 +100,7 @@ input.f:focus{border-color:var(--navy)}
 .quick{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=11">
+<link rel="stylesheet" href="/static/theme.css?v=12">
 </head>
 <body>
 <div id="map"></div>
@@ -141,6 +141,24 @@ let nearLayer = L.layerGroup().addTo(map), rideLayer = L.layerGroup().addTo(map)
 const aLayer = L.layerGroup().addTo(map);
 // Б точканы тандап жатканда А точка картада кара белги болуп турат
 function showA(on) { aLayer.clearLayers(); if (on && S.from) L.marker(S.from, {icon:icon("", "А"), interactive:false}).addTo(aLayer); }
+// Картадан тандоо: А/Б чекити — колго кармап жылдырыла турган чоң пин
+let pickM = null, pickP = null;
+const bigPin = to => L.divIcon({className:"", html:`<div class="dpin${to ? " to" : ""}"><b></b><span>${to ? "Б" : "А"}</span><i></i></div>`, iconSize:[46,62], iconAnchor:[23,57]});
+function pickMarker(kind, p) {
+  if (pickM) { pickM.remove(); pickM = null; }
+  if (!kind) return;
+  pickM = L.marker(p, {icon:bigPin(kind === "to"), draggable:true, autoPan:true, zIndexOffset:1000}).addTo(map);
+  pickM.on("dragstart", () => { if ($("#pa")) $("#pa").textContent = "…"; });
+  pickM.on("dragend", () => { const c = pickM.getLatLng(); pickAt([c.lat, c.lng]); });
+  pickAt(p);
+}
+async function pickAt(p) {
+  pickP = p; if (pickM) pickM.setLatLng(p);
+  if ($("#pa")) $("#pa").textContent = "…";
+  const a = await reverse(p[0], p[1]);
+  if (a === null || !pickM) return;
+  if ($("#pa")) $("#pa").textContent = a;
+}
 
 // ---------- геокоддоо (OpenStreetMap Nominatim) ----------
 let revSeq = 0;
@@ -164,10 +182,11 @@ map.on("moveend", () => {
   clearTimeout(moveTimer);
   moveTimer = setTimeout(onPinMoved, 250);
 });
-const pinActive = () => S.mode === "idle" || S.mode === "pickDest" || S.mode === "pickFrom";
+const pinActive = () => S.mode === "idle";
 // Картаны басса — пин ошол жерге барат (жылдырбай эле тандаса болот)
 map.on("click", e => {
   if (S.mode === "search") return;
+  if (pickM && (S.mode === "pickFrom" || S.mode === "pickDest")) return pickAt([e.latlng.lat, e.latlng.lng]);
   if (pinActive()) map.panTo(e.latlng);
 });
 async function onPinMoved() {
@@ -192,6 +211,7 @@ async function loadNear() {
     : n.eta_min ? `${n.eta_min} мүнөттө берүү` : "Жакын арада бош айдоочу жок";
 }
 function setPin(kind) {
+  pickMarker(null);
   const show = kind !== null;
   $("#pin").classList.toggle("hide", !show);
   $("#pinHead").classList.toggle("to", kind === "to");
@@ -350,32 +370,41 @@ function viewSearch(field) {
 
 // А точканы картадан тандоо
 function viewPickFrom() {
-  S.mode = "pickFrom"; setPin("from");
-  if (S.from) map.setView(S.from, map.getZoom());
-  render(`<h2>А точка — каяктан?</h2><p class="muted">Картаны басыңыз же жылдырыңыз — кара пин (А) сизди алып кете турган жерди көрсөтөт.</p>
+  S.mode = "pickFrom"; setPin(null); showA(false);
+  if (S.to) L.marker(S.to, {icon:icon("to", "Б"), interactive:false}).addTo(aLayer);
+  const c = map.getCenter(), p0 = S.from || [c.lat, c.lng];
+  map.setView(p0, map.getZoom());
+  render(`<h2>А точка — каяктан?</h2><p class="muted">Кара <b>А</b> пинди кармап сүйрөңүз же картаны басыңыз — сизди ошол жерден алып кетишет.</p>
+    <div class="wbox"><span class="bul lt">А</span><b id="pa">…</b></div>
     <button class="btn main" id="ok">Даяр</button><button class="btn ghost" id="back">Артка</button>`);
-  $("#ok").onclick = () => { const c = map.getCenter(); S.from = [c.lat, c.lng]; S.fromAddr = $("#chipAddr").textContent; S.fromLock = true;
+  pickMarker("from", p0);
+  $("#ok").onclick = () => { S.from = pickP; S.fromAddr = $("#pa").textContent; S.fromLock = true; showA(false);
     if (S.to) return viewQuote(); viewPickDest(); };                 // эми Б точка — сары пин
   $("#back").onclick = viewIdle;
-  onPinMoved();
 }
 
 function viewPickDest(save) {
-  S.mode = "pickDest"; setPin("to"); showA(!save);
+  S.mode = "pickDest"; setPin(null); showA(!save);
   const what = save === "home" ? "Үйүңүз кайда?" : save === "work" ? "Ишиңиз кайда?" : "Б точка — каякка?";
-  render(`<h2>${what}</h2><p class="muted">Картаны басыңыз же жылдырыңыз — сары пин (Б) ${save ? "даректи" : "бара турган жерди"} көрсөтөт.</p>
+  const c = map.getCenter();
+  let p0 = S.to || [c.lat, c.lng];
+  let v = p0;                                     // А да, Б да көрүнүп турсун (шторка астында калбасын)
+  if (!S.to && S.from && !save) { p0 = [S.from[0] + 0.0025, S.from[1] + 0.002]; v = [S.from[0] - 0.0012, S.from[1] + 0.001]; }
+  map.setView(v, map.getZoom());
+  render(`<h2>${what}</h2><p class="muted">Сары <b>Б</b> пинди кармап сүйрөңүз же картаны басыңыз — ${save ? "дарек" : "бара турган жер"} ошол болот.</p>
+    <div class="wbox"><span class="bul lt to">Б</span><b id="pa">…</b></div>
     ${save ? "" : `<input class="f" id="pn" maxlength="80" placeholder="Бул жердин аты (мис. Нурбек той-кана)" value="${esc(S.pendName || "")}">
       <p class="muted" style="margin-top:-4px">Аты жазылса — тизмеге кошулуп, кийин башкалар да таба алат.</p>`}
     <button class="btn main" id="ok">${save ? "Сактоо" : "Даяр"}</button>
     ${save ? "" : `<button class="btn ghost" id="typeB">✍️ Б точканы жазып тандоо</button>`}<button class="btn ghost" id="back">Артка</button>`);
   if ($("#typeB")) $("#typeB").onclick = () => viewSearch("to");
-  $("#ok").onclick = async () => { const c = map.getCenter(); S.to = [c.lat, c.lng]; S.toAddr = $("#chipAddr").textContent;
+  pickMarker("to", p0);
+  $("#ok").onclick = async () => { S.to = pickP; S.toAddr = $("#pa").textContent;
     if (save) { PLACES = await api("/api/place", {kind:save, p:S.to, name:S.toAddr}); map.setView(S.from, 15); return viewIdle(); }
     const nm = ($("#pn").value || "").trim(); S.pendName = "";
     if (nm.length >= 2) { S.toAddr = nm; api("/api/addr_suggest", {name:nm, p:S.to}); }
     viewQuote(); };
   $("#back").onclick = () => { map.setView(S.from, map.getZoom()); viewIdle(); };
-  onPinMoved();
 }
 
 async function viewQuote() {

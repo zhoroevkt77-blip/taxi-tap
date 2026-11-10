@@ -171,3 +171,12 @@ input.f::placeholder{color:#8a8a95}
 .lnk-b{flex:none;width:42px;height:42px;border-radius:12px;border:1px solid #e6e6eb;background:#fff;font-size:18px;cursor:pointer;box-shadow:0 2px 6px rgba(20,20,30,.12)}
 .hrow{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-top:1px solid #f0f0f3;font-size:14px}
 .hrow b{white-space:nowrap}
+/* v12: картадан тандоодо жылдырыла турган А/Б пин */
+.dpin{width:46px;height:62px;position:relative;cursor:grab;filter:drop-shadow(0 6px 8px rgba(0,0,0,.35));animation:dpin 1.6s ease-in-out 2}
+.dpin b{position:absolute;left:0;top:0;width:46px;height:46px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--navy);border:3px solid #fff;box-sizing:border-box}
+.dpin span{position:absolute;left:0;top:0;width:46px;height:46px;display:grid;place-items:center;color:#fff;font-weight:900;font-size:21px;pointer-events:none}
+.dpin.to span{color:#16161a}
+.dpin i{position:absolute;left:19px;bottom:0;width:8px;height:8px;border-radius:50%;background:rgba(0,0,0,.35)}
+.dpin.to b{background:var(--grad)}
+@keyframes dpin{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.wbox:has(#pa){display:flex;align-items:center;gap:10px;font-size:15px}

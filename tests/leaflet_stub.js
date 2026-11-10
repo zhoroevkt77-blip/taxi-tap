@@ -26,8 +26,8 @@ Group.prototype={addTo(m){this.m=m;m.layers.push(this);this.items.forEach(i=>i.a
 function Marker(p,o){this.p=p;this.o=o}
 Marker.prototype={addTo(g){if(g instanceof Group){g.items.push(this);this.m=g.m;}else this.m=g;
  this.el=document.createElement("div");this.el.style.cssText="position:absolute";this.el.innerHTML=this.o.icon.html;this.m.ov.appendChild(this.el);
- this.m.layers.push(this);this._draw();return this},setLatLng(p){this.p=p;this._draw()},bindTooltip(){return this},remove(){this.el&&this.el.remove()},
- _draw(){if(!this.el)return;const [x,y]=this.m.xy(this.p);this.el.style.left=(x-15)+"px";this.el.style.top=(y-15)+"px"}};
+ this.m.layers.push(this);this._draw();return this},setLatLng(p){this.p=p;this._draw();return this},getLatLng(){return{lat:this.p[0],lng:this.p[1]}},on(){return this},bindTooltip(){return this},remove(){this.el&&this.el.remove()},
+ _draw(){if(!this.el)return;const [x,y]=this.m.xy(this.p);const a=(this.o.icon&&this.o.icon.iconAnchor)||[15,15];this.el.style.left=(x-a[0])+"px";this.el.style.top=(y-a[1])+"px"}};
 function Line(pts,o){this.pts=pts;this.o=o}
 Line.prototype={addTo(g){g.items.push(this);this.m=g.m;this.el=document.createElementNS("http://www.w3.org/2000/svg","svg");
  this.el.setAttribute("style","position:absolute;inset:0;width:100%;height:100%;pointer-events:none");this.m.ov.prepend(this.el);this.m.layers.push(this);this._draw();return this},
