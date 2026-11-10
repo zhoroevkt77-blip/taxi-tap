@@ -212,3 +212,9 @@ input.f::placeholder{color:#8a8a95}
 .abr.got .bul.lt{box-shadow:0 0 0 3px #1f9d55}
 .abr.got .bul.lt.to{box-shadow:0 0 0 3px #1f9d55}
 #toast.ok{background:#1f9d55}
+/* v17: туткасы чоңураак — сүрүү оңой */
+.grab{height:40px!important;margin:-10px -16px 2px!important;width:calc(100% + 32px)!important}
+.grab:before{top:14px!important;width:52px!important;margin-left:-26px!important}
+.grab:after{right:16px!important;top:5px!important}
+.grab.down:after{right:16px!important;top:5px!important}
+.sheet{overscroll-behavior:contain}

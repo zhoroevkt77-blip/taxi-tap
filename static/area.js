@@ -79,41 +79,63 @@ function bindInstall() {
 // ---------- Төмөнкү барак: өйдө-ылдый сүрүү (картаны көрүү үчүн) ----------
 // Тутканы (сызыкча) ылдый сүрсөңүз — барак жыйылып, карта көрүнөт; өйдө сүрсөңүз же бассаңыз — ачылат.
 window.SHEET = (function () {
-  let sheet = null, grab = null, cur = 0, collapsed = false, start = null, base = 0, moved = false;
-  const PEEK = 110;                                       // жыйылганда көрүнүп турган бөлүгү (px)
+  // Барак: тутканы же барактын өзүн (жогору жакта турганда) сүрүп жабуу/ачуу; тез «серпсе» — ошол жакка кетет.
+  let sheet = null, grab = null, cur = 0, collapsed = false;
+  let st = null;                 // {y, x, t, base, fromGrab, drag, decided, lastY, lastT, v}
+  const PEEK = 110;
   const max = () => sheet ? Math.max(0, sheet.offsetHeight - PEEK) : 0;
   function set(y, anim) {
     cur = Math.max(0, Math.min(max(), y));
-    sheet.style.transition = anim ? "transform .25s ease" : "none";
+    sheet.style.transition = anim ? "transform .22s cubic-bezier(.2,.8,.2,1)" : "none";
     sheet.style.transform = cur ? `translateY(${cur}px)` : "";
     window.dispatchEvent(new Event("sheetmove"));
   }
-  function snap(c) { collapsed = c; set(c ? max() : 0, true); grab && grab.classList.toggle("down", c); }
-  function down(y) { start = y; base = cur; moved = false; }
-  function move(y, e) {
-    if (start === null) return;
-    const dy = y - start;
-    if (Math.abs(dy) > 5) moved = true;
-    if (moved) { e && e.cancelable && e.preventDefault(); set(base + dy, false); }
+  function snap(c) { collapsed = c; set(c ? max() : 0, true); grab && grab.classList.toggle("down", c); if (c) sheet.scrollTop = 0; }
+  const interactive = el => el && el.closest && el.closest("input,textarea,select,.res,.cls,.chips,.quick,table,.lnk-b");
+  function down(y, x, target) {
+    st = {y, x, t: Date.now(), base: cur, fromGrab: !!(grab && grab.contains(target)), drag: false, decided: false,
+          lastY: y, lastT: Date.now(), v: 0, target};
+  }
+  function move(y, x, e) {
+    if (!st) return;
+    const dy = y - st.y, dx = x - st.x, now = Date.now();
+    if (!st.decided) {
+      if (Math.abs(dy) < 6 && Math.abs(dx) < 6) return;
+      st.decided = true;
+      const vertical = Math.abs(dy) > Math.abs(dx);
+      st.drag = vertical && (st.fromGrab || collapsed || (sheet.scrollTop <= 0 && dy > 0 && !interactive(st.target)));
+    }
+    if (!st.drag) return;
+    e && e.cancelable && e.preventDefault();
+    const dt = Math.max(1, now - st.lastT);
+    st.v = 0.7 * st.v + 0.3 * ((y - st.lastY) / dt);      // px/ms, жумшартылган
+    st.lastY = y; st.lastT = now;
+    set(st.base + dy, false);
   }
   function up() {
-    if (start === null) return;
-    start = null;
-    if (!moved) return snap(!collapsed);                 // жөн эле басса — которуштурат
-    snap(cur > max() / 2);
+    if (!st) return;
+    const s0 = st; st = null;
+    if (!s0.drag) {
+      if (!s0.decided && s0.fromGrab) return snap(!collapsed);          // туткасын басса — которуштурат
+      if (!s0.decided && collapsed && !interactive(s0.target)) return snap(false);   // жабык баракты басса — ачылат
+      return;
+    }
+    if (s0.v > 0.35) return snap(true);                  // ылдый серпти
+    if (s0.v < -0.35) return snap(false);                // өйдө серпти
+    snap(cur > max() * 0.35);
   }
   function init(el) {
     sheet = el; grab = el.querySelector(".grab"); if (!grab) return;
-    grab.addEventListener("touchstart", e => down(e.touches[0].clientY), {passive:true});
-    grab.addEventListener("touchmove", e => move(e.touches[0].clientY, e), {passive:false});
-    grab.addEventListener("touchend", up);
-    grab.addEventListener("mousedown", e => { down(e.clientY); e.preventDefault(); });
-    window.addEventListener("mousemove", e => move(e.clientY, e));
+    el.addEventListener("touchstart", e => down(e.touches[0].clientY, e.touches[0].clientX, e.target), {passive:true});
+    el.addEventListener("touchmove", e => move(e.touches[0].clientY, e.touches[0].clientX, e), {passive:false});
+    el.addEventListener("touchend", up); el.addEventListener("touchcancel", up);
+    grab.addEventListener("mousedown", e => { down(e.clientY, e.clientX, e.target); e.preventDefault(); });
+    window.addEventListener("mousemove", e => move(e.clientY, e.clientX, e));
     window.addEventListener("mouseup", up);
   }
   return {
     init,
-    refresh() { if (sheet && collapsed) set(max(), false); },       // мазмун өзгөргөндө
+    refresh() { if (sheet && collapsed) set(max(), false); },
     expand() { if (sheet && collapsed) snap(false); },
     visible() { return sheet ? window.innerHeight - sheet.getBoundingClientRect().top : 0; },
   };
