@@ -40,7 +40,7 @@ try:
         r.click("#list .res >> nth=0"); r.wait_for_timeout(1500); r.fill("#hnT", "15")
         r.screenshot(path=os.path.join(SHOTS, "a4_quote.png"))
         r.click("#back"); r.wait_for_timeout(500); r.click("#where"); r.wait_for_timeout(300); r.type("#qt", "Ысмайыл дүкөн", delay=30); r.wait_for_timeout(900)
-        r.click("#pickMap"); r.wait_for_timeout(800); r.screenshot(path=os.path.join(SHOTS, "a8_pick.png"))
+        r.click("#mapB"); r.wait_for_timeout(800); r.screenshot(path=os.path.join(SHOTS, "a8_pick.png"))
         a = b.new_context(viewport={"width": 1100, "height": 1000}).new_page(); a.route("**/*", route); a.on("pageerror", lambda e: print("JS:", e))
         a.goto(URL + "/admin"); a.fill("#ph", "0700 900 900"); a.click("#go"); a.wait_for_timeout(1500)
         a.click("nav button[data-t='addr']"); a.wait_for_timeout(1000)

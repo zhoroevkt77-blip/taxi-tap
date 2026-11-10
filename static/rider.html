@@ -79,6 +79,8 @@ input.f:focus{border-color:var(--navy)}
 .abl b{font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .abl b.ph{color:var(--soft);font-weight:600}
 .abe{flex:none;font-size:16px}
+.mapb{flex:none;border:1px solid #e6e6eb;background:#fff;border-radius:12px;padding:5px 8px;font-size:11.5px;line-height:1.15;text-align:center;font-weight:800;color:var(--ink);cursor:pointer;white-space:nowrap;box-shadow:0 2px 6px rgba(20,20,30,.12)}
+.mapb:active{transform:scale(.96)}
 .fromrow{display:flex;align-items:center;gap:6px;width:100%;border:0;background:transparent;padding:10px 4px 2px;font-size:14px;cursor:pointer;text-align:left;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fromrow b{overflow:hidden;text-overflow:ellipsis}
 .hn{width:70px;border:1px solid var(--line);border-radius:10px;padding:6px 8px;font-size:14px;text-align:center;flex:none}
@@ -159,7 +161,7 @@ map.on("moveend", () => {
   clearTimeout(moveTimer);
   moveTimer = setTimeout(onPinMoved, 250);
 });
-const pinActive = () => S.mode === "idle" || S.mode === "pickDest";
+const pinActive = () => S.mode === "idle" || S.mode === "pickDest" || S.mode === "pickFrom";
 // Картаны басса — пин ошол жерге барат (жылдырбай эле тандаса болот)
 map.on("click", e => {
   if (S.mode === "search") return;
@@ -174,7 +176,7 @@ async function onPinMoved() {
   const addr = await reverse(c.lat, c.lng);
   if (addr === null) return;
   $("#chipAddr").textContent = addr;
-  if (S.mode === "idle") { S.from = [c.lat, c.lng]; S.fromAddr = addr; loadNear(); if ($("#fromTxt")) $("#fromTxt").textContent = addr; }
+  if (S.mode === "idle" || S.mode === "pickFrom") { S.from = [c.lat, c.lng]; S.fromAddr = addr; loadNear(); if ($("#fromTxt")) $("#fromTxt").textContent = addr; }
   else { S.to = [c.lat, c.lng]; S.toAddr = addr; }
 }
 async function loadNear() {
@@ -249,15 +251,15 @@ function viewIdle() {
   S.mode = "idle"; S.to = null; S.quote = null; S.hnT = ""; setPin("from");
   rideLayer.clearLayers(); driverMarker = null;
   render(`<div class="ab">
-      <button class="abr abb" id="fromRow"><span class="bul lt">А</span><span class="abl"><small>А точка · каяктан</small><b id="fromTxt">${esc(S.fromAddr || "…")}</b></span><span class="abe">✏️</span></button>
-      <button class="abr abb" id="where"><span class="bul to lt">Б</span><span class="abl"><small>Б точка · каякка</small><b class="ph">Каякка барасыз?</b></span><span class="abe">🔍</span></button>
+      <div class="abr abb" id="fromRow"><span class="bul lt">А</span><span class="abl"><small>А точка · каяктан</small><b id="fromTxt">${esc(S.fromAddr || "…")}</b></span><button class="mapb" id="mapA">🗺 Картадан<br>белгиле</button></div>
+      <div class="abr abb" id="where"><span class="bul to lt">Б</span><span class="abl"><small>Б точка · каякка</small><b class="ph">Каякка барасыз?</b></span><button class="mapb" id="mapB">🗺 Картадан<br>белгиле</button></div>
     </div>
-    <div class="chips" id="places"></div>
-    <button class="btn ghost" id="mapTo">📍 Картадан белгилөө</button>`);
+    <div class="chips" id="places"></div>`);
   loadPlaces();
   $("#where").onclick = () => viewSearch("to");
   $("#fromRow").onclick = () => viewSearch("from");
-  $("#mapTo").onclick = viewPickDest;
+  $("#mapA").onclick = e => { e.stopPropagation(); viewPickFrom(); };
+  $("#mapB").onclick = e => { e.stopPropagation(); viewPickDest(); };
   onPinMoved();
 }
 
@@ -287,18 +289,17 @@ function viewSearch(field) {
   S.mode = "search";
   let act = field === "from" ? "from" : "to";
   render(`<div class="ab">
-      <div class="abr" id="rf"><span class="bul lt">А</span><input class="ai" id="qf" placeholder="А точка — каяктан" autocomplete="off" value="${esc(S.fromAddr || "")}"></div>
-      <div class="abr" id="rt"><span class="bul to lt">Б</span><input class="ai" id="qt" placeholder="Б точка — каякка барасыз?" autocomplete="off" value="${S.to ? esc(S.toAddr) : ""}"></div>
+      <div class="abr" id="rf"><span class="bul lt">А</span><input class="ai" id="qf" placeholder="А точка — каяктан" autocomplete="off" value="${esc(S.fromAddr || "")}"><button class="mapb" id="mapA">🗺 Картадан<br>белгиле</button></div>
+      <div class="abr" id="rt"><span class="bul to lt">Б</span><input class="ai" id="qt" placeholder="Б точка — каякка?" autocomplete="off" value="${S.to ? esc(S.toAddr) : ""}"><button class="mapb" id="mapB">🗺 Картадан<br>белгиле</button></div>
     </div>
     <div id="list"></div>
-    <button class="btn ghost" id="pickMap">📍 Картадан белгилөө</button>
     <button class="btn ghost" id="back">Артка</button>`);
   const inp = {from:$("#qf"), to:$("#qt")};
   const focus = k => { act = k; $("#rf").classList.toggle("on", k === "from"); $("#rt").classList.toggle("on", k === "to"); run(); };
   inp.from.onfocus = () => { inp.from.select(); focus("from"); };
   inp.to.onfocus = () => focus("to");
-  $("#pickMap").onclick = () => { if (act === "from") { S.mode = "idle"; return viewIdle(); }
-    S.pendName = inp.to.value.trim(); viewPickDest(); };
+  $("#mapA").onclick = () => viewPickFrom();
+  $("#mapB").onclick = () => { S.pendName = inp.to.value.trim(); viewPickDest(); };
   $("#back").onclick = viewIdle;
   let t = null, seq = 0;
   const choose = r => {
@@ -341,6 +342,18 @@ function viewSearch(field) {
   }
   inp.from.oninput = inp.to.oninput = run;
   (act === "from" ? inp.from : inp.to).focus();
+}
+
+// А точканы картадан тандоо
+function viewPickFrom() {
+  S.mode = "pickFrom"; setPin("from");
+  if (S.from) map.setView(S.from, map.getZoom());
+  render(`<h2>А точка — каяктан?</h2><p class="muted">Картаны басыңыз же жылдырыңыз — кара пин (А) сизди алып кете турган жерди көрсөтөт.</p>
+    <button class="btn main" id="ok">Даяр</button><button class="btn ghost" id="back">Артка</button>`);
+  $("#ok").onclick = () => { const c = map.getCenter(); S.from = [c.lat, c.lng]; S.fromAddr = $("#chipAddr").textContent; S.fromLock = true;
+    if (S.to) return viewQuote(); viewSearch("to"); };
+  $("#back").onclick = viewIdle;
+  onPinMoved();
 }
 
 function viewPickDest(save) {
