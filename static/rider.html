@@ -100,7 +100,7 @@ input.f:focus{border-color:var(--navy)}
 .quick{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=15">
+<link rel="stylesheet" href="/static/theme.css?v=16">
 </head>
 <body>
 <div id="map"></div>
@@ -262,8 +262,8 @@ function viewIdle() {
   S.mode = "idle"; S.to = null; S.quote = null; S.hnT = ""; S.lmT = ""; setPin("from"); showA(false);
   rideLayer.clearLayers(); driverMarker = null;
   render(`<div class="ab">
-      <div class="abr abb" id="fromRow"><span class="bul lt">А</span><span class="abl"><small>А точка · каяктан</small><b id="fromTxt">${esc(S.fromAddr || "…")}</b></span><button class="mapb" id="mapA">🗺 Картадан<br>белгиле</button></div>
-      <div class="abr abb" id="where"><span class="bul to lt">Б</span><span class="abl"><small>Б точка · каякка</small><b class="ph">Каякка барасыз?</b></span><button class="mapb" id="mapB">🗺 Картадан<br>белгиле</button></div>
+      <div class="abr abb" id="fromRow"><span class="bul lt">А</span><span class="abl"><small>А точка · каяктан <i class="chk" id="chkA">✓ тандалды</i></small><b id="fromTxt">${esc(S.fromAddr || "…")}</b></span><button class="mapb" id="mapA">🗺 Картадан<br>белгиле</button></div>
+      <div class="abr abb need" id="where"><span class="bul to lt">Б</span><span class="abl"><small>Б точка · каякка <i class="hint">— тандаңыз 👆</i></small><b class="ph">Каякка барасыз?</b></span><button class="mapb" id="mapB">🗺 Картадан<br>белгиле</button></div>
     </div>
     <div class="chips" id="places"></div><p class="muted" id="nearMsg" style="margin:4px 2px 0;font-size:13px">${esc(S.nearMsg || "")}</p>`);
   loadPlaces();
@@ -284,8 +284,8 @@ async function loadPlaces(force) {
     + P.recent.map((r, i) => btn("r" + i, "🕘 " + esc(r.name))).join("");
   box.querySelectorAll("button").forEach(b => b.onclick = () => {
     const k = b.dataset.k;
-    if (k[0] === "r") { const r = P.recent[+k.slice(1)]; S.to = [r.lat, r.lon]; S.toAddr = r.name; return viewQuote(); }
-    if (P[k]) { S.to = [P[k].lat, P[k].lon]; S.toAddr = k === "home" ? "Үй" : "Иш"; return viewQuote(); }
+    if (k[0] === "r") { const r = P.recent[+k.slice(1)]; S.to = [r.lat, r.lon]; S.toAddr = r.name; picked("Б"); return viewQuote(); }
+    if (P[k]) { S.to = [P[k].lat, P[k].lon]; S.toAddr = k === "home" ? "Үй" : "Иш"; picked("Б"); return viewQuote(); }
     viewPickDest(k);
   });
   // басып туруу → өчүрүү
@@ -300,8 +300,8 @@ function viewSearch(field) {
   S.mode = "search";
   let act = field === "from" ? "from" : "to";
   render(`<div class="ab">
-      <div class="abr" id="rf"><span class="bul lt">А</span><input class="ai" id="qf" placeholder="А точка — каяктан" autocomplete="off" value="${esc(S.fromAddr || "")}"><button class="mapb" id="mapA">🗺 Картадан<br>белгиле</button></div>
-      <div class="abr" id="rt"><span class="bul to lt">Б</span><input class="ai" id="qt" placeholder="Б точка — каякка?" autocomplete="off" value="${S.to ? esc(S.toAddr) : ""}"><button class="mapb" id="mapB">🗺 Картадан<br>белгиле</button></div>
+      <div class="abr${S.from ? " got" : ""}" id="rf"><span class="bul lt">А</span><input class="ai" id="qf" placeholder="А точка — каяктан" autocomplete="off" value="${esc(S.fromAddr || "")}"><button class="mapb" id="mapA">🗺 Картадан<br>белгиле</button></div>
+      <div class="abr${S.to ? " got" : " need"}" id="rt"><span class="bul to lt">Б</span><input class="ai" id="qt" placeholder="Б точка — каякка?" autocomplete="off" value="${S.to ? esc(S.toAddr) : ""}"><button class="mapb" id="mapB">🗺 Картадан<br>белгиле</button></div>
     </div>
     <div id="list"></div>
     <button class="btn ghost" id="back">Артка</button>`);
@@ -317,11 +317,11 @@ function viewSearch(field) {
   const choose = r => {
     if (act === "from") {
       S.from = [r.lat, r.lon]; S.fromAddr = r.name; S.fromLock = true; map.setView(S.from, 16);
-      inp.from.value = r.name;
+      inp.from.value = r.name; $("#rf").classList.add("got"); picked("А");
       if (S.to) return viewQuote();
       inp.to.focus(); return;
     }
-    S.to = [r.lat, r.lon]; S.toAddr = r.name; viewQuote();
+    S.to = [r.lat, r.lon]; S.toAddr = r.name; picked("Б"); viewQuote();
   };
   function run() {
     clearTimeout(t);
@@ -363,7 +363,7 @@ function viewPickFrom() {
   if (S.from) map.setView(S.from, map.getZoom());
   render(`<h2>А точка — каяктан?</h2><p class="muted">Картаны басыңыз же жылдырыңыз — кара пин (А) сизди алып кете турган жерди көрсөтөт.</p>
     <button class="btn main" id="ok">Даяр</button><button class="btn ghost" id="back">Артка</button>`);
-  $("#ok").onclick = () => { const c = map.getCenter(); S.from = [c.lat, c.lng]; S.fromAddr = $("#chipAddr").textContent; S.fromLock = true;
+  $("#ok").onclick = () => { const c = map.getCenter(); S.from = [c.lat, c.lng]; S.fromAddr = $("#chipAddr").textContent; S.fromLock = true; picked("А");
     if (S.to) return viewQuote(); viewPickDest(); };                 // эми Б точка — сары пин
   $("#back").onclick = viewIdle;
   onPinMoved();
@@ -380,6 +380,7 @@ function viewPickDest(save) {
   if ($("#typeB")) $("#typeB").onclick = () => viewSearch("to");
   $("#ok").onclick = async () => { const c = map.getCenter(); S.to = [c.lat, c.lng]; S.toAddr = $("#chipAddr").textContent;
     if (save) { PLACES = await api("/api/place", {kind:save, p:S.to, name:S.toAddr}); map.setView(S.from, 15); return viewIdle(); }
+    picked("Б");
     const nm = ($("#pn").value || "").trim(); S.pendName = "";
     if (nm.length >= 2) { S.toAddr = nm; api("/api/addr_suggest", {name:nm, p:S.to}); }
     viewQuote(); };
@@ -471,6 +472,8 @@ async function viewQuote() {
   };
   $("#back").onclick = () => { map.setView(S.from, 15); viewIdle(); };
 }
+// Точка тандалганда: кыска дирилдөө + 1,5 сек кабар
+function picked(w) { try { navigator.vibrate && navigator.vibrate(35); } catch (e) {} toast(`✓ ${w} точка тандалды`, 1500); }
 const withHn = (a, h) => (h = (h || "").trim()) ? `${a}, ${h}` : a;
 const withLm = (a, m) => (m = (m || "").trim()) ? `${a} — ${m}` : a;
 function alertBox(t) { const e = document.createElement("p"); e.className = "err"; e.textContent = t; $("#view").appendChild(e); }

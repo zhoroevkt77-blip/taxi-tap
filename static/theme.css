@@ -204,3 +204,11 @@ input.f::placeholder{color:#8a8a95}
 .f.lm{margin:2px 0 8px;padding:9px 12px;font-size:14px}
 #chipEta:empty{display:none}
 #nearMsg:empty{display:none}
+/* v16: тандалды белгилери */
+.chk{font-style:normal;color:#1f9d55;font-weight:800;margin-left:4px}
+.abr.need{box-shadow:inset 0 0 0 2px #ffb703;border-radius:14px;background:#fffaf0}
+.abr.need .hint{font-style:normal;color:#b07a00;font-weight:800}
+.abr.got{background:#effaf3!important}
+.abr.got .bul.lt{box-shadow:0 0 0 3px #1f9d55}
+.abr.got .bul.lt.to{box-shadow:0 0 0 3px #1f9d55}
+#toast.ok{background:#1f9d55}
