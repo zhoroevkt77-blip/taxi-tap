@@ -194,7 +194,7 @@ function viewLogin(pending, link) {
 let mePoll = null;
 function pollMe() {
   clearInterval(mePoll);
-  mePoll = setInterval(async () => { const m = await api("/api/me"); if (m.auth) { clearInterval(mePoll); boot(); } }, 2500);
+  mePoll = setInterval(async () => { const m = await api("/api/me?kind=rider"); if (m.auth) { clearInterval(mePoll); boot(); } }, 2500);
 }
 
 function viewIdle() {
@@ -350,7 +350,7 @@ $("#menuBtn").onclick = async () => {
 };
 
 async function boot() {
-  const me = await api("/api/me");
+  const me = await api("/api/me?kind=rider");
   if (!me.auth) return viewLogin(me.pending, me.link);
   const r = await api("/api/ride");
   if (r.ride && ["searching", "accepted", "arrived", "in_trip"].includes(r.ride.status)) {

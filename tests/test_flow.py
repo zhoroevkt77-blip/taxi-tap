@@ -195,3 +195,21 @@ class Web(unittest.TestCase):
         out = flow.on_contact("tg:77", "996700111333")
         self.assertIn("ырасталды", out[0]["text"])
         self.assertEqual(core.web_session(tok)["uid"], "ph:+996700111333")
+
+
+class DriverWeb(unittest.TestCase):
+    def test_driver_login_and_state(self):
+        import web
+        core.init_db()
+        core.ensure_user("tg:88", "Эрлан"); core.set_user("tg:88", phone="+996700888888")
+        core.add_driver("tg:88", "Honda Fit", "Көк", "08 888 KG")
+        core.set_driver("tg:88", status="active")
+        self.assertEqual(core.driver_by_phone("0700 888 888"), "tg:88")
+        self.assertIsNone(core.driver_by_phone("0700 000 001"))
+        tok = core.web_session_new("0700 888 888", "", "driver")
+        self.assertEqual(core.web_session_verify(tok, "996700888888"), "tg:88")
+        core.driver_location("tg:88", *NEAR, live_period=60)
+        st = web.driver_state("tg:88")
+        self.assertTrue(st["online"])
+        self.assertIsNone(st["offer"])
+        self.assertEqual(st["today"]["rides"], 0)

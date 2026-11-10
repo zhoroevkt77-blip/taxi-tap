@@ -74,6 +74,40 @@ def ride_view(r):
     return v
 
 
+def driver_state(uid):
+    """Айдоочунун бети ушул бир суроо менен бардык абалын алат."""
+    d = core.get_driver(uid) or {}
+    u = core.get_user(uid) or {}
+    t = core.now()
+    st = {"name": u.get("name"), "status": d.get("status"),
+          "online": bool(core.is_available(d) or d.get("busy_ride")),
+          "balance": int(d.get("balance") or 0), "min_balance": core.MIN_BALANCE,
+          "rating": d.get("rating"), "rides_done": d.get("rides_done"),
+          "car": "%s %s, %s" % (d.get("car_color") or "", d.get("car_model") or "",
+                                d.get("car_plate") or ""),
+          "pos": [d["lat"], d["lon"]] if d.get("lat") is not None else None,
+          "today": core.driver_today(uid), "offer": None, "ride": None,
+          "bot": BOT_USERNAME}
+    o = core.offer_for(uid)
+    if o and d.get("lat") is not None:
+        st["offer"] = {"id": o["id"], "price": o["price"], "dist_km": o["dist_km"],
+                       "to_pickup_km": round(core.haversine_km(d["lat"], d["lon"],
+                                                               o["p_lat"], o["p_lon"]), 1),
+                       "has_dest": o["d_lat"] is not None,
+                       "left": max(0, int(core.OFFER_SEC - (t - (o["offered_at"] or t)))),
+                       "total": int(core.OFFER_SEC), "p": [o["p_lat"], o["p_lon"]]}
+    if d.get("busy_ride"):
+        r = core.get_ride(d["busy_ride"])
+        if r and r["status"] in ("accepted", "arrived", "in_trip"):
+            p = core.get_user(r["passenger"]) or {}
+            st["ride"] = {"id": r["id"], "status": r["status"], "price": r["price"],
+                          "dist_km": r["dist_km"], "passenger": p.get("name") or "",
+                          "phone": p.get("phone") or "",
+                          "p": [r["p_lat"], r["p_lon"]],
+                          "d": [r["d_lat"], r["d_lon"]] if r["d_lat"] is not None else None}
+    return st
+
+
 class H(BaseHTTPRequestHandler):
     server_version = "TaxiTap"
 
@@ -121,9 +155,11 @@ class H(BaseHTTPRequestHandler):
         c = SimpleCookie(self.headers.get("Cookie") or "")
         return c[COOKIE].value if COOKIE in c else None
 
-    def _uid(self):
+    def _uid(self, kind="rider"):
         s = core.web_session(self._token())
-        return s["uid"] if s and s["verified"] else None
+        if not s or not s["verified"] or (s.get("kind") or "rider") != kind:
+            return None
+        return s["uid"]
 
     # ---------- маршруттар ----------
 
@@ -132,6 +168,18 @@ class H(BaseHTTPRequestHandler):
             u = urlparse(self.path)
             if u.path in ("/", "/index.html"):
                 return self._file(os.path.join(STATIC, "rider.html"))
+            if u.path in ("/driver", "/driver/"):
+                return self._file(os.path.join(STATIC, "driver.html"))
+            if u.path == "/api/d/state":
+                uid = self._uid("driver")
+                if not uid:
+                    return self._json({"error": "auth"}, 401)
+                return self._json(driver_state(uid))
+            if u.path == "/api/d/history":
+                uid = self._uid("driver")
+                if not uid:
+                    return self._json({"error": "auth"}, 401)
+                return self._json({"rides": core.driver_history(uid)})
             if u.path.startswith("/static/"):
                 name = os.path.basename(u.path)
                 return self._file(os.path.join(STATIC, name))
@@ -143,6 +191,10 @@ class H(BaseHTTPRequestHandler):
             if u.path == "/api/me":
                 s = core.web_session(self._token())
                 if not s:
+                    return self._json({"auth": False})
+                kind = s.get("kind") or "rider"
+                want = (parse_qs(u.query).get("kind") or ["rider"])[0]
+                if kind != want:
                     return self._json({"auth": False})
                 if not s["verified"]:
                     return self._json({"auth": False, "pending": True,
@@ -183,6 +235,8 @@ class H(BaseHTTPRequestHandler):
                 return self._login(b)
             if path == "/api/logout":
                 return self._json({"ok": True}, cookie="")
+            if path.startswith("/api/d/"):
+                return self._driver_post(path[7:], b)
             uid = self._uid()
             if not uid:
                 return self._json({"error": "auth"}, 401)
@@ -223,15 +277,51 @@ class H(BaseHTTPRequestHandler):
             traceback.print_exc()
             return self._json({"error": "server"}, 500)
 
+    def _driver_post(self, action, b):
+        uid = self._uid("driver")
+        if not uid:
+            return self._json({"error": "auth"}, 401)
+        d = core.get_driver(uid)
+        if not d or d["status"] != "active":
+            return self._json({"error": "not_active"}, 403)
+        rid = int(b.get("id") or 0)
+        if action == "location":
+            p = _point(b.get("p"))
+            if not p:
+                return self._json({"error": "bad_point"}, 400)
+            if b.get("online", True) and (d["online"] or d["busy_ride"]):
+                # Сайт ар 5 сек жиберет; 60 сек ичинде жаңыртуу келбесе — офлайн.
+                core.driver_location(uid, p[0], p[1], live_period=60)
+            return self._json({"ok": True})
+        if action == "online":
+            if b.get("on"):
+                p = _point(b.get("p"))
+                if not p:
+                    return self._json({"error": "need_location"}, 400)
+                core.driver_location(uid, p[0], p[1], live_period=60)
+            else:
+                flow.go_offline(uid)
+            return self._json(driver_state(uid))
+        handlers = {"accept": flow.driver_accept, "decline": flow.driver_decline,
+                    "step": flow.driver_step, "cancel": flow.driver_cancel}
+        if action not in handlers or not rid:
+            return self._json({"error": "not_found"}, 404)
+        outs = handlers[action](uid, rid)
+        deliver([o for o in outs if o.get("to") != uid])   # айдоочу сайтта көрүп турат
+        return self._json(driver_state(uid))
+
     def _tg_link(self, tok):
         return "https://t.me/%s?start=web_%s" % (BOT_USERNAME, tok) if BOT_USERNAME else None
 
     def _login(self, b):
         phone = str(b.get("phone") or "")[:20]
         name = str(b.get("name") or "").strip()[:40]
+        kind = "driver" if b.get("kind") == "driver" else "rider"
         if not core.phone_uid(phone):
             return self._json({"error": "bad_phone"}, 400)
-        tok = core.web_session_new(phone, name)
+        if kind == "driver" and not core.driver_by_phone(phone):
+            return self._json({"error": "not_driver"}, 404)
+        tok = core.web_session_new(phone, name, kind)
         if DEV_LOGIN:
             core.web_session_verify(tok)
             return self._json({"auth": True}, cookie=tok)

@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="ky">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#17365C">
+<title>Такси ТАП! — Айдоочу</title>
+<link rel="manifest" href="/static/manifest.json">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{--navy:#17365C;--gold:#C9A03A;--gold2:#E3C368;--ink:#152741;--soft:#5A6880;--paper:#F1F4F9;--line:#E1E7F1;--ok:#1D9E75;--bad:#D8443A}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--paper);overflow:hidden}
+#map{position:fixed;inset:0;z-index:1}
+.top{position:fixed;top:max(12px,env(safe-area-inset-top));left:12px;right:12px;z-index:5;display:flex;gap:8px;align-items:center}
+.logo{background:var(--navy);color:#fff;font-weight:800;font-size:15px;padding:10px 12px;border-radius:14px}
+.logo b{color:var(--gold2)}
+.pill{background:#fff;border-radius:14px;padding:8px 12px;box-shadow:0 2px 10px rgba(21,39,65,.15);font-size:13px;line-height:1.2}
+.pill b{display:block;font-size:16px}
+.state{margin-left:auto;font-weight:700;font-size:13px;padding:10px 12px;border-radius:14px;background:#fff;box-shadow:0 2px 10px rgba(21,39,65,.15)}
+.state.on{background:var(--ok);color:#fff}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:6;background:#fff;border-radius:22px 22px 0 0;padding:10px 16px calc(16px + env(safe-area-inset-bottom));box-shadow:0 -6px 24px rgba(21,39,65,.12);max-height:86vh;overflow:auto}
+.grab{width:38px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 12px}
+h2{font-size:20px;margin:2px 0 10px}
+.muted{color:var(--soft);font-size:13px}
+.btn{width:100%;border:0;border-radius:14px;padding:16px;font-size:17px;font-weight:700;cursor:pointer;margin-top:10px;display:block;text-align:center;text-decoration:none}
+.btn.main{background:var(--gold);color:#14243F}
+.btn.go{background:var(--ok);color:#fff;font-size:19px;padding:20px}
+.btn.dark{background:var(--navy);color:#fff}
+.btn.ghost{background:var(--paper);color:var(--ink)}
+.btn.red{background:#FCEBEB;color:var(--bad)}
+.btn:disabled{opacity:.5}
+input.f{width:100%;font-size:17px;padding:14px;border-radius:14px;border:1px solid var(--line);background:var(--paper);margin-bottom:10px;outline:none;color:var(--ink)}
+.err{color:var(--bad);font-size:13px;min-height:18px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:6px 0}
+.stat{background:var(--paper);border-radius:14px;padding:12px}
+.stat b{display:block;font-size:22px}
+.offer{position:fixed;inset:0;z-index:20;background:rgba(21,39,65,.55);display:flex;align-items:flex-end}
+.ocard{background:#fff;width:100%;border-radius:22px 22px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));animation:up .25s ease-out}
+@keyframes up{from{transform:translateY(40px);opacity:.5}to{transform:none;opacity:1}}
+.ring{width:74px;height:74px;flex:none;position:relative}
+.ring svg{transform:rotate(-90deg)}
+.ring span{position:absolute;inset:0;display:grid;place-items:center;font-weight:800;font-size:22px}
+.oprice{font-size:34px;font-weight:800}
+.row{display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
+.row:last-child{border:0}
+.bul{width:10px;height:10px;border-radius:50%;background:var(--navy);flex:none}
+.bul.to{background:var(--gold)}
+.two{display:flex;gap:10px}.two>*{flex:1}
+.carm{width:30px;height:30px;border-radius:50%;background:var(--navy);border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3);display:grid;place-items:center;color:#fff;font-size:14px}
+.carm.me{background:var(--ok)}
+.carm.to{background:var(--gold);color:#14243F}
+.wait{display:flex;align-items:center;gap:12px;background:var(--paper);border-radius:14px;padding:14px}
+.blink{width:12px;height:12px;border-radius:50%;background:var(--ok);animation:b 1.2s infinite}
+@keyframes b{50%{opacity:.25}}
+.hist{font-size:14px}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div class="top">
+  <div class="logo">ТАП! <b>Айдоочу</b></div>
+  <div class="pill hide" id="earn"><span class="muted">Бүгүн</span><b id="earnV">0 с</b></div>
+  <div class="state hide" id="stBadge">Офлайн</div>
+</div>
+<div class="sheet"><div class="grab"></div><div id="view"></div></div>
+<div class="offer hide" id="offer"><div class="ocard" id="ocard"></div></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const api = async (path, body) => {
+  const r = await fetch(path, body === undefined ? {credentials:"same-origin"} :
+    {method:"POST", credentials:"same-origin", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)});
+  return r.json();
+};
+const map = L.map("map", {zoomControl:false}).setView([42.8746, 74.5698], 15);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:"© OpenStreetMap"}).addTo(map);
+const icon = (cls, t) => L.divIcon({className:"", html:`<div class="carm ${cls}">${t}</div>`, iconSize:[30,30], iconAnchor:[15,15]});
+const layer = L.layerGroup().addTo(map);
+let me = null, myPos = null, D = null, poll = null, watch = null, lock = null, lastOffer = null, lastRide = null, pingT = null;
+
+// ---------- GPS ----------
+function startGps() {
+  if (!navigator.geolocation || watch !== null) return;
+  watch = navigator.geolocation.watchPosition(p => {
+    myPos = [p.coords.latitude, p.coords.longitude];
+    drawMe();
+  }, () => {}, {enableHighAccuracy:true, maximumAge:3000, timeout:15000});
+  clearInterval(pingT);
+  pingT = setInterval(() => { if (myPos && D && D.online) api("/api/d/location", {p:myPos}); }, 5000);
+}
+function getPos() {
+  return new Promise(res => {
+    if (myPos) return res(myPos);
+    if (!navigator.geolocation) return res(null);
+    navigator.geolocation.getCurrentPosition(p => { myPos = [p.coords.latitude, p.coords.longitude]; res(myPos); },
+      () => res(null), {enableHighAccuracy:true, timeout:10000});
+  });
+}
+function drawMe() {
+  if (!myPos) return;
+  if (!me) { me = L.marker(myPos, {icon:icon("me", "🚕"), interactive:false}).addTo(map); map.setView(myPos, 16); }
+  else me.setLatLng(myPos);
+}
+async function wake(on) {
+  try {
+    if (on && "wakeLock" in navigator && !lock) { lock = await navigator.wakeLock.request("screen"); lock.addEventListener("release", () => lock = null); }
+    if (!on && lock) { await lock.release(); lock = null; }
+  } catch (e) {}
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && D && D.online) wake(true); });
+
+// ---------- үн ----------
+let actx = null;
+function beep() {
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    [0, 0.25, 0.5].forEach(t => {
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.frequency.value = 880; o.connect(g); g.connect(actx.destination);
+      g.gain.setValueAtTime(0.25, actx.currentTime + t); g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + t + 0.2);
+      o.start(actx.currentTime + t); o.stop(actx.currentTime + t + 0.22);
+    });
+    navigator.vibrate && navigator.vibrate([300, 120, 300]);
+  } catch (e) {}
+}
+
+// ---------- көрүнүштөр ----------
+const render = h => $("#view").innerHTML = h;
+const navUrl = p => `https://www.google.com/maps/dir/?api=1&destination=${p[0]},${p[1]}`;
+
+function viewLogin(pending, link, err) {
+  $("#earn").classList.add("hide"); $("#stBadge").classList.add("hide");
+  if (pending) {
+    render(`<h2>Номериңизди ырастаңыз</h2><p class="muted">Telegram'да ботко өтүп, «Номеримди жөнөтүү» басыңыз.</p>
+      ${link ? `<a class="btn dark" href="${esc(link)}" target="_blank">Telegram'да ырастоо</a>` : ""}
+      <button class="btn ghost" id="relog">Артка</button>`);
+    $("#relog").onclick = () => viewLogin(false);
+    const t = setInterval(async () => { const m = await api("/api/me?kind=driver"); if (m.auth) { clearInterval(t); boot(); } }, 2500);
+    return;
+  }
+  render(`<h2>Айдоочунун кабинети</h2>
+    <p class="muted">Telegram ботто айдоочу катары катталган номериңизди жазыңыз.</p>
+    <input class="f" id="ph" placeholder="+996 700 123 456" inputmode="tel" autocomplete="tel">
+    <div class="err" id="er">${esc(err || "")}</div>
+    <button class="btn main" id="go">Кирүү</button>`);
+  $("#ph").oninput = () => $("#er").textContent = "";
+  $("#go").onclick = async () => {
+    const r = await api("/api/login", {phone:$("#ph").value, kind:"driver"});
+    if (r.error === "not_driver") return $("#er").textContent = "Бул номер айдоочу катары катталган эмес. Адегенде ботто катталыңыз.";
+    if (r.error) return $("#er").textContent = "Номерди толук жазыңыз: +996 700 123 456";
+    r.auth ? boot() : viewLogin(true, r.link);
+  };
+}
+
+function header() {
+  $("#earn").classList.remove("hide"); $("#stBadge").classList.remove("hide");
+  $("#earnV").textContent = D.today.earned + " с";
+  $("#stBadge").textContent = D.ride ? "Сапарда" : D.online ? "Онлайн" : "Офлайн";
+  $("#stBadge").classList.toggle("on", D.online || !!D.ride);
+}
+
+function viewHome() {
+  const low = D.balance < D.min_balance;
+  const stats = `<div class="grid">
+      <div class="stat"><span class="muted">Бүгүн сапар</span><b>${D.today.rides}</b></div>
+      <div class="stat"><span class="muted">Баланс</span><b style="color:${low ? "var(--bad)" : "inherit"}">${D.balance} с</b></div>
+      <div class="stat"><span class="muted">Рейтинг</span><b>★ ${D.rating ?? "5.0"}</b></div>
+      <div class="stat"><span class="muted">Бардык сапар</span><b>${D.rides_done ?? 0}</b></div></div>`;
+  const topup = D.bot ? `<a class="btn ghost" href="https://t.me/${esc(D.bot)}" target="_blank">➕ Балансты толуктоо (бот)</a>` : "";
+  if (D.online) {
+    render(`<div class="wait"><div class="blink"></div><div><b>Заказ күтүлүүдө</b><div class="muted">Экранды өчүрбөңүз — GPS иштеп турат</div></div></div>
+      ${stats}<button class="btn red" id="off">Линиядан чыгуу</button>`);
+    $("#off").onclick = async () => { D = await api("/api/d/online", {on:false}); wake(false); lastView = ""; show(); };
+  } else {
+    render(`<h2>Салам, ${esc(D.name || "айдоочу")}!</h2><p class="muted">${esc(D.car)}</p>
+      ${low ? `<p class="err">Баланс жетишсиз — заказдар келбейт.</p>` : ""}
+      <button class="btn go" id="on">Линияга чыгуу</button>
+      <div class="err" id="er"></div>${stats}${topup}
+      <button class="btn ghost" id="hist">Сапарлардын тарыхы</button>`);
+    $("#on").onclick = async () => {
+      beep();                                   // үн браузерде ушул басуу менен ачылат
+      $("#on").disabled = true;
+      const p = await getPos();
+      if (!p) { $("#on").disabled = false; return $("#er").textContent = "GPS'ке уруксат бериңиз (браузердин жөндөөлөрүнөн)."; }
+      D = await api("/api/d/online", {on:true, p});
+      startGps(); wake(true); lastView = ""; show();
+    };
+    $("#hist").onclick = viewHistory;
+  }
+}
+
+async function viewHistory() {
+  const h = await api("/api/d/history");
+  const name = {completed:"✅", cancelled:"✖️", accepted:"…", arrived:"…", in_trip:"…"};
+  render(`<h2>Сапарлар</h2><div class="hist">${(h.rides || []).map(r =>
+    `<div class="row"><span>${name[r.status] || ""}</span><div style="flex:1">№${r.id} · ${new Date(r.created_at * 1000).toLocaleString("ky-KG", {day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit"})}</div><b>${r.price ? r.price + " с" : "—"}</b></div>`).join("") || `<p class="muted">Азырынча сапар жок.</p>`}</div>
+    <button class="btn ghost" id="back">Артка</button>`);
+  $("#back").onclick = () => { lastView = ""; show(); };
+}
+
+function viewRide() {
+  const r = D.ride;
+  layer.clearLayers();
+  L.marker(r.p, {icon:icon("", "👤"), interactive:false}).addTo(layer);
+  if (r.d) L.marker(r.d, {icon:icon("to", "■"), interactive:false}).addTo(layer);
+  const target = r.status === "in_trip" ? r.d : r.p;
+  if (myPos && target) L.polyline([myPos, target], {color:"#17365C", weight:4, dashArray:"6 8"}).addTo(layer);
+  if (lastRide !== r.id + r.status && myPos && target) map.fitBounds(L.latLngBounds([myPos, target]), {paddingTopLeft:[40, 90], paddingBottomRight:[40, 360]});
+  lastRide = r.id + r.status;
+  const title = {accepted:"Жүргүнчүгө барыңыз", arrived:"Жүргүнчүнү күтүңүз", in_trip:"Сапар жүрүп жатат"}[r.status];
+  const next = {accepted:["📍 Келдим", "main"], arrived:["▶️ Сапарды баштоо", "go"], in_trip:["🏁 Сапарды бүтүрүү", "dark"]}[r.status];
+  render(`<h2>${title}</h2>
+    <div class="row"><span class="bul"></span><div style="flex:1"><b>${esc(r.passenger)}</b><div class="muted">${r.price ? r.price + " сом" : "Тариф боюнча"}${r.dist_km ? " · ~" + r.dist_km + " км" : ""}</div></div></div>
+    ${r.d ? "" : `<div class="row"><span class="bul to"></span><div class="muted">Бара турган жерин жүргүнчү өзү айтат</div></div>`}
+    <div class="two"><a class="btn ghost" href="tel:${esc(r.phone)}">📞 Чалуу</a>${target ? `<a class="btn ghost" href="${navUrl(target)}" target="_blank">🧭 Навигатор</a>` : ""}</div>
+    <button class="btn ${next[1]}" id="step">${next[0]}</button>
+    ${r.status !== "in_trip" ? `<button class="btn red" id="cx">Жокко чыгаруу</button>` : ""}`);
+  $("#step").onclick = async () => { $("#step").disabled = true; const prev = r; D = await api("/api/d/step", {id:r.id}); if (!D.ride && prev.status === "in_trip") done(prev); else show(); };
+  const cx = $("#cx");
+  if (cx) cx.onclick = async () => { if (!confirm("Заказды жокко чыгарасызбы?")) return; D = await api("/api/d/cancel", {id:r.id}); show(); };
+}
+
+function done(r) {
+  layer.clearLayers();
+  lastView = D.online ? "on" : "off";
+  render(`<h2 style="text-align:center">Сапар бүттү</h2><p class="oprice" style="text-align:center;margin:0">${r.price ? r.price + " сом" : "Тариф боюнча"}</p>
+    <p class="muted" style="text-align:center">Жүргүнчүдөн акчаны алыңыз</p><button class="btn main" id="ok">Улантуу</button>`);
+  $("#ok").onclick = () => { lastView = ""; show(); };
+}
+
+function showOffer() {
+  const o = D.offer, box = $("#offer");
+  if (!o) { box.classList.add("hide"); lastOffer = null; return; }
+  if (lastOffer !== o.id) { lastOffer = o.id; beep(); }
+  box.classList.remove("hide");
+  const C = 2 * Math.PI * 32, frac = o.left / o.total;
+  $("#ocard").innerHTML = `<div style="display:flex;align-items:center;gap:14px">
+      <div style="flex:1"><div class="muted">Жаңы заказ</div><div class="oprice">${o.price ? o.price + " с" : "Тариф"}</div>
+      <div class="muted">Сизден ${o.to_pickup_km} км${o.has_dest ? " · сапар ~" + o.dist_km + " км" : " · багыты айтылат"}</div></div>
+      <div class="ring"><svg width="74" height="74"><circle cx="37" cy="37" r="32" stroke="#E1E7F1" stroke-width="7" fill="none"/>
+      <circle cx="37" cy="37" r="32" stroke="#C9A03A" stroke-width="7" fill="none" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - frac)}"/></svg><span>${o.left}</span></div></div>
+    <button class="btn go" id="acc">Алам</button><button class="btn ghost" id="dec">Жок</button>`;
+  $("#acc").onclick = async () => { $("#acc").disabled = true; D = await api("/api/d/accept", {id:o.id}); box.classList.add("hide"); show(); };
+  $("#dec").onclick = async () => { D = await api("/api/d/decline", {id:o.id}); box.classList.add("hide"); show(); };
+}
+
+let lastView = "";
+function show() {
+  if (!D || D.error) return;
+  header();
+  if (D.status !== "active") {
+    render(`<h2>${D.status === "pending" ? "Арызыңыз текшерилүүдө" : "Аккаунт бөгөттөлгөн"}</h2><p class="muted">Админ менен байланышыңыз.</p>`);
+    return;
+  }
+  showOffer();
+  const key = D.ride ? "ride" + D.ride.id + D.ride.status : D.online ? "on" : "off";
+  if (key !== lastView) { lastView = key; D.ride ? viewRide() : viewHome(); }
+  if (!D.ride) layer.clearLayers();
+}
+
+async function refresh() {
+  const s = await api("/api/d/state");
+  if (s.error === "auth") { clearInterval(poll); return viewLogin(false); }
+  D = s;
+  show();
+}
+
+async function boot() {
+  const m = await api("/api/me?kind=driver");
+  if (!m.auth) return viewLogin(m.pending, m.link);
+  await refresh();
+  if (D.online || D.ride) { startGps(); wake(true); }
+  else getPos().then(drawMe);
+  clearInterval(poll); poll = setInterval(refresh, 2000);
+}
+boot();
+</script>
+</body>
+</html>

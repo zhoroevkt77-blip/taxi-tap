@@ -212,6 +212,7 @@ SCHEMA = [
         token TEXT PRIMARY KEY,         -- браузердеги cookie
         uid TEXT,                       -- ырасталгандан кийин: 'ph:+996...'
         phone TEXT, name TEXT,
+        kind TEXT DEFAULT 'rider',      -- rider | driver
         verified INTEGER DEFAULT 0,
         created_at REAL)""",
     "CREATE INDEX IF NOT EXISTS idx_rides_status ON rides(status)",
@@ -531,12 +532,23 @@ def phone_uid(phone):
     return "ph:+" + d if len(d) >= 11 else None
 
 
-def web_session_new(phone, name):
+def web_session_new(phone, name, kind="rider"):
     import secrets
     tok = secrets.token_urlsafe(18)
-    query("INSERT INTO web_sessions (token, phone, name, created_at) VALUES (?, ?, ?, ?)",
-          (tok, phone, name, now()))
+    query("INSERT INTO web_sessions (token, phone, name, kind, created_at) VALUES (?, ?, ?, ?, ?)",
+          (tok, phone, name, kind, now()))
     return tok
+
+
+def driver_by_phone(phone):
+    """Сайттан кирген айдоочу: номери боюнча Telegram'дагы аккаунтун табат."""
+    uid = phone_uid(phone)
+    if not uid:
+        return None
+    for u in query("SELECT uid, phone FROM users WHERE phone IS NOT NULL", (), "all"):
+        if phone_uid(u["phone"]) == uid and get_driver(u["uid"]):
+            return u["uid"]
+    return None
 
 
 def web_session(tok):
@@ -555,6 +567,12 @@ def web_session_verify(tok, phone_seen=None):
         return None
     if phone_seen is not None and phone_uid(phone_seen) != uid:
         return None
+    if s.get("kind") == "driver":
+        duid = driver_by_phone(s["phone"])
+        if not duid:
+            return None
+        query("UPDATE web_sessions SET verified=1, uid=? WHERE token=?", (duid, tok))
+        return duid
     ensure_user(uid, s["name"] or "")
     set_user(uid, phone=uid[3:], name=s["name"] or "")
     query("UPDATE web_sessions SET verified=1, uid=? WHERE token=?", (uid, tok))
@@ -572,3 +590,28 @@ def last_ride_of(uid, within_sec=900):
 
 def rated(rid):
     return query("SELECT ride_id FROM ratings WHERE ride_id=?", (rid,), "one") is not None
+
+
+# ==================== Айдоочунун сайты ====================
+
+def day_start(tz_hours=6):
+    """Бишкек убактысы боюнча бүгүнкү күндүн башы."""
+    t = now()
+    return t - ((t + tz_hours * 3600) % 86400)
+
+
+def driver_today(uid):
+    r = query("SELECT COUNT(*) AS n, COALESCE(SUM(price), 0) AS s FROM rides "
+              "WHERE driver=? AND status='completed' AND completed_at>=?",
+              (uid, day_start()), "one")
+    return {"rides": r["n"], "earned": int(r["s"] or 0)}
+
+
+def driver_history(uid, limit=20):
+    return query("SELECT id, status, price, dist_km, created_at, completed_at FROM rides "
+                 "WHERE driver=? ORDER BY id DESC LIMIT ?", (uid, limit), "all")
+
+
+def offer_for(uid):
+    return query("SELECT * FROM rides WHERE status='searching' AND offered_to=? LIMIT 1",
+                 (uid,), "one")
