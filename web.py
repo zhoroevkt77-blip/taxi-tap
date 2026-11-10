@@ -287,7 +287,7 @@ class H(BaseHTTPRequestHandler):
                 return self._json(core.get_places(uid))
             if u.path == "/api/addr":
                 near = _point([(q.get("lat") or [""])[0], (q.get("lon") or [""])[0]])
-                return self._json({"items": addrbook.search((q.get("q") or [""])[0][:60], near)})
+                return self._json({"items": addrbook.search_all((q.get("q") or [""])[0][:60], near)})
             if u.path == "/api/d/state":
                 return self._json(driver_state(uid))
             if u.path == "/api/d/history":
@@ -557,6 +557,7 @@ class H(BaseHTTPRequestHandler):
             return self._json({"items": addrbook.admin_list((q.get("q") or [""])[0][:60],
                                                             only=(q.get("only") or [""])[0] or None),
                                "count": addrbook.count(), "import": addrbook.import_state,
+                               "dgis": dict(addrbook.dgis_state, on=bool(addrbook.DGIS_KEY)),
                                "kinds": {k: {"icon": v[0], "name": v[1]} for k, v in addrbook.KINDS.items()}})
         if action == "drivers":
             t = core.now()

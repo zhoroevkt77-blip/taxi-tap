@@ -383,10 +383,90 @@ def import_osm():
 def ensure_seeded():
     """Тизме бош болсо — бир жолу OSM'ден жүктөйт (фондо), анан интернеттен чогултулган аттар."""
     if not core.AREA_ON:
+        dgis_selftest()
         return
     if not count()["total"]:
         time.sleep(5)                       # аймактын чеги жүктөлсүн
         import_osm()
     n = seed_web()
+    dgis_selftest()
     if n:
         print("  Даректер: интернеттен чогултулган %d ат кошулду (жери болжолдуу)" % n, flush=True)
+
+
+# ==================== 2ГИС (кошумча издөө, DGIS_KEY болсо) ====================
+# Өз тизмебизде аз натыйжа болсо гана 2ГИСтен сурайт. Натыйжалар базага сакталбайт
+# (2ГИСтин маалыматы лицензиялуу) — эстутумда бир саатка гана кэштелет.
+import os as _os
+
+DGIS_KEY = (_os.environ.get("DGIS_KEY") or "").strip()
+DGIS_URL = "https://catalog.api.2gis.com/3.0/items"
+_dgis_cache = {}
+dgis_state = {"ok": None, "calls": 0, "errors": 0, "last_error": None}
+
+
+def _dgis_parse(data):
+    out = []
+    for it in ((data or {}).get("result") or {}).get("items") or []:
+        p = it.get("point") or {}
+        lat, lon = p.get("lat"), p.get("lon")
+        if lat is None or lon is None:
+            continue
+        if core.AREA_ON and not core.in_area(lat, lon):
+            continue
+        name = it.get("name") or it.get("address_name") or it.get("full_name") or ""
+        sub = it.get("address_name") if it.get("address_name") and it.get("address_name") != name else ""
+        if not sub:
+            full = it.get("full_name") or ""
+            sub = ", ".join(x.strip() for x in full.split(",")[:-1][-2:]) if "," in full else ""
+        out.append({"id": None, "name": name, "kind": "poi", "icon": "📍", "area": (sub + " · 2ГИС").strip(" ·"),
+                    "lat": lat, "lon": lon, "aliases": "", "source": "2gis", "approx": False})
+    return out
+
+
+def dgis_search(q, near=None, limit=6):
+    if not DGIS_KEY or len((q or "").strip()) < 3:
+        return []
+    key = (norm(q), round(near[0], 2) if near else 0, round(near[1], 2) if near else 0)
+    hit = _dgis_cache.get(key)
+    if hit and hit[0] > time.time():
+        return hit[1]
+    c = near or ((core.AREA_BBOX[0] + core.AREA_BBOX[2]) / 2, (core.AREA_BBOX[1] + core.AREA_BBOX[3]) / 2)
+    params = {"q": q, "key": DGIS_KEY, "location": "%f,%f" % (c[1], c[0]), "radius": 40000,
+              "fields": "items.point,items.address_name,items.full_name", "page_size": 10, "locale": "ru_KG"}
+    try:
+        dgis_state["calls"] += 1
+        req = urllib.request.Request(DGIS_URL + "?" + urllib.parse.urlencode(params),
+                                     headers={"User-Agent": "TaksiTAP/1.0"})
+        with urllib.request.urlopen(req, timeout=6) as r:
+            data = json.loads(r.read().decode())
+        code = ((data.get("meta") or {}).get("code"))
+        if code not in (200, 404, None):
+            raise RuntimeError("meta %s: %s" % (code, (data.get("meta") or {}).get("error")))
+        res = _dgis_parse(data)[:limit]
+        dgis_state["ok"] = True
+    except Exception as e:
+        dgis_state.update(ok=False, last_error=str(e)[:200])
+        dgis_state["errors"] += 1
+        res = []
+    if len(_dgis_cache) > 2000:
+        _dgis_cache.clear()
+    _dgis_cache[key] = (time.time() + 3600, res)
+    return res
+
+
+def search_all(q, near=None, limit=8):
+    """Адегенде өз тизмебиз; аз болсо — 2ГИС (кайталанганы чыкпайт)."""
+    own = search(q, near, limit)
+    if len(own) >= 3 or not DGIS_KEY:
+        return own
+    names = {norm(x["name"]) for x in own}
+    extra = [x for x in dgis_search(q, near) if norm(x["name"]) not in names]
+    return (own + extra)[:limit + 3]
+
+
+def dgis_selftest():
+    if DGIS_KEY:
+        r = dgis_search("Базар-Коргон", (41.0417, 72.7472))
+        print("  2ГИС: %s (%d натыйжа)%s" % ("ачкыч иштейт" if dgis_state["ok"] else "иштебей жатат", len(r),
+                                            "" if dgis_state["ok"] else " — " + str(dgis_state["last_error"])), flush=True)

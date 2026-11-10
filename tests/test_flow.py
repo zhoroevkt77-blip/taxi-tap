@@ -442,6 +442,15 @@ class AddrBook(unittest.TestCase):
         self.assertIsNone(addrbook.save("", "food", 42.49, 78.39))
         self.assertEqual(addrbook.count()["hidden"], 1)
 
+    def test_dgis_parse(self):
+        data = {"meta": {"code": 200}, "result": {"items": [
+            {"name": "Нурбек", "address_name": "Текебаева, 21", "full_name": "Базар-Коргон, Нурбек", "point": {"lat": 42.49, "lon": 78.39}},
+            {"name": "Жок жер"}]}}
+        r = addrbook._dgis_parse(data)
+        self.assertEqual(len(r), 1)
+        self.assertEqual(r[0]["area"], "Текебаева, 21 · 2ГИС")
+        self.assertEqual(addrbook.dgis_search("нурбек"), [])          # ачкыч жок — сурабайт
+
     def test_suggest_and_seed(self):
         # жүргүнчү сунуштады — азырынча көрүнбөйт
         a1 = addrbook.suggest("Нурбек той-кана", 42.4910, 78.3910, by="ph:1", weight=1)

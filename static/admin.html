@@ -442,7 +442,7 @@ async function viewAddr(q) {
   const K = A.kinds, c = A.count, im = A.import;
   $("#main").innerHTML = `<div class="panel"><h3>Даректер тизмеси — жүргүнчүлөр «Кайдан / Кайда» жазганда ушундан сунуш чыгат</h3>
       <div class="item"><div class="main"><b>${c.total} дарек</b><span class="muted">${c.admin} — өзүңүз кошкон · ${c.hidden} жашырылган ·
-        ${im.running ? "OpenStreetMap'тен жүктөлүүдө…" : im.error ? "OSM жүктөлбөдү: " + esc(im.error) : im.last ? "OSM акыркы жолу: +" + im.added + " жаңы" : "OSM'ден азырынча жүктөлө элек"}</span></div>
+        ${im.running ? "OpenStreetMap'тен жүктөлүүдө…" : im.error ? "OSM жүктөлбөдү: " + esc(im.error) : im.last ? "OSM акыркы жолу: +" + im.added + " жаңы" : "OSM'ден азырынча жүктөлө элек"}<br>${A.dgis.on ? (A.dgis.ok === false ? "⚠️ 2ГИС иштебей жатат: " + esc(A.dgis.last_error || "") : "🟢 2ГИС кошумча издөө күйүк · " + A.dgis.calls + " суроо (рестарттан бери)") : "2ГИС туташкан эмес"}</span></div>
         <button class="btn" id="dImp" ${im.running ? "disabled" : ""}>↻ OpenStreetMap'тен жүктөө</button>
         <button class="btn gold" id="dNew">＋ Жаңы дарек</button></div>
       <div class="item" style="gap:6px">
