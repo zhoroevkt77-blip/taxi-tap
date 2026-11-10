@@ -150,3 +150,8 @@ input.f::placeholder{color:#8a8a95}
 .grab:before{content:"";position:absolute;left:50%;top:8px;width:44px;height:5px;margin-left:-22px;border-radius:3px;background:#d4d4db}
 .grab.down:after{content:"▲ Ачуу";position:absolute;right:4px;top:2px;font-size:11px;font-weight:800;color:#8a8a95}
 .sheet{will-change:transform}
+/* v9: «Жабуу / Ачуу» жазуусу дайыма көрүнөт, чоңураак */
+.grab{height:30px!important;margin:-6px auto 4px!important}
+.grab:before{top:12px!important}
+.grab:after{content:"▼ Жабуу";position:absolute;right:0;top:0;font-size:15px;font-weight:800;color:#3a3a44;background:#f1f1f4;border:1px solid #e6e6eb;border-radius:14px;padding:4px 12px;line-height:1.2}
+.grab.down:after{content:"▲ Ачуу"!important;font-size:15px!important;color:#16161a!important;background:linear-gradient(135deg,#ffc61a,#ffb703)!important;border-color:rgba(190,130,0,.35)!important;right:0!important;top:0!important}
