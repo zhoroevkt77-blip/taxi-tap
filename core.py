@@ -671,7 +671,7 @@ def quote(p_lat, p_lon, d_lat=None, d_lon=None, cls="econom"):
     k = surge_k(city)
     cfg = class_config()
     if cls not in cfg or not cfg[cls]["on"]:
-        cls = "econom"
+        cls = next(c for c in cfg if cfg[c]["on"])
     base = {"city": city, "dist_km": None, "price": None, "surge": k, "tariff": t, "cls": cls,
             "prices": {c: None for c in cfg if cfg[c]["on"]}}
     if d_lat is not None and city and not in_area(d_lat, d_lon):
@@ -690,8 +690,8 @@ def quote(p_lat, p_lon, d_lat=None, d_lon=None, cls="econom"):
 # Коэффициент тарифке көбөйтүлөт. Админ «Тарифтер» бөлүмүнөн өзгөртөт.
 CLASSES = {
     "econom": {"name": "Эконом", "k": 1.0, "on": True},
-    "comfort": {"name": "Комфорт", "k": 1.3, "on": True},
-    "minivan": {"name": "Минивэн", "k": 1.5, "on": True},
+    "comfort": {"name": "Комфорт", "k": 1.3, "on": False},    # айдоочулары чыкканда күйгүзүлөт
+    "minivan": {"name": "Минивэн", "k": 1.5, "on": False},
     "delivery": {"name": "Жеткирүү", "k": 1.0, "on": True},
 }
 DEFAULT_DRIVER_CLASSES = ("econom", "delivery")
@@ -703,9 +703,9 @@ def class_config():
     for c, d in CLASSES.items():
         x = dict(d)
         x.update({k: v for k, v in (saved.get(c) or {}).items() if k in ("k", "on")})
-        if c == "econom":
-            x["on"] = True                     # негизги класс өчпөйт
         out[c] = x
+    if not any(x["on"] for x in out.values()):
+        out["econom"]["on"] = True             # баары өчсө — заказ бербей калбасын
     return out
 
 
@@ -721,6 +721,8 @@ def set_class_config(rows):
         if not 0.5 <= k <= 5:
             return False
         clean[c] = {"k": k, "on": bool(x.get("on", True))}
+    if not any(x["on"] for x in clean.values()) and len(clean) == len(CLASSES):
+        return False                           # жок дегенде бир класс күйүк болушу керек
     set_setting("classes", clean)
     return True
 

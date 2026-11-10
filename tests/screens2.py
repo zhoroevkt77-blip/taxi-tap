@@ -16,6 +16,7 @@ core.ensure_user(DRV, "Бакыт"); core.set_user(DRV, phone=DRV[3:])
 flow.register_driver(DRV, "Бакыт", "Toyota Camry", "Ак", "01 123 ABC", {"license": "x", "techpass": "x", "car": "x"})
 flow.admin_driver(DRV, "approve"); core.add_tx(DRV, 600, "topup")
 core.set_driver(DRV, classes="econom,comfort,delivery")
+core.set_class_config({"comfort": {"k": 1.3, "on": True}})
 core.driver_location(DRV, 42.4950, 78.3990, live_period=3600)
 
 REV = {"address": {"road": "Абдрахманов көчөсү", "house_number": "128"}}

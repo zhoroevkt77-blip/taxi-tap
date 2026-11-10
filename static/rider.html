@@ -340,7 +340,7 @@ async function viewQuote() {
       ? "Такси ТАП! Базар-Коргон районунун ичинде гана иштейт. Шаар аралык каттамдарга бара албайбыз."
       : "Бул жерде Такси ТАП! азырынча иштебейт."}</p><button class="btn ghost" id="back">Артка</button>`); $("#back").onclick = viewIdle; return; }
   S.quote = q;
-  if (!q.classes.some(c => c.id === S.cls)) S.cls = "econom";
+  if (!q.classes.some(c => c.id === S.cls)) S.cls = q.classes[0].id;
   const ICON = {econom:"🚕", comfort:"🚘", minivan:"🚐", delivery:"📦"};
   const sub = q.price ? `${q.dist_km} км · ~${q.minutes} мүн` : `отуруу ${Math.round(q.tariff.base)} с + ${Math.round(q.tariff.per_km)} с/км`;
   const cur = () => q.classes.find(c => c.id === S.cls);

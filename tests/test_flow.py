@@ -298,10 +298,19 @@ class Features(unittest.TestCase):
     def test_classes_price_and_dispatch(self):
         q = core.quote(*KARAKOL, *DEST)
         self.assertEqual(q["cls"], "econom")
-        self.assertGreater(q["prices"]["comfort"], q["prices"]["econom"])
-        self.assertTrue(core.set_class_config({"minivan": {"k": 1.5, "on": False}}))
+        self.assertNotIn("comfort", q["prices"])                         # демейки өчүк
+        self.assertEqual(core.quote(*KARAKOL, *DEST, cls="comfort")["cls"], "econom")
+        self.assertTrue(core.set_class_config({"comfort": {"k": 1.3, "on": True}}))
         core._settings_cache.clear()
-        self.assertNotIn("minivan", core.quote(*KARAKOL, *DEST)["prices"])
+        q = core.quote(*KARAKOL, *DEST)
+        self.assertGreater(q["prices"]["comfort"], q["prices"]["econom"])
+        self.assertNotIn("minivan", q["prices"])
+        off = {c: {"k": 1, "on": False} for c in core.CLASSES}
+        self.assertFalse(core.set_class_config(off))                       # баары өчпөйт
+        self.assertTrue(core.set_class_config(dict(off, delivery={"k": 1, "on": True})))
+        core._settings_cache.clear()
+        self.assertEqual(core.quote(*KARAKOL, *DEST)["cls"], "delivery")     # эконом өчүк
+        core.set_class_config({"comfort": {"k": 1.3, "on": True}}); core._settings_cache.clear()
         p = rider("0555 000 071")
         e = make_driver("0700 000 071", "Эконом", NEAR, 0)
         c = make_driver("0700 000 072", "Комфорт", (42.4975, 78.4020), 0)
