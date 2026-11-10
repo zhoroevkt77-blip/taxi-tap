@@ -256,6 +256,9 @@ SCHEMA = [
     """CREATE TABLE IF NOT EXISTS passenger_ratings (
         ride_id INTEGER PRIMARY KEY, stars INTEGER, at REAL)""",
     "CREATE INDEX IF NOT EXISTS idx_msg_ride ON messages(ride_id)",
+    f"""CREATE TABLE IF NOT EXISTS addresses (
+        id {_PK}, name TEXT, kind TEXT, lat REAL, lon REAL, aliases TEXT, area TEXT,
+        source TEXT, hidden INTEGER DEFAULT 0, osm_key TEXT, created_at REAL)""",
     "CREATE INDEX IF NOT EXISTS idx_rides_status ON rides(status)",
     "CREATE INDEX IF NOT EXISTS idx_tx_kind ON balance_tx(kind, at)",
     "CREATE INDEX IF NOT EXISTS idx_drivers_online ON drivers(online, status)",

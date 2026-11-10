@@ -22,6 +22,7 @@ from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
+import addrbook
 import core
 import flow
 import ops
@@ -284,6 +285,9 @@ class H(BaseHTTPRequestHandler):
                 return self._json({"ride": ride_view(core.last_ride_of(uid))})
             if u.path == "/api/places":
                 return self._json(core.get_places(uid))
+            if u.path == "/api/addr":
+                near = _point([(q.get("lat") or [""])[0], (q.get("lon") or [""])[0]])
+                return self._json({"items": addrbook.search((q.get("q") or [""])[0][:60], near)})
             if u.path == "/api/d/state":
                 return self._json(driver_state(uid))
             if u.path == "/api/d/history":
@@ -540,6 +544,10 @@ class H(BaseHTTPRequestHandler):
     def _admin_get(self, action, q):
         if action == "overview":
             return self._json(core.admin_overview())
+        if action == "addr":
+            return self._json({"items": addrbook.admin_list((q.get("q") or [""])[0][:60]),
+                               "count": addrbook.count(), "import": addrbook.import_state,
+                               "kinds": {k: {"icon": v[0], "name": v[1]} for k, v in addrbook.KINDS.items()}})
         if action == "drivers":
             t = core.now()
             rows = core.admin_drivers()
@@ -599,6 +607,21 @@ class H(BaseHTTPRequestHandler):
             if city not in core.CITIES or any(v is None or v < 0 for v in vals):
                 return self._json({"error": "bad"}, 400)
             core.set_tariff(city, *vals)
+            return self._json({"ok": True})
+        if action == "addr":
+            p = _point(b.get("p"))
+            aid = addrbook.save(_txt(b.get("name"), 80), b.get("kind") or "poi", *(p or (None, None)),
+                                aliases=_txt(b.get("aliases"), 200), area=_txt(b.get("area"), 60),
+                                aid=int(b.get("id") or 0) or None)
+            return self._json({"id": aid} if aid else {"error": "bad"}, 200 if aid else 400)
+        if action == "addr_hide":
+            addrbook.set_hidden(int(b.get("id") or 0), bool(b.get("hidden")))
+            return self._json({"ok": True})
+        if action == "addr_delete":
+            addrbook.delete(int(b.get("id") or 0))
+            return self._json({"ok": True})
+        if action == "addr_import":
+            threading.Thread(target=addrbook.import_osm, daemon=True).start()
             return self._json({"ok": True})
         if action == "classes":
             if not core.set_class_config(b.get("classes")):
@@ -687,6 +710,7 @@ if __name__ == "__main__":
     import dispatch
     core.init_db()
     threading.Thread(target=core.load_area, daemon=True).start()
+    threading.Thread(target=addrbook.ensure_seeded, daemon=True).start()
     start()
     while True:                     # Telegram'сыз режим: dispatch ушул жерде
         try:

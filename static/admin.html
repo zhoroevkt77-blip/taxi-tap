@@ -76,6 +76,7 @@ td input.f{padding:7px 8px;max-width:90px;min-width:58px}
   <button data-t="rides">Сапарлар</button>
   <button data-t="finance">Каржы</button>
   <button data-t="tariffs">Тарифтер</button>
+  <button data-t="addr">Даректер</button>
   <button data-t="area">Аймак</button>
 </nav>
 <main id="main"></main>
@@ -434,10 +435,66 @@ function drawPreview() {
   $("#hint").textContent = draw.length ? `${draw.length} чекит. Аймакты толук айланып чыккандан кийин «Сактоо» басыңыз.` : "Картаны аймактын четтери боюнча басыңыз.";
 }
 
+// ---------- даректер китепчеси ----------
+let dmap = null, dlyr = null, DF = null;
+async function viewAddr(q) {
+  const A = await api("/api/a/addr" + (q ? "?q=" + encodeURIComponent(q) : ""));
+  const K = A.kinds, c = A.count, im = A.import;
+  $("#main").innerHTML = `<div class="panel"><h3>Даректер тизмеси — жүргүнчүлөр «Кайдан / Кайда» жазганда ушундан сунуш чыгат</h3>
+      <div class="item"><div class="main"><b>${c.total} дарек</b><span class="muted">${c.admin} — өзүңүз кошкон · ${c.hidden} жашырылган ·
+        ${im.running ? "OpenStreetMap'тен жүктөлүүдө…" : im.error ? "OSM жүктөлбөдү: " + esc(im.error) : im.last ? "OSM акыркы жолу: +" + im.added + " жаңы" : "OSM'ден азырынча жүктөлө элек"}</span></div>
+        <button class="btn" id="dImp" ${im.running ? "disabled" : ""}>↻ OpenStreetMap'тен жүктөө</button>
+        <button class="btn gold" id="dNew">＋ Жаңы дарек</button></div>
+      <div id="dForm"></div></div>
+    <div class="panel"><div style="padding:10px 14px"><input class="f" id="dQ" placeholder="Издөө: базар, мектеп, Ленина…" value="${esc(q || "")}"></div>
+      <div id="dList">${A.items.length ? A.items.map(x => `<div class="item"><div class="main"><b>${x.icon} ${esc(x.name)} ${x.hidden ? '<span class="tag t-cancelled">жашырылган</span>' : ""}</b>
+          <span class="muted">${esc(K[x.kind] ? K[x.kind].name : x.kind)}${x.area ? " · " + esc(x.area) : ""}${x.aliases ? " · башка аттары: " + esc(x.aliases) : ""} · ${x.source === "admin" ? "өзүңүз" : "OSM"}</span></div>
+          <button class="btn" data-ed="${x.id}">Оңдоо</button><button class="btn" data-hd="${x.id}" data-h="${x.hidden ? 0 : 1}">${x.hidden ? "Көрсөтүү" : "Жашыруу"}</button></div>`).join("")
+        : `<div class="empty">${q ? "Табылган жок." : "Тизме бош. «OpenStreetMap'тен жүктөө» же «Жаңы дарек» басыңыз."}</div>`}</div></div>`;
+  let t = null;
+  $("#dQ").oninput = e => { clearTimeout(t); t = setTimeout(() => viewAddr(e.target.value.trim()), 400); };
+  if (q) { const i = $("#dQ"); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
+  $("#dImp").onclick = async () => { await api("/api/a/addr_import", {}); setTimeout(() => viewAddr(q), 800);
+    setTimeout(() => tab === "addr" && viewAddr(q), 20000); };
+  $("#dNew").onclick = () => addrForm({kind:"poi"}, K, q);
+  document.querySelectorAll("[data-ed]").forEach(b => b.onclick = () => addrForm(A.items.find(x => x.id == b.dataset.ed), K, q));
+  document.querySelectorAll("[data-hd]").forEach(b => b.onclick = async () => { await api("/api/a/addr_hide", {id:+b.dataset.hd, hidden:b.dataset.h === "1"}); viewAddr(q); });
+}
+async function addrForm(x, K, q) {
+  DF = {id:x.id || null, p:x.lat ? [x.lat, x.lon] : null};
+  $("#dForm").innerHTML = `<div class="fset">
+      <div><label>Аталышы (жүргүнчү ушуну көрөт)</label><input class="f" id="dN" placeholder="Борбордук базар" value="${esc(x.name || "")}"></div>
+      <div><label>Түрү</label><select class="f" id="dK">${Object.entries(K).map(([k, v]) => `<option value="${k}" ${k === x.kind ? "selected" : ""}>${v.icon} ${esc(v.name)}</option>`).join("")}</select></div>
+      <div><label>Башка аттары (үтүр менен)</label><input class="f" id="dAl" placeholder="эски базар, рынок" value="${esc(x.aliases || "")}"></div>
+      <div><label>Айыл / кичи район</label><input class="f" id="dAr" placeholder="Базар-Коргон" value="${esc(x.area || "")}"></div>
+    </div>
+    <div style="padding:0 14px"><p class="muted" id="dHint">Картадан ошол жерди басыңыз.</p><div id="dmap" style="height:300px;border-radius:16px;overflow:hidden;position:relative"></div></div>
+    <div style="padding:10px 14px 14px"><button class="btn ok" id="dSave">Сактоо</button> <button class="btn" id="dX">Жабуу</button>
+      ${x.id ? `<button class="btn bad" id="dDel">Өчүрүү</button>` : ""} <span class="err" id="dEr"></span></div>`;
+  const a = await (await fetch("/api/area")).json();
+  dmap = L.map("dmap").setView(DF.p || a.center, DF.p ? 17 : 13);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:"© OpenStreetMap"}).addTo(dmap);
+  dlyr = L.layerGroup().addTo(dmap);
+  const mark = () => { dlyr.clearLayers(); if (DF.p) L.marker(DF.p, {icon:dot("#ffb703")}).addTo(dlyr);
+    $("#dHint").textContent = DF.p ? "✓ Жери белгиленди. Өзгөртүү үчүн картаны кайра басыңыз." : "Картадан ошол жерди басыңыз."; };
+  mark();
+  dmap.on("click", e => { DF.p = [e.latlng.lat, e.latlng.lng]; mark(); });
+  $("#dX").onclick = () => { $("#dForm").innerHTML = ""; };
+  $("#dSave").onclick = async () => {
+    if (!$("#dN").value.trim()) return $("#dEr").textContent = "Аталышын жазыңыз.";
+    if (!DF.p) return $("#dEr").textContent = "Картадан жерин басыңыз.";
+    const r = await api("/api/a/addr", {id:DF.id, name:$("#dN").value, kind:$("#dK").value, aliases:$("#dAl").value, area:$("#dAr").value, p:DF.p});
+    if (r.error) return $("#dEr").textContent = "Сакталган жок: жер иштөө аймагынын ичинде болушу керек.";
+    viewAddr(q);
+  };
+  const del = $("#dDel");
+  if (del) del.onclick = async () => { if (!confirm("Бул даректи биротоло өчүрөсүзбү?")) return; await api("/api/a/addr_delete", {id:DF.id}); viewAddr(q); };
+  $("#dN").focus();
+}
 function show(t) {
   tab = t; lyr = null;
   document.querySelectorAll("nav button").forEach(b => b.classList.toggle("on", b.dataset.t === t));
-  ({map:viewMap, drivers:viewDrivers, topups:viewTopups, rides:viewRides, tariffs:viewTariffs, area:viewArea, finance:viewFinance})[t]();
+  ({map:viewMap, drivers:viewDrivers, topups:viewTopups, rides:viewRides, tariffs:viewTariffs, area:viewArea, finance:viewFinance, addr:() => viewAddr("")})[t]();
 }
 document.querySelectorAll("nav button").forEach(b => b.onclick = () => show(b.dataset.t));
 async function boot() {

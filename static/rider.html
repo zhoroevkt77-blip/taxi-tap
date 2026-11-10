@@ -65,6 +65,17 @@ input.f:focus{border-color:var(--navy)}
 .carm{width:30px;height:30px;border-radius:50%;background:var(--navy);border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3);display:grid;place-items:center;color:#fff;font-size:15px}
 .carm.mine{background:var(--gold);color:#16161a}
 .hide{display:none!important}
+.ab{border:1px solid var(--line);border-radius:16px;overflow:hidden;margin-bottom:6px}
+.abr{display:flex;align-items:center;gap:10px;padding:2px 12px}
+.abr+.abr{border-top:1px solid var(--line)}
+.abr.on{background:#fff8e6}
+.ai{flex:1;border:0;outline:0;background:transparent;font-size:16px;padding:12px 0;color:var(--ink);font-weight:600;min-width:0}
+.res{display:flex;gap:10px;align-items:center}
+.res .ri{font-size:20px;width:26px;text-align:center;flex:none}
+.res .muted{display:block}
+.fromrow{display:flex;align-items:center;gap:6px;width:100%;border:0;background:transparent;padding:10px 4px 2px;font-size:14px;cursor:pointer;text-align:left;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fromrow b{overflow:hidden;text-overflow:ellipsis}
+.hn{width:70px;border:1px solid var(--line);border-radius:10px;padding:6px 8px;font-size:14px;text-align:center;flex:none}
 .chips{display:flex;gap:8px;overflow-x:auto;margin:10px 0 2px;padding-bottom:2px}
 .chips button{flex:none;border:0;background:var(--paper);border-radius:12px;padding:10px 12px;font-size:14px;font-weight:600;color:var(--ink);cursor:pointer;max-width:170px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cls{display:flex;gap:8px;overflow-x:auto;margin-top:10px;padding-bottom:2px}
@@ -133,44 +144,6 @@ async function reverse(lat, lon) {
     return (street ? street + (a.house_number ? " " + a.house_number : "") : (j.display_name || "").split(",")[0]) || "Картадагы чекит";
   } catch (e) { return "Картадагы чекит"; }
 }
-// Издөө: адегенде Photon (ката жазылса да табат), анан Nominatim.
-// Жыйынтык: [{name, sub, lat, lon}]
-function cleanQuery(q) {
-  return q.replace(/(^|[\s,])(улица|ул|просп|пр|мкр)\.?(?=[А-ЯЁӨҮҢA-Z])/gu, "$1$2 ")   // «улБерикбаева» → «ул Берикбаева»
-          .replace(/\s+/g, " ").trim();
-}
-async function search(q) {
-  q = cleanQuery(q);
-  const c = map.getCenter(), out = [], seen = new Set();
-  const add = (name, sub, lat, lon) => {
-    const k = name + "|" + (+lat).toFixed(4);
-    if (!name || seen.has(k)) return; seen.add(k); out.push({name, sub, lat:+lat, lon:+lon});
-  };
-  try {
-    const bb = window.AREA && AREA.on ? `&bbox=${AREA.bbox[1]},${AREA.bbox[0]},${AREA.bbox[3]},${AREA.bbox[2]}` : "";
-    const r = await (await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lat=${c.lat}&lon=${c.lng}&limit=10${bb}`)).json();
-    (r.features || []).forEach(f => {
-      const p = f.properties || {}, g = f.geometry.coordinates;
-      if (p.countrycode && p.countrycode !== "KG") return;
-      const street = p.street ? p.street + (p.housenumber ? " " + p.housenumber : "") : "";
-      const name = p.name && p.name !== p.street ? p.name : street || p.name;
-      add(name, [p.name && p.name !== p.street ? street : "", p.district, p.city || p.county].filter(Boolean).join(", "), g[1], g[0]);
-    });
-  } catch (e) {}
-  if (out.length < 3) {
-    try {
-      const d = 0.4, A = window.AREA && AREA.on ? AREA.bbox : null;
-      const vb = A ? [A[1], A[2], A[3], A[0]].join(",") + "&bounded=1" : [c.lng - d, c.lat + d, c.lng + d, c.lat - d].join(",");
-      const r = await (await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=7&countrycodes=kg&accept-language=ky,ru&viewbox=${vb}&q=${encodeURIComponent(q)}`)).json();
-      r.forEach(x => { const parts = x.display_name.split(","); add(parts[0], parts.slice(1, 3).join(","), x.lat, x.lon); });
-    } catch (e) {}
-  }
-  // аймактан сырткарысы чыкпайт; жакынкылар биринчи
-  for (let i = out.length - 1; i >= 0; i--) if (!inArea(out[i].lat, out[i].lon)) out.splice(i, 1);
-  out.sort((a, b) => Math.hypot(a.lat - c.lat, a.lon - c.lng) - Math.hypot(b.lat - c.lat, b.lon - c.lng));
-  return out.slice(0, 7);
-}
-
 // ---------- пин жана карта ----------
 let moveTimer = null;
 map.on("movestart", () => { if (pinActive()) $("#pin").classList.add("up"); });
@@ -183,16 +156,19 @@ map.on("moveend", () => {
 const pinActive = () => S.mode === "idle" || S.mode === "pickDest";
 // Картаны басса — пин ошол жерге барат (жылдырбай эле тандаса болот)
 map.on("click", e => {
-  if (S.mode === "search") { viewPickDest(); }
+  if (S.mode === "search") return;
   if (pinActive()) map.panTo(e.latlng);
 });
 async function onPinMoved() {
   const c = map.getCenter();
+  if (S.mode === "idle" && S.fromLock) {           // дарек тизмеден тандалган — өз атын сактайбыз
+    S.fromLock = false; $("#chipAddr").textContent = S.fromAddr; if ($("#fromTxt")) $("#fromTxt").textContent = S.fromAddr; loadNear(); return;
+  }
   $("#chipAddr").textContent = "…";
   const addr = await reverse(c.lat, c.lng);
   if (addr === null) return;
   $("#chipAddr").textContent = addr;
-  if (S.mode === "idle") { S.from = [c.lat, c.lng]; S.fromAddr = addr; loadNear(); }
+  if (S.mode === "idle") { S.from = [c.lat, c.lng]; S.fromAddr = addr; loadNear(); if ($("#fromTxt")) $("#fromTxt").textContent = addr; }
   else { S.to = [c.lat, c.lng]; S.toAddr = addr; }
 }
 async function loadNear() {
@@ -263,13 +239,15 @@ function pollMe() {
 }
 
 function viewIdle() {
-  S.mode = "idle"; S.to = null; S.quote = null; setPin("from");
+  S.mode = "idle"; S.to = null; S.quote = null; S.hnT = ""; setPin("from");
   rideLayer.clearLayers(); driverMarker = null;
   render(`<button class="search" id="where">🔍&nbsp; Кайда бара жатабыз?</button>
+    <button class="fromrow" id="fromRow"><span class="bul"></span><span class="muted">Кайдан:</span> <b id="fromTxt">${esc(S.fromAddr || "…")}</b> ✏️</button>
     <div class="chips" id="places"></div>
     <button class="btn ghost" id="mapTo">📍 Картадан белгилөө</button>`);
   loadPlaces();
-  $("#where").onclick = viewSearch;
+  $("#where").onclick = () => viewSearch("to");
+  $("#fromRow").onclick = () => viewSearch("from");
   $("#mapTo").onclick = viewPickDest;
   onPinMoved();
 }
@@ -295,28 +273,64 @@ async function loadPlaces(force) {
   });
 }
 
-function viewSearch() {
+// ---------- Кайдан → Кайда (колу менен жазуу, даректер тизмесинен) ----------
+function viewSearch(field) {
   S.mode = "search";
-  render(`<input class="f" id="q" placeholder="Көчө, үй же жай" autocomplete="off">
-    <div class="res" id="pickMap"><b>📍 Картадан тандоо</b><span class="muted">Картаны басыңыз же жылдырыңыз</span></div>
+  let act = field === "from" ? "from" : "to";
+  render(`<div class="ab">
+      <div class="abr" id="rf"><span class="bul"></span><input class="ai" id="qf" placeholder="Кайдан" autocomplete="off" value="${esc(S.fromAddr || "")}"></div>
+      <div class="abr" id="rt"><span class="bul to"></span><input class="ai" id="qt" placeholder="Кайда барасыз?" autocomplete="off" value="${S.to ? esc(S.toAddr) : ""}"></div>
+    </div>
     <div id="list"></div>
+    <button class="btn ghost" id="pickMap">📍 Картадан белгилөө</button>
     <button class="btn ghost" id="back">Артка</button>`);
-  const q = $("#q"); q.focus();
-  $("#pickMap").onclick = viewPickDest;
+  const inp = {from:$("#qf"), to:$("#qt")};
+  const focus = k => { act = k; $("#rf").classList.toggle("on", k === "from"); $("#rt").classList.toggle("on", k === "to"); run(); };
+  inp.from.onfocus = () => { inp.from.select(); focus("from"); };
+  inp.to.onfocus = () => focus("to");
+  $("#pickMap").onclick = () => act === "from" ? (S.mode = "idle", viewIdle()) : viewPickDest();
   $("#back").onclick = viewIdle;
-  let t = null;
-  q.oninput = () => { clearTimeout(t); t = setTimeout(async () => {
-    if (q.value.trim().length < 3) return;
-    $("#list").innerHTML = `<p class="muted">Изделүүдө…</p>`;
-    const res = await search(q.value.trim());
-    $("#list").innerHTML = res.length ? res.map((r, i) =>
-      `<div class="res" data-i="${i}"><b>${esc(r.name)}</b><span class="muted">${esc(r.sub)}</span></div>`).join("")
-      : `<p class="muted">Табылган жок. Көчөнүн атын гана жазып көрүңүз же «Картадан тандоо» басыңыз.</p>`;
-    $("#list").querySelectorAll(".res").forEach(el => el.onclick = () => {
-      const r = res[+el.dataset.i];
-      S.to = [r.lat, r.lon]; S.toAddr = r.name; viewQuote();
-    });
-  }, 450); };
+  let t = null, seq = 0;
+  const choose = r => {
+    if (act === "from") {
+      S.from = [r.lat, r.lon]; S.fromAddr = r.name; S.fromLock = true; map.setView(S.from, 16);
+      inp.from.value = r.name;
+      if (S.to) return viewQuote();
+      inp.to.focus(); return;
+    }
+    S.to = [r.lat, r.lon]; S.toAddr = r.name; viewQuote();
+  };
+  function run() {
+    clearTimeout(t);
+    t = setTimeout(async () => {
+      const my = ++seq, q = inp[act].value.trim();
+      const P = PLACES && !PLACES.error ? PLACES : {recent:[]};
+      let quick = [];
+      if (act === "from") quick.push({icon:"📍", name:"Менин жерим", area:"GPS / картадагы пин", gps:true});
+      if (P.home) quick.push({icon:"🏠", name:"Үй", area:P.home.name || "", lat:P.home.lat, lon:P.home.lon});
+      if (P.work) quick.push({icon:"💼", name:"Иш", area:P.work.name || "", lat:P.work.lat, lon:P.work.lon});
+      (P.recent || []).forEach(r => quick.push({icon:"🕘", name:r.name, area:"", lat:r.lat, lon:r.lon}));
+      let items = [];
+      if (q.length >= 2 && !(act === "from" && q === S.fromAddr)) {
+        const near = S.from || [map.getCenter().lat, map.getCenter().lng];
+        const x = await api(`/api/addr?q=${encodeURIComponent(q)}&lat=${near[0]}&lon=${near[1]}`);
+        if (my !== seq) return;
+        items = x.items || [];
+        quick = quick.filter(r => !r.gps && (r.name + " " + r.area).toLowerCase().includes(q.toLowerCase()));
+      }
+      const all = quick.concat(items);
+      $("#list").innerHTML = all.length ? all.map((r, i) =>
+        `<div class="res" data-i="${i}"><span class="ri">${r.icon}</span><div><b>${esc(r.name)}</b>${r.area ? `<span class="muted">${esc(r.area)}</span>` : ""}</div></div>`).join("")
+        : q.length >= 2 ? `<p class="muted">«${esc(q)}» табылган жок. Башкача жазып көрүңүз (мис. көчөнүн атын гана) же «Картадан белгилөө» басыңыз.</p>` : "";
+      $("#list").querySelectorAll(".res").forEach(el => el.onclick = () => {
+        const r = all[+el.dataset.i];
+        if (r.gps) { S.fromLock = false; inp.from.value = S.fromAddr; return S.to ? viewQuote() : inp.to.focus(); }
+        choose(r);
+      });
+    }, 200);
+  }
+  inp.from.oninput = inp.to.oninput = run;
+  (act === "from" ? inp.from : inp.to).focus();
 }
 
 function viewPickDest(save) {
@@ -346,8 +360,8 @@ async function viewQuote() {
   const sub = q.price ? `${q.dist_km} км · ~${q.minutes} мүн` : `отуруу ${Math.round(q.tariff.base)} с + ${Math.round(q.tariff.per_km)} с/км`;
   const cur = () => q.classes.find(c => c.id === S.cls);
   const priceTxt = c => c.price ? `${c.price} с` : `${c.min} с+`;
-  render(`<div class="row"><span class="bul"></span><div><b>${esc(S.fromAddr)}</b></div></div>
-    <div class="row"><span class="bul to"></span><div><b>${S.to ? esc(S.toAddr) : "Айдоочуга айтам"}</b></div></div>
+  render(`<div class="row"><span class="bul"></span><div style="flex:1"><b>${esc(S.fromAddr)}</b></div><input class="hn" id="hnF" placeholder="үй №" maxlength="12" value="${esc(S.hnF || "")}"></div>
+    <div class="row"><span class="bul to"></span><div style="flex:1"><b>${esc(S.toAddr)}</b></div><input class="hn" id="hnT" placeholder="үй №" maxlength="12" value="${esc(S.hnT || "")}"></div>
     <div class="cls" id="cls">${q.classes.map(c => `<div data-c="${c.id}"><i>${ICON[c.id] || "🚕"}</i><div class="muted">${esc(c.name)}</div><b>${priceTxt(c)}</b></div>`).join("")}</div>
     <div class="muted" style="margin-top:6px">${sub}${q.surge > 1 ? ` · ⚡ ×${q.surge}` : ""} · <span id="qp"></span></div>
     <div id="extra"></div>
@@ -356,6 +370,7 @@ async function viewQuote() {
     <p class="muted" style="margin:6px 0 0">Айдоочу ${q.wait.free_min} мүнөт акысыз күтөт, андан кийин ${q.wait.per_min} сом/мүн.</p>
     <button class="btn main" id="order">Чакыруу</button><button class="btn ghost" id="back">Артка</button>`);
   S.promo = null; S.at = null; S.disc = 0; S.other = null; S.note = "";
+  $("#hnF").oninput = e => S.hnF = e.target.value; $("#hnT").oninput = e => S.hnT = e.target.value;
   const paint = () => {
     $("#cls").querySelectorAll("[data-c]").forEach(el => el.classList.toggle("on", el.dataset.c === S.cls));
     const c = cur();
@@ -403,7 +418,7 @@ async function viewQuote() {
       : $("#oPh") && $("#oPh").value.trim() ? {other_phone:$("#oPh").value, other_name:$("#oNm").value} : {};
     $("#order").disabled = true;
     const r = await api("/api/order", {p:S.from, d:S.to, promo:S.promo, at:S.at, cls:S.cls, note:nt,
-      p_addr:S.fromAddr, d_addr:S.to ? S.toAddr : "", ...oth});
+      p_addr:withHn(S.fromAddr, $("#hnF").value), d_addr:withHn(S.toAddr, $("#hnT").value), ...oth});
     if (r.ride) { S.ride = r.ride; viewRide(); poll(); }
     else { $("#order").disabled = false; alertBox(r.error === "have_active" ? "Сизде активдүү заказ бар."
       : r.error === "bad_time" ? "Убакытты 25 мүнөттөн 3 күнгө чейинки аралыкта тандаңыз."
@@ -411,6 +426,7 @@ async function viewQuote() {
   };
   $("#back").onclick = () => { map.setView(S.from, 15); viewIdle(); };
 }
+const withHn = (a, h) => (h = (h || "").trim()) ? `${a}, ${h}` : a;
 function alertBox(t) { const e = document.createElement("p"); e.className = "err"; e.textContent = t; $("#view").appendChild(e); }
 
 // А → Б маршруту: адегенде түз сызык (дароо), анан жол боюнча (сервер OSRM'ден алат)

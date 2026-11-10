@@ -21,6 +21,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+import addrbook
 import core
 import dispatch
 import ops
@@ -193,6 +194,7 @@ def main():
     global API
     core.init_db()
     threading.Thread(target=core.load_area, daemon=True).start()   # аймактын чеги (OSM)
+    threading.Thread(target=addrbook.ensure_seeded, daemon=True).start()   # даректер (OSM)
     token = read_token()
     if token:
         API = "https://api.telegram.org/bot%s/" % token

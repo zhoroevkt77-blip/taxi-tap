@@ -10,6 +10,7 @@ import shutil
 import sys
 import tempfile
 import unittest
+import urllib.parse
 import urllib.request
 
 _tmp = tempfile.mkdtemp()
@@ -18,6 +19,7 @@ os.environ.update(SQLITE_PATH=os.path.join(_tmp, "t.db"), DATA_DIR=_tmp, DATABAS
                   WEB_DEV_LOGIN="1", SITE_URL="https://taxi.example.kg", SERVICE_AREA="off")
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import addrbook  # noqa: E402
 import bot       # noqa: E402
 import core      # noqa: E402
 import dispatch  # noqa: E402
@@ -402,6 +404,45 @@ class Features(unittest.TestCase):
         self.assertIsNone(core.get_places(p)["home"])
 
 
+class AddrBook(unittest.TestCase):
+    def setUp(self):
+        core.init_db()
+        core.query("DELETE FROM addresses"); addrbook._reset()
+
+    def test_parse_merge_search(self):
+        data = {"elements": [
+            {"type": "node", "id": 1, "lat": 42.49, "lon": 78.39, "tags": {"place": "town", "name": "Каракол"}},
+            {"type": "node", "id": 2, "lat": 42.53, "lon": 78.45, "tags": {"place": "village", "name": "Ак-Суу"}},
+            {"type": "way", "id": 10, "center": {"lat": 42.490, "lon": 78.390}, "tags": {"highway": "residential", "name": "Юбилейная улица"}},
+            {"type": "way", "id": 11, "center": {"lat": 42.492, "lon": 78.392}, "tags": {"highway": "residential", "name": "Юбилейная улица"}},
+            {"type": "way", "id": 12, "center": {"lat": 42.530, "lon": 78.450}, "tags": {"highway": "residential", "name": "Юбилейная улица"}},
+            {"type": "way", "id": 13, "center": {"lat": 42.495, "lon": 78.395}, "tags": {"amenity": "marketplace", "name": "Борбордук базар"}},
+            {"type": "node", "id": 14, "lat": 42.494, "lon": 78.396, "tags": {"amenity": "school", "name": "№1 мектеп"}},
+            {"type": "node", "id": 15, "lat": 42.494, "lon": 78.396, "tags": {"amenity": "bench"}},
+        ]}
+        items = addrbook.parse_overpass(data)
+        streets = [x for x in items if x["kind"] == "street"]
+        self.assertEqual(len(streets), 2)                          # бир шаарда бириктирилди, Ак-Суудагысы өзүнчө
+        self.assertEqual(streets[0]["name"], "Юбилейная көчөсү")
+        self.assertEqual({x["area"] for x in streets}, {"Каракол", "Ак-Суу"})
+        self.assertEqual(addrbook.merge(items), len(items))
+        self.assertEqual(addrbook.merge(items), 0)                  # кайталанбайт
+        r = addrbook.search("баз")
+        self.assertEqual(r[0]["name"], "Борбордук базар"); self.assertEqual(r[0]["icon"], "🛒")
+        self.assertEqual(addrbook.search("юбилейн")[0]["kind"], "street")
+        near = addrbook.search("юбилейная", near=(42.53, 78.45))
+        self.assertEqual(near[0]["area"], "Ак-Суу")                  # жакыны биринчи
+        self.assertTrue(addrbook.search("мектеп"))
+        self.assertEqual(addrbook.search("кочосу"), [])             # «көчөсү» өзү издөөгө кирбейт
+        # админ: кошуу, башка аты, жашыруу
+        aid = addrbook.save("Нурбек ресторан", "food", 42.491, 78.391, aliases="нурбек, той кана")
+        self.assertEqual(addrbook.search("той")[0]["id"], aid)
+        addrbook.set_hidden(aid, True)
+        self.assertEqual(addrbook.search("нурбек"), [])
+        self.assertIsNone(addrbook.save("", "food", 42.49, 78.39))
+        self.assertEqual(addrbook.count()["hidden"], 1)
+
+
 class DestOut(unittest.TestCase):
     def test_intercity_refused(self):
         core.init_db()
@@ -642,6 +683,8 @@ class Http(unittest.TestCase):
         self.assertTrue(drv("/api/d/online", {"on": True, "p": list(NEAR)})["online"])
         pas("/api/login", {"phone": "0555 444 555", "name": "Айгүл", "agree": True})
         self.assertEqual(pas("/api/order", {"p": list(KARAKOL)}).get("error"), "need_dest")    # багытсыз болбойт
+        addrbook.save("Борбордук базар", "market", 42.495, 78.395)
+        self.assertEqual(pas("/api/addr?q=" + urllib.parse.quote("базар"))["items"][0]["name"], "Борбордук базар")
         self.assertEqual(pas("/api/order", {"p": list(KARAKOL), "d": list(DEST)})["ride"]["status"], "searching")
         dispatch.tick()
         st = drv("/api/d/state")
