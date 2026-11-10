@@ -55,6 +55,10 @@ input.f{width:100%;font-size:17px;padding:14px;border-radius:14px;border:1px sol
 @keyframes b{50%{opacity:.25}}
 .hist{font-size:14px}
 .hide{display:none!important}
+table.fin{width:100%;border-collapse:collapse;font-size:14px;margin:8px 0}
+table.fin th{font-size:11px;color:var(--soft);font-weight:600;text-align:right;padding:6px 4px}
+table.fin td{text-align:right;padding:9px 4px;border-top:1px solid var(--line)}
+table.fin td:first-child,table.fin th:first-child{text-align:left}
 .docs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:4px 0 6px}
 .doc{border:1.5px dashed var(--line);border-radius:14px;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;color:var(--soft);text-align:center;padding:6px;cursor:pointer;background:var(--paper) center/cover no-repeat;position:relative}
 .doc.ok{border:2px solid var(--ok);color:transparent}
@@ -191,13 +195,15 @@ function viewHome() {
       ${stats}<button class="btn red" id="off">Линиядан чыгуу</button>`);
     $("#off").onclick = async () => { D = await api("/api/d/online", {on:false}); wake(false); lastView = ""; show(); };
   } else {
-    render(`<h2>Салам, ${esc(D.name || "айдоочу")}!</h2><p class="muted">${esc(D.car)}</p>
+    render(`<h2>Салам, ${esc(D.name || "айдоочу")}!</h2><p class="muted">${esc(D.car_color)} ${esc(D.car_model)}, ${esc(D.car_plate)}</p>
       ${low ? `<p class="err">Баланс жетишсиз — заказдар келбейт.</p>` : ""}
       <button class="btn go" id="on">Линияга чыгуу</button>
       <div class="err" id="er"></div>${stats}${topup}
+      <button class="btn ghost" id="cab">💼 Менин кабинетим</button>
       <button class="btn ghost" id="hist">Сапарлардын тарыхы</button>${sw}
       <a class="btn ghost" href="/">🚕 Такси чакыруу (жүргүнчү)</a><button class="btn ghost" id="out">Чыгуу</button>`);
     $("#top") && ($("#top").onclick = viewTopup);
+    $("#cab").onclick = viewCabinet;
     $("#nt") && ($("#nt").onchange = () => api("/api/notify", {on:$("#nt").checked}));
     $("#out").onclick = async () => { await api("/api/logout", {}); location.reload(); };
     $("#on").onclick = async () => {
@@ -210,6 +216,23 @@ function viewHome() {
     };
     $("#hist").onclick = viewHistory;
   }
+}
+
+function viewCabinet() {
+  const f = D.finance || {}, row = (t, k) => { const x = f[k] || {rides:0, gross:0, fee:0, net:0};
+    return `<tr><td>${t}</td><td>${x.rides}</td><td>${x.gross}</td><td>${x.fee}</td><td><b>${x.net}</b></td></tr>`; };
+  render(`<h2>Менин кабинетим</h2>
+    <div class="note">💼 Тариф: <b>${esc(D.tariff)}</b></div>
+    <div class="grid"><div class="stat"><span class="muted">Баланс</span><b style="color:${D.balance < D.min_balance ? "var(--bad)" : "inherit"}">${D.balance} с</b></div>
+      <div class="stat"><span class="muted">Рейтинг</span><b>★ ${D.rating ?? "5.0"}</b></div></div>
+    <table class="fin"><tr><th></th><th>Сапар</th><th>Жүгүртүү</th><th>Комиссия</th><th>Колуңузда</th></tr>
+      ${row("Бүгүн", "today")}${row("Ушул жума", "week")}${row("Ушул ай", "month")}</table>
+    <p class="muted">Сумма сом менен. «Колуңузда» — жүргүнчүлөр төлөгөн акчадан комиссия кемитилгени.
+    ${D.min_balance > 0 ? `Баланс ${D.min_balance} сомдон аз болсо, заказ келбейт.` : ""}</p>
+    ${D.pending_topup ? `<div class="note">🕓 Чегиңиз текшерилүүдө.</div>` : `<button class="btn main" id="top">➕ Балансты толуктоо</button>`}
+    <button class="btn ghost" id="back">Артка</button>`);
+  $("#top") && ($("#top").onclick = viewTopup);
+  $("#back").onclick = () => { lastView = ""; show(); };
 }
 
 async function viewHistory() {

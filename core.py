@@ -245,7 +245,10 @@ SCHEMA = [
         kind TEXT DEFAULT 'rider',      -- rider | driver | admin
         verified INTEGER DEFAULT 0,
         created_at REAL)""",
+    """CREATE TABLE IF NOT EXISTS settings (
+        key TEXT PRIMARY KEY, value TEXT)""",
     "CREATE INDEX IF NOT EXISTS idx_rides_status ON rides(status)",
+    "CREATE INDEX IF NOT EXISTS idx_tx_kind ON balance_tx(kind, at)",
     "CREATE INDEX IF NOT EXISTS idx_drivers_online ON drivers(online, status)",
 ]
 
@@ -349,7 +352,7 @@ def is_available(d, t=None):
     t = t or now()
     if not d or d["status"] != "active" or not d["online"] or d["busy_ride"]:
         return False
-    if d["lat"] is None or (d["balance"] or 0) < MIN_BALANCE:
+    if d["lat"] is None or (d["balance"] or 0) < min_balance():
         return False
     live = (d["live_until"] or 0) > t
     fresh = t - (d["loc_at"] or 0) < LOC_TTL_SEC
@@ -731,8 +734,11 @@ def advance(rid, driver):
 def _finish(rid, driver):
     r = get_ride(rid)
     query("UPDATE drivers SET busy_ride=NULL, rides_done=rides_done+1 WHERE uid=?", (driver,))
-    if COMMISSION_PCT > 0 and r["price"]:
-        add_tx(driver, -round(r["price"] * COMMISSION_PCT / 100.0, 2), "commission", ride_id=rid)
+    pct = commission_pct()
+    if pct > 0 and r["price"]:
+        fee = math.floor(r["price"] * pct / 100.0 + 0.5)        # бүтүн сомго
+        if fee > 0:
+            add_tx(driver, -fee, "commission", ride_id=rid)
 
 
 def cancel(rid, by, allowed=("searching", "accepted", "arrived")):
@@ -976,3 +982,160 @@ def all_tariffs():
     cities = [AREA_CITY] if AREA_ON else list(CITIES)
     return [dict(saved.get(c) or dict(CITY_TARIFFS.get(c) or DEFAULT_TARIFF, city=c),
                  saved=c in saved) for c in cities]
+
+
+# ==================== Жөндөөлөр (админ панелинен) ====================
+
+_settings_cache = {}
+
+
+def get_setting(key, default=None):
+    """5 секунд кэш: dispatch ар 2 секундда ар бир айдоочу үчүн сурайт."""
+    hit = _settings_cache.get(key)
+    if hit and hit[0] > now():
+        return hit[1] if hit[1] is not None else default
+    row = query("SELECT value FROM settings WHERE key=?", (key,), "one")
+    try:
+        val = json.loads(row["value"]) if row else None
+    except ValueError:
+        val = None
+    _settings_cache[key] = (now() + 5, val)
+    return val if val is not None else default
+
+
+def set_setting(key, value):
+    _settings_cache.pop(key, None)
+    query("DELETE FROM settings WHERE key=?", (key,))
+    query("INSERT INTO settings (key, value) VALUES (?, ?)", (key, json.dumps(value, ensure_ascii=False)))
+
+
+# ==================== Каржы ====================
+# Комиссия: пайыз (percent) + бекер мезгил (free_until, Бишкек убактысы менен күн).
+# free_until өткөндө бекер мезгил өзү бүтүп, пайыз иштей баштайт.
+
+TZ = 6 * 3600   # Бишкек UTC+6
+
+
+def finance_config():
+    c = get_setting("finance") or {}
+    return {"percent": float(c.get("percent", COMMISSION_PCT)),
+            "free_until": c.get("free_until") or None,          # "2027-01-01"
+            "min_balance": float(c.get("min_balance", MIN_BALANCE))}
+
+
+def set_finance_config(percent, free_until=None, min_balance=0):
+    if not (0 <= percent <= 30) or not (-100000 <= min_balance <= 100000):
+        return False
+    if free_until:
+        try:
+            time.strptime(free_until, "%Y-%m-%d")
+        except ValueError:
+            return False
+    set_setting("finance", {"percent": round(percent, 2), "free_until": free_until or None,
+                            "min_balance": min_balance})
+    return True
+
+
+def _date_ts(d):
+    """'2027-01-01' → ошол күндүн башы (Бишкек), unix убакыт."""
+    import calendar
+    return calendar.timegm(time.strptime(d, "%Y-%m-%d")) - TZ
+
+
+def free_active(cfg=None):
+    cfg = cfg or finance_config()
+    return bool(cfg["free_until"]) and now() < _date_ts(cfg["free_until"])
+
+
+def commission_pct():
+    cfg = finance_config()
+    return 0.0 if free_active(cfg) else cfg["percent"]
+
+
+def min_balance():
+    return finance_config()["min_balance"]
+
+
+def finance_mode_text():
+    cfg = finance_config()
+    if free_active(cfg):
+        return "Бекер — %s чейин, андан кийин %g%%" % (cfg["free_until"], cfg["percent"])
+    if cfg["percent"] <= 0:
+        return "Бекер (комиссия жок)"
+    return "Ар бир сапардан %g%%" % cfg["percent"]
+
+
+def period_starts():
+    """Бишкек убактысы менен: бүгүн, ушул жума (дүйшөмбүдөн), ушул ай."""
+    t = now() + TZ
+    lt = time.gmtime(t)
+    day = t - (t % 86400)
+    week = day - lt.tm_wday * 86400
+    month = day - (lt.tm_mday - 1) * 86400
+    return {"today": day - TZ, "week": week - TZ, "month": month - TZ}
+
+
+def _ride_sum(since, driver=None):
+    q = "SELECT COUNT(*) AS n, COALESCE(SUM(price),0) AS s FROM rides WHERE status='completed' AND completed_at>=?"
+    args = [since]
+    if driver:
+        q += " AND driver=?"
+        args.append(driver)
+    r = query(q, tuple(args), "one")
+    return int(r["n"]), float(r["s"] or 0)
+
+
+def _tx_sum(kind, since, driver=None):
+    q = "SELECT COALESCE(SUM(amount),0) AS s FROM balance_tx WHERE kind=? AND status='done' AND at>=?"
+    args = [kind, since]
+    if driver:
+        q += " AND driver=?"
+        args.append(driver)
+    return float(query(q, tuple(args), "one")["s"] or 0)
+
+
+def driver_finance(uid):
+    """Айдоочунун кабинети: бүгүн / жума / ай — сапар, жүгүртүү, комиссия, колунда калганы."""
+    out = {}
+    for k, since in period_starts().items():
+        n, gross = _ride_sum(since, uid)
+        fee = -_tx_sum("commission", since, uid)
+        out[k] = {"rides": n, "gross": int(gross), "fee": round(fee), "net": int(gross - fee)}
+    return out
+
+
+def admin_finance():
+    ps = period_starts()
+    totals = {}
+    for k, since in ps.items():
+        n, gross = _ride_sum(since)
+        totals[k] = {"rides": n, "gross": int(gross),
+                     "commission": round(-_tx_sum("commission", since)),
+                     "topups": round(_tx_sum("topup", since))}
+    # акыркы 6 ай (Бишкек убактысы менен)
+    months = []
+    lt = time.gmtime(now() + TZ)
+    y, m = lt.tm_year, lt.tm_mon
+    for _ in range(6):
+        import calendar
+        start = calendar.timegm((y, m, 1, 0, 0, 0)) - TZ
+        ny, nm = (y + (m == 12), m % 12 + 1)
+        end = calendar.timegm((ny, nm, 1, 0, 0, 0)) - TZ
+        r = query("SELECT COUNT(*) AS n, COALESCE(SUM(price),0) AS s FROM rides WHERE status='completed' "
+                  "AND completed_at>=? AND completed_at<?", (start, end), "one")
+        c = query("SELECT COALESCE(SUM(-amount),0) AS s FROM balance_tx WHERE kind='commission' "
+                  "AND status='done' AND at>=? AND at<?", (start, end), "one")
+        months.append({"month": "%d-%02d" % (y, m), "rides": int(r["n"]), "gross": int(r["s"] or 0),
+                       "commission": round(c["s"] or 0)})
+        y, m = (y - (m == 1), (m - 2) % 12 + 1)
+    months.reverse()
+    drivers = []
+    for d in query("SELECT d.uid, d.balance, d.status, u.name, u.phone FROM drivers d "
+                   "LEFT JOIN users u ON u.uid=d.uid WHERE d.status IN ('active','blocked')", (), "all"):
+        n, gross = _ride_sum(ps["month"], d["uid"])
+        drivers.append({"uid": d["uid"], "name": d["name"], "phone": d["phone"], "status": d["status"],
+                        "balance": round(d["balance"] or 0), "rides": n, "gross": int(gross),
+                        "commission": round(-_tx_sum("commission", ps["month"], d["uid"]))})
+    drivers.sort(key=lambda x: (-x["gross"], x["name"] or ""))
+    return {"config": finance_config(), "mode": finance_mode_text(), "pct_now": commission_pct(),
+            "totals": totals, "months": months, "drivers": drivers}

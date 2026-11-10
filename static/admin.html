@@ -50,6 +50,13 @@ td input.f{padding:7px 8px;max-width:90px;min-width:58px}
 .proof{width:64px;height:64px;object-fit:cover;border-radius:8px;background:var(--paper);cursor:zoom-in}
 .mk{width:24px;height:24px;border-radius:50%;border:3px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.35)}
 .hide{display:none!important}
+.bars{display:flex;align-items:flex-end;gap:10px;height:150px;padding:14px 14px 0}
+.bars div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;font-size:12px;color:var(--soft)}
+.bars i{display:block;width:100%;max-width:46px;background:var(--gold);border-radius:6px 6px 0 0;min-height:2px}
+.bars b{font-size:12px;color:var(--ink);margin-bottom:4px}
+.fset{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;padding:12px 14px}
+.fset label{font-size:12px;color:var(--soft);display:block;margin-bottom:4px}
+.mode{display:inline-block;background:#E1F5EE;color:#085041;font-weight:700;border-radius:10px;padding:6px 12px;font-size:14px}
 #amap{height:min(62vh,520px);border-radius:14px;border:1px solid var(--line);overflow:hidden;position:relative;background:#EDEAE2}
 .tools{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
 .tools .btn{padding:11px 14px;font-size:14px}
@@ -66,6 +73,7 @@ td input.f{padding:7px 8px;max-width:90px;min-width:58px}
   <button data-t="drivers">Айдоочулар<span class="badge hide" id="bD"></span></button>
   <button data-t="topups">Толуктоо<span class="badge hide" id="bT"></span></button>
   <button data-t="rides">Сапарлар</button>
+  <button data-t="finance">Каржы</button>
   <button data-t="tariffs">Тарифтер</button>
   <button data-t="area">Аймак</button>
 </nav>
@@ -221,6 +229,46 @@ async function refresh() {
   O = r; badges();
   if (tab === "map") drawMap();
 }
+// ---------- каржы ----------
+async function viewFinance() {
+  const F = await api("/api/a/finance"), c = F.config, T = F.totals;
+  const money = v => (v || 0).toLocaleString("ru-RU") + " с";
+  const mx = Math.max(1, ...F.months.map(m => m.commission || m.gross));
+  const key = F.months.some(m => m.commission) ? "commission" : "gross";
+  const MN = ["", "янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
+  $("#main").innerHTML = `
+    <div class="panel"><h3>Комиссия</h3>
+      <div class="item"><div class="main"><span class="mode">${esc(F.mode)}</span>
+        <div class="muted" style="margin-top:6px">Азыр колдонулуп жатканы: <span style="font-weight:700;color:var(--ink)">${F.pct_now}%</span> ар бир бүткөн сапардан, айдоочунун балансынан кармалат.</div></div></div>
+      <div class="fset">
+        <div><label>Комиссия, %</label><input class="f" id="fp" inputmode="decimal" value="${c.percent}"></div>
+        <div><label>Бекер мезгил ушул күнгө чейин (бош = жок)</label><input class="f" id="ff" type="date" value="${c.free_until || ""}"></div>
+        <div><label>Минималдуу баланс, сом</label><input class="f" id="fm" inputmode="numeric" value="${c.min_balance}"></div>
+      </div>
+      <div style="padding:0 14px 14px"><button class="btn gold" id="fsave">Сактоо</button> <span class="muted" id="fmsg"></span>
+        <p class="muted">Бекер мезгил бүткөн күнү комиссия өзү күйөт. Баланс минималдуудан аз болсо, айдоочуга заказ келбейт жана Telegram'га эскертүү барат.</p></div>
+    </div>
+    <div class="cards">
+      ${[["Бүгүн", "today"], ["Ушул жума", "week"], ["Ушул ай", "month"]].map(([t, k]) => `<div class="card"><span>${t}: комиссия</span><b>${money(T[k].commission)}</b>
+        <span>${T[k].rides} сапар · жүгүртүү ${money(T[k].gross)}</span></div>`).join("")}
+      <div class="card"><span>Ушул ай: толуктоолор</span><b>${money(T.month.topups)}</b><span>айдоочулар төлөгөн чектер</span></div>
+    </div>
+    <div class="panel"><h3>Акыркы 6 ай — ${key === "commission" ? "комиссия" : "жүгүртүү (комиссия азырынча жок)"}</h3>
+      <div class="bars">${F.months.map(m => `<div><b>${m[key] ? m[key].toLocaleString("ru-RU") : ""}</b>
+        <i style="height:${Math.round(100 * (m[key] || 0) / mx)}%"></i>${MN[+m.month.slice(5)]}</div>`).join("")}</div>
+      <div style="height:12px"></div></div>
+    <div class="panel"><h3>Айдоочулар — ушул ай</h3><div class="scroll"><table>
+      <tr><th>Айдоочу</th><th>Сапар</th><th>Жүгүртүү</th><th>Комиссия</th><th>Баланс</th></tr>
+      ${F.drivers.map(d => `<tr><td>${esc(d.name)}<div class="muted">${esc(d.phone)}</div></td><td>${d.rides}</td><td>${money(d.gross)}</td>
+        <td>${money(d.commission)}</td><td style="color:${d.balance < c.min_balance ? "var(--bad)" : "inherit"}"><b>${money(d.balance)}</b></td></tr>`).join("")}
+    </table>${F.drivers.length ? "" : `<div class="empty">Азырынча активдүү айдоочу жок.</div>`}</div></div>`;
+  $("#fsave").onclick = async () => {
+    const r = await api("/api/a/finance", {percent:$("#fp").value, free_until:$("#ff").value, min_balance:$("#fm").value});
+    if (r.error) return $("#fmsg").textContent = "Текшериңиз: комиссия 0–30%, күн туура болушу керек.";
+    viewFinance();
+  };
+}
+
 // ---------- аймак (иштөө чеги) ----------
 let amap = null, alyr = null, draw = null;
 async function viewArea() {
@@ -274,7 +322,7 @@ function drawPreview() {
 function show(t) {
   tab = t; lyr = null;
   document.querySelectorAll("nav button").forEach(b => b.classList.toggle("on", b.dataset.t === t));
-  ({map:viewMap, drivers:viewDrivers, topups:viewTopups, rides:viewRides, tariffs:viewTariffs, area:viewArea})[t]();
+  ({map:viewMap, drivers:viewDrivers, topups:viewTopups, rides:viewRides, tariffs:viewTariffs, area:viewArea, finance:viewFinance})[t]();
 }
 document.querySelectorAll("nav button").forEach(b => b.onclick = () => show(b.dataset.t));
 async function boot() {

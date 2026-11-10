@@ -90,7 +90,7 @@ class Ride(unittest.TestCase):
         self.assertEqual(flow.driver_step(d1, rid), [])                 # сапар башталды
         self.assertIn("бүттү", flow.driver_step(d1, rid)[0]["text"])
         price = core.get_ride(rid)["price"]
-        self.assertAlmostEqual(core.get_driver(d1)["balance"], 1000 - price * 0.1, places=2)
+        self.assertEqual(core.get_driver(d1)["balance"], 1000 - int(price * 0.1 + 0.5))
         self.assertTrue(core.rate(rid, p, 4))
         self.assertFalse(core.rate(rid, p, 1))
         self.assertEqual(core.get_driver(d1)["rating"], 4.0)
@@ -201,6 +201,55 @@ class CustomArea(unittest.TestCase):
         self.assertEqual(core.area_info()["source"], "custom")
         core.reset_area()
         self.assertNotEqual(core.area_info()["source"], "custom")
+
+
+class Finance(unittest.TestCase):
+    def setUp(self):
+        core.init_db()
+        offline_all()
+
+    def tearDown(self):
+        core.query("DELETE FROM settings")
+        core._settings_cache.clear()
+
+    def test_free_until_then_percent(self):
+        self.assertFalse(core.set_finance_config(50))                     # 30%дан ашык болбойт
+        self.assertFalse(core.set_finance_config(5, "31.12.2026"))         # туура эмес күн
+        self.assertTrue(core.set_finance_config(5, "2099-01-01"))
+        self.assertEqual(core.commission_pct(), 0)
+        self.assertIn("Бекер", core.finance_mode_text())
+        core.set_finance_config(5, "2020-01-01")                          # мөөнөт өткөн
+        self.assertEqual(core.commission_pct(), 5)
+        self.assertEqual(core.finance_mode_text(), "Ар бир сапардан 5%")
+
+    def test_income_and_cabinet(self):
+        core.set_finance_config(7)
+        d = make_driver("0700 000 061", "Каржы", NEAR, 1000)
+        rid = order(rider("0555 000 061"))
+        dispatch.tick()
+        flow.driver_accept(d, rid)
+        for _ in range(3):
+            flow.driver_step(d, rid)
+        price = core.get_ride(rid)["price"]
+        me = core.driver_finance(d)
+        self.assertEqual(me["today"]["rides"], 1)
+        self.assertEqual(me["month"]["gross"], int(price))
+        self.assertEqual(me["today"]["fee"], int(price * 0.07 + 0.5))
+        a = core.admin_finance()
+        self.assertGreaterEqual(a["totals"]["today"]["commission"], int(price * 0.07 + 0.5))
+        self.assertEqual(len(a["months"]), 6)
+        self.assertIn(d, [x["uid"] for x in a["drivers"]])
+
+    def test_low_balance_notice(self):
+        core.set_finance_config(10, None, 50)
+        d = make_driver("0700 000 062", "Аз", NEAR, 55)
+        rid = order(rider("0555 000 062"))
+        dispatch.tick()
+        flow.driver_accept(d, rid)
+        flow.driver_step(d, rid); flow.driver_step(d, rid)
+        out = flow.driver_step(d, rid)
+        self.assertIn(d, [o["to"] for o in out])                          # «баланс аз» кабары
+        self.assertFalse(core.is_available(core.get_driver(d)))
 
 
 class Accounts(unittest.TestCase):
@@ -342,6 +391,11 @@ class Http(unittest.TestCase):
         self.assertEqual(adm("/api/a/area", {"points": pts})["source"], "custom")
         self.assertEqual(adm("/api/a/area", {"points": pts[:2]})["error"], "bad_points")
         adm("/api/a/area", {"reset": True})
+        # каржы: админ гана өзгөртөт
+        self.assertEqual(drv("/api/a/finance", {"percent": 1})["error"], "auth")
+        self.assertEqual(adm("/api/a/finance", {"percent": 5, "free_until": "2099-01-01"})["pct_now"], 0)
+        self.assertIn("Бекер", drv("/api/d/state")["tariff"])
+        adm("/api/a/finance", {"percent": 10})
         # линия, заказ
         self.assertTrue(drv("/api/d/online", {"on": True, "p": list(NEAR)})["online"])
         pas("/api/login", {"phone": "0555 444 555", "name": "Айгүл"})

@@ -95,7 +95,9 @@ def driver_state(uid):
           "car_model": d.get("car_model"), "car_color": d.get("car_color"),
           "car_plate": d.get("car_plate"),
           "online": bool(d and (core.is_available(d) or d.get("busy_ride"))),
-          "balance": int(d.get("balance") or 0), "min_balance": core.MIN_BALANCE,
+          "balance": int(d.get("balance") or 0), "min_balance": core.min_balance(),
+          "tariff": core.finance_mode_text(), "pct_now": core.commission_pct(),
+          "finance": core.driver_finance(uid) if d else None,
           "rating": d.get("rating"), "rides_done": d.get("rides_done"),
           "today": core.driver_today(uid) if d else {"rides": 0, "earned": 0},
           "offer": None, "ride": None, "pay_info": core.PAY_INFO,
@@ -402,6 +404,8 @@ class H(BaseHTTPRequestHandler):
             return self._json({"rides": core.admin_rides()})
         if action == "tariffs":
             return self._json({"tariffs": core.all_tariffs()})
+        if action == "finance":
+            return self._json(core.admin_finance())
         if action == "file":
             return self._file(core.upload_path((q.get("n") or [""])[0]), private=True)
         return self._json({"error": "not_found"}, 404)
@@ -435,6 +439,12 @@ class H(BaseHTTPRequestHandler):
                 return self._json({"error": "bad"}, 400)
             core.set_tariff(city, *vals)
             return self._json({"ok": True})
+        if action == "finance":
+            pct, mb = _num(b.get("percent")), _num(b.get("min_balance") or 0)
+            fu = _txt(b.get("free_until"), 10) or None
+            if pct is None or mb is None or not core.set_finance_config(pct, fu, mb):
+                return self._json({"error": "bad"}, 400)
+            return self._json(core.admin_finance())
         if action == "area":
             if b.get("reset"):
                 core.reset_area()

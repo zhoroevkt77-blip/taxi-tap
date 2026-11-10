@@ -54,7 +54,11 @@ def driver_step(uid, rid):
     if new == "arrived":
         return [note(p, "p_arrived")]
     if new == "completed":
-        return [note(p, "p_completed")]
+        out = [note(p, "p_completed")]
+        d = core.get_driver(uid)
+        if core.commission_pct() > 0 and (d["balance"] or 0) < core.min_balance():
+            out.append(note(uid, "d_low_balance", "/driver", balance=int(d["balance"] or 0)))
+        return out
     return []
 
 
