@@ -499,6 +499,15 @@ class DestOut(unittest.TestCase):
             self.assertTrue(web.driver_state(d)["in_area"])
             self.assertEqual(len(dispatch.candidates(core.get_ride(rid), 100)), 1)
             core.cancel(rid, p)
+            # сыртта 1 сааттан ашык линияда турса — өзү офлайн болот
+            core.driver_location(d, 40.9333, 73.0000, live_period=60)
+            self.assertTrue(core.get_driver(d)["out_since"])
+            self.assertEqual(core.auto_offline_out(), [])
+            core.set_driver(d, out_since=core.now() - core.OUT_MAX_SEC - 5)
+            self.assertEqual(core.auto_offline_out(), [d])
+            self.assertFalse(core.get_driver(d)["online"])
+            core.driver_location(d, 41.036, 72.746, live_period=60)
+            self.assertIsNone(core.get_driver(d)["out_since"])
         finally:
             core.reset_area(); core.AREA_ON = old
 

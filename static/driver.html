@@ -262,7 +262,7 @@ function viewHome() {
   const sw = D.tg ? `<div class="sw"><div><b>Telegram билдирүүлөрү</b><div class="muted">Сайт жабык болсо да жаңы заказ жөнүндө кабар келет</div></div>
     <input type="checkbox" id="nt" ${D.notify ? "checked" : ""} style="width:24px;height:24px"></div>` : "";
   if (D.online) {
-    render(`${outHTML()}<div class="wait"><div class="blink"${D.in_area === false ? ' style="background:var(--bad)"' : ""}></div><div><b>${D.in_area === false ? "Заказ келбейт — аймактын сыртындасыз" : "Заказ күтүлүүдө"}${D.home && D.home.on ? " · 🏠 үйгө карай" : ""}</b><div class="muted">Экранды өчүрбөңүз — GPS иштеп турат</div></div></div>
+    render(`${outHTML()}<div class="wait"><div class="blink"${D.in_area === false ? ' style="background:var(--bad)"' : ""}></div><div><b>${D.in_area === false ? "Заказ келбейт — аймактын сыртындасыз" : "Заказ күтүлүүдө"}${D.home && D.home.on ? " · 🏠 үйгө карай" : ""}</b><div class="muted">${D.in_area === false ? "1 сааттын ичинде аймакка кирбесеңиз, линиядан өзү чыгарылат" : "Экранды өчүрбөңүз — GPS иштеп турат"}</div></div></div>
       ${stats}${homeHTML()}<button class="btn red" id="off">Линиядан чыгуу</button>`);
     bindHome();
     $("#off").onclick = async () => { D = await api("/api/d/online", {on:false}); wake(false); lastView = ""; show(); };

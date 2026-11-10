@@ -115,7 +115,7 @@ function login(pending, link) {
 function viewMap() {
   const s = O.stats;
   $("#main").innerHTML = `<div class="cards">
-    <div class="card"><span>Онлайн айдоочу</span><b>${s.online}</b><span>${s.busy} сапарда</span></div>
+    <div class="card"><span>Онлайн айдоочу</span><b>${s.online}</b><span>${s.busy} сапарда${s.online_out ? ` · ${s.online_out} аймактан сыртта` : ""}</span></div>
     <div class="card"><span>Активдүү заказ</span><b>${s.active}</b><span>${s.searching} изделүүдө</span></div>
     <div class="card"><span>Бүгүн бүттү</span><b>${s.done_today}</b><span>${s.lost_today} айдоочусуз калды</span></div>
     <div class="card"><span>Бүгүнкү жүгүртүү</span><b>${s.gross_today.toLocaleString("ru-RU")} с</b><span>комиссия ${s.fee_today} с</span></div></div>

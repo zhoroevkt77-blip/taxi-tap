@@ -279,7 +279,8 @@ NEW_COLUMNS = {
                 "classes": "TEXT",                 # 'econom,delivery,comfort,minivan'
                 "next_ride": "INTEGER",            # сапар бүтө электе алган кийинки заказ
                 "home_lat": "REAL", "home_lon": "REAL", "home_on": "INTEGER DEFAULT 0",
-                "home_day": "TEXT", "home_uses": "INTEGER DEFAULT 0"},
+                "home_day": "TEXT", "home_uses": "INTEGER DEFAULT 0",
+                "out_since": "REAL"},              # аймактан сыртка чыккан убакыт
     "balance_tx": {"claimed": "REAL"},
     "rides": {"note": "TEXT", "source": "TEXT",   # source: web | phone (диспетчер)
               "promo": "TEXT", "discount": "REAL DEFAULT 0",
@@ -373,6 +374,11 @@ def driver_location(uid, lat, lon, live_period=None, msg_date=None):
     """
     t = now()
     fields = {"lat": lat, "lon": lon, "loc_at": t, "online": 1}
+    if AREA_ON and not in_area(lat, lon):
+        cur = query("SELECT out_since FROM drivers WHERE uid=?", (uid,), "one")
+        fields["out_since"] = (cur and cur["out_since"]) or t
+    else:
+        fields["out_since"] = None
     if live_period:
         fields["live_until"] = (msg_date or t) + live_period
     set_driver(uid, **fields)
@@ -387,6 +393,20 @@ def is_available(d, t=None):
     live = (d["live_until"] or 0) > t
     fresh = t - (d["loc_at"] or 0) < LOC_TTL_SEC
     return live or fresh
+
+
+OUT_MAX_SEC = float(os.environ.get("OUT_MAX_MIN") or 60) * 60   # аймактан сыртта ушунча турса — өзү линиядан чыгат
+
+
+def auto_offline_out():
+    """Аймактан сыртта OUT_MAX_SEC'тен ашык линияда турган (сапарсыз) айдоочуларды офлайн кылат."""
+    if not AREA_ON:
+        return []
+    rows = query("SELECT uid FROM drivers WHERE online=1 AND busy_ride IS NULL AND out_since IS NOT NULL "
+                 "AND out_since<?", (now() - OUT_MAX_SEC,), "all")
+    for d in rows:
+        set_driver(d["uid"], online=0, live_until=None, out_since=None)
+    return [d["uid"] for d in rows]
 
 
 def online_drivers(city=None):
@@ -1248,6 +1268,10 @@ def offer_for(uid):
 
 # ==================== Админ панели ====================
 
+def _is_out(d):
+    return bool(AREA_ON and d["lat"] is not None and not in_area(d["lat"], d["lon"]))
+
+
 def admin_overview():
     t0 = day_start()
     drivers = query("SELECT d.*, u.name, u.phone FROM drivers d LEFT JOIN users u ON u.uid=d.uid",
@@ -1265,7 +1289,8 @@ def admin_overview():
     pend_tx = query("SELECT t.*, u.name, u.phone FROM balance_tx t LEFT JOIN users u ON "
                     "u.uid=t.driver WHERE t.status='pending' ORDER BY t.id", (), "all")
     return {
-        "stats": {"online": len(online), "busy": sum(1 for d in online if d["busy_ride"]),
+        "stats": {"online": sum(1 for d in online if not _is_out(d)), "busy": sum(1 for d in online if d["busy_ride"]),
+                  "online_out": sum(1 for d in online if _is_out(d)),
                   "active": len(rides), "searching": sum(1 for r in rides if r["status"] == "searching"),
                   "done_today": today["n"], "gross_today": int(today["s"] or 0),
                   "fee_today": round(fee["s"] or 0), "lost_today": lost["n"]},

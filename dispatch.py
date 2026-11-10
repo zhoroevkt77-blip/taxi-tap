@@ -70,6 +70,7 @@ def tick():
     айдоочунун сайтында /api/d/state аркылуу көрүнөт.
     """
     out = [note(r["passenger"], "p_scheduled_go") for r in core.activate_scheduled()]
+    out += [note(uid, "d_auto_off", "/driver") for uid in core.auto_offline_out()]
     t = core.now()
     for r in core.searching_rides():
         rid = r["id"]
