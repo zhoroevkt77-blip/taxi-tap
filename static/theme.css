@@ -269,3 +269,25 @@ body.athome .top,body.athome #pin,body.athome .navbtns,body.athome .sheet{visibi
 .tile b,.tile small{position:relative;z-index:1;max-width:72%}
 .tile .ico{font-size:46px!important;right:10px!important;bottom:8px!important;opacity:.95}
 .tiles3{grid-template-columns:repeat(auto-fit,minmax(0,1fr))!important}
+/* v21: А/Б кадам-кадам */
+.st-top{display:flex;align-items:center;gap:10px;margin-top:4px}
+.st-back{width:44px;height:44px;border-radius:50%;border:0;background:#f1f1f4;font-size:26px;font-weight:900;cursor:pointer;line-height:1}
+.st-steps{display:flex;gap:6px;margin-left:auto}.st-steps i{width:30px;height:6px;border-radius:3px;background:#e3e3e8}.st-steps i.on{background:#ffb703}
+.st-h{font-size:28px;font-weight:900;margin:22px 0 6px;line-height:1.15;color:#16161a}
+.st-sub{color:#6b6b76;font-size:15px;margin:0 0 18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st-big{display:flex;align-items:center;gap:14px;width:100%;border:0;border-radius:22px;padding:18px 16px;margin-bottom:12px;background:#f4f4f7;font-size:19px;font-weight:800;color:#16161a;text-align:left;font-family:inherit;cursor:pointer}
+.st-big.y{background:linear-gradient(135deg,#ffd84d,#ffb703);box-shadow:0 8px 20px rgba(255,183,3,.35)}
+.st-big .i{width:54px;height:54px;border-radius:16px;background:#fff;display:grid;place-items:center;font-size:28px;flex:none}
+.st-big .tx{flex:1;min-width:0}
+.st-big small{display:block;font-size:14px;font-weight:600;color:#5f5f6a;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st-big.y small{color:#5a4300}
+.st-big em{font-style:normal;font-size:24px;color:#9a9aa5}
+.st-warn{background:#fff3c4;border-radius:14px;padding:10px 12px;font-size:14px;font-weight:600}
+.st-two{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px}
+.st-two button{border:0;background:#f1f1f4;border-radius:16px;padding:15px 8px;font-weight:800;font-size:16px;font-family:inherit;color:#16161a;cursor:pointer}
+.st-sec{font-size:12px;font-weight:800;color:#9a9aa5;letter-spacing:.5px;margin:16px 2px 0}
+.st-it{display:flex;align-items:center;gap:14px;width:100%;border:0;background:none;border-bottom:1px solid #eee;padding:13px 2px;text-align:left;font-family:inherit;cursor:pointer}
+.st-it .ic{width:48px;height:48px;border-radius:14px;background:#f3f3f6;display:grid;place-items:center;font-size:23px;flex:none}
+.st-it .tx{flex:1;min-width:0}.st-it b{display:block;font-size:17px;color:#16161a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.st-it small{font-size:13.5px;color:#7a7a85}
+.st-it .t{color:#7a7a85;font-weight:700;font-size:14px;white-space:nowrap}

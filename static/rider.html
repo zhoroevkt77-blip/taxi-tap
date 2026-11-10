@@ -100,7 +100,7 @@ input.f:focus{border-color:var(--navy)}
 .quick{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=20">
+<link rel="stylesheet" href="/static/theme.css?v=21">
 </head>
 <body>
 <div id="map"></div>
@@ -221,7 +221,7 @@ function locate(force) {
 }
 
 // ---------- көрүнүштөр ----------
-function render(html) { if (S.mode !== "idle") homeOn(false); $("#sheet").classList.toggle("full", S.mode === "search"); $("#view").innerHTML = html; window.SHEET && SHEET.refresh(); positionLocate(); }
+function render(html) { if (!PAGE_MODES.includes(S.mode)) homeOn(false); $("#sheet").classList.toggle("full", S.mode === "search"); $("#view").innerHTML = html; window.SHEET && SHEET.refresh(); positionLocate(); }
 window.addEventListener("sheetmove", () => positionLocate());
 function positionLocate() {
   requestAnimationFrame(() => NAV.place());
@@ -285,10 +285,10 @@ function viewIdle() {
     <button class="hsearch" id="hSearch">🔍 <span>Каякка барабыз?</span><em>›</em></button>
     <div class="hrec">${rec.slice(0, 5).map((r, i) => `<button class="rec" data-i="${i}"><span class="pi">${r.ico}</span><span class="rt"><b>${esc(r.name)}</b><small>${esc(r.sub)}</small></span><span class="t">${minsTo(r)}</span></button>`).join("")}</div>
     <p class="muted" id="nearMsg" style="margin:10px 4px 0;font-size:13px">${esc(S.nearMsg || "")}</p>`;
-  const go = (cls) => { if (cls) S.cls = cls; viewSearch("to"); };
+  const go = (cls) => { if (cls) S.cls = cls; viewStepA(); };
   $("#hSearch").onclick = () => go("econom");
   $("#tTaxi").onclick = () => go("econom");
-  $("#hAddr").onclick = () => viewSearch("from");
+  $("#hAddr").onclick = () => viewStepA();
   $("#hMenu").onclick = viewCabinet;
   if ($("#tDel")) $("#tDel").onclick = () => go("delivery");
   if ($("#tComf")) $("#tComf").onclick = () => go("comfort");
@@ -308,6 +308,48 @@ function minsTo(r) {
   const a = Math.sin(dLa / 2) ** 2 + Math.cos(S.from[0] * Math.PI / 180) * Math.cos(r.lat * Math.PI / 180) * Math.sin(dLo / 2) ** 2;
   const km = 2 * R * Math.asin(Math.sqrt(a)) * 1.3;
   return km > 60 ? "" : `${Math.max(2, Math.round(km / 25 * 60))} мүн`;
+}
+const PAGE_MODES = ["idle", "stepA", "stepB"];
+// ---------- 1-кадам: «Сизди кайдан алып кетсин?» ----------
+function viewStepA() {
+  S.mode = "stepA"; S.to = null; setPin(null); showA(false); render(""); homeOn(true);
+  $("#home").innerHTML = `<div class="st-top"><button class="st-back" id="sBack">‹</button><div class="st-steps"><i class="on"></i><i></i></div></div>
+    <h1 class="st-h">Сизди кайдан<br>алып кетсин?</h1><p class="st-sub">А точка — айдоочу ушул жерге келет</p>
+    <button class="st-big y" id="aHere"><span class="i">📍</span><span class="tx">Ушул жерден<small id="fromTxt">${esc(S.fromAddr || "Аныкталууда…")}</small></span><em>›</em></button>
+    <button class="st-big" id="aMap"><span class="i">🗺</span><span class="tx">Картадан белгилейм<small>Пинди так жериңизге коёсуз</small></span><em>›</em></button>
+    <button class="st-big" id="aType"><span class="i">✍️</span><span class="tx">Жазып табам<small>Көчө, дүкөн, мекеме…</small></span><em>›</em></button>
+    ${S.gpsBad ? `<p class="st-warn">📡 GPS так эмес (±${S.gpsBad} м) — «Картадан белгилейм» тандаганыңыз жакшы.</p>` : ""}`;
+  $("#sBack").onclick = viewIdle;
+  $("#aHere").onclick = () => { if (!S.from) return toast("Жериңиз аныктала элек — «Картадан белгилейм» басыңыз", 2500); S.fromLock = true; picked("А"); viewStepB(); };
+  $("#aMap").onclick = viewPickFrom;
+  $("#aType").onclick = () => viewSearch("from");
+  window.scrollTo(0, 0); $("#home").scrollTop = 0;
+}
+// ---------- 2-кадам: «Кайда барасыз?» ----------
+function viewStepB() {
+  S.mode = "stepB"; setPin(null); showA(false); render(""); homeOn(true);
+  const P = PLACES && !PLACES.error ? PLACES : {recent:[], popular:[]};
+  const it = (r, i) => `<button class="st-it" data-i="${i}"><span class="ic">${r.icon}</span><span class="tx"><b>${esc(r.name)}</b><small>${esc(r.area || "")}</small></span><span class="t">${minsTo(r)}</span></button>`;
+  const L1 = [], L2 = [], L3 = [];
+  if (P.home) L1.push({icon:"🏠", name:"Үй", area:P.home.name || "", lat:P.home.lat, lon:P.home.lon});
+  if (P.work) L1.push({icon:"💼", name:"Иш", area:P.work.name || "", lat:P.work.lat, lon:P.work.lon});
+  (P.recent || []).forEach(r => L2.push({icon:"🕘", name:r.name, area:"", lat:r.lat, lon:r.lon}));
+  const seen = new Set(L2.map(r => r.name.toLowerCase()));
+  (P.popular || []).forEach(r => { if (!seen.has(r.name.toLowerCase())) L3.push(r); });
+  const all = L1.concat(L2, L3); let k = 0;
+  const sec = (t, arr) => arr.length ? (t ? `<div class="st-sec">${t}</div>` : "") + arr.map(r => it(r, k++)).join("") : "";
+  $("#home").innerHTML = `<div class="st-top"><button class="st-back" id="sBack">‹</button><div class="st-steps"><i class="on"></i><i class="on"></i></div></div>
+    <h1 class="st-h">Кайда барасыз?</h1><p class="st-sub">📍 ${esc(S.fromAddr || "А точка")} → ?</p>
+    <div class="st-two"><button id="bType">✍️ Жазып табам</button><button id="bMap">🗺 Картадан</button></div>
+    ${sec("", L1)}${sec("АКЫРКЫ САПАРЛАР", L2)}${sec("КӨП БАРЫШАТ", L3)}
+    ${all.length ? "" : `<p class="st-sub" style="margin-top:14px">Даректи жазып табыңыз же картадан белгилеңиз.</p>`}`;
+  $("#sBack").onclick = viewStepA;
+  $("#bType").onclick = () => viewSearch("to");
+  $("#bMap").onclick = () => viewPickDest();
+  $("#home").querySelectorAll(".st-it").forEach(b => b.onclick = () => { const r = all[+b.dataset.i];
+    S.to = [r.lat, r.lon]; S.toAddr = r.name; picked("Б"); viewQuote(); });
+  $("#home").scrollTop = 0;
+  if (!PLACES) loadPlaces().then(() => { if (S.mode === "stepB") viewStepB(); });
 }
 function homeOn(on) {
   $("#home").classList.toggle("hide", !on);
@@ -352,14 +394,14 @@ function viewSearch(field) {
   inp.to.onfocus = () => focus("to");
   $("#mapA").onclick = () => viewPickFrom();
   $("#mapB").onclick = () => { S.pendName = inp.to.value.trim(); viewPickDest(); };
-  $("#back").onclick = viewIdle;
+  $("#back").onclick = () => act === "from" ? viewStepA() : viewStepB();
   let t = null, seq = 0;
   const choose = r => {
     if (act === "from") {
       S.from = [r.lat, r.lon]; S.fromAddr = r.name; S.fromLock = true; map.setView(S.from, 16);
       inp.from.value = r.name; $("#rf").classList.add("got"); picked("А");
       if (S.to) return viewQuote();
-      inp.to.focus(); return;
+      return viewStepB();
     }
     S.to = [r.lat, r.lon]; S.toAddr = r.name; picked("Б"); viewQuote();
   };
@@ -405,8 +447,8 @@ function viewPickFrom() {
   render(`<h2>А точка — каяктан?</h2><p class="muted">Картаны басыңыз же жылдырыңыз — кара пин (А) сизди алып кете турган жерди көрсөтөт.</p>
     <button class="btn main" id="ok">Даяр</button><button class="btn ghost" id="back">Артка</button>`);
   $("#ok").onclick = () => { const c = map.getCenter(); S.from = [c.lat, c.lng]; S.fromAddr = $("#chipAddr").textContent; S.fromLock = true; picked("А");
-    if (S.to) return viewQuote(); viewPickDest(); };                 // эми Б точка — сары пин
-  $("#back").onclick = viewIdle;
+    if (S.to) return viewQuote(); viewStepB(); };                    // эми Б точка
+  $("#back").onclick = viewStepA;
   onPinMoved();
 }
 
@@ -425,7 +467,7 @@ function viewPickDest(save) {
     const nm = ($("#pn").value || "").trim(); S.pendName = "";
     if (nm.length >= 2) { S.toAddr = nm; api("/api/addr_suggest", {name:nm, p:S.to}); }
     viewQuote(); };
-  $("#back").onclick = () => { map.setView(S.from, map.getZoom()); viewIdle(); };
+  $("#back").onclick = () => { map.setView(S.from, map.getZoom()); save ? viewIdle() : viewStepB(); };
   onPinMoved();
 }
 
@@ -512,7 +554,7 @@ async function viewQuote() {
       : r.error === "bad_time" ? "Убакытты 25 мүнөттөн 3 күнгө чейинки аралыкта тандаңыз."
       : r.error === "bad_other_phone" ? "Номерди толук жазыңыз: 0700 123 456" : r.message || "Ката кетти, кайра аракет кылыңыз."); }
   };
-  $("#back").onclick = () => { map.setView(S.from, 15); viewIdle(); };
+  $("#back").onclick = () => { map.setView(S.from, 15); S.to = null; viewStepB(); };
 }
 // Точка тандалганда: кыска дирилдөө + 1,5 сек кабар
 function picked(w) { try { navigator.vibrate && navigator.vibrate(35); } catch (e) {} toast(`✓ ${w} точка тандалды`, 1500); }
