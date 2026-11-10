@@ -100,7 +100,7 @@ input.f:focus{border-color:var(--navy)}
 .quick{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=13">
+<link rel="stylesheet" href="/static/theme.css?v=14">
 </head>
 <body>
 <div id="map"></div>
@@ -116,7 +116,6 @@ input.f:focus{border-color:var(--navy)}
   <div class="head" id="pinHead"></div><div class="stick" id="pinStick"></div><div class="dot"></div>
 </div>
 
-<button class="round locate" id="locBtn" aria-label="Мен турган жер">➤</button>
 
 <div class="sheet" id="sheet"><div class="grab"></div><div id="view"></div></div>
 
@@ -217,11 +216,12 @@ function setPin(kind) {
   $("#pinHead").classList.toggle("to", kind === "to");
   $("#pinStick").classList.toggle("to", kind === "to");
 }
-$("#locBtn").onclick = () => locate(true);
+NAV.init(map, {onLocate: () => locate(true)});
 function locate(force) {
   if (!navigator.geolocation) return;
   navigator.geolocation.getCurrentPosition(p => {
     const ll = [p.coords.latitude, p.coords.longitude];
+    NAV.set(ll, p.coords.heading, p.coords.speed);
     if (!inArea(ll[0], ll[1])) {               // аймактан сырткары — карта борборунда калат
       if (force) $("#chipEta").textContent = `Сиз ${window.AREA && AREA.name ? AREA.name + " районунун" : "аймактын"} сыртындасыз`;
       return;
@@ -234,7 +234,7 @@ function locate(force) {
 function render(html) { $("#view").innerHTML = html; window.SHEET && SHEET.refresh(); positionLocate(); }
 window.addEventListener("sheetmove", () => positionLocate());
 function positionLocate() {
-  requestAnimationFrame(() => { $("#locBtn").style.bottom = ((window.SHEET ? SHEET.visible() : $("#sheet").offsetHeight) + 14) + "px"; });
+  requestAnimationFrame(() => NAV.place());
 }
 
 function viewLogin(pending, link) {

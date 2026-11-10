@@ -143,3 +143,71 @@ function bindLinks() {
     else location.href = "https://wa.me/?text=" + encodeURIComponent(text + " " + url);
   });
 }
+
+// ---------- Навигация: сары жебе (мен), компас, «мен турган жер» баскычы ----------
+// Жебе телефон кайсы жакты караса ошол жакка бурулат (жүрүп баратканда — GPS багыты).
+window.NAV = (function () {
+  let map = null, marker = null, pos = null, head = null, gpsHead = null, wrap = null, onLocate = null, watching = false, oriOn = false;
+  const ARROW = `<svg viewBox="0 0 60 60" width="52" height="52"><defs>
+      <linearGradient id="ga" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd84d"/><stop offset="1" stop-color="#f5a800"/></linearGradient>
+      <linearGradient id="gb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e09a00"/><stop offset="1" stop-color="#b87800"/></linearGradient></defs>
+    <path d="M30 4 L52 52 L30 41 Z" fill="url(#gb)"/><path d="M30 4 L8 52 L30 41 Z" fill="url(#ga)"/></svg>`;
+  const LOC = `<svg viewBox="0 0 24 24" width="24" height="24"><path d="M21.5 2.5 L2.8 10.3 L11 12.9 L13.7 21.2 Z" fill="#16161a" stroke="#16161a" stroke-width="1.2" stroke-linejoin="round"/></svg>`;
+  const COMP = `<svg viewBox="0 0 40 40" width="34" height="34"><path d="M20 4 L26 20 L14 20 Z" fill="#ff3b30"/><path d="M20 36 L26 20 L14 20 Z" fill="#c9c9cf"/><circle cx="20" cy="20" r="2.6" fill="#fff"/></svg>`;
+  function icon() { return L.divIcon({className:"", html:`<div class="navme"><i></i><b class="navarr">${ARROW}</b></div>`, iconSize:[52,52], iconAnchor:[26,26]}); }
+  function paint() {
+    const h = gpsHead !== null ? gpsHead : head;
+    document.querySelectorAll(".navarr").forEach(e => e.style.transform = `rotate(${h || 0}deg)`);
+    const c = document.getElementById("navComp");
+    if (c) { c.firstChild.style.transform = `rotate(${-(head || 0)}deg)`; c.classList.toggle("hide", head === null); }
+  }
+  function onOri(e) {
+    let h = null;
+    if (typeof e.webkitCompassHeading === "number") h = e.webkitCompassHeading;
+    else if (e.absolute && typeof e.alpha === "number") h = 360 - e.alpha;
+    if (h === null) return;
+    const so = (screen.orientation && screen.orientation.angle) || window.orientation || 0;
+    head = (h + so + 360) % 360; paint();
+  }
+  function listenOri() {
+    if (oriOn) return; oriOn = true;
+    if ("ondeviceorientationabsolute" in window) window.addEventListener("deviceorientationabsolute", onOri);
+    else window.addEventListener("deviceorientation", onOri);
+  }
+  async function askOri() {                       // iPhone уруксат сурайт
+    try { if (window.DeviceOrientationEvent && DeviceOrientationEvent.requestPermission) {
+      if (await DeviceOrientationEvent.requestPermission() !== "granted") return; } } catch (e) {}
+    listenOri();
+  }
+  function set(p, gh, speed) {
+    pos = p; gpsHead = (typeof gh === "number" && !isNaN(gh) && (speed || 0) > 1.5) ? gh : null;
+    if (!map) return;
+    if (!marker) marker = L.marker(p, {icon:icon(), interactive:false, zIndexOffset:900, keyboard:false}).addTo(map);
+    else marker.setLatLng(p);
+    paint();
+  }
+  function watch() {
+    if (watching || !navigator.geolocation) return; watching = true;
+    navigator.geolocation.watchPosition(p => set([p.coords.latitude, p.coords.longitude], p.coords.heading, p.coords.speed),
+      () => {}, {enableHighAccuracy:true, maximumAge:3000, timeout:20000});
+  }
+  function place() {
+    if (!wrap) return;
+    const v = window.SHEET ? SHEET.visible() : 0;
+    wrap.style.bottom = (Math.max(v, 0) + 14) + "px";
+  }
+  function init(m, opts) {
+    map = m; onLocate = (opts && opts.onLocate) || null;
+    wrap = document.createElement("div"); wrap.className = "navbtns"; wrap.id = "navBtns";
+    wrap.innerHTML = `<button class="navb hide" id="navComp" aria-label="Компас (түндүк)">${COMP}</button><button class="navb" id="navLoc" aria-label="Мен турган жер">${LOC}</button>`;
+    document.body.appendChild(wrap);
+    wrap.querySelector("#navComp").firstChild.style.transition = "transform .2s linear";
+    wrap.querySelector("#navLoc").onclick = () => { askOri(); watch(); if (onLocate) onLocate(); else if (pos) map.setView(pos, Math.max(map.getZoom(), 16)); };
+    wrap.querySelector("#navComp").onclick = () => { askOri(); if (pos) map.setView(pos, Math.max(map.getZoom(), 17)); };
+    listenOri(); watch();
+    window.addEventListener("sheetmove", place); window.addEventListener("resize", place);
+    setInterval(place, 300); place();
+    document.addEventListener("click", askOri, {once:true});
+  }
+  return {init, set, place, pos: () => pos};
+})();

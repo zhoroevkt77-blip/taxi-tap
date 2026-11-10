@@ -81,7 +81,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=13">
+<link rel="stylesheet" href="/static/theme.css?v=14">
 </head>
 <body>
 <div id="map"></div>
@@ -109,13 +109,14 @@ setupArea(map, {zoom:14});
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:"© OpenStreetMap"}).addTo(map);
 const icon = (cls, t) => L.divIcon({className:"", html:`<div class="carm ${cls}">${t}</div>`, iconSize:[30,30], iconAnchor:[15,15]});
 const layer = L.layerGroup().addTo(map);
-let me = null, myPos = null, D = null, poll = null, watch = null, lock = null, lastOffer = null, lastRide = null, pingT = null;
+let me = null, myHead = null, mySpeed = 0, myPos = null, D = null, poll = null, watch = null, lock = null, lastOffer = null, lastRide = null, pingT = null;
 
+NAV.init(map, {onLocate: () => getPos().then(p => { if (p) { drawMe(); map.setView(p, Math.max(map.getZoom(), 16)); } })});
 // ---------- GPS ----------
 function startGps() {
   if (!navigator.geolocation || watch !== null) return;
   watch = navigator.geolocation.watchPosition(p => {
-    myPos = [p.coords.latitude, p.coords.longitude];
+    myPos = [p.coords.latitude, p.coords.longitude]; myHead = p.coords.heading; mySpeed = p.coords.speed;
     drawMe();
   }, () => {}, {enableHighAccuracy:true, maximumAge:3000, timeout:15000});
   clearInterval(pingT);
@@ -131,8 +132,8 @@ function getPos() {
 }
 function drawMe() {
   if (!myPos) return;
-  if (!me) { me = L.marker(myPos, {icon:icon("me", "🚕"), interactive:false}).addTo(map); map.setView(myPos, 16); }
-  else me.setLatLng(myPos);
+  NAV.set(myPos, myHead, mySpeed);
+  if (!me) { me = true; map.setView(myPos, 16); }
 }
 async function wake(on) {
   try {
