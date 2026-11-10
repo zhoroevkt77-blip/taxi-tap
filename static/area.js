@@ -183,7 +183,7 @@ window.NAV = (function () {
     pos = p; gpsHead = (typeof gh === "number" && !isNaN(gh) && (speed || 0) > 1.5) ? gh : null;
     if (!map) return;
     // Аймактан сырткары турса да картада көрүнсүн: чекти ошол жерге чейин кеңейтебиз
-    const mb = map.options.maxBounds;
+    const mb = map.options && map.options.maxBounds;
     if (mb && mb.contains && !mb.contains(p)) {
       const d = 0.03; map.setMaxBounds(L.latLngBounds(mb.getSouthWest(), mb.getNorthEast()).extend([p[0] - d, p[1] - d]).extend([p[0] + d, p[1] + d]));
     }
