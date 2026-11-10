@@ -116,3 +116,12 @@ input.f{padding:9px 12px!important;font-size:15px!important;margin-bottom:8px!im
 .role a{padding:6px 10px!important;font-size:12px!important}
 .pill,.state{padding:6px 10px!important}
 .round{width:40px!important;height:40px!important}
+
+/* v6: коюу көлөкөлөр (ТАКСИ роБОТтогудай) */
+:root{--sh:0 5px 18px rgba(20,20,30,.30);--glow:0 7px 20px rgba(255,183,3,.60)}
+.btn.ghost{box-shadow:var(--sh)!important}
+.btn.go{box-shadow:0 7px 20px rgba(47,158,95,.50)!important}
+.btn.red,.btn.bad{box-shadow:0 5px 16px rgba(224,52,74,.22)!important}
+.wbox,.note{box-shadow:0 4px 14px rgba(160,110,0,.18)}
+.stat,.car,.wait,.chips button,.quick button,.cls>div,.role,.logo,.pill,.state,.round,.chip,body.adm .panel,body.adm .card,body.adm nav button{box-shadow:var(--sh)!important}
+.cls>div.on,.role a.on,body.adm nav button.on,.btn.main,.btn.gold{box-shadow:var(--glow)!important}
