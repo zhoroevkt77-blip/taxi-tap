@@ -134,6 +134,12 @@ class Ride(unittest.TestCase):
         out = flow.passenger_cancel(p, rid)
         self.assertEqual(out[0]["to"], d)
 
+    def test_bazar_korgon(self):
+        self.assertEqual(core.city_of(41.0400, 72.7500), "Базар-Коргон")
+        q = core.quote(41.0400, 72.7500, 41.0250, 72.7350)
+        self.assertEqual(q["tariff"]["base"], 25)
+        self.assertTrue(60 <= q["price"] <= 150)
+
     def test_quote(self):
         q = core.quote(*KARAKOL, *DEST)
         self.assertEqual(q["city"], "Каракол")

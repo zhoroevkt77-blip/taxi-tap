@@ -84,6 +84,14 @@ CITIES = {
     "Баткен": (40.0629, 70.8194),
     "Балыкчы": (42.4600, 76.1870),
     "Кара-Балта": (42.8142, 73.8481),
+    "Базар-Коргон": (41.0377, 72.7470),
+}
+
+# Шаарга жараша демейки тариф (админ панелинен өзгөрөт).
+# Базар-Коргон: Яндекс Go «Эконом» 2026-11-10: 9 мүн → 64 с, 11 мүн → 82 с, 12 мүн → 118 с.
+# Ага жакын, бир аз арзаныраак башталат.
+CITY_TARIFFS = {
+    "Базар-Коргон": {"base": 25, "per_km": 14, "per_min": 1, "min_price": 60},
 }
 CITY_RADIUS_KM = 40
 
@@ -410,7 +418,7 @@ def city_of(lat, lon):
 
 def get_tariff(city):
     row = query("SELECT * FROM tariffs WHERE city=?", (city or "",), "one")
-    return row or dict(DEFAULT_TARIFF, city=city)
+    return row or dict(CITY_TARIFFS.get(city) or DEFAULT_TARIFF, city=city)
 
 
 def set_tariff(city, base, per_km, per_min, min_price):
@@ -813,4 +821,5 @@ def admin_rides(limit=60):
 
 def all_tariffs():
     saved = {t["city"]: t for t in query("SELECT * FROM tariffs", (), "all")}
-    return [dict(saved.get(c) or dict(DEFAULT_TARIFF, city=c), saved=c in saved) for c in CITIES]
+    return [dict(saved.get(c) or dict(CITY_TARIFFS.get(c) or DEFAULT_TARIFF, city=c),
+                 saved=c in saved) for c in CITIES]
