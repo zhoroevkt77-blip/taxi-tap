@@ -137,8 +137,12 @@ class Ride(unittest.TestCase):
     def test_bazar_korgon(self):
         self.assertEqual(core.city_of(41.0400, 72.7500), "Базар-Коргон")
         q = core.quote(41.0400, 72.7500, 41.0250, 72.7350)
-        self.assertEqual(q["tariff"]["base"], 25)
+        self.assertEqual(q["tariff"]["base"], 10)
         self.assertTrue(60 <= q["price"] <= 150)
+        # Яндекс: 64 · 82 · 118 сом → биздики арзаныраак
+        t = core.get_tariff("Базар-Коргон")
+        self.assertEqual([core.price_of(t, 2.5, 9), core.price_of(t, 2.6, 11), core.price_of(t, 6, 12)],
+                         [60, 70, 110])
 
     def test_quote(self):
         q = core.quote(*KARAKOL, *DEST)

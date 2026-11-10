@@ -88,10 +88,11 @@ CITIES = {
 }
 
 # Шаарга жараша демейки тариф (админ панелинен өзгөрөт).
-# Базар-Коргон: Яндекс Go «Эконом» 2026-11-10: 9 мүн → 64 с, 11 мүн → 82 с, 12 мүн → 118 с.
-# Ага жакын, бир аз арзаныраак башталат.
+# Базар-Коргон — Яндекс Go «Эконом», 2026-11-10:
+#   2,5 км / 9 мүн → 64 с · 2,6 км / 11 мүн → 82 с · 6 км / 12 мүн → 118 с
+# Ушул тариф менен: 60 · 70 · 110 с (Яндекстен 6–15% арзан).
 CITY_TARIFFS = {
-    "Базар-Коргон": {"base": 25, "per_km": 14, "per_min": 1, "min_price": 60},
+    "Базар-Коргон": {"base": 10, "per_km": 13, "per_min": 2, "min_price": 60},
 }
 CITY_RADIUS_KM = 40
 
@@ -484,8 +485,14 @@ def route(lat1, lon1, lat2, lon2):
     return out
 
 
+def price_of(t, km, minutes, k=1.0):
+    """Баа = max(минимум, отуруу + км×a + мүн×b) × k, жакынкы 10 сомго тегеректелет."""
+    raw = (t["base"] + t["per_km"] * km + t["per_min"] * minutes) * k
+    return int(max(t["min_price"] * k, math.floor(raw / 10.0 + 0.5) * 10))
+
+
 def quote(p_lat, p_lon, d_lat=None, d_lon=None):
-    """Баа = max(минимум, отуруу + км×a + мүн×b) × k, 10 сомго тегеректелет."""
+    """Маршрут → баа (price_of). Баа заказ берилгенде белгиленет, жолдо өзгөрбөйт."""
     city = city_of(p_lat, p_lon)
     t = get_tariff(city)
     k = surge_k(city)
@@ -493,9 +500,8 @@ def quote(p_lat, p_lon, d_lat=None, d_lon=None):
         return {"city": city, "dist_km": None, "price": None, "surge": k, "tariff": t}
     rt = route(p_lat, p_lon, d_lat, d_lon)
     km, minutes = rt["km"], rt["min"]
-    raw = max(t["min_price"], t["base"] + t["per_km"] * km + t["per_min"] * minutes) * k
     return {"city": city, "dist_km": round(km, 1), "minutes": round(minutes),
-            "price": int(math.ceil(raw / 10.0) * 10), "surge": k, "tariff": t, "route": rt}
+            "price": price_of(t, km, minutes, k), "surge": k, "tariff": t, "route": rt}
 
 
 # ==================== Сапар ====================
