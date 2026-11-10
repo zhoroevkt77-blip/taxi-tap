@@ -200,6 +200,7 @@ window.NAV = (function () {
     if (!wrap) return;
     const v = window.SHEET ? SHEET.visible() : 0;
     wrap.style.bottom = (Math.max(v, 0) + 14) + "px";
+    wrap.style.visibility = (v + 14 + 54 > window.innerHeight - 190) ? "hidden" : "";   // барак бийик болсо — үстүңкү баскычтарды жаап калбасын
   }
   function init(m, opts) {
     map = m; onLocate = (opts && opts.onLocate) || null;

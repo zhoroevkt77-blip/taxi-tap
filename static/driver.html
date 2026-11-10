@@ -247,7 +247,7 @@ function viewAddAddr() {
 function outHTML() {
   if (D.in_area !== false) return "";
   return `<div class="note" style="background:#fdecef!important;border-color:#f5c2cb!important">⚠️ <b>Сиз ${D.area_name ? esc(D.area_name) + " районунун" : "иштөө аймагынын"} сыртындасыз.</b>
-    Такси ТАП! ушул райондун ичинде гана иштейт — бул жерде заказ келбейт. Аймакка киргенде заказдар өзү келе баштайт.</div>`;
+    Такси ТАП! сервиси ${D.area_name ? esc(D.area_name) + " районунун аймагында" : "иштөө аймагында"} гана иштейт — бул жерде заказ келбейт. Аймакка киргенде заказдар өзү келе баштайт.</div>`;
 }
 
 function viewHome() {
