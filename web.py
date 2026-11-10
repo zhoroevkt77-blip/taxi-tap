@@ -201,9 +201,6 @@ class H(BaseHTTPRequestHandler):
                 return self._me()
             if u.path == "/api/area":
                 return self._json(core.area_info())
-            if u.path == "/api/routes":
-                return self._json({"routes": [{k: r[k] for k in ("name", "lat", "lon", "price")}
-                                              for r in core.get_routes()]})
             if u.path == "/api/near":
                 return self._near(q)
             if u.path == "/api/route":
@@ -314,9 +311,11 @@ class H(BaseHTTPRequestHandler):
             q = core.quote(p[0], p[1], *(d or (None, None)))
             if not q["city"]:
                 return self._json({"error": "no_city"})
+            if q.get("dest_out"):
+                return self._json({"error": "dest_out"})
             t = q["tariff"]
             return self._json({"city": q["city"], "price": q["price"], "dist_km": q["dist_km"],
-                               "minutes": q.get("minutes"), "surge": q["surge"], "fixed": q.get("fixed"),
+                               "minutes": q.get("minutes"), "surge": q["surge"],
                                "route": (q.get("route") or {}).get("coords"),
                                "tariff": {k: t[k] for k in ("base", "per_km", "min_price")}})
         if path == "/api/promo":
@@ -333,6 +332,8 @@ class H(BaseHTTPRequestHandler):
             q = core.quote(p[0], p[1], *(d or (None, None)))
             if not q["city"]:
                 return self._json({"error": "no_city"}, 400)
+            if q.get("dest_out"):
+                return self._json({"error": "dest_out"}, 400)
             promo, disc = None, 0
             if b.get("promo"):
                 disc, err = core.check_promo(b.get("promo"), uid, q["price"])
@@ -435,8 +436,7 @@ class H(BaseHTTPRequestHandler):
         if action == "promos":
             return self._json({"promos": core.list_promos()})
         if action == "tariffs":
-            return self._json({"tariffs": core.all_tariffs(), "routes": core.get_routes(),
-                               "places": core.KNOWN_PLACES})
+            return self._json({"tariffs": core.all_tariffs()})
         if action == "finance":
             return self._json(core.admin_finance())
         if action == "backup":
@@ -489,10 +489,6 @@ class H(BaseHTTPRequestHandler):
             if not ok:
                 return self._json({"error": "bad"}, 400)
             return self._json({"promos": core.list_promos()})
-        if action == "routes":
-            if not core.set_routes(b.get("routes")):
-                return self._json({"error": "bad"}, 400)
-            return self._json({"routes": core.get_routes()})
         if action == "order":
             # Диспетчер: телефон аркылуу келген заказ
             phone, name, note = _txt(b.get("phone"), 20), _txt(b.get("name"), 40), _txt(b.get("note"), 200)
@@ -507,6 +503,8 @@ class H(BaseHTTPRequestHandler):
             q = core.quote(p[0], p[1], *(d or (None, None)))
             if not q["city"]:
                 return self._json({"error": "no_city"}, 400)
+            if q.get("dest_out"):
+                return self._json({"error": "dest_out"}, 400)
             u = core.ensure_user(uid, name)
             core.set_user(uid, phone=uid[3:], **({"name": name} if name and not u.get("name") else {}))
             rid = core.create_ride(uid, q, p[0], p[1], *(d or (None, None)), note=note or None,
@@ -517,7 +515,8 @@ class H(BaseHTTPRequestHandler):
             if not p:
                 return self._json({"error": "bad_point"}, 400)
             q = core.quote(p[0], p[1], *(d or (None, None)))
-            return self._json({"city": q["city"], "price": q["price"], "dist_km": q["dist_km"]})
+            return self._json({"city": q["city"], "price": q["price"], "dist_km": q["dist_km"],
+                               "dest_out": bool(q.get("dest_out"))})
         if action == "finance":
             pct, mb = _num(b.get("percent")), _num(b.get("min_balance") or 0)
             fu = _txt(b.get("free_until"), 10) or None

@@ -154,6 +154,7 @@ async function phoneForm() {
   let price = "";
   if (PO.p) { const q = await api("/api/a/quote", {p:PO.p, d:PO.d});
     price = !q.city ? `<span class="err">Бул жер иштөө аймагынан сырткары</span>`
+      : q.dest_out ? `<span class="err">Бара турган жер райондон сырткары — шаар аралык каттам жок</span>`
       : `Баасы: <b>${q.price ? q.price + " сом" : "тариф боюнча"}</b>${q.dist_km ? " · ~" + q.dist_km + " км" : ""}`; }
   const pickTxt = k => PO.pick === k ? "👆 Картадан басыңыз…" : PO[k] ? "✓ Белгиленди (өзгөртүү)" : (k === "p" ? "Картадан белгилөө" : "Белгилөө (милдеттүү эмес)");
   box.innerHTML = `<div class="fset">
@@ -171,7 +172,7 @@ async function phoneForm() {
     if (!PO.p) return $("#poEr").textContent = "Кайдан экенин картадан басыңыз.";
     const r = await api("/api/a/order", {phone:$("#poPh").value, name:$("#poNm").value, note:$("#poNt").value, p:PO.p, d:PO.d});
     if (r.error) return $("#poEr").textContent = {bad_phone:"Номерди толук жазыңыз.", have_active:"Бул номерде активдүү заказ бар.",
-      no_city:"Бул жер иштөө аймагынан сырткары.", bad_point:"Жерди белгилеңиз."}[r.error] || "Ката.";
+      no_city:"Бул жер иштөө аймагынан сырткары.", dest_out:"Бара турган жер райондон сырткары.", bad_point:"Жерди белгилеңиз."}[r.error] || "Ката.";
     PO.open = false; phoneForm(); refresh();
   };
 }
@@ -254,35 +255,13 @@ async function viewRides() {
 
 // ---------- тарифтер ----------
 async function viewTariffs() {
-  const {tariffs, routes, places} = await api("/api/a/tariffs");
+  const {tariffs} = await api("/api/a/tariffs");
   $("#main").innerHTML = `<div class="panel"><h3>Тарифтер (сом)</h3><div class="scroll"><table>
     <tr><th>Шаар</th><th>Отуруу</th><th>1 км</th><th>1 мүнөт</th><th>Минимум</th><th></th></tr>
     ${tariffs.map((t, i) => `<tr><td><b>${esc(t.city)}</b>${t.saved ? "" : `<div class="muted">демейки</div>`}</td>
       ${["base", "per_km", "per_min", "min_price"].map(k => `<td><input class="f" inputmode="decimal" id="t${i}${k}" value="${+t[k]}"></td>`).join("")}
       <td><button class="btn gold" data-i="${i}">Сактоо</button></td></tr>`).join("")}</table></div></div>
-    <p class="muted">Баа = max(минимум, отуруу + км × 1 км баасы + мүнөт × 1 мүнөт баасы) × талап коэффициенти, 10 сомго тегеректелет.</p>
-    <div class="panel"><h3>Шаар аралык каттамдар — белгиленген баа</h3><div class="scroll"><table id="rt">
-      <tr><th>Багыт</th><th>Баасы, сом</th><th>Радиус, км</th><th></th></tr>
-      ${routes.map((r, i) => `<tr data-row="${i}"><td><b>${esc(r.name)}</b></td>
-        <td><input class="f" inputmode="numeric" data-k="price" value="${Math.round(r.price)}"></td>
-        <td><input class="f" inputmode="decimal" data-k="radius" value="${r.radius}"></td>
-        <td><button class="btn bad" data-del="${i}">Өчүрүү</button></td></tr>`).join("")}
-    </table></div>
-    <div class="fset"><div><label>Жаңы багыт</label><select class="f" id="rtNew">${Object.keys(places).filter(n => !routes.some(r => r.name === n))
-        .map(n => `<option>${esc(n)}</option>`).join("")}</select></div>
-      <div><label>Баасы, сом</label><input class="f" id="rtPrice" inputmode="numeric" placeholder="600"></div></div>
-    <div style="padding:0 14px 14px"><button class="btn" id="rtAdd">+ Кошуу</button> <button class="btn gold" id="rtSave">Каттамдарды сактоо</button> <span class="muted" id="rtMsg"></span>
-      <p class="muted">Жүргүнчү ушул жерге (радиус ичинде) заказ берсе — баа белгиленген, талап коэффициенти колдонулбайт. Демейки баалар мисал гана — өзүңүздүн бааңызды коюңуз.</p></div></div>`;
-  let R = routes.map(r => ({...r}));
-  const readR = () => $("#rt").querySelectorAll("[data-row]").forEach(tr => { const r = R[+tr.dataset.row];
-    tr.querySelectorAll("[data-k]").forEach(inp => r[inp.dataset.k] = +inp.value); });
-  const saveR = async () => { const x = await api("/api/a/routes", {routes:R});
-    if (x.error) return $("#rtMsg").textContent = "Текшериңиз: баа 1–20 000, радиус 0.5–30 км."; viewTariffs(); };
-  $("#rtSave").onclick = () => { readR(); saveR(); };
-  $("#rtAdd").onclick = () => { readR(); const n = $("#rtNew").value, p = +$("#rtPrice").value;
-    if (!n || !(p > 0)) return $("#rtMsg").textContent = "Багытты тандап, баасын жазыңыз.";
-    R.push({name:n, lat:places[n][0], lon:places[n][1], price:p, radius:5}); saveR(); };
-  $("#main").querySelectorAll("[data-del]").forEach(b => b.onclick = () => { readR(); R.splice(+b.dataset.del, 1); saveR(); });
+    <p class="muted">Баа = max(минимум, отуруу + км × 1 км баасы + мүнөт × 1 мүнөт баасы) × талап коэффициенти, 10 сомго тегеректелет.</p>`;
   $("#main").querySelectorAll("[data-i]").forEach(b => b.onclick = async () => {
     const i = +b.dataset.i, v = k => $(`#t${i}${k}`).value;
     const r = await api("/api/a/tariff", {city:tariffs[i].city, base:v("base"), per_km:v("per_km"), per_min:v("per_min"), min_price:v("min_price")});
