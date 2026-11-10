@@ -66,6 +66,7 @@ td input.f{padding:7px 8px;max-width:90px;min-width:58px}
 <main id="main"></main>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/static/area.js"></script>
 <script>
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -105,7 +106,8 @@ function viewMap() {
     <div id="map"></div>
     <div class="legend"><span><i style="background:var(--ok)"></i>Бош айдоочу</span><span><i style="background:var(--navy)"></i>Сапардагы айдоочу</span><span><i style="background:var(--gold)"></i>Айдоочу изделүүдө</span><span><i style="background:#378ADD"></i>Жүргүнчү күтүп турат</span></div>
     <div class="panel"><h3>Активдүү заказдар</h3><div id="act"></div></div>`;
-  map = L.map("map", {zoomControl:true}).setView([42.8746, 74.5698], 13);
+  map = L.map("map", {zoomControl:true}).setView([41.0377, 72.7470], 12);
+  setupArea(map, {minZoom:9, center:false});
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:"© OpenStreetMap"}).addTo(map);
   lyr = L.layerGroup().addTo(map); fitted = false; drawMap();
 }

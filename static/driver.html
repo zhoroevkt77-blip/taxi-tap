@@ -76,6 +76,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 <div class="offer hide" id="offer"><div class="ocard" id="ocard"></div></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/static/area.js"></script>
 <script>
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -84,7 +85,8 @@ const api = async (path, body) => {
     {method:"POST", credentials:"same-origin", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)});
   return r.json();
 };
-const map = L.map("map", {zoomControl:false}).setView([42.8746, 74.5698], 15);
+const map = L.map("map", {zoomControl:false}).setView([41.0377, 72.7470], 14);
+setupArea(map, {zoom:14});
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:"© OpenStreetMap"}).addTo(map);
 const icon = (cls, t) => L.divIcon({className:"", html:`<div class="carm ${cls}">${t}</div>`, iconSize:[30,30], iconAnchor:[15,15]});
 const layer = L.layerGroup().addTo(map);

@@ -15,7 +15,7 @@ import urllib.request
 _tmp = tempfile.mkdtemp()
 os.environ.update(SQLITE_PATH=os.path.join(_tmp, "t.db"), DATA_DIR=_tmp, DATABASE_URL="",
                   ADMIN_IDS="900", ADMIN_PHONES="0700 111 000", COMMISSION_PCT="10",
-                  WEB_DEV_LOGIN="1", SITE_URL="https://taxi.example.kg")
+                  WEB_DEV_LOGIN="1", SITE_URL="https://taxi.example.kg", SERVICE_AREA="off")
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import bot       # noqa: E402
@@ -149,6 +149,32 @@ class Ride(unittest.TestCase):
         self.assertEqual(q["city"], "Каракол")
         self.assertEqual(q["price"] % 10, 0)
         self.assertIsNone(core.quote(41.0, 78.0)["city"])
+
+
+class Area(unittest.TestCase):
+    def setUp(self):
+        core.AREA_ON = True
+        core._area.update(geojson=None, source="bbox")
+
+    def tearDown(self):
+        core.AREA_ON = False
+
+    def test_bbox_fallback(self):
+        self.assertTrue(core.in_area(41.0377, 72.7470))           # Базар-Коргон
+        self.assertTrue(core.in_area(41.33, 72.94))                # Арстанбап
+        self.assertFalse(core.in_area(40.5283, 72.7985))           # Ош
+        self.assertFalse(core.in_area(42.8746, 74.5698))           # Бишкек
+        self.assertEqual(core.city_of(41.04, 72.75), "Базар-Коргон")
+        self.assertIsNone(core.quote(42.8746, 74.5698, 42.88, 74.58)["city"])
+
+    def test_polygon(self):
+        core._area["geojson"] = {"type": "MultiPolygon", "coordinates": [
+            [[[72.6, 41.0], [72.9, 41.0], [72.9, 41.1], [72.6, 41.1], [72.6, 41.0]]]]}
+        self.assertTrue(core.in_area(41.05, 72.75))
+        self.assertFalse(core.in_area(41.2, 72.75))
+        info = core.area_info()
+        self.assertEqual(info["bbox"], [41.0, 72.6, 41.1, 72.9])
+        self.assertEqual(info["center"], list(core.CITIES["Базар-Коргон"]))
 
 
 class Accounts(unittest.TestCase):

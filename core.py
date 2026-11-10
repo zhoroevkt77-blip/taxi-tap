@@ -408,7 +408,107 @@ def haversine_km(lat1, lon1, lat2, lon2):
     return 2 * r * math.asin(math.sqrt(a))
 
 
+# ==================== Иштөө аймагы ====================
+# Сервис бир аймакта гана иштейт (демейки: Базар-Коргон району).
+# Чеги OpenStreetMap'тен бир жолу жүктөлүп, DATA_DIR'ге сакталат.
+# Жүктөлбөсө — болжолдуу төрт бурчтук (AREA_BBOX). SERVICE_AREA=off → бүт өлкө.
+
+AREA_ON = (os.environ.get("SERVICE_AREA") or "on").lower() not in ("off", "0", "")
+AREA_CITY = os.environ.get("AREA_CITY") or "Базар-Коргон"
+AREA_NAME = os.environ.get("AREA_NAME") or "Базар-Коргон району"
+AREA_QUERY = os.environ.get("AREA_QUERY") or "Базар-Коргонский район"
+# түштүк, батыш, түндүк, чыгыш
+AREA_BBOX = [float(x) for x in (os.environ.get("AREA_BBOX") or "40.96,72.45,41.60,73.25").split(",")]
+_area = {"geojson": None, "source": "bbox"}
+
+
+def _bbox_geojson(b):
+    s_, w, n, e = b
+    return {"type": "Polygon", "coordinates": [[[w, s_], [e, s_], [e, n], [w, n], [w, s_]]]}
+
+
+def _rings(gj):
+    """GeoJSON → тышкы шакекчелердин тизмеси [[lon, lat], ...]."""
+    if not gj:
+        return []
+    if gj["type"] == "Polygon":
+        return [gj["coordinates"][0]]
+    if gj["type"] == "MultiPolygon":
+        return [poly[0] for poly in gj["coordinates"]]
+    return []
+
+
+def _in_ring(lat, lon, ring):
+    inside = False
+    j = len(ring) - 1
+    for i in range(len(ring)):
+        xi, yi = ring[i]
+        xj, yj = ring[j]
+        if (yi > lat) != (yj > lat) and lon < (xj - xi) * (lat - yi) / ((yj - yi) or 1e-12) + xi:
+            inside = not inside
+        j = i
+    return inside
+
+
+def area_geojson():
+    return _area["geojson"] or _bbox_geojson(AREA_BBOX)
+
+
+def in_area(lat, lon):
+    if not AREA_ON:
+        return True
+    return any(_in_ring(lat, lon, r) for r in _rings(area_geojson()))
+
+
+def area_info():
+    gj = area_geojson()
+    pts = [p for r in _rings(gj) for p in r]
+    lons, lats = [p[0] for p in pts], [p[1] for p in pts]
+    return {"on": AREA_ON, "name": AREA_NAME, "city": AREA_CITY,
+            "center": list(CITIES.get(AREA_CITY) or ((min(lats) + max(lats)) / 2,
+                                                     (min(lons) + max(lons)) / 2)),
+            "bbox": [min(lats), min(lons), max(lats), max(lons)],
+            "geojson": gj, "source": _area["source"]}
+
+
+def load_area(fetch=True):
+    """Аймактын чегин окуйт: файлдан, болбосо OpenStreetMap'тен (Nominatim)."""
+    if not AREA_ON:
+        return
+    path = os.path.join(DATA_DIR, "area_%s.json" % "".join(c for c in AREA_QUERY if c.isalnum()))
+    try:
+        with open(path, encoding="utf-8") as f:
+            _area.update(geojson=json.load(f), source="osm")
+            return
+    except (OSError, ValueError):
+        pass
+    if not fetch:
+        return
+    import urllib.parse
+    import urllib.request
+    url = ("https://nominatim.openstreetmap.org/search?format=json&polygon_geojson=1"
+           "&polygon_threshold=0.001&countrycodes=kg&limit=5&q=" + urllib.parse.quote(AREA_QUERY))
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "TaksiTAP/1.0 (taxi service)"})
+        with urllib.request.urlopen(req, timeout=15) as r:
+            res = json.loads(r.read().decode())
+        for x in res:
+            gj = x.get("geojson") or {}
+            if x.get("osm_type") == "relation" and gj.get("type") in ("Polygon", "MultiPolygon"):
+                os.makedirs(DATA_DIR, exist_ok=True)
+                with open(path, "w", encoding="utf-8") as f:
+                    json.dump(gj, f)
+                _area.update(geojson=gj, source="osm")
+                print("  Аймак: %s (OpenStreetMap)" % x.get("display_name", "")[:60], flush=True)
+                return
+        print("  Аймак: OSM'де табылган жок — болжолдуу чек колдонулат", flush=True)
+    except Exception as e:
+        print("  Аймак: жүктөлбөдү (%s) — болжолдуу чек" % e, flush=True)
+
+
 def city_of(lat, lon):
+    if AREA_ON:
+        return AREA_CITY if in_area(lat, lon) else None
     best, best_d = None, CITY_RADIUS_KM
     for name, (clat, clon) in CITIES.items():
         d = haversine_km(lat, lon, clat, clon)

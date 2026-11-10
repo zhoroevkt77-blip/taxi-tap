@@ -84,6 +84,7 @@ input.f:focus{border-color:var(--navy)}
 <div class="sheet" id="sheet"><div class="grab"></div><div id="view"></div></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/static/area.js"></script>
 <script>
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -94,7 +95,8 @@ const api = async (path, body) => {
 };
 
 const S = { mode:"boot", from:null, fromAddr:"", to:null, toAddr:"", ride:null, quote:null, near:null, timer:null };
-const map = L.map("map", {zoomControl:false, attributionControl:true}).setView([42.8746, 74.5698], 15);
+const map = L.map("map", {zoomControl:false, attributionControl:true}).setView([41.0377, 72.7470], 15);
+const areaReady = setupArea(map, {zoom:15});
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:"© OpenStreetMap"}).addTo(map);
 
 const icon = (cls, txt) => L.divIcon({className:"", html:`<div class="carm ${cls}">${txt}</div>`, iconSize:[30,30], iconAnchor:[15,15]});
@@ -127,7 +129,8 @@ async function search(q) {
     if (!name || seen.has(k)) return; seen.add(k); out.push({name, sub, lat:+lat, lon:+lon});
   };
   try {
-    const r = await (await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lat=${c.lat}&lon=${c.lng}&limit=8`)).json();
+    const bb = window.AREA && AREA.on ? `&bbox=${AREA.bbox[1]},${AREA.bbox[0]},${AREA.bbox[3]},${AREA.bbox[2]}` : "";
+    const r = await (await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lat=${c.lat}&lon=${c.lng}&limit=10${bb}`)).json();
     (r.features || []).forEach(f => {
       const p = f.properties || {}, g = f.geometry.coordinates;
       if (p.countrycode && p.countrycode !== "KG") return;
@@ -138,12 +141,14 @@ async function search(q) {
   } catch (e) {}
   if (out.length < 3) {
     try {
-      const d = 0.4, vb = [c.lng - d, c.lat + d, c.lng + d, c.lat - d].join(",");
+      const d = 0.4, A = window.AREA && AREA.on ? AREA.bbox : null;
+      const vb = A ? [A[1], A[2], A[3], A[0]].join(",") + "&bounded=1" : [c.lng - d, c.lat + d, c.lng + d, c.lat - d].join(",");
       const r = await (await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=7&countrycodes=kg&accept-language=ky,ru&viewbox=${vb}&q=${encodeURIComponent(q)}`)).json();
       r.forEach(x => { const parts = x.display_name.split(","); add(parts[0], parts.slice(1, 3).join(","), x.lat, x.lon); });
     } catch (e) {}
   }
-  // жакынкылар биринчи
+  // аймактан сырткарысы чыкпайт; жакынкылар биринчи
+  for (let i = out.length - 1; i >= 0; i--) if (!inArea(out[i].lat, out[i].lon)) out.splice(i, 1);
   out.sort((a, b) => Math.hypot(a.lat - c.lat, a.lon - c.lng) - Math.hypot(b.lat - c.lat, b.lon - c.lng));
   return out.slice(0, 7);
 }
@@ -178,7 +183,7 @@ async function loadNear() {
   S.near = n;
   nearLayer.clearLayers();
   (n.drivers || []).forEach(p => L.marker(p, {icon:icon("", "🚕"), interactive:false}).addTo(nearLayer));
-  $("#chipEta").textContent = !n.city ? "Бул жерде азырынча иштебейбиз"
+  $("#chipEta").textContent = !n.city ? `Биз ${(window.AREA && AREA.name) || "бул аймакта"} гана иштейбиз`
     : n.eta_min ? `${n.eta_min} мүнөттө берүү` : "Жакын арада бош айдоочу жок";
 }
 function setPin(kind) {
@@ -191,7 +196,12 @@ $("#locBtn").onclick = () => locate(true);
 function locate(force) {
   if (!navigator.geolocation) return;
   navigator.geolocation.getCurrentPosition(p => {
-    if (force || S.mode === "idle") map.setView([p.coords.latitude, p.coords.longitude], 16);
+    const ll = [p.coords.latitude, p.coords.longitude];
+    if (!inArea(ll[0], ll[1])) {               // аймактан сырткары — карта борборунда калат
+      if (force) $("#chipEta").textContent = `Сиз ${(window.AREA && AREA.name) || "аймактан"} сырткарыдасыз`;
+      return;
+    }
+    if (force || S.mode === "idle") map.setView(ll, 16);
   }, () => {}, {enableHighAccuracy:true, timeout:8000});
 }
 
@@ -411,6 +421,7 @@ $("#menuBtn").onclick = async () => {
 
 async function boot() {
   const me = await api("/api/me");
+  await areaReady;
   if (!me.auth) return viewLogin(me.pending, me.link);
   const r = await api("/api/ride");
   if (r.ride && ["searching", "accepted", "arrived", "in_trip"].includes(r.ride.status)) {

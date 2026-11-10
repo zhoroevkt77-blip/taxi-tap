@@ -171,6 +171,7 @@ def dispatch_worker():
 def main():
     global API
     core.init_db()
+    threading.Thread(target=core.load_area, daemon=True).start()   # аймактын чеги (OSM)
     token = read_token()
     if token:
         API = "https://api.telegram.org/bot%s/" % token

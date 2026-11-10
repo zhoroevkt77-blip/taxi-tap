@@ -189,6 +189,8 @@ class H(BaseHTTPRequestHandler):
                 return self._json({"ok": True})
             if u.path == "/api/me":
                 return self._me()
+            if u.path == "/api/area":
+                return self._json(core.area_info())
             if u.path == "/api/near":
                 return self._near(q)
             if u.path == "/api/route":
@@ -453,6 +455,7 @@ def start(port=None):
 if __name__ == "__main__":
     import dispatch
     core.init_db()
+    threading.Thread(target=core.load_area, daemon=True).start()
     start()
     while True:                     # Telegram'сыз режим: dispatch ушул жерде
         try:
