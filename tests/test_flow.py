@@ -835,3 +835,34 @@ class ProFeatures(unittest.TestCase):
         self.assertTrue(all("🆘" in o["text"] for o in outs))
         self.assertEqual(len(core.driver_daily(d)), 7)
         core.cancel(rid, p)
+
+
+class AreaList(unittest.TestCase):
+    def test_select_units(self):
+        old_on, old_fetch = core.AREA_ON, core._fetch_unit_poly
+        core.AREA_ON = True
+        sq = lambda la, lo, d: {"type": "Polygon", "coordinates": [[[lo - d, la - d], [lo + d, la - d], [lo + d, la + d], [lo - d, la + d], [lo - d, la - d]]]}
+        core._fetch_unit_poly = lambda u: (sq(41.04, 72.75, .2), False) if "район" in u["ru"] else (sq(40.93, 73.0, .05), True)
+        try:
+            self.assertIsNotNone(core.geo_find("Базар-Коргон району", "Жалал-Абад облусу"))
+            self.assertIsNotNone(core.geo_find("Базар-Коргон шаары", None))                   # райондук шаар
+            r = core.set_area_units([{"name": "Базар-Коргон району", "ob": "Жалал-Абад облусу"},
+                                     {"name": "Манас шаары", "ob": "Жалал-Абад облусу"}])
+            self.assertTrue(r.get("ok"), r)
+            self.assertEqual(core.city_of(41.04, 72.75), "Базар-Коргон")
+            self.assertEqual(core.city_of(40.93, 73.0), "Манас")
+            self.assertIsNone(core.city_of(42.87, 74.59))
+            self.assertEqual([t["city"] for t in core.all_tariffs()], ["Базар-Коргон", "Манас"])
+            self.assertEqual(core.area_gen(), "иштөө аймагынын")
+            core.set_area_units([{"name": "Базар-Коргон району", "ob": "Жалал-Абад облусу"}])
+            self.assertEqual(core.area_gen(), "Базар-Коргон районунун")
+            core._area.update(units=[], geojson=None); core.load_area(fetch=False)
+            self.assertEqual(core.AREA_NAME, "Базар-Коргон району")
+            self.assertEqual(core.set_area_units([{"name": "Жок район"}]).get("error"), "unknown")
+        finally:
+            core._fetch_unit_poly = old_fetch
+            try:
+                os.remove(core._sel_path())
+            except OSError:
+                pass
+            core.reset_area(); core.AREA_ON = old_on

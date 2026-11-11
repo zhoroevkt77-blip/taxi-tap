@@ -65,7 +65,7 @@ td input.f{padding:7px 8px;max-width:90px;min-width:58px}
 .docs{display:flex;gap:8px;margin-top:8px}.docs a{display:block}.docs img{width:92px;height:68px;object-fit:cover;border-radius:8px;border:1px solid var(--line);background:var(--paper)}
 .docs span{display:block;font-size:11px;color:var(--soft);text-align:center;margin-top:2px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=21">
+<link rel="stylesheet" href="/static/theme.css?v=22">
 </head>
 <body class="adm">
 <header><div class="logo"><img src="/static/icon-192.png" alt="">Такси <b>ТАП!</b><span class="ver">Админ</span></div><div class="live" id="live"></div></header>
@@ -389,12 +389,22 @@ async function viewFinance() {
 let amap = null, alyr = null, draw = null;
 async function viewArea() {
   const a = await (await fetch("/api/area")).json();
-  const src = {custom:"өзүңүз тарткан чек", osm:"OpenStreetMap'теги райондун чеги", bbox:"болжолдуу төрт бурчтук"}[a.source] || a.source;
+  const src = {custom:"өзүңүз тарткан чек", osm:"OpenStreetMap'теги райондун чеги", list:"тизмеден тандалган (OpenStreetMap чектери)", bbox:"болжолдуу төрт бурчтук"}[a.source] || a.source;
   $("#main").innerHTML = `<div class="panel"><h3>Иштөө аймагы: ${esc(a.name)}</h3>
       <div class="item"><div class="main"><span class="muted">Азыркы чек: <b>${esc(src)}</b>. Жүргүнчүлөр ушул чектин ичинде гана заказ бере алат.</span></div></div></div>
+    <div class="panel"><h3>📋 Тизмеден тандоо (облус → район / шаар)</h3>
+      <div class="item"><div class="main" style="width:100%">
+        <select class="f" id="obSel"></select>
+        <div id="unitList" class="ulist"></div>
+        <div class="muted" style="margin-top:8px">Тандалды:</div><div id="selChips" class="schips"></div>
+        <button class="btn gold" id="selSave" style="margin-top:10px">✓ Ушул аймакта иштейбиз</button>
+        <p class="muted" id="selMsg"></p>
+        <p class="muted">Бир нече район же шаар тандаса болот — ар биринин тарифин «Тарифтер» бөлүмүнөн өзүнчө койсо болот. Чектер OpenStreetMap'тен алынат; чеги жок кичи шаарлар үчүн 5 км тегерек коюлат.</p>
+      </div></div></div>
     <div id="amap"></div>
     <div class="tools" id="tools"></div>
     <p class="muted" id="hint"></p>`;
+  areaPicker(a);
   amap = L.map("amap", {zoomControl:true}).setView(a.center, 11);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:"© OpenStreetMap"}).addTo(amap);
   alyr = L.layerGroup().addTo(amap);
@@ -404,15 +414,52 @@ async function viewArea() {
   draw = null; areaTools(a);
   amap.on("click", e => { if (!draw) return; draw.push([e.latlng.lat, e.latlng.lng]); drawPreview(); });
 }
+// ---------- облус → район/шаар тизмеси (ТАП!тан) ----------
+let GEO = null;
+async function areaPicker(a) {
+  if (!GEO) GEO = await (await fetch("/static/geo_kg.json")).json();
+  let sel = (a.selection || []).filter(x => x.ob);
+  const key = x => x.ob + "|" + x.name;
+  const ob0 = (sel[0] && sel[0].ob) || "Жалал-Абад облусу";
+  $("#obSel").innerHTML = GEO.map(o => `<option${o.name === ob0 ? " selected" : ""}>${esc(o.name)}</option>`).join("");
+  const has = (ob, n) => sel.some(x => x.ob === ob && x.name === n);
+  function list() {
+    const o = GEO.find(x => x.name === $("#obSel").value);
+    const row = (n, kind, sub) => `<label class="urow${sub ? " sub" : ""}"><input type="checkbox" data-n="${esc(n)}" ${has(o.name, n) ? "checked" : ""}>
+      <span>${kind === "district" ? "🗺" : "🏙"} ${esc(n)}</span></label>`;
+    $("#unitList").innerHTML = o.units.map(u => row(u.name, u.kind) + (u.towns || []).map(t => row(t.name, "town", true)).join("")).join("");
+    $("#unitList").querySelectorAll("input").forEach(c => c.onchange = () => {
+      const n = c.dataset.n;
+      sel = c.checked ? sel.concat([{name:n, ob:o.name}]) : sel.filter(x => key(x) !== o.name + "|" + n);
+      chips();
+    });
+  }
+  function chips() {
+    $("#selChips").innerHTML = sel.length ? sel.map((x, i) => `<span class="schip">${esc(x.name)} <b data-i="${i}">✕</b></span>`).join("") : `<span class="muted">— эч нерсе —</span>`;
+    $("#selChips").querySelectorAll("b").forEach(b => b.onclick = () => { sel.splice(+b.dataset.i, 1); chips(); list(); });
+  }
+  $("#obSel").onchange = list; list(); chips();
+  $("#selSave").onclick = async () => {
+    if (!sel.length) return $("#selMsg").textContent = "Кеминде бир район же шаар тандаңыз.";
+    if (a.source === "custom" && !confirm("Колго тартылган чек өчүп, тизмедегилер коюлат. Макулсузбу?")) return;
+    $("#selSave").disabled = true; $("#selMsg").textContent = "⏳ OpenStreetMap'тен чектер жүктөлүүдө… (ар бирине 1–3 сек)";
+    const r = await api("/api/a/area_sel", {units:sel});
+    $("#selSave").disabled = false;
+    if (r.error) return $("#selMsg").textContent = r.error === "not_found" ? `«${r.name}» картадан табылган жок.` : "Сакталган жок: " + r.error;
+    const ap = (r.units || []).filter(u => u.approx).map(u => u.name);
+    toast(`✓ Аймак: ${r.name}${ap.length ? " · болжолдуу (5 км): " + ap.join(", ") : ""}`, 4000);
+    viewArea();
+  };
+}
 function areaTools(a) {
   const t = $("#tools");
   if (!draw) {
     t.innerHTML = `<button class="btn gold" id="aNew">✏️ Жаңы чек тартуу</button>
-      ${a.source === "custom" ? `<button class="btn" id="aReset">↺ Райондун чегине кайтаруу</button>` : ""}`;
+      ${a.source === "custom" ? `<button class="btn" id="aReset">↺ Тизмедеги чекке кайтаруу</button>` : ""}`;
     $("#hint").textContent = "«Жаңы чек тартуу» басып, картаны аймактын четтери боюнча кезек-кезек басыңыз. Кеминде 3 чекит.";
     $("#aNew").onclick = () => { draw = []; alyr.clearLayers(); drawPreview(); areaTools(a); };
     const r = $("#aReset");
-    if (r) r.onclick = async () => { if (!confirm("Өзүңүз тарткан чекти өчүрүп, райондун чегине кайтасызбы?")) return;
+    if (r) r.onclick = async () => { if (!confirm("Өзүңүз тарткан чекти өчүрүп, тизмеден тандалган чекке кайтасызбы?")) return;
       await api("/api/a/area", {reset:true}); setTimeout(viewArea, 1500); };
     return;
   }

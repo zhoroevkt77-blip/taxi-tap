@@ -100,7 +100,7 @@ input.f:focus{border-color:var(--navy)}
 .quick{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=21">
+<link rel="stylesheet" href="/static/theme.css?v=22">
 </head>
 <body>
 <div id="map"></div>
@@ -478,7 +478,7 @@ async function viewQuote() {
   const q = await api("/api/quote", {p:S.from, d:S.to});
   if (q.route) { routeSeq++; drawRoute(q.route); }
   if (q.error) { render(`<h2>Кечиресиз</h2><p class="muted">${q.error === "dest_out"
-      ? "Такси ТАП! Базар-Коргон районунун ичинде гана иштейт. Шаар аралык каттамдарга бара албайбыз."
+      ? `Такси ТАП! ${esc((window.AREA && AREA.gen && AREA.gen !== "иштөө аймагынын") ? AREA.gen : "иштөө аймагынын")} ичинде гана иштейт. Шаар аралык каттамдарга бара албайбыз.`
       : "Бул жерде Такси ТАП! азырынча иштебейт."}</p><button class="btn ghost" id="back">Артка</button>`); $("#back").onclick = viewIdle; return; }
   S.quote = q;
   if (!q.classes.some(c => c.id === S.cls)) S.cls = q.classes[0].id;

@@ -291,3 +291,13 @@ body.athome .top,body.athome #pin,body.athome .navbtns,body.athome .sheet{visibi
 .st-it .tx{flex:1;min-width:0}.st-it b{display:block;font-size:17px;color:#16161a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .st-it small{font-size:13.5px;color:#7a7a85}
 .st-it .t{color:#7a7a85;font-weight:700;font-size:14px;white-space:nowrap}
+/* v22: админ — аймак тизмеси */
+.ulist{max-height:300px;overflow:auto;border:1px solid #eee;border-radius:14px;padding:6px;margin-top:8px;background:#fafafb}
+.urow{display:flex;align-items:center;gap:10px;padding:9px 8px;border-radius:10px;font-weight:700;cursor:pointer}
+.urow:hover{background:#fff}
+.urow.sub{padding-left:34px;font-weight:600;font-size:14px;color:#3a3a44}
+.urow input{width:20px;height:20px;flex:none}
+.schips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.schip{background:#fff3c4;border-radius:12px;padding:6px 10px;font-weight:700;font-size:14px}
+.schip b{cursor:pointer;color:#b07a00;margin-left:4px}
+#obSel{font-size:16px;font-weight:700;padding:12px;border-radius:12px;width:100%}

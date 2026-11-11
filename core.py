@@ -473,7 +473,7 @@ AREA_NAME = os.environ.get("AREA_NAME") or "Базар-Коргон району
 AREA_QUERY = os.environ.get("AREA_QUERY") or "Базар-Коргонский район"
 # түштүк, батыш, түндүк, чыгыш
 AREA_BBOX = [float(x) for x in (os.environ.get("AREA_BBOX") or "40.96,72.45,41.60,73.25").split(",")]
-_area = {"geojson": None, "source": "bbox"}
+_area = {"geojson": None, "source": "bbox", "units": []}   # units: [{"name", "city", "gj", "approx"}]
 
 
 def _bbox_geojson(b):
@@ -514,6 +514,157 @@ def in_area(lat, lon):
     return any(_in_ring(lat, lon, r) for r in _rings(area_geojson()))
 
 
+def unit_city(name):
+    """«Базар-Коргон району» / «Базар-Коргон шаары» → «Базар-Коргон» (тариф ушул ат менен)."""
+    for suf in (" району", " шаары", " облусу"):
+        if name.endswith(suf):
+            return name[: -len(suf)]
+    return name
+
+
+def area_gen():
+    """Илик жөндөмө: «Базар-Коргон районунун», «Манас шаарынын», же «иштөө аймагынын»."""
+    if not AREA_ON:
+        return "иштөө аймагынын"
+    names = [u["name"] for u in _area["units"]] or [AREA_NAME]
+    if len(names) != 1:
+        return "иштөө аймагынын"
+    n = names[0]
+    if n.endswith(" району"):
+        return n[:-7] + " районунун"
+    if n.endswith(" шаары"):
+        return n[:-6] + " шаарынын"
+    return n + " аймагынын"
+
+
+# ---------- Аймакты тизмеден тандоо (облус → район/шаар), чектер OpenStreetMap'тен ----------
+GEO_KG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static", "geo_kg.json")
+TOWN_RADIUS_KM = 5.0
+
+
+def geo_kg():
+    with open(GEO_KG_PATH, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def geo_find(name, ob=None):
+    """Тизмеден район/шаарды табат: {"name", "ru", "ob", "ob_ru", "kind"}."""
+    for o in geo_kg():
+        if ob and o["name"] != ob:
+            continue
+        for u in o["units"]:
+            if u["name"] == name:
+                return {"name": u["name"], "ru": u["ru"], "ob": o["name"], "ob_ru": o.get("ru", ""), "kind": u["kind"]}
+            for t in u.get("towns") or []:
+                if t["name"] == name:
+                    return {"name": t["name"], "ru": t["ru"], "ob": o["name"], "ob_ru": o.get("ru", ""), "kind": "town"}
+    return None
+
+
+def _circle(lat, lon, km, n=32):
+    import math
+    pts = []
+    for i in range(n + 1):
+        a = 2 * math.pi * i / n
+        pts.append([round(lon + km / (111.32 * math.cos(math.radians(lat))) * math.cos(a), 6),
+                    round(lat + km / 110.57 * math.sin(a), 6)])
+    return {"type": "Polygon", "coordinates": [pts]}
+
+
+def _sel_path():
+    return os.path.join(DATA_DIR, "area_sel.json")
+
+
+def _unit_cache(u):
+    return os.path.join(DATA_DIR, "area_%s.json" % "".join(c for c in (u["ru"] + u["ob"]) if c.isalnum()))
+
+
+def _fetch_unit_poly(u):
+    """OSM'ден чек. Табылбаса (кичи шаар — чекит гана) → 5 км тегерек. Кайтарат: (gj, approx)."""
+    import urllib.parse
+    import urllib.request
+    import time as _t
+    qs = [u["ru"] + (", " + u["ob_ru"] if u.get("ob_ru") else ""), u["ru"], u["name"]]
+    point = None
+    for q in qs:
+        url = ("https://nominatim.openstreetmap.org/search?format=json&polygon_geojson=1"
+               "&polygon_threshold=0.001&countrycodes=kg&limit=5&q=" + urllib.parse.quote(q))
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "TaksiTAP/1.0 (taxi service)"})
+            with urllib.request.urlopen(req, timeout=15) as r:
+                res = json.loads(r.read().decode())
+        except Exception as e:
+            print("  Аймак: %s — жүктөлбөдү (%s)" % (u["name"], e), flush=True)
+            res = []
+        for x in res:
+            gj = x.get("geojson") or {}
+            if x.get("osm_type") == "relation" and gj.get("type") in ("Polygon", "MultiPolygon"):
+                return gj, False
+            if point is None and x.get("lat"):
+                point = (float(x["lat"]), float(x["lon"]))
+        _t.sleep(1.1)                                   # Nominatim: секундуна 1 суроо
+    if point:
+        return _circle(point[0], point[1], TOWN_RADIUS_KM), True
+    return None, False
+
+
+def _apply_units(units):
+    """units: [{"name","gj","approx"}] → жалпы чек, аты, борбордук шаар, bbox."""
+    global AREA_NAME, AREA_CITY, AREA_BBOX
+    polys = []
+    for u in units:
+        gj = u["gj"]
+        polys += [gj["coordinates"]] if gj["type"] == "Polygon" else list(gj["coordinates"])
+    _area.update(units=[dict(name=u["name"], city=unit_city(u["name"]), gj=u["gj"], approx=u.get("approx"))
+                        for u in units],
+                 geojson={"type": "MultiPolygon", "coordinates": polys}, source="list")
+    AREA_NAME = ", ".join(u["name"] for u in units)
+    AREA_CITY = unit_city(units[0]["name"])
+    pts = [p for r in _rings(_area["geojson"]) for p in r]
+    AREA_BBOX = [min(p[1] for p in pts), min(p[0] for p in pts), max(p[1] for p in pts), max(p[0] for p in pts)]
+
+
+def set_area_units(names):
+    """Админ тизмеден тандады: [{"name", "ob"}, ...]. Ката болсо {"error", "name"}."""
+    if not names or len(names) > 12:
+        return {"error": "bad_count"}
+    units = []
+    for n in names:
+        u = geo_find(n.get("name"), n.get("ob"))
+        if not u:
+            return {"error": "unknown", "name": n.get("name")}
+        try:
+            with open(_unit_cache(u), encoding="utf-8") as f:
+                c = json.load(f)
+            gj, approx = c["gj"], c.get("approx")
+        except (OSError, ValueError, KeyError):
+            gj, approx = _fetch_unit_poly(u)
+            if not gj:
+                return {"error": "not_found", "name": u["name"]}
+            os.makedirs(DATA_DIR, exist_ok=True)
+            with open(_unit_cache(u), "w", encoding="utf-8") as f:
+                json.dump({"gj": gj, "approx": approx}, f)
+        units.append(dict(u, gj=gj, approx=approx))
+    os.makedirs(DATA_DIR, exist_ok=True)
+    with open(_sel_path(), "w", encoding="utf-8") as f:
+        json.dump([{"name": u["name"], "ob": u["ob"]} for u in units], f, ensure_ascii=False)
+    try:
+        os.remove(_custom_path())                       # тизмеден тандалды — колго тартылган чек өчөт
+    except OSError:
+        pass
+    _apply_units(units)
+    return {"ok": True, "units": [{"name": u["name"], "approx": u["approx"]} for u in units]}
+
+
+def area_selection():
+    try:
+        with open(_sel_path(), encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        u = geo_find(AREA_NAME)
+        return [{"name": u["name"], "ob": u["ob"]}] if u else []
+
+
 def area_info():
     gj = area_geojson()
     pts = [p for r in _rings(gj) for p in r]
@@ -522,7 +673,9 @@ def area_info():
             "center": list(CITIES.get(AREA_CITY) or ((min(lats) + max(lats)) / 2,
                                                      (min(lons) + max(lons)) / 2)),
             "bbox": [min(lats), min(lons), max(lats), max(lons)],
-            "geojson": gj, "source": _area["source"]}
+            "geojson": gj, "source": _area["source"], "gen": area_gen(),
+            "units": [{"name": u["name"], "approx": u.get("approx")} for u in _area["units"]],
+            "selection": area_selection()}
 
 
 def _custom_path():
@@ -560,7 +713,7 @@ def reset_area():
         os.remove(_custom_path())
     except OSError:
         pass
-    _area.update(geojson=None, source="bbox")
+    _area.update(geojson=None, source="bbox", units=[])
     load_area(fetch=False)
 
 
@@ -573,6 +726,26 @@ def load_area(fetch=True):
             _area.update(geojson=json.load(f), source="custom")
             return
     except (OSError, ValueError):
+        pass
+    try:                                                # тизмеден тандалган райондор/шаарлар
+        with open(_sel_path(), encoding="utf-8") as f:
+            sel = json.load(f)
+        if sel:
+            if fetch:
+                r = set_area_units(sel)
+                if r.get("ok"):
+                    print("  Аймак: %s (тизмеден)" % AREA_NAME, flush=True)
+                    return
+            else:
+                units = []
+                for n in sel:
+                    u = geo_find(n["name"], n.get("ob"))
+                    with open(_unit_cache(u), encoding="utf-8") as f:
+                        c = json.load(f)
+                    units.append(dict(u, gj=c["gj"], approx=c.get("approx")))
+                _apply_units(units)
+                return
+    except (OSError, ValueError, KeyError, TypeError):
         pass
     path = os.path.join(DATA_DIR, "area_%s.json" % "".join(c for c in AREA_QUERY if c.isalnum()))
     try:
@@ -607,6 +780,9 @@ def load_area(fetch=True):
 
 def city_of(lat, lon):
     if AREA_ON:
+        for u in _area["units"]:
+            if any(_in_ring(lat, lon, r) for r in _rings(u["gj"])):
+                return u["city"]
         return AREA_CITY if in_area(lat, lon) else None
     best, best_d = None, CITY_RADIUS_KM
     for name, (clat, clon) in CITIES.items():
@@ -1383,7 +1559,7 @@ def admin_rides(limit=60):
 def all_tariffs():
     """Аймак күйүк болсо — ошол шаардын тарифи гана (башкалары колдонулбайт)."""
     saved = {t["city"]: t for t in query("SELECT * FROM tariffs", (), "all")}
-    cities = [AREA_CITY] if AREA_ON else list(CITIES)
+    cities = (list(dict.fromkeys(u["city"] for u in _area["units"])) or [AREA_CITY]) if AREA_ON else list(CITIES)
     return [dict(saved.get(c) or dict(CITY_TARIFFS.get(c) or DEFAULT_TARIFF, city=c),
                  saved=c in saved) for c in cities]
 
