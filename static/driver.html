@@ -81,7 +81,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=46">
+<link rel="stylesheet" href="/static/theme.css?v=47">
 </head>
 <body>
 <nav id="bnav" class="bnav pro"><a data-k="earn"><img src="/static/n_earn.webp" alt="">Киреше</a><a data-k="hist"><img src="/static/n_trips.webp" alt="">Сапарлар</a><a data-k="line" class="big on"><img src="/static/n_go.webp" alt="">Линия</a><a data-k="help"><img src="/static/n_help.webp" alt="">Жардам</a><a data-k="cab"><img src="/static/n_cab.webp" alt="">Кабинет</a></nav>
@@ -300,11 +300,11 @@ function viewHome() {
       <button class="btn go" id="on">Линияга чыгуу</button>
       <div class="err" id="er"></div>${stats}${topup}
       ${homeHTML()}${sw}
-      ${installHTML()}<button class="btn ghost" id="out">Чыгуу</button>`);
+      ${installHTML()}<button class="outb" id="out">🚪 Чыгуу</button>`);
     bindInstall();
     $("#top") && ($("#top").onclick = viewTopup);
     $("#nt") && ($("#nt").onchange = () => api("/api/notify", {on:$("#nt").checked}));
-    $("#out").onclick = async () => { await api("/api/logout", {}); location.reload(); };
+    $("#out").onclick = confirmOut;
     $("#on").onclick = () => goOnline($("#on"));
     bindHome();
   }
@@ -341,10 +341,11 @@ function viewCabinet(part) {
     <button class="btn ghost" id="addAddr">📍 Дарек кошуу</button>
     <p class="muted" style="margin-top:-2px">Жергиликтүү жерлердин аттарын (той-кана, дүкөн, көчө) кошуңуз — жүргүнчүлөр дарек жазганда табылат.</p>
     ${linksHTML(D.bot)}
-    <p class="muted">Жүргүнчүлөргө жүргүнчүнүн шилтемесин, тааныш айдоочуларга айдоочунун шилтемесин жөнөтүңүз.</p></div>`);
+    <p class="muted">Жүргүнчүлөргө жүргүнчүнүн шилтемесин, тааныш айдоочуларга айдоочунун шилтемесин жөнөтүңүз.</p>
+    <button class="outb" id="cabOut">🚪 Чыгуу</button></div>`);
   bindLinks(); window.SHEET && SHEET.expand();
   $("#top") && ($("#top").onclick = viewTopup);
-  $("#addAddr").onclick = viewAddAddr;
+  $("#addAddr").onclick = viewAddAddr; $("#cabOut").onclick = confirmOut;
   $("#goalCh").onclick = async () => { const v = prompt("Күндүк максат (сом):", D.goal); if (v === null) return;
     const r = await api("/api/d/goal", {goal:+v}); if (r.error) return toast("100 сомдон 50 000 сомго чейин жазыңыз", 2500);
     D = r; header(); viewCabinet("earn"); };
@@ -747,6 +748,16 @@ function viewHelp() {
     <details class="faq"><summary>Жүргүнчү менен көйгөй чыкса?</summary><p>Сапар бетиндеги 🆘 баскычы админге жериңизди жана сапарды дароо жөнөтөт. Коркунуч болсо 112ге чалыңыз.</p></details>
     <details class="faq"><summary>Күбөлүктүн мөөнөтү бүтсө?</summary><p>«Кабинет → Документтер» бөлүмүнөн жаңы күбөлүктүн сүрөтүн жана мөөнөтүн жүктөңүз.</p></details>`);
   window.SHEET && SHEET.expand();
+}
+function confirmOut() {
+  if (D && D.ride) return overlay(`<div class="lgx"><div class="lg-ic" style="background:#fff6dd">🚕</div><h2>Азыр чыгууга болбойт</h2>
+      <p class="muted">Сизде жүрүп жаткан сапар бар. Адегенде сапарды бүтүрүңүз.</p>
+      <button class="btn main" id="ovlX">Сапарга кайтуу</button></div>`);
+  overlay(`<div class="lgx"><div class="lg-ic">🚪</div><h2>Аккаунттан чыгасызбы?</h2>${D && D.online ? `<div class="lg-warn">🟢 Сиз азыр <b>линиядасыз</b>. Чыксаңыз линиядан да чыгасыз — заказ келбей калат.</div>` : ""}
+      <p class="muted">Кайра кирүү үчүн номериңизди Telegram аркылуу кайра ырастайсыз.</p>
+      <button class="btn lg-red" id="lgYes">Ооба, чыгуу</button><button class="btn ghost" id="lgNo">Калуу</button></div>`);
+  $("#lgNo").onclick = closeOverlay;
+  $("#lgYes").onclick = async () => { $("#lgYes").disabled = true; if (D && D.online) await api("/api/d/online", {on:false}); await api("/api/logout", {}); location.replace("/driver"); };
 }
 function navOn(k) { document.querySelectorAll("#bnav a").forEach(a => a.classList.toggle("on", a.dataset.k === k)); }
 document.querySelectorAll("#bnav a").forEach(a => a.onclick = () => {

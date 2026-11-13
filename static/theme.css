@@ -417,7 +417,7 @@ button.state{white-space:normal!important;line-height:1.2;text-align:center;max-
 .ccard .cimg{width:62px;height:62px;border-radius:16px;flex:none;object-fit:cover}
 .ccard .ct{flex:1;min-width:0}.ccard b{display:block;font-size:18px;font-weight:900}.ccard small{display:block;color:#5f5f6a;font-size:14px;margin-top:2px}
 .ccard em{font-style:normal;font-size:28px;color:#3a3a44;font-weight:300}
-.cab-out{display:block;width:100%;margin:14px 0 6px;border:0;border-radius:22px;padding:17px;font-size:19px;font-weight:900;font-family:inherit;background:linear-gradient(135deg,#ffd31a,#fcbc00);color:#16161a;box-shadow:0 10px 24px rgba(255,183,3,.4);cursor:pointer}
+.cab-out,.outb{display:block;width:100%;margin:14px 0 6px;border:1.5px solid #f3c9cb;border-radius:18px;padding:15px;font-size:17px;font-weight:800;font-family:inherit;background:#fff5f5;color:#d6262d;cursor:pointer}
 #cabMore .lnks{background:#fff;border-radius:22px;padding:12px 14px;margin-bottom:12px;box-shadow:0 6px 18px rgba(20,20,30,.07)}
 .topav{width:58px!important;height:58px!important;font-size:26px!important;border:3px solid #fff!important;box-shadow:0 4px 14px rgba(20,20,30,.25)!important}
 /* v35: коэффициент — малина + 💓 */
@@ -475,3 +475,9 @@ body.dnav .sheet{bottom:calc(84px + env(safe-area-inset-bottom,0px));padding-bot
 .ep.bad{background:#e5343a;color:#fff;animation:epPulse 1.6s ease-in-out infinite}.ep.bad small{color:#ffe1e1}.ep .ei{font-size:22px;padding-left:4px}
 @keyframes epPulse{50%{box-shadow:0 4px 22px rgba(229,52,58,.55)}}
 body.dnav .sheet.folded{clip-path:inset(0 0 calc(100% - 92px) 0 round 22px 22px 0 0)}
+
+/* чыгуу эскертүүсү */
+.lgx{text-align:center}.lgx h2{margin:4px 0 6px}.lgx p{font-size:15px;line-height:1.45;margin:6px 0}
+.lg-ic{width:72px;height:72px;border-radius:50%;background:#fff1f1;display:flex;align-items:center;justify-content:center;font-size:36px;margin:4px auto 10px}
+.lg-warn{background:#fff8e6;border-radius:14px;padding:11px 12px;text-align:left;font-size:14px;line-height:1.4;margin:10px 0;color:#5a4300}
+.btn.lg-red{background:#e5343a!important;color:#fff!important;box-shadow:none}

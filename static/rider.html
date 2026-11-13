@@ -101,7 +101,7 @@ input.f:focus{border-color:var(--navy)}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
 <link rel="preload" as="image" href="/static/h_taxi.webp"><link rel="preload" as="image" href="/static/h_box.webp"><link rel="preload" as="image" href="/static/h_girl.webp"><link rel="preload" as="image" href="/static/h_map.webp">
-<link rel="stylesheet" href="/static/theme.css?v=46">
+<link rel="stylesheet" href="/static/theme.css?v=47">
 </head>
 <body>
 <div id="map"></div>
@@ -756,6 +756,17 @@ function sheetBox(html, after) {
   o.innerHTML = `<div class="rboxc">${html}</div>`; o.classList.add("on");
   const x = $("#bxX"); if (x) x.onclick = closeBox; if (after) after();
 }
+function confirmOut() {
+  if (S.ride) return sheetBox(`<div class="lgx"><div class="lg-ic" style="background:#fff6dd">🚕</div><h2>Азыр чыгууга болбойт</h2>
+      <p class="muted">Сизде жүрүп жаткан сапар бар. Адегенде сапарды бүтүрүңүз же жокко чыгарыңыз.</p>
+      <button class="btn main" id="lgBack">Сапарга кайтуу</button></div>`, () => { $("#lgBack").onclick = () => { closeBox(); viewRide(); }; });
+  sheetBox(`<div class="lgx"><div class="lg-ic">🚪</div><h2>Аккаунттан чыгасызбы?</h2>
+      <p class="muted">Кайра кирүү үчүн номериңизди Telegram аркылуу кайра ырастайсыз.</p>
+      <button class="btn lg-red" id="lgYes">Ооба, чыгуу</button><button class="btn ghost" id="lgNo">Калуу</button></div>`, () => {
+    $("#lgNo").onclick = closeBox;
+    $("#lgYes").onclick = async () => { $("#lgYes").disabled = true; await api("/api/logout", {}); location.replace("/"); };
+  });
+}
 function closeBox() { const o = $("#rbox"); if (o) o.classList.remove("on");
   const a = document.querySelector("#bnav a.on"); if (a && a.dataset.k === "help") navOn(S.mode === "menu" ? "cab" : "home"); }
 async function shareTrip() {
@@ -898,7 +909,7 @@ async function viewCabinet() {
     ${me.park ? li("cPark", "c_taxi", "🏢 Таксопарк кабинети", esc(me.park), "/park") : ""}
     ${me.admin ? li("cAdm", "c_tools", "Админ панели", "", "/admin") : ""}
     ${li("cInfo", "c_info", "Маалымат", "Колдонуу шарттары, купуялык", "/terms")}
-    ${installHTML()}<button class="cab-out" id="out">⎋ Чыгуу</button>`;
+    ${installHTML()}<button class="cab-out" id="out">🚪 Чыгуу</button>`;
   $("#home").scrollTop = 0;
   bindInstall();
   const more = html => { $("#cabMore").innerHTML = html; $("#cabMore").scrollIntoView({behavior:"smooth", block:"start"}); };
@@ -921,7 +932,7 @@ async function viewCabinet() {
     ME_AV = x.avatar; S.mode = prevView; viewCabinet(); toast("✓ Сүрөт коюлду", 1500);
   };
   $("#avCam").onchange = avUp; $("#avGal").onchange = avUp;
-  $("#out").onclick = async () => { await api("/api/logout", {}); location.reload(); };
+  $("#out").onclick = confirmOut;
   $("#cPromo").onclick = () => { const v = prompt("Промокод (кийинки заказга колдонулат):", promo);
     if (v === null) return; try { v.trim() ? localStorage.setItem("promoPre", v.trim().toUpperCase()) : localStorage.removeItem("promoPre"); } catch (e) {}
     S.mode = prevView; viewCabinet(); };
