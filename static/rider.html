@@ -101,14 +101,14 @@ input.f:focus{border-color:var(--navy)}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
 <link rel="preload" as="image" href="/static/h_taxi.webp"><link rel="preload" as="image" href="/static/h_box.webp"><link rel="preload" as="image" href="/static/h_girl.webp"><link rel="preload" as="image" href="/static/h_map.webp">
-<link rel="stylesheet" href="/static/theme.css?v=50">
+<link rel="stylesheet" href="/static/theme.css?v=53">
 </head>
 <body>
 <div id="map"></div>
 
 <div class="top">
   <div class="lcol"><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b></div>
-    <div class="role"><a class="on">🧳 Жүргүнчү</a><a href="/driver">🚗 Айдоочу</a></div></div>
+    <div class="role"><a class="on"><img src="/static/r_bag.webp" alt="">Жүргүнчү</a><a href="/driver"><img src="/static/r_car.webp" alt="" class="rc">Айдоочу</a></div></div>
   <button class="round" id="menuBtn" aria-label="Кабинет">👤</button>
 </div>
 
@@ -304,7 +304,7 @@ function viewIdle() {
   if (P.work) rec.push({ico:"💼", name:"Иш", sub:P.work.name || "", lat:P.work.lat, lon:P.work.lon});
   (P.recent || []).forEach(r => rec.push({ico:"🕘", name:r.name, sub:"Акыркы сапар", lat:r.lat, lon:r.lon}));
   $("#home").innerHTML = `<div class="hh"><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b></div><button class="round" id="hMenu" aria-label="Кабинет">${avBtn()}</button></div>
-    <div class="role hrole"><a class="on">🧳 Жүргүнчү</a><a href="/driver">🚗 Айдоочу</a></div>
+    <div class="role hrole"><a class="on"><img src="/static/r_bag.webp" alt="">Жүргүнчү</a><a href="/driver"><img src="/static/r_car.webp" alt="" class="rc">Айдоочу</a></div>
     <button class="haddr" id="hAddr"><small><img class="pinI" src="/static/pin.webp" alt="">Сиз турган жер</small><b id="fromTxt">${esc(S.fromAddr || "Аныкталууда…")}</b><span>›</span></button>
     <div class="tiles">${tile("tTaxi", "h_taxi.webp", "Такси", `<span id="taxiEta">${homeEta()}</span>`, true, !has("delivery"))}
       ${has("delivery") ? tile("tDel", "h_box.webp", "Жеткирүү", "Буюм, документ") : ""}</div>
@@ -893,7 +893,7 @@ async function viewCabinet() {
   render(""); homeOn(true);
   $("#home").innerHTML = `<div class="cab-hero"><img class="cab-hdr" src="/static/c_hdr.webp" alt="">
       <div class="hh"><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b></div><button class="round" id="close" aria-label="Жабуу">${avBtn()}</button></div>
-      <div class="role hrole"><a class="on">🧳 Жүргүнчү</a><a href="/driver">🚗 Айдоочу</a></div></div>
+      <div class="role hrole"><a class="on"><img src="/static/r_bag.webp" alt="">Жүргүнчү</a><a href="/driver"><img src="/static/r_car.webp" alt="" class="rc">Айдоочу</a></div></div>
     <div class="cab-card"><button class="st-back cab-bk" id="close2" aria-label="Артка">‹</button>
       <button class="cab-av" id="avBox">${me.avatar ? `<img src="${esc(me.avatar)}" alt="">` : esc((me.name || "?")[0].toUpperCase())}<span class="cab-cam">📷</span></button>
       <input type="file" accept="image/*" capture="user" id="avCam" hidden><input type="file" accept="image/*" id="avGal" hidden>

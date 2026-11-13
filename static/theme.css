@@ -487,3 +487,10 @@ body.dnav .sheet{max-height:calc(100dvh - 318px - env(safe-area-inset-top,0px))!
 .ep{gap:6px;padding:5px 9px 5px 5px}.ep b{font-size:15px}.ep small{font-size:10.5px}
 .ep .ring,.ep .ring svg{width:38px;height:38px}.ep .ring em{font-size:9.5px}
 .ep .eye svg{width:18px;height:18px}
+/* Жүргүнчү/Айдоочу которгуч — Kake'нин макетиндей (чемодан + такси) */
+.role{border-radius:28px!important;padding:4px!important;box-shadow:0 6px 18px rgba(80,80,140,.14)!important;background:linear-gradient(180deg,#fff,#f4f4f9)!important}
+.role a{display:flex!important;align-items:center;gap:5px;padding:5px 12px 5px 6px!important;border-radius:24px!important;font-size:14px!important;font-weight:900!important;color:#16161a!important}
+.role a img{height:30px;width:30px;object-fit:contain;flex:none;background:none!important;box-shadow:none!important;border:0!important;border-radius:0!important;padding:0!important;margin:0!important}.role a img.rc{width:44px;height:28px}
+.drole a{font-size:13px!important;padding:4px 10px 4px 4px!important;gap:3px}.drole a img{width:24px;height:24px}.drole a img.rc{width:34px;height:22px}
+.role a.on{background:linear-gradient(180deg,#ffe25a,#ffc400 60%,#ffb300)!important;box-shadow:0 6px 16px rgba(255,170,0,.45),inset 0 2px 0 rgba(255,255,255,.55)!important;border:0!important}
+.drole a{font-size:12px!important;padding:3px 8px 3px 3px!important;gap:2px}.drole a img{width:22px;height:22px}.drole a img.rc{width:30px;height:20px}
