@@ -101,7 +101,7 @@ input.f:focus{border-color:var(--navy)}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
 <link rel="preload" as="image" href="/static/h_taxi.webp"><link rel="preload" as="image" href="/static/h_box.webp"><link rel="preload" as="image" href="/static/h_girl.webp"><link rel="preload" as="image" href="/static/h_map.webp">
-<link rel="stylesheet" href="/static/theme.css?v=30">
+<link rel="stylesheet" href="/static/theme.css?v=31">
 </head>
 <body>
 <div id="map"></div>
@@ -825,9 +825,10 @@ async function viewCabinet() {
   const li = (id, ico, t, sub, href) => `<${href ? `a href="${href}"` : "button"} class="crow" id="${id}"><span class="ci">${ico}</span><span class="ct"><b>${t}</b>${sub ? `<small>${sub}</small>` : ""}</span><em>›</em></${href ? "a" : "button"}>`;
   let promo = ""; try { promo = localStorage.getItem("promoPre") || ""; } catch (e) {}
   render(`<div class="cab-top"><button class="st-back" id="close">‹</button></div>
-    <label class="cab-av" id="avBox">${me.avatar ? `<img src="${esc(me.avatar)}" alt="">` : esc((me.name || "?")[0].toUpperCase())}
-      <span class="cab-cam">📷</span><input type="file" accept="image/*" id="avIn" hidden></label>
-    ${me.avatar ? `<p style="text-align:center;margin:-2px 0 6px"><button class="lnk-b" id="avDel" style="width:auto;height:30px;padding:0 12px;font-size:13px">Сүрөттү алып салуу</button></p>` : `<p class="muted" style="text-align:center;margin:-2px 0 6px;font-size:13px">Сүрөт коюу үчүн тегеректи басыңыз</p>`}
+    <button class="cab-av" id="avBox">${me.avatar ? `<img src="${esc(me.avatar)}" alt="">` : esc((me.name || "?")[0].toUpperCase())}
+      <span class="cab-cam">📷</span></button>
+    <input type="file" accept="image/*" capture="user" id="avCam" hidden><input type="file" accept="image/*" id="avGal" hidden>
+    <p class="muted" style="text-align:center;margin:-2px 0 6px;font-size:13px">${me.avatar ? "Сүрөттү алмаштыруу үчүн тегеректи басыңыз" : "Сүрөт коюу үчүн тегеректи басыңыз"}</p>
     <div class="cab-nm">${esc(me.name || "Жүргүнчү")}</div><div class="cab-ph">${esc(me.phone)}</div>
     <div class="cab-q"><button id="qH"><span>🕘</span>Сапарлар</button><a href="${me.bot ? "https://t.me/" + me.bot : "/terms"}" target="_blank"><span>🎧</span>Колдоо</a>
       <button id="qA"><span>📍</span>Даректер</button><button id="qS"><span>⚙️</span>Жөндөөлөр</button></div>
@@ -844,15 +845,24 @@ async function viewCabinet() {
   bindInstall();
   const more = html => { $("#cabMore").innerHTML = html; $("#cabMore").scrollIntoView({behavior:"smooth", block:"start"}); };
   $("#close").onclick = () => { S.ride ? viewRide() : viewIdle(); };
-  $("#avIn").onchange = async e => {
+  $("#avBox").onclick = () => sheetBox(`<h2>📷 Профилдин сүрөтү</h2>
+      <button class="btn main" id="avC">📸 Камера менен тартуу</button>
+      <button class="btn ghost" id="avG">🖼 Галереядан тандоо</button>
+      ${ME_AV ? `<button class="btn ghost" id="avDel" style="color:var(--bad)">🗑 Сүрөттү алып салуу</button>` : ""}
+      <button class="btn ghost" id="bxX">Жабуу</button>`, () => {
+        $("#avC").onclick = () => { closeBox(); $("#avCam").click(); };
+        $("#avG").onclick = () => { closeBox(); $("#avGal").click(); };
+        if ($("#avDel")) $("#avDel").onclick = async () => { closeBox(); if (!confirm("Сүрөттү алып салабызбы?")) return;
+          await api("/api/avatar", {img:null}); ME_AV = null; S.mode = prevView; viewCabinet(); };
+      });
+  const avUp = async e => {
     const f = e.target.files && e.target.files[0]; if (!f) return;
     toast("Сүрөт жүктөлүүдө…", 1500);
     const img = await avShrink(f), x = await api("/api/avatar", {img});
     if (x.error) return toast("Сүрөттү жүктөй алган жокпуз — башкасын тандап көрүңүз", 2500);
     ME_AV = x.avatar; S.mode = prevView; viewCabinet(); toast("✓ Сүрөт коюлду", 1500);
   };
-  if ($("#avDel")) $("#avDel").onclick = async () => { if (!confirm("Сүрөттү алып салабызбы?")) return;
-    await api("/api/avatar", {img:null}); ME_AV = null; S.mode = prevView; viewCabinet(); };
+  $("#avCam").onchange = avUp; $("#avGal").onchange = avUp;
   $("#out").onclick = async () => { await api("/api/logout", {}); location.reload(); };
   $("#cPromo").onclick = () => { const v = prompt("Промокод (кийинки заказга колдонулат):", promo);
     if (v === null) return; try { v.trim() ? localStorage.setItem("promoPre", v.trim().toUpperCase()) : localStorage.removeItem("promoPre"); } catch (e) {}
