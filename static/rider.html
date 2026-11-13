@@ -100,6 +100,7 @@ input.f:focus{border-color:var(--navy)}
 .quick{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
+<link rel="preload" as="image" href="/static/h_taxi.webp"><link rel="preload" as="image" href="/static/h_box.webp"><link rel="preload" as="image" href="/static/h_girl.webp"><link rel="preload" as="image" href="/static/h_map.webp">
 <link rel="stylesheet" href="/static/theme.css?v=28">
 </head>
 <body>
@@ -277,9 +278,9 @@ function viewIdle() {
   $("#home").innerHTML = `<div class="hh"><div class="logo"><img src="/static/icon-192.png" alt="">Такси <b>ТАП!</b></div><button class="round" id="hMenu" aria-label="Кабинет">👤</button></div>
     <div class="role hrole"><a class="on">✈️ Жүргүнчүмүн</a><a href="/driver">🚗 Айдоочумун</a></div>
     <button class="haddr" id="hAddr"><small>📍 Сиз турган жер</small><b id="fromTxt">${esc(S.fromAddr || "Аныкталууда…")}</b><span>›</span></button>
-    <div class="tiles">${tile("tTaxi", "h_taxi.png", "Такси", `<span id="taxiEta">${homeEta()}</span>`, true, !has("delivery"))}
-      ${has("delivery") ? tile("tDel", "h_box.png", "Жеткирүү", "Буюм, документ") : ""}</div>
-    <div class="tiles2">${stile("tOther", "h_girl.png", "Башка адамга такси заказ кылуу")}${stile("tMap", "h_map.png", "Картадан<br>белгилөө")}</div>
+    <div class="tiles">${tile("tTaxi", "h_taxi.webp", "Такси", `<span id="taxiEta">${homeEta()}</span>`, true, !has("delivery"))}
+      ${has("delivery") ? tile("tDel", "h_box.webp", "Жеткирүү", "Буюм, документ") : ""}</div>
+    <div class="tiles2">${stile("tOther", "h_girl.webp", "Башка адамга такси заказ кылуу")}${stile("tMap", "h_map.webp", "Картадан<br>белгилөө")}</div>
     ${has("comfort") || has("minivan") ? `<div class="tiles3">${has("comfort") ? `<button class="sm" id="tComf"><span>🚘</span>Комфорт</button>` : ""}${has("minivan") ? `<button class="sm" id="tVan"><span>🚐</span>Минивэн</button>` : ""}</div>` : ""}
     <button class="hsearch" id="hSearch">🔍 <span>Каякка барасыз?</span><em>›</em></button>
     <div class="hrec">${rec.slice(0, 5).map((r, i) => `<button class="rec" data-i="${i}"><span class="pi">${r.ico}</span><span class="rt"><b>${esc(r.name)}</b><small>${esc(r.sub)}</small></span><span class="t">${minsTo(r)}</span><span class="chev">›</span></button>`).join("")}</div>
