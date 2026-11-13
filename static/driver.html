@@ -81,10 +81,10 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=42">
+<link rel="stylesheet" href="/static/theme.css?v=43">
 </head>
 <body>
-<nav id="bnav" class="bnav"><a data-k="line" class="on"><i>🟢</i>Линия</a><a data-k="earn"><i>💰</i>Киреше</a><a data-k="hist"><i>🧾</i>Сапарлар</a><a data-k="cab"><i>👤</i>Кабинет</a></nav>
+<nav id="bnav" class="bnav pro"><a data-k="earn"><img src="/static/n_earn.webp" alt="">Киреше</a><a data-k="hist"><img src="/static/n_trips.webp" alt="">Сапарлар</a><a data-k="line" class="big on"><img src="/static/n_go.webp" alt="">Линия</a><a data-k="help"><img src="/static/n_help.webp" alt="">Жардам</a><a data-k="cab"><img src="/static/n_cab.webp" alt="">Кабинет</a></nav>
 <div id="map"></div>
 <div class="top">
   <div class="lcol"><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b></div>
@@ -709,10 +709,22 @@ function viewTopup() {
 }
 
 let lastView = "";
+function viewHelp() {
+  navOn("help");
+  render(`<h2>💬 Жардам</h2>
+    ${D.bot ? `<a class="btn main" href="https://t.me/${esc(D.bot)}" target="_blank" style="display:block;text-align:center;text-decoration:none">✈️ Telegram аркылуу жазуу</a>` : ""}
+    <a class="btn red" href="tel:112" style="display:block;text-align:center;text-decoration:none">📞 Шашылыш: 112</a>
+    <details class="faq"><summary>Заказ кантип келет?</summary><p>«Линияга чыгуу» баскычын басыңыз. Жакын жердеги заказ экранга чыгат — сүрүп кабыл аласыз. Сайт жабык болсо Telegram'га кабар келет.</p></details>
+    <details class="faq"><summary>Баланс эмне үчүн керек?</summary><p>Комиссия балансыңыздан кемийт. Баланс аз болсо заказ келбейт — «Киреше» бөлүмүнөн толуктаңыз.</p></details>
+    <details class="faq"><summary>Активдүүлүк деген эмне?</summary><p>Заказ алып бүтүрсөңүз көбөйөт, баш тартсаңыз азаят. Активдүүлүгү жогору айдоочуга заказ биринчи келет.</p></details>
+    <details class="faq"><summary>Жүргүнчү менен көйгөй чыкса?</summary><p>Сапар бетиндеги 🆘 баскычы админге жериңизди жана сапарды дароо жөнөтөт. Коркунуч болсо 112ге чалыңыз.</p></details>
+    <details class="faq"><summary>Күбөлүктүн мөөнөтү бүтсө?</summary><p>«Кабинет → Документтер» бөлүмүнөн жаңы күбөлүктүн сүрөтүн жана мөөнөтүн жүктөңүз.</p></details>`);
+  window.SHEET && SHEET.expand();
+}
 function navOn(k) { document.querySelectorAll("#bnav a").forEach(a => a.classList.toggle("on", a.dataset.k === k)); }
 document.querySelectorAll("#bnav a").forEach(a => a.onclick = () => {
   const k = a.dataset.k; window.SHEET && SHEET.expand();
-  if (k === "line") { lastView = ""; show(); } else if (k === "hist") viewHistory(); else viewCabinet(k);
+  if (k === "line") { lastView = ""; show(); } else if (k === "hist") viewHistory(); else if (k === "help") viewHelp(); else viewCabinet(k);
 });
 function show() {
   if (!D || D.error) return;

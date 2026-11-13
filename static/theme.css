@@ -464,3 +464,4 @@ body.rnav .home{padding-bottom:calc(120px + env(safe-area-inset-bottom,0px))}
 .bnav.pro a{font-size:12px;letter-spacing:-.2px;white-space:nowrap}
 .bnav.pro img{width:40px;height:40px}
 .bnav.pro a.big{font-size:14px;margin-top:-40px}.bnav.pro a.big img{width:74px;height:74px}
+body.dnav .sheet{bottom:calc(84px + env(safe-area-inset-bottom,0px));padding-bottom:44px}
