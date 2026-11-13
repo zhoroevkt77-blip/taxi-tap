@@ -151,8 +151,8 @@ function linksHTML(bot) {
   const row = (id, ico, title, url, sub) => `<div class="lnk"><div class="lnk-t"><b>${ico} ${title}</b><span>${url.replace(/^https?:\/\//, "")}</span>${sub ? `<small>${sub}</small>` : ""}</div>
     <button class="lnk-b" data-copy="${url}">📋</button><button class="lnk-b" data-share="${url}" data-title="${title}">📤</button></div>`;
   return `<div class="lnks"><h3 style="margin:4px 0 8px">🔗 Такси ТАП! шилтемелери</h3>
-    ${row("p", "🧳", "Жүргүнчүлөр үчүн", o + "/", "Таксини ушул жерден чакырышат")}
-    ${row("d", "🚗", "Айдоочулар үчүн", o + "/driver", "Айдоочу болуп катталуу")}
+    ${row("p", '<img class="lki" src="/static/r_bag.webp" alt="">', "Жүргүнчүлөр үчүн", o + "/", "Таксини ушул жерден чакырышат")}
+    ${row("d", '<img class="lki rc" src="/static/r_car.webp" alt="">', "Айдоочулар үчүн", o + "/driver", "Айдоочу болуп катталуу")}
     ${bot ? row("b", "✈️", "Telegram бот", "https://t.me/" + bot, "Номерди ырастоо жана билдирүүлөр") : ""}
     <p class="muted" style="margin:6px 0 0">📋 — көчүрүү, 📤 — WhatsApp, Telegram аркылуу жөнөтүү.</p></div>`;
 }
