@@ -81,7 +81,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=26">
+<link rel="stylesheet" href="/static/theme.css?v=27">
 </head>
 <body>
 <div id="map"></div>
@@ -90,7 +90,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
     <div class="role drole"><a href="/">🧳 Жүргүнчү</a><a class="on">🚗 Айдоочу</a></div></div>
   <div class="rcol"><button class="state hide" id="stBadge">Офлайн</button>
     <div class="pill hide" id="earn"><span class="muted">Бүгүн</span><b id="earnV">0 с</b></div>
-    <div class="tools hide" id="tools"><button class="tbtn" id="heatBtn" aria-label="Заказ көп жерлер">🔥</button><button class="tbtn sos" id="sosBtn" aria-label="SOS">🆘</button></div></div>
+    <div class="tools hide" id="tools"><button class="tbtn" id="cabBtn" aria-label="Менин кабинетим">👤</button><button class="tbtn" id="heatBtn" aria-label="Заказ көп жерлер">🔥</button><button class="tbtn sos" id="sosBtn" aria-label="SOS">🆘</button></div></div>
 </div>
 <div class="sheet"><div class="grab"></div><div id="view"></div></div>
 <div class="offer hide" id="offer"><div class="ocard" id="ocard"></div></div>
@@ -266,8 +266,9 @@ function viewHome() {
     <input type="checkbox" id="nt" ${D.notify ? "checked" : ""} style="width:24px;height:24px"></div>` : "";
   if (D.online) {
     render(`${outHTML()}<div class="wait"><div class="blink"${D.in_area === false ? ' style="background:var(--bad)"' : ""}></div><div><b>${D.in_area === false ? "Заказ келбейт — аймактын сыртындасыз" : "Заказ күтүлүүдө"}${D.home && D.home.on ? " · 🏠 үйгө карай" : ""}</b><div class="muted">${D.in_area === false ? "1 сааттын ичинде аймакка кирбесеңиз, линиядан өзү чыгарылат" : "Экранды өчүрбөңүз — GPS иштеп турат"}</div></div></div>
-      ${stats}${homeHTML()}<button class="btn red" id="off">Линиядан чыгуу</button>`);
+      ${stats}<button class="btn ghost" id="cab">💼 Менин кабинетим</button>${homeHTML()}<button class="btn red" id="off">Линиядан чыгуу</button>`);
     bindHome();
+    $("#cab").onclick = viewCabinet;
     $("#off").onclick = goOffline;
   } else {
     render(`<h2>Салам, ${esc(D.name || "айдоочу")}!</h2><p class="muted">${esc(D.car_color)} ${esc(D.car_model)}, ${esc(D.car_plate)}</p>
@@ -505,6 +506,7 @@ async function goOnline(btn) {
 async function goOffline() {
   D = await api("/api/d/online", {on:false}); wake(false); lastView = ""; show(); window.SHEET && SHEET.expand();
 }
+$("#cabBtn").onclick = () => { if (!D || D.status !== "active") return; window.SHEET && SHEET.expand(); D.ride ? null : viewCabinet(); };
 $("#stBadge").onclick = () => {
   if (!D || D.status !== "active" || D.ride) return;
   if (D.online) { if (confirm("Линиядан чыгасызбы?")) goOffline(); }
