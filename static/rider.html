@@ -741,7 +741,7 @@ function rideInfo(r) {
     <div class="hrow"><span class="muted">№</span><b>${r.id}</b></div>
     <div class="hrow"><span>🅰 Каяктан</span><b>${esc(r.p_addr || "—")}</b></div>
     <div class="hrow"><span>🅱 Каякка</span><b>${esc(r.d_addr || "—")}</b></div>
-    <div class="hrow"><span>Класс</span><b>${CL[r.cls] || r.cls}</b></div>
+    <div class="hrow"><span>Тариф</span><b>${CL[r.cls] || r.cls}</b></div>
     <div class="hrow"><span>Аралык</span><b>${r.dist_km ? r.dist_km.toFixed(1) + " км" : "—"}</b></div>
     <div class="hrow"><span>💵 Накталай</span><b>${r.pay ? r.pay + " сом" : "тариф боюнча"}</b></div>
     <div class="hrow"><span>Айдоочу</span><b>${esc(d.name || "")} ★${d.rating ?? "5"}</b></div>

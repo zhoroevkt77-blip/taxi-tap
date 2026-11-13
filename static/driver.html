@@ -316,8 +316,8 @@ function viewCabinet(part) {
     return `<tr><td>${t}</td><td>${x.rides}</td><td>${x.gross}</td><td>${x.fee}</td><td><b>${x.net}</b></td></tr>`; };
   const E = part === "earn", C = !E, on = c => c ? "" : ' style="display:none"';
   render(`<h2>${E ? "💰 Киреше" : "Менин кабинетим"}</h2>
-    <div${on(C)}><div class="note">💼 Тариф: <b>${esc(D.tariff)}</b><br>🚕 Класстарыңыз: <b>${(D.classes || []).map(c => esc((D.class_names || {})[c] || c)).join(", ")}</b>
-      <div class="muted">Комфорт же Минивэн класска өтүү үчүн админге кайрылыңыз.</div></div></div>
+    <div${on(C)}><div class="note">🚕 Тарифтериңиз: <b>${(D.classes || []).map(c => esc((D.class_names || {})[c] || c)).join(", ")}</b><br>💼 Комиссия: <b>${esc(D.tariff)}</b>
+      <div class="muted">Комфорт же Минивэн тарифине өтүү үчүн админге кайрылыңыз.</div></div></div>
     <div class="grid"><div class="stat"><span class="muted">Баланс</span><b style="color:${D.balance < D.min_balance ? "var(--bad)" : "inherit"}">${D.balance} с</b></div>
       <div class="stat"><span class="muted">Рейтинг</span><b>★ ${D.rating ?? "5.0"}</b></div></div>
     <div${on(E)}><table class="fin"><tr><th></th><th>Сапар</th><th>Жүгүртүү</th><th>Комиссия</th><th>Колуңузда</th></tr>

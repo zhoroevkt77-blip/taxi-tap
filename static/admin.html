@@ -289,13 +289,13 @@ async function viewTariffs() {
         <label class="muted">Коэффициент <input class="f" inputmode="decimal" data-ck="${c}" value="${x.k}" style="max-width:80px;display:inline-block"></label>
         <button class="btn ${x.on ? "ok" : ""}" data-con="${c}" style="min-width:110px">${x.on ? "✓ Күйүк" : "Өчүк"}</button></div>`).join("")}
       <div style="padding:0 14px 14px"><button class="btn gold" id="clSave">Коэффициенттерди сактоо</button> <span class="muted" id="clMsg"></span>
-      <p class="muted">Баскычты бассаңыз дароо күйөт же өчөт. Коэффициент 1.3 = Экономдон 30% кымбат. Айдоочунун класстары «Айдоочулар» бөлүмүндө белгиленет. Комфорт/Минивэн айдоочусу Эконом заказды да алат. Жок дегенде бир тариф күйүк болушу керек.</p></div></div>
+      <p class="muted">Баскычты бассаңыз дароо күйөт же өчөт. Коэффициент 1.3 = Экономдон 30% кымбат. Айдоочунун тарифтери «Айдоочулар» бөлүмүндө белгиленет. Комфорт/Минивэн айдоочусу Эконом заказды да алат. Жок дегенде бир тариф күйүк болушу керек.</p></div></div>
     <div class="panel"><h3>Баалар (сом)</h3><div class="scroll"><table>
     <tr><th>Шаар</th><th>Отуруу</th><th>1 км</th><th>1 мүнөт</th><th>Минимум</th><th></th></tr>
     ${tariffs.map((t, i) => `<tr><td><b>${esc(t.city)}</b>${t.saved ? "" : `<div class="muted">демейки</div>`}</td>
       ${["base", "per_km", "per_min", "min_price"].map(k => `<td><input class="f" inputmode="decimal" id="t${i}${k}" value="${+t[k]}"></td>`).join("")}
       <td><button class="btn gold" data-i="${i}">Сактоо</button></td></tr>`).join("")}</table></div></div>
-    <p class="muted">Баа = max(минимум, отуруу + км × 1 км баасы + мүнөт × 1 мүнөт баасы) × талап коэффициенти × класс, 10 сомго тегеректелет.</p>
+    <p class="muted">Баа = max(минимум, отуруу + км × 1 км баасы + мүнөт × 1 мүнөт баасы) × талап коэффициенти × тариф коэффициенти, 10 сомго тегеректелет.</p>
     <div class="panel"><h3>Акылуу күтүү</h3><div class="fset">
       <div><label>Акысыз мүнөт</label><input class="f" id="wFree" inputmode="decimal" value="${wait.free_min}"></div>
       <div><label>Андан кийин, сом/мүн</label><input class="f" id="wPer" inputmode="decimal" value="${wait.per_min}"></div></div>
