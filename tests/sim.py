@@ -143,7 +143,7 @@ try:
         dv.evaluate("SHEET.collapse()")
         dv.click("#heatBtn")
         frame(r, dv, 13, "Талап картасы (коэффициент)", "Малина түстүү уюлдар: ×1.2 … ×1.5 — айдоочу ошол жакка барат", 2200)
-        dv.click("#sosBtn")
+        dv.evaluate("sosOpen()")
         frame(r, dv, 14, "🆘 SOS баскычы", "112ге чалуу же админге жерин жана сапарын жөнөтүү", 800)
         dv.click("#sosSend"); dv.wait_for_timeout(600)
         frame(r, dv, 15, "Админге шашылыш кабар кетти", "Telegram'га: айдоочу, унаа, жүргүнчү жана картадагы жери", 600)

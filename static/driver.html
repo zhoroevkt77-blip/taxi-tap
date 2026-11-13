@@ -92,7 +92,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
   <div class="rcol"><button class="state hide" id="stBadge" style="display:none">Офлайн</button>
     <button class="tbtn hide topav" id="cabBtn" aria-label="Менин кабинетим">👤</button>
     <div class="r2"><button class="ep hide" id="earn"></button></div>
-    <div class="tools hide" id="tools"><button class="sbtn" id="heatBtn" aria-label="Коэффициент"><i>💓</i>×1.0</button><button class="tbtn sos" id="sosBtn" aria-label="SOS">🆘</button></div></div>
+    <div class="tools hide" id="tools"><button class="sbtn" id="heatBtn" aria-label="Коэффициент"><i>💓</i>×1.0</button></div></div>
 </div>
 <div class="sheet"><div class="grab"></div><div id="view"></div></div>
 <div class="offer hide" id="offer"><div class="ocard" id="ocard"></div></div>
@@ -232,7 +232,6 @@ function header() {
   earnPill();
   $("#stBadge").innerHTML = D.ride ? "🚕 Сапарда" : D.online ? "🟢 Линияда" : "▶ Линияга чыгуу";
   $("#stBadge").classList.toggle("on", D.online || !!D.ride);
-  $("#sosBtn").classList.toggle("hide", !(D.online || D.ride));
 }
 
 const ICON = {econom:"🚕", comfort:"🚘", minivan:"🚐", delivery:"📦"};
@@ -429,7 +428,9 @@ function viewRide() {
     <div class="two"><a class="btn ghost" href="tel:${esc(callPh)}">📞 Чалуу</a><button class="btn ghost chatb" id="chat">💬 Чат<em id="chatN" class="hide"></em></button></div>
     ${target ? `<button class="btn main" id="navGo">🧭 ${r.status === "in_trip" ? "Б точкага" : "Жүргүнчүгө"} жол — ${esc((NAVS[navPref()] || {t:"навигатор"}).t)}</button>` : ""}
     <button class="btn ${next[1]}" id="step">${next[0]}</button>
-    ${r.status !== "in_trip" ? `<button class="btn red" id="cx">Жокко чыгаруу</button>` : ""}`);
+    ${r.status !== "in_trip" ? `<button class="btn red" id="cx">Жокко чыгаруу</button>` : ""}
+    <button class="btn ghost" id="rSos" style="color:var(--bad)">🆘 Шашылыш жардам</button>`);
+  $("#rSos").onclick = sosOpen;
   $("#chat").onclick = viewChat;
   if ($("#navGo")) $("#navGo").onclick = () => openNav(target);
   const nx = $("#nx"); if (nx) nx.onclick = async e => { e.preventDefault(); if (!confirm("Кийинки заказдан баш тартасызбы?")) return;
@@ -593,7 +594,7 @@ function closeOverlay() { $("#ovl").classList.add("hide"); }
 $("#ovl").onclick = e => { if (e.target.id === "ovl") closeOverlay(); };
 
 // ---------- SOS ----------
-$("#sosBtn").onclick = () => {
+function sosOpen() {
   overlay(`<h2 style="color:var(--bad)">🆘 Шашылыш жардам</h2>
     <p class="muted">Коркунуч болсо — дароо 112ге чалыңыз. «Админге билдирүү» басылса, админге жериңиз жана сапарыңыз жөнөтүлөт.</p>
     <a class="btn red" href="tel:112" style="font-size:19px">📞 112ге чалуу</a>
@@ -601,7 +602,7 @@ $("#sosBtn").onclick = () => {
     <button class="btn ghost" id="ovlX">Жабуу</button>`);
   $("#sosSend").onclick = async () => { $("#sosSend").disabled = true; await api("/api/d/sos", {p:myPos});
     $("#sosSend").textContent = "✓ Админге жөнөтүлдү"; };
-};
+}
 
 // ---------- Коэффициент: малина түстүү алты бурчтуктар + 💓 баскычы ----------
 const heatLayer = L.layerGroup().addTo(map);
@@ -749,13 +750,14 @@ let lastView = "";
 function viewHelp() {
   navOn("help");
   render(`<h2>💬 Жардам</h2>
+    <button class="btn red" id="hSos">🆘 Шашылыш жардам (112 / админге)</button>
     ${D.bot ? `<a class="btn main" href="https://t.me/${esc(D.bot)}" target="_blank" style="display:block;text-align:center;text-decoration:none">✈️ Telegram аркылуу жазуу</a>` : ""}
-    <a class="btn red" href="tel:112" style="display:block;text-align:center;text-decoration:none">📞 Шашылыш: 112</a>
     <details class="faq"><summary>Заказ кантип келет?</summary><p>«Линияга чыгуу» баскычын басыңыз. Жакын жердеги заказ экранга чыгат — сүрүп кабыл аласыз. Сайт жабык болсо Telegram'га кабар келет.</p></details>
     <details class="faq"><summary>Баланс эмне үчүн керек?</summary><p>Комиссия балансыңыздан кемийт. Баланс аз болсо заказ келбейт — «Киреше» бөлүмүнөн толуктаңыз.</p></details>
     <details class="faq"><summary>Активдүүлүк деген эмне?</summary><p>Заказ алып бүтүрсөңүз көбөйөт, баш тартсаңыз азаят. Активдүүлүгү жогору айдоочуга заказ биринчи келет.</p></details>
-    <details class="faq"><summary>Жүргүнчү менен көйгөй чыкса?</summary><p>Сапар бетиндеги 🆘 баскычы админге жериңизди жана сапарды дароо жөнөтөт. Коркунуч болсо 112ге чалыңыз.</p></details>
+    <details class="faq"><summary>Жүргүнчү менен көйгөй чыкса?</summary><p>Ушул бөлүмдөгү же сапар бетиндеги «🆘 Шашылыш жардам» баскычы админге жериңизди жана сапарды дароо жөнөтөт. Коркунуч болсо 112ге чалыңыз.</p></details>
     <details class="faq"><summary>Күбөлүктүн мөөнөтү бүтсө?</summary><p>«Кабинет → Документтер» бөлүмүнөн жаңы күбөлүктүн сүрөтүн жана мөөнөтүн жүктөңүз.</p></details>`);
+  $("#hSos").onclick = sosOpen;
   window.SHEET && SHEET.expand();
 }
 function confirmOut() {
