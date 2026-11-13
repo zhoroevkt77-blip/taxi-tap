@@ -350,3 +350,9 @@ body.athome .top,body.athome #pin,body.athome .navbtns,body.athome .sheet{visibi
 .crow em{font-style:normal;color:#9a9aa5;font-size:20px}
 .ptag{display:inline-block;background:#effaf3;color:#16764f;border-radius:12px;padding:5px 10px;margin:3px 4px 0 0;font-size:13px;font-weight:800}
 .ptag.bad{background:#fdecec;color:#b42318}
+/* v23: айдоочунун өйдөкү тилкеси батат */
+.top .lcol{min-width:0}
+.top .rcol{flex:none;max-width:132px}
+.drole a{font-size:13px!important;padding:8px 11px!important}
+button.state{white-space:normal!important;line-height:1.2;text-align:center;max-width:132px}
+.navme b{filter:drop-shadow(0 3px 5px rgba(0,0,0,.35))!important}

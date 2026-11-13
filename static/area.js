@@ -171,10 +171,8 @@ function bindLinks() {
 // Жебе телефон кайсы жакты караса ошол жакка бурулат (жүрүп баратканда — GPS багыты).
 window.NAV = (function () {
   let map = null, marker = null, pos = null, head = null, gpsHead = null, wrap = null, onLocate = null, watching = false, oriOn = false;
-  const ARROW = `<svg viewBox="0 0 60 60" width="52" height="52"><defs>
-      <linearGradient id="ga" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd84d"/><stop offset="1" stop-color="#f5a800"/></linearGradient>
-      <linearGradient id="gb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e09a00"/><stop offset="1" stop-color="#b87800"/></linearGradient></defs>
-    <path d="M30 4 L52 52 L30 41 Z" fill="url(#gb)"/><path d="M30 4 L8 52 L30 41 Z" fill="url(#ga)"/></svg>`;
+  const ARROW = `<svg viewBox="0 0 60 60" width="50" height="50"><path d="M30 6 L50 52 L30 42 L10 52 Z" fill="#FAC775" stroke="#fff" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M30 6 L50 52 L30 42 Z" fill="#E09A00"/><path d="M30 6 L10 52 L30 42 Z" fill="#FFC61A"/></svg>`;
   const LOC = `<svg viewBox="0 0 24 24" width="24" height="24"><path d="M21.5 2.5 L2.8 10.3 L11 12.9 L13.7 21.2 Z" fill="#16161a" stroke="#16161a" stroke-width="1.2" stroke-linejoin="round"/></svg>`;
   const COMP = `<svg viewBox="0 0 40 40" width="34" height="34"><path d="M20 4 L26 20 L14 20 Z" fill="#ff3b30"/><path d="M20 36 L26 20 L14 20 Z" fill="#c9c9cf"/><circle cx="20" cy="20" r="2.6" fill="#fff"/></svg>`;
   function icon() { return L.divIcon({className:"", html:`<div class="navme"><i></i><b class="navarr">${ARROW}</b></div>`, iconSize:[52,52], iconAnchor:[26,26]}); }
