@@ -11,6 +11,7 @@
 """
 
 import base64
+import datetime
 import json
 import math
 import os
@@ -291,7 +292,9 @@ NEW_COLUMNS = {
                 "home_day": "TEXT", "home_uses": "INTEGER DEFAULT 0",
                 "out_since": "REAL",
                 "activity": "INTEGER DEFAULT 100",
-                "park_id": "INTEGER"},                # таксопарк (жок болсо — өз алдынча)   # активдүүлүк 0..100 (Яндекс Pro'догудай)              # аймактан сыртка чыккан убакыт
+                "park_id": "INTEGER",
+                "doc_selfie": "TEXT",                # күбөлүктү кармап тартылган селфи
+                "lic_until": "TEXT"},                # күбөлүктүн мөөнөтү YYYY-MM-DD                # таксопарк (жок болсо — өз алдынча)   # активдүүлүк 0..100 (Яндекс Pro'догудай)              # аймактан сыртка чыккан убакыт
     "balance_tx": {"claimed": "REAL"},
     "rides": {"note": "TEXT", "source": "TEXT",   # source: web | phone (диспетчер)
               "promo": "TEXT", "discount": "REAL DEFAULT 0",
@@ -1540,12 +1543,51 @@ def register_driver(uid, name, model, color, plate, docs):
         set_user(uid, name=name)
     fields = dict(car_model=model, car_color=color, car_plate=plate, status="pending",
                   reject_note=None, doc_license=docs.get("license"),
-                  doc_techpass=docs.get("techpass"), doc_car=docs.get("car"))
+                  doc_techpass=docs.get("techpass"), doc_car=docs.get("car"),
+                  doc_selfie=docs.get("selfie"))
+    if docs.get("lic_until"):
+        fields["lic_until"] = docs["lic_until"]
     if get_driver(uid):
         set_driver(uid, **fields)
     else:
         query("INSERT INTO drivers (uid, created_at) VALUES (?, ?)", (uid, now()))
         set_driver(uid, **fields)
+
+
+def lic_days_left(d):
+    """Айдоочулук күбөлүктүн мөөнөтү бүткөнчө канча күн калды (белгисиз болсо None)."""
+    v = (d or {}).get("lic_until")
+    try:
+        end = datetime.date.fromisoformat(str(v)[:10])
+    except (TypeError, ValueError):
+        return None
+    return (end - datetime.date.fromtimestamp(now())).days
+
+
+LIC_WARN_DAYS = (30, 7, 1)
+
+
+def lic_daily():
+    """Күнүнө бир жолу: мөөнөтү жакындаганга эскертүү, бүткөндү линиядан чыгаруу.
+    Кайтарат: [(uid, 'soon'|'expired', days, date)]."""
+    today = datetime.date.fromtimestamp(now()).isoformat()
+    if get_setting("lic_day") == today:
+        return []
+    set_setting("lic_day", today)
+    out = []
+    for d in query("SELECT uid, lic_until, online, busy_ride FROM drivers WHERE status='active' "
+                   "AND lic_until IS NOT NULL", (), "all"):
+        left = lic_days_left(d)
+        if left is None:
+            continue
+        if left < 0:
+            if left == -1 or d["online"]:
+                out.append((d["uid"], "expired", left, d["lic_until"]))
+            if d["online"] and not d["busy_ride"]:
+                set_driver(d["uid"], online=0, live_until=None)
+        elif left in LIC_WARN_DAYS:
+            out.append((d["uid"], "soon", left, d["lic_until"]))
+    return out
 
 
 def last_ride_of(uid, within_sec=900):
@@ -1678,7 +1720,7 @@ def admin_overview():
 def admin_drivers():
     return query("SELECT d.uid, d.status, d.balance, d.rating, d.rides_done, d.car_model, "
                  "d.car_color, d.car_plate, d.online, d.busy_ride, d.loc_at, d.live_until, d.lat, d.lon, "
-                 "d.doc_license, d.doc_techpass, d.doc_car, d.reject_note, d.created_at, d.classes, "
+                 "d.doc_license, d.doc_techpass, d.doc_car, d.doc_selfie, d.lic_until, d.reject_note, d.created_at, d.classes, "
                  "u.name, u.phone FROM drivers d LEFT JOIN users u ON u.uid=d.uid "
                  "ORDER BY d.status='pending' DESC, d.rides_done DESC", (), "all")
 

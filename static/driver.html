@@ -61,8 +61,8 @@ table.fin{width:100%;border-collapse:collapse;font-size:14px;margin:8px 0}
 table.fin th{font-size:11px;color:var(--soft);font-weight:600;text-align:right;padding:6px 4px}
 table.fin td{text-align:right;padding:9px 4px;border-top:1px solid var(--line)}
 table.fin td:first-child,table.fin th:first-child{text-align:left}
-.docs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:4px 0 6px}
-.doc{border:1.5px dashed var(--line);border-radius:14px;aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;color:var(--soft);text-align:center;padding:6px;cursor:pointer;background:var(--paper) center/cover no-repeat;position:relative}
+.docs{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:4px 0 6px}
+.doc{border:1.5px dashed var(--line);border-radius:14px;aspect-ratio:1.5;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:12px;color:var(--soft);text-align:center;padding:6px;cursor:pointer;background:var(--paper) center/cover no-repeat;position:relative}
 .doc.ok{border:2px solid var(--ok);color:transparent}
 .doc input{position:absolute;inset:0;opacity:0;cursor:pointer}
 .doc i{font-style:normal;font-size:24px;display:block;margin-bottom:4px}
@@ -307,6 +307,7 @@ function viewCabinet() {
       <span class="muted">Заказ алсаңыз жана бүтүрсөңүз +1, сунушка жооп бербесеңиз же «Жок» десеңиз −3, кабыл алгандан кийин жокко чыгарсаңыз −10.
       Активдүүлүгү жогору айдоочуга заказ биринчи келет.</span></div>
     <div id="praise"></div>
+    ${licNote()}
     <div class="sw"><div><b>🔊 Заказды үн менен айтуу</b><div class="muted">«Жаңы заказ, 80 сом, 1,2 километр»</div></div>
       <input type="checkbox" id="vc" ${voiceOn() ? "checked" : ""} style="width:24px;height:24px"></div>
     <div class="sw"><div><b>🧭 Навигатор</b><div class="muted">${esc((NAVS[navPref()] || {t:"Тандала элек"}).t)}</div></div>
@@ -320,6 +321,7 @@ function viewCabinet() {
   bindLinks(); window.SHEET && SHEET.expand();
   $("#top") && ($("#top").onclick = viewTopup);
   $("#hist").onclick = viewHistory; $("#addAddr").onclick = viewAddAddr;
+  $("#licUp") && ($("#licUp").onclick = viewLicense);
   $("#vc").onchange = e => { try { localStorage.setItem("voice", e.target.checked ? "on" : "off"); } catch (x) {} if (e.target.checked) say("Үн күйгүзүлдү"); };
   $("#navCh").onclick = () => openNav(null, true);
   api("/api/d/praise").then(x => { const el = $("#praise"); if (!el || !x) return;
@@ -500,7 +502,10 @@ async function goOnline(btn) {
   if (btn) btn.disabled = true;
   const p = await getPos();
   if (!p) { if (btn) btn.disabled = false; const e = $("#er"); if (e) e.textContent = "GPS'ке уруксат бериңиз (браузердин жөндөөлөрүнөн)."; else alert("GPS'ке уруксат бериңиз."); return; }
-  D = await api("/api/d/online", {on:true, p});
+  const r = await api("/api/d/online", {on:true, p});
+  if (r.error === "lic_expired") { if (btn) btn.disabled = false; alert("Айдоочулук күбөлүгүңүздүн мөөнөтү бүттү. Жаңы күбөлүктү жүктөңүз."); return viewLicense(); }
+  if (r.error) { if (btn) btn.disabled = false; return; }
+  D = r;
   startGps(); wake(true); lastView = ""; show();
   if (window.SHEET && !D.ride) setTimeout(() => SHEET.collapse(), 400);   // карта толук көрүнсүн
 }
@@ -618,6 +623,37 @@ function docInput(el, store, key) {
   };
 }
 
+const LIC_ERR = {doc_selfie:"Күбөлүктү колуңузга кармап селфи тартыңыз.", lic_date:"Күбөлүктүн мөөнөтүн жазыңыз.",
+  lic_expired:"Күбөлүктүн мөөнөтү бүтүп калган — жарактуу күбөлүк керек."};
+function licNote() {
+  const l = D.lic_left;
+  if (!D.lic_until) return `<div class="note">🪪 <b>Документтер</b><br><span class="muted">Айдоочулук күбөлүгүңүздүн мөөнөтүн жазып коюңуз.</span>
+    <button class="btn ghost" id="licUp" style="margin-top:8px">Мөөнөтүн жазуу</button></div>`;
+  const bad = l < 0, soon = l <= 30;
+  return `<div class="note" ${bad ? 'style="background:#fdecec"' : ""}>🪪 <b>Айдоочулук күбөлүк</b>: ${esc(D.lic_until)} чейин<br>
+    <span class="muted" style="color:${bad ? "var(--bad)" : soon ? "#b26a00" : ""}">${bad ? "Мөөнөтү бүттү — линияга чыга албайсыз." : soon ? `${l} күн калды — жаңылап коюңуз.` : `${l} күн калды.`}</span>
+    ${bad || soon ? `<button class="btn main" id="licUp" style="margin-top:8px">Күбөлүктү жаңылоо</button>` : ""}</div>`;
+}
+function viewLicense() {
+  const box = {};
+  render(`<h2>Күбөлүктү жаңылоо</h2>
+    <label class="l">Жаңы күбөлүктүн сүрөтү</label>
+    <div class="docs" style="grid-template-columns:1fr"><div class="doc" id="nl" style="aspect-ratio:1.6"><i>🪪</i>Айдоочулук күбөлүк<input type="file" accept="image/*"></div></div>
+    <label class="l">Мөөнөтү (качанга чейин)</label><input class="f" id="nd" type="date" value="${esc(D.lic_until || "")}">
+    <p class="muted">Админ сүрөттү текшерет.</p>
+    <div class="err" id="er"></div><button class="btn main" id="send">Сактоо</button><button class="btn ghost" id="back">Артка</button>`);
+  docInput($("#nl"), box, "license");
+  $("#back").onclick = () => { lastView = ""; show(); };
+  $("#send").onclick = async () => {
+    if (!box.license) return $("#er").textContent = "Күбөлүктүн сүрөтүн жүктөңүз.";
+    if (!$("#nd").value) return $("#er").textContent = "Мөөнөтүн жазыңыз.";
+    $("#send").disabled = true;
+    const r = await api("/api/d/license", {license:box.license, lic_until:$("#nd").value});
+    if (r.error) { $("#send").disabled = false; return $("#er").textContent = LIC_ERR[r.error] || "Ката."; }
+    D = r; toast("✅ Сакталды"); lastView = ""; show();
+  };
+}
+
 function viewRegister() {
   $("#earn").classList.add("hide");
   const again = D.status === "rejected" || D.status === "pending";
@@ -633,19 +669,23 @@ function viewRegister() {
       <div class="doc" id="dl"><i>🪪</i>Айдоочулук күбөлүк<input type="file" accept="image/*"></div>
       <div class="doc" id="dt"><i>📄</i>Техпаспорт<input type="file" accept="image/*"></div>
       <div class="doc" id="dc"><i>🚗</i>Унаанын сүрөтү<input type="file" accept="image/*"></div>
+      <div class="doc" id="ds"><i>🤳</i>Күбөлүктү колуңузга кармап селфи<input type="file" accept="image/*" capture="user"></div>
     </div>
+    <label class="l">Күбөлүктүн мөөнөтү (качанга чейин жарактуу)</label>
+    <input class="f" id="rl" type="date" value="${esc(D.lic_until || "")}">
     <p class="muted">Документтерди админ гана көрөт.</p>
     <div class="err" id="er"></div><button class="btn main" id="send">Арызды жөнөтүү</button>
     `);
-  docInput($("#dl"), docs, "license"); docInput($("#dt"), docs, "techpass"); docInput($("#dc"), docs, "car");
+  docInput($("#dl"), docs, "license"); docInput($("#dt"), docs, "techpass"); docInput($("#dc"), docs, "car"); docInput($("#ds"), docs, "selfie");
   $("#send").onclick = async () => {
-    const body = {name:$("#rn").value, model:$("#rm").value, color:$("#rc").value, plate:$("#rp").value, ...docs};
+    const body = {name:$("#rn").value, model:$("#rm").value, color:$("#rc").value, plate:$("#rp").value, lic_until:$("#rl").value, ...docs};
     if (!body.name.trim() || !body.model.trim() || !body.color.trim() || !body.plate.trim()) return $("#er").textContent = "Бардык талааларды толтуруңуз.";
-    if (!again && Object.keys(docs).length < 3) return $("#er").textContent = "Үч сүрөттү тең жүктөңүз.";
+    if (!again && Object.keys(docs).length < 4) return $("#er").textContent = "Төрт сүрөттү тең жүктөңүз (селфи да).";
+    if (!body.lic_until) return $("#er").textContent = "Күбөлүктүн мөөнөтүн жазыңыз.";
     $("#send").disabled = true; $("#send").textContent = "Жөнөтүлүүдө…";
     const r = await api("/api/d/register", body);
     if (r.error) { $("#send").disabled = false; $("#send").textContent = "Арызды жөнөтүү";
-      return $("#er").textContent = r.error.startsWith("doc_") ? "Документтин сүрөтүн жүктөңүз." : "Ката. Талааларды текшериңиз."; }
+      return $("#er").textContent = LIC_ERR[r.error] || (r.error.startsWith("doc_") ? "Документтин сүрөтүн жүктөңүз." : "Ката. Талааларды текшериңиз."); }
     D = r; lastView = ""; show();
   };
 }

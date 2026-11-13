@@ -72,6 +72,8 @@ def tick():
     """
     out = [note(r["passenger"], "p_scheduled_go") for r in core.activate_scheduled()]
     out += [note(uid, "d_auto_off", "/driver", area=core.area_gen()) for uid in core.auto_offline_out()]
+    for uid, kind, days, date in core.lic_daily():
+        out.append(note(uid, "d_lic_" + kind, "/driver", days=days, date=date))
     t = core.now()
     for r in core.searching_rides():
         rid = r["id"]

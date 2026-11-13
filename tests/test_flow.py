@@ -707,8 +707,14 @@ class Http(unittest.TestCase):
         self.assertIsNone(st["status"])
         self.assertEqual(drv("/api/d/register", {"name": "Нурбек", "model": "Fit", "color": "Боз",
                                                  "plate": "01 777 kga", "license": PNG})["error"], "doc_techpass")
-        st = drv("/api/d/register", {"name": "Нурбек", "model": "Fit", "color": "Боз", "plate": "01 777 kga",
-                                     "license": PNG, "techpass": PNG, "car": PNG})
+        reg = {"name": "Нурбек", "model": "Fit", "color": "Боз", "plate": "01 777 kga",
+               "license": PNG, "techpass": PNG, "car": PNG}
+        self.assertEqual(drv("/api/d/register", reg)["error"], "doc_selfie")
+        reg["selfie"] = PNG
+        self.assertEqual(drv("/api/d/register", reg)["error"], "lic_date")
+        self.assertEqual(drv("/api/d/register", dict(reg, lic_until="2020-01-01"))["error"], "lic_expired")
+        st = drv("/api/d/register", dict(reg, lic_until="2035-05-01"))
+        self.assertEqual(st["lic_until"], "2035-05-01")
         self.assertEqual(st["status"], "pending")
         self.assertEqual(drv("/api/d/online", {"on": True, "p": list(NEAR)})["error"], "not_active")
         # админ
@@ -951,3 +957,22 @@ class Parks(unittest.TestCase):
             self.assertEqual(len(parks.admin_list()), 1)
         finally:
             core.commission_pct = old
+
+
+class LicenseCheck(unittest.TestCase):
+    def test_license_expiry(self):
+        import datetime, dispatch
+        core.init_db(); offline_all()
+        d = make_driver("0700 000 171", "Мөөнөт", NEAR, 500)
+        today = datetime.date.fromtimestamp(core.now())
+        self.assertIsNone(core.lic_days_left(core.get_driver(d)))
+        core.set_driver(d, lic_until=(today + datetime.timedelta(days=7)).isoformat())
+        core.set_setting("lic_day", "")
+        self.assertIn((d, "soon", 7), [x[:3] for x in core.lic_daily()])
+        self.assertEqual(core.lic_daily(), [])                           # күнүнө бир жолу
+        core.set_driver(d, lic_until=(today - datetime.timedelta(days=1)).isoformat(), online=1)
+        core.set_setting("lic_day", "")
+        self.assertIn((d, "expired", -1), [x[:3] for x in core.lic_daily()])
+        self.assertFalse(core.get_driver(d)["online"])                   # линиядан чыгарылды
+        core.set_setting("lic_day", today.isoformat())
+        self.assertIsInstance(dispatch.tick(), list)

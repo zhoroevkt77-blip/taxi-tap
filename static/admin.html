@@ -65,6 +65,8 @@ td input.f{padding:7px 8px;max-width:90px;min-width:58px}
 .vx.first{background:#1D9E75;width:20px;height:20px}
 .docs{display:flex;gap:8px;margin-top:8px}.docs a{display:block}.docs img{width:92px;height:68px;object-fit:cover;border-radius:8px;border:1px solid var(--line);background:var(--paper)}
 .docs span{display:block;font-size:11px;color:var(--soft);text-align:center;margin-top:2px}
+.docs{flex-wrap:wrap}.chk{margin:10px 0 2px;padding:10px 12px;border-radius:12px;background:#fff8e1}.chk label{font-weight:500!important;color:#222!important;font-size:14px!important;display:flex!important;gap:8px;align-items:flex-start}.chk input{width:18px;height:18px;flex:none;margin-top:1px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
 </style>
 <link rel="stylesheet" href="/static/theme.css?v=38">
 </head>
@@ -210,18 +212,29 @@ async function viewDrivers() {
   const {drivers} = await api("/api/a/drivers");
   const pend = drivers.filter(d => d.status === "pending"), rest = drivers.filter(d => d.status !== "pending");
   const file = n => n ? `/api/a/file?n=${encodeURIComponent(n)}` : "";
-  const docs = d => `<div class="docs">${[["doc_license", "Күбөлүк"], ["doc_techpass", "Техпаспорт"], ["doc_car", "Унаа"]].map(([k, t]) =>
+  const docs = d => `<div class="docs">${[["doc_selfie", "Селфи"], ["doc_license", "Күбөлүк"], ["doc_techpass", "Техпаспорт"], ["doc_car", "Унаа"]].map(([k, t]) =>
       d[k] ? `<a href="${file(d[k])}" target="_blank"><img src="${file(d[k])}" alt="${t}" loading="lazy"><span>${t}</span></a>` : "").join("")}</div>`;
+  const today = new Date().toISOString().slice(0, 10);
+  const lic = d => { if (!d.lic_until) return `<span class="muted" style="display:block">🪪 Мөөнөтү жазылган эмес</span>`;
+    const left = Math.round((new Date(d.lic_until) - new Date(today)) / 864e5);
+    return `<span class="muted" style="display:block;color:${left < 0 ? "var(--bad)" : left <= 30 ? "#b26a00" : ""}">🪪 Күбөлүк ${esc(d.lic_until)} чейин${left < 0 ? " — МӨӨНӨТҮ БҮТКӨН" : left <= 30 ? ` — ${left} күн калды` : ""}</span>`; };
+  const checks = d => `<div class="chk" data-ck="${esc(d.uid)}"><b style="font-size:13px">Ырастоодон мурун текшериңиз:</b>${["Селфидеги жүз күбөлүктөгү сүрөткө окшош", "Аты-жөнү күбөлүктөгүдөй", "Унаанын номери техпаспорттогудай",
+      "Унаанын сүрөтүндөгү номер дал келет"].map(t => `<label style="margin:6px 0"><input type="checkbox"> <span>${t}</span></label>`).join("")}</div>`;
   const row = d => `<div class="item"><div class="main"><b>${esc(d.name)} ${tag(d.status)} ${d.is_online ? '<span class="tag t-in_trip">онлайн</span>' : ""}</b>
       <span class="muted">${esc(d.phone)} · ${esc(d.car_color)} ${esc(d.car_model)}, ${esc(d.car_plate)}${d.status === "active" || d.status === "blocked" ? ` · ★ ${d.rating} · ${d.rides_done} сапар · баланс <b>${Math.round(d.balance)} с</b>` : ""}</span>
-      ${d.status === "rejected" && d.reject_note ? `<span class="muted">Себеби: ${esc(d.reject_note)}</span>` : ""}${d.status === "pending" ? docs(d) : ""}
+      ${d.status === "rejected" && d.reject_note ? `<span class="muted">Себеби: ${esc(d.reject_note)}</span>` : ""}${lic(d)}
+      ${d.status === "pending" ? docs(d) + checks(d) : `<details><summary class="muted" style="cursor:pointer">📄 Документтер</summary>${docs(d)}</details>`}
       ${d.status === "active" ? `<span class="muted" data-cl="${esc(d.uid)}">${[["econom","Эконом"],["comfort","Комфорт"],["minivan","Минивэн"],["delivery","Жеткирүү"]].map(([c, t]) =>
         `<label style="margin-right:10px;white-space:nowrap"><input type="checkbox" value="${c}" ${(d.classes || "econom,delivery").split(",").includes(c) ? "checked" : ""}> ${t}</label>`).join("")}</span>` : ""}</div>
-      ${d.status === "pending" ? `<button class="btn ok" data-a="approve" data-u="${esc(d.uid)}">Ырастоо</button><button class="btn bad" data-a="reject" data-u="${esc(d.uid)}">Баш тартуу</button>`
+      ${d.status === "pending" ? `<button class="btn ok" data-a="approve" data-u="${esc(d.uid)}" disabled title="Адегенде бардык белгилерди коюңуз">Ырастоо</button><button class="btn bad" data-a="reject" data-u="${esc(d.uid)}">Баш тартуу</button>`
         : `<button class="btn" data-bal="${esc(d.uid)}">± Баланс</button>` + (d.status === "blocked"
           ? `<button class="btn ok" data-a="unblock" data-u="${esc(d.uid)}">Ачуу</button>` : `<button class="btn bad" data-a="block" data-u="${esc(d.uid)}">Бөгөттөө</button>`)}</div>`;
   $("#main").innerHTML = (pend.length ? `<div class="panel"><h3>Ырастоону күткөндөр (${pend.length})</h3>${pend.map(row).join("")}</div>` : "")
     + `<div class="panel"><h3>Бардык айдоочулар (${rest.length})</h3>${rest.map(row).join("") || `<div class="empty">Айдоочу жок.</div>`}</div>`;
+  $("#main").querySelectorAll("[data-ck]").forEach(box => {
+    const btn = $("#main").querySelector(`[data-a="approve"][data-u="${CSS.escape(box.dataset.ck)}"]`), all = [...box.querySelectorAll("input")];
+    all.forEach(i => i.onchange = () => { if (btn) btn.disabled = !all.every(x => x.checked); });
+  });
   $("#main").querySelectorAll("[data-a]").forEach(b => b.onclick = async () => {
     let reason = "";
     if (b.dataset.a === "block" && !confirm("Бөгөттөйсүзбү?")) return;

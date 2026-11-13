@@ -120,6 +120,7 @@ def driver_state(uid):
     t = core.now()
     st = {"name": u.get("name"), "phone": u.get("phone"), "status": d.get("status"),
           "reject_note": d.get("reject_note"),
+          "lic_until": d.get("lic_until"), "lic_left": core.lic_days_left(d),
           "car_model": d.get("car_model"), "car_color": d.get("car_color"),
           "car_plate": d.get("car_plate"),
           "online": bool(d and (core.is_available(d) or d.get("busy_ride"))),
@@ -551,14 +552,36 @@ class H(BaseHTTPRequestHandler):
             if not (name and model and color and plate):
                 return self._json({"error": "fields"}, 400)
             docs = {}
-            for k in ("license", "techpass", "car"):
+            for k in ("license", "techpass", "car", "selfie"):
                 docs[k] = core.save_upload(b.get(k)) if b.get(k) else (d or {}).get("doc_" + k)
                 if not docs[k]:
                     return self._json({"error": "doc_" + k}, 400)
+            lu = _txt(b.get("lic_until"), 10) or (d or {}).get("lic_until")
+            left = core.lic_days_left({"lic_until": lu})
+            if left is None:
+                return self._json({"error": "lic_date"}, 400)
+            if left < 0:
+                return self._json({"error": "lic_expired"}, 400)
+            docs["lic_until"] = lu
             deliver(flow.register_driver(uid, name, model, color, plate, docs))
             return self._json(driver_state(uid))
         if not d or d["status"] != "active":
             return self._json({"error": "not_active"}, 403)
+        if action == "license":
+            lu = _txt(b.get("lic_until"), 10)
+            left = core.lic_days_left({"lic_until": lu})
+            if left is None:
+                return self._json({"error": "lic_date"}, 400)
+            if left < 0:
+                return self._json({"error": "lic_expired"}, 400)
+            photo = core.save_upload(b.get("license")) if b.get("license") else None
+            if not photo:
+                return self._json({"error": "doc_license"}, 400)
+            core.set_driver(uid, doc_license=photo, lic_until=lu)
+            u = core.get_user(uid) or {}
+            deliver([flow.note(a, "a_lic_update", "/admin", name=u.get("name") or u.get("phone"), date=lu)
+                     for a in core.admins()])
+            return self._json(driver_state(uid))
         if action == "topup":
             amount = _num(b.get("amount"))
             if not amount or amount <= 0 or amount > 100000:
@@ -578,6 +601,9 @@ class H(BaseHTTPRequestHandler):
             return self._json({"ok": True})
         if action == "online":
             if b.get("on"):
+                left = core.lic_days_left(d)
+                if left is not None and left < 0:
+                    return self._json({"error": "lic_expired"}, 403)
                 p = _point(b.get("p"))
                 if not p:
                     return self._json({"error": "need_location"}, 400)
