@@ -45,10 +45,10 @@ if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").cat
 window.INSTALL = null;
 window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); window.INSTALL = e; instBar(); });
 window.addEventListener("appinstalled", () => { window.INSTALL = null; const x = document.getElementById("instBar"); if (x) x.remove(); });
-// Сайт ачылганда эле өйдө жакта «Орнотуу» тилкеси чыгат (жапса — 3 күн чыкпайт)
+// Сайт ачылганда эле өйдө жакта «Орнотуу» тилкеси чыгат (жапса — 1 күн чыкпайт)
 function instBar() {
   if (window.matchMedia("(display-mode: standalone)").matches || navigator.standalone) return;
-  try { if (Date.now() - (+localStorage.getItem("instNo") || 0) < 3 * 864e5) return; } catch (e) {}
+  try { if (Date.now() - (+localStorage.getItem("instNo") || 0) < 864e5) return; } catch (e) {}
   if (document.getElementById("instBar") || !document.body) return;
   const ios = /iphone|ipad/i.test(navigator.userAgent);
   const can = !!window.INSTALL;
@@ -69,6 +69,7 @@ function installHTML() {
   const ios = /iphone|ipad/i.test(navigator.userAgent);
   if (window.INSTALL) return `<button class="btn ghost" id="instBtn">📲 Телефонго тиркеме катары орнотуу</button>`;
   if (ios) return `<p class="muted" style="margin-top:10px">📲 Орнотуу: Safari'де «Бөлүшүү» → «На экран „Домой“».</p>`;
+  if (/android/i.test(navigator.userAgent)) return `<p class="muted" style="margin-top:10px">📲 Орнотуу: Chrome'дун менюсу ⋮ → «Установить приложение» же «Добавить на главный экран».</p>`;
   return "";
 }
 function bindInstall() {
