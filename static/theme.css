@@ -356,3 +356,31 @@ body.athome .top,body.athome #pin,body.athome .navbtns,body.athome .sheet{visibi
 .drole a{font-size:13px!important;padding:8px 11px!important}
 button.state{white-space:normal!important;line-height:1.2;text-align:center;max-width:132px}
 .navme b{filter:drop-shadow(0 3px 5px rgba(0,0,0,.35))!important}
+/* v24: башкы бет — сүрөттүү плиткалар */
+.tiles .tile{height:150px;border-radius:26px;box-shadow:0 6px 18px rgba(20,20,30,.08),inset 0 0 0 1px rgba(0,0,0,.04)}
+.tiles .tile.wide{grid-column:1/-1}
+.tile b{font-size:24px!important;letter-spacing:-.3px}
+.tile small{font-size:15px!important;max-width:58%!important;line-height:1.25}
+.tile .art{position:absolute;right:0;bottom:0;height:100%;max-width:62%;object-fit:contain;object-position:right bottom;pointer-events:none}
+.tile.big{background:linear-gradient(135deg,#ffd31a,#fcbc00)!important}
+.tile.big .art{-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 22%);mask-image:linear-gradient(90deg,transparent 0,#000 22%)}
+.tile:not(.big) .art{height:76%;right:6px;bottom:8px}
+.tile .ico{display:none}
+.tiles2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.stile{display:flex;align-items:center;gap:8px;height:108px;border:0;border-radius:24px;background:#f4f5f8;padding:6px 12px 6px 6px;font-family:inherit;cursor:pointer;box-shadow:0 6px 18px rgba(20,20,30,.07),inset 0 0 0 1px rgba(0,0,0,.04);text-align:left;overflow:hidden}
+.stile img{height:96px;max-width:52%;object-fit:contain;flex:none}
+.stile b{font-size:16.5px;font-weight:900;color:#16161a;line-height:1.2}
+.hsearch{background:#f4f5f8!important;box-shadow:0 6px 18px rgba(20,20,30,.08),inset 0 0 0 1px rgba(0,0,0,.04)}
+.hrec .chev{color:#9a9aa5;font-size:26px;font-weight:300;margin-left:8px;line-height:1}
+.hrec .pi{width:54px!important;height:54px!important;border-radius:16px!important;font-size:30px!important;background:#f4f5f8!important}
+.hnote{display:flex;gap:10px;align-items:flex-start;color:#5f5f6a;font-style:italic;font-size:14px;margin:12px 4px 0;line-height:1.4}
+.hnote:not(:empty):before{content:"i";flex:none;width:22px;height:22px;border-radius:50%;border:2px solid #7a7a85;color:#7a7a85;font-style:normal;font-weight:800;font-size:13px;display:grid;place-items:center;margin-top:1px}
+.hnote:empty{display:none}
+.tile.big{background:linear-gradient(180deg,#fecd1b,#fcbd00)!important}
+.tile.big .art{-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 40%);mask-image:linear-gradient(90deg,transparent 0,#000 40%);max-width:70%}
+.tile small{font-size:14px!important;max-width:62%!important}
+.tile:not(.big) .art{height:58%!important;right:4px!important;bottom:6px!important;max-width:58%}
+.tile:not(.big) small{max-width:52%!important}
+.stile{gap:6px;padding-right:8px}
+.stile img{height:84px;max-width:46%}
+.stile b{font-size:15px}
