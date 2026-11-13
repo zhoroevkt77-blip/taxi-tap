@@ -37,6 +37,9 @@ function Circ(c,o){this.p=c;this.o=o}
 Circ.prototype={addTo(g){if(g instanceof Group){g.items.push(this);this.m=g.m;}else this.m=g;this.el=document.createElement("div");this.m.ov.prepend(this.el);this.m.layers.push(this);this._draw();return this},
  remove(){this.el&&this.el.remove()},_draw(){if(!this.el)return;const [x,y]=this.m.xy(this.p);const mpp=156543*Math.cos(this.p[0]*Math.PI/180)/Math.pow(2,this.m.z);const r=this.o.radius/mpp;
  this.el.style.cssText=`position:absolute;left:${x-r}px;top:${y-r}px;width:${2*r}px;height:${2*r}px;border-radius:50%;background:${this.o.fillColor};opacity:${this.o.fillOpacity};pointer-events:none`}};
-window.L={circle:(c,o)=>new Circ(c,o),map:id=>new Map(id),tileLayer:()=>({addTo(){}}),layerGroup:()=>new Group(),marker:(p,o)=>new Marker(p,o),
+function Poly(ps,o){this.ps=ps;this.o=o}
+Poly.prototype={addTo(g){if(g instanceof Group){g.items.push(this);this.m=g.m;}else this.m=g;const N="http://www.w3.org/2000/svg";this.el=document.createElementNS(N,"svg");this.el.style.cssText="position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none";this.pg=document.createElementNS(N,"polygon");this.el.appendChild(this.pg);this.m.ov.prepend(this.el);this.m.layers.push(this);this._draw();return this},
+ remove(){this.el&&this.el.remove()},_draw(){if(!this.el)return;this.pg.setAttribute("points",this.ps.map(p=>this.m.xy(p).join(",")).join(" "));this.pg.setAttribute("fill",this.o.fillColor||"#888");this.pg.setAttribute("fill-opacity",this.o.fillOpacity??.5);this.pg.setAttribute("stroke",this.o.color||"#fff");this.pg.setAttribute("stroke-width",this.o.weight||2)}};
+window.L={polygon:(ps,o)=>new Poly(ps,o),circle:(c,o)=>new Circ(c,o),map:id=>new Map(id),tileLayer:()=>({addTo(){}}),layerGroup:()=>new Group(),marker:(p,o)=>new Marker(p,o),
  divIcon:o=>o,polyline:(p,o)=>new Line(p,o),latLngBounds:a=>({a:a[0],b:a[1]})};
 })();

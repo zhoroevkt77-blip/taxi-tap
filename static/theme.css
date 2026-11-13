@@ -420,3 +420,13 @@ button.state{white-space:normal!important;line-height:1.2;text-align:center;max-
 .cab-out{display:block;width:100%;margin:14px 0 6px;border:0;border-radius:22px;padding:17px;font-size:19px;font-weight:900;font-family:inherit;background:linear-gradient(135deg,#ffd31a,#fcbc00);color:#16161a;box-shadow:0 10px 24px rgba(255,183,3,.4);cursor:pointer}
 #cabMore .lnks{background:#fff;border-radius:22px;padding:12px 14px;margin-bottom:12px;box-shadow:0 6px 18px rgba(20,20,30,.07)}
 .topav{width:58px!important;height:58px!important;font-size:26px!important;border:3px solid #fff!important;box-shadow:0 4px 14px rgba(20,20,30,.25)!important}
+/* v35: коэффициент — малина + 💓 */
+.sbtn{display:flex;align-items:center;gap:5px;border:0;border-radius:22px;padding:10px 13px;font-family:inherit;font-weight:900;font-size:16px;cursor:pointer;background:#fff;color:#7A0C3E;box-shadow:0 4px 14px rgba(20,20,30,.2)}
+.sbtn i{font-style:normal;font-size:17px}
+.sbtn.hot{background:linear-gradient(135deg,#F0468A,#B0125B);color:#fff;box-shadow:0 6px 16px rgba(176,18,91,.4)}
+.sbtn.on{outline:3px solid #fff;outline-offset:-1px}
+.hexk{font:900 13px Inter,system-ui,sans-serif;text-align:center;text-shadow:0 1px 2px rgba(0,0,0,.25);white-space:nowrap}
+.surgebox{display:flex;gap:10px;align-items:center;background:#FFE6F0;color:#7A0C3E;border-radius:16px;padding:10px 12px;font-weight:700;font-size:14px;margin:8px 0}
+.surgebox span{font-size:20px}
+.cls s{color:#8a8a95;font-weight:600;font-size:12px;margin-left:4px}
+.sbtn.warm{color:#B0125B;box-shadow:0 0 0 2px #F0468A,0 4px 14px rgba(176,18,91,.25)}

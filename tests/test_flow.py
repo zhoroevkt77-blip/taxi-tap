@@ -897,3 +897,21 @@ class Avatar(unittest.TestCase):
         self.assertIsNone(core.set_avatar(u, "data:text/plain;base64,aGk="))
         self.assertEqual(core.set_avatar(u, None), "")
         self.assertFalse(os.path.isfile(core.upload_path(n) or "/nope"))
+
+
+class LocalSurge(unittest.TestCase):
+    def test_cells_and_quote(self):
+        core.init_db(); offline_all()
+        p0 = (41.0500, 72.7700)
+        for i in range(4):
+            u = rider("0555 000 15%d" % i)
+            q = core.quote(p0[0], p0[1], 41.03, 72.756)
+            rid = core.create_ride(u, q, p0[0], p0[1], 41.03, 72.756)
+        cells = core.surge_cells()
+        k = cells[core.hex_of(*p0)]["k"]
+        self.assertGreater(k, 1.0); self.assertLessEqual(k, core.SURGE_MAX)
+        self.assertEqual(core.quote(p0[0], p0[1], 41.03, 72.756)["surge"], max(k, core.surge_k(core.city_of(*p0))))
+        lat, lon = core.hex_center(*core.hex_of(*p0))
+        self.assertLess(core.haversine_km(lat, lon, *p0), 0.5)
+        for r in core.query("SELECT id, passenger FROM rides WHERE status='searching'", (), "all"):
+            core.cancel(r["id"], r["passenger"])

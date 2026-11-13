@@ -81,7 +81,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=34">
+<link rel="stylesheet" href="/static/theme.css?v=35">
 </head>
 <body>
 <div id="map"></div>
@@ -91,7 +91,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
   <div class="rcol"><button class="state hide" id="stBadge" style="display:none">Офлайн</button>
     <button class="tbtn hide topav" id="cabBtn" aria-label="Менин кабинетим">👤</button>
     <div class="r2"><div class="pill hide" id="earn"><span class="muted">Бүгүн</span><b id="earnV">0 с</b></div></div>
-    <div class="tools hide" id="tools"><button class="tbtn" id="heatBtn" aria-label="Заказ көп жерлер">🔥</button><button class="tbtn sos" id="sosBtn" aria-label="SOS">🆘</button></div></div>
+    <div class="tools hide" id="tools"><button class="sbtn" id="heatBtn" aria-label="Коэффициент"><i>💓</i>×1.0</button><button class="tbtn sos" id="sosBtn" aria-label="SOS">🆘</button></div></div>
 </div>
 <div class="sheet"><div class="grab"></div><div id="view"></div></div>
 <div class="offer hide" id="offer"><div class="ocard" id="ocard"></div></div>
@@ -563,23 +563,33 @@ $("#sosBtn").onclick = () => {
     $("#sosSend").textContent = "✓ Админге жөнөтүлдү"; };
 };
 
-// ---------- Заказ көп жерлер (жылуулук картасы) ----------
+// ---------- Коэффициент: малина түстүү алты бурчтуктар + 💓 баскычы ----------
 const heatLayer = L.layerGroup().addTo(map);
 let heatOn = false, heatT = null;
+const SC = k => k >= 1.4 ? "#B0125B" : k >= 1.25 ? "#F0468A" : "#FFC2D9";
+function hexPts(lat, lon, r) {
+  const c = Math.cos(41 * Math.PI / 180);
+  return [0, 1, 2, 3, 4, 5].map(i => { const a = Math.PI / 3 * i; return [lat + r * Math.sin(a), lon + r * Math.cos(a) / c]; });
+}
 async function loadHeat() {
-  const x = await api("/api/d/heat"); heatLayer.clearLayers();
-  if (!heatOn || !x.cells) return;
-  x.cells.forEach(c => {
-    const w = c.n + c.lost * 2, col = w >= 5 ? "#e5383b" : w >= 3 ? "#ff8c1a" : "#ffc61a";
-    if (L.circle) L.circle([c.lat, c.lon], {radius:230, stroke:false, fillColor:col, fillOpacity:Math.min(.55, .2 + w * .06), interactive:false}).addTo(heatLayer);
+  const x = await api("/api/d/heat"); if (!x || x.error) return;
+  const k = x.k_here || 1, b = $("#heatBtn");
+  b.innerHTML = `<i>💓</i>×${k.toFixed(1)}`; b.classList.toggle("hot", k > 1); b.classList.toggle("warm", k <= 1 && (x.k_max || 1) > 1);
+  heatLayer.clearLayers();
+  if (!heatOn) return;
+  (x.cells || []).forEach(c => {
+    if (L.polygon) L.polygon(hexPts(c.lat, c.lon, x.r * 0.97), {color:"#fff", weight:2, fillColor:SC(c.k), fillOpacity:.58, interactive:false}).addTo(heatLayer);
+    L.marker([c.lat, c.lon], {interactive:false, icon:L.divIcon({className:"", iconSize:[60, 20], iconAnchor:[30, 10],
+      html:`<div class="hexk" style="color:${c.k >= 1.25 ? "#fff" : "#7A0C3E"}">×${c.k.toFixed(1)}</div>`})}).addTo(heatLayer);
   });
-  if (!x.cells.length) toast("Акыркы 2 саатта заказ болгон жок — картада көрсөтө турган эч нерсе жок.", 3000);
+  if (!(x.cells || []).length) toast("Азыр бош: акыркы 30 мүнөттө заказ болгон жок.", 2500);
 }
 $("#heatBtn").onclick = () => {
-  heatOn = !heatOn; $("#heatBtn").classList.toggle("on", heatOn); clearInterval(heatT);
-  if (heatOn) { loadHeat(); heatT = setInterval(loadHeat, 60000); toast("🔥 Акыркы 2 саатта заказ көп болгон жерлер. Кызыл — эң көп.", 3000); }
-  else heatLayer.clearLayers();
+  heatOn = !heatOn; $("#heatBtn").classList.toggle("on", heatOn);
+  loadHeat();
+  if (heatOn) toast("💓 Талап картасы: ар бир уюлдагы коэффициент. Кочкул малина — баа эң жогору.", 3000);
 };
+setTimeout(loadHeat, 1500); heatT = setInterval(loadHeat, 45000);
 const actColor = a => (a ?? 100) >= 70 ? "var(--ok)" : (a ?? 100) >= 40 ? "#d18a00" : "var(--bad)";
 
 // ---------- сүрөттү кичирейтүү (браузерде) ----------

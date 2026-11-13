@@ -805,6 +805,67 @@ def set_tariff(city, base, per_km, per_min, min_price):
           (city, base, per_km, per_min, min_price))
 
 
+# ==================== Жергиликтүү коэффициент (алты бурчтуктар) ====================
+HEX = 0.0034                     # уюлдун «радиусу» градус менен (~380 м)
+SURGE_LOCAL = os.environ.get("SURGE_LOCAL", "1") != "0"
+SURGE_MAX = 1.5
+
+
+def _hex_xy(lat, lon):
+    return lon * math.cos(math.radians(41.0)), lat           # жергиликтүү тегиз проекция
+
+
+def hex_of(lat, lon):
+    """Кадимки «жалпак үстү» алты бурчтук тор: (q, r)."""
+    x, y = _hex_xy(lat, lon)
+    q = (2.0 / 3 * x) / HEX
+    r = (-1.0 / 3 * x + math.sqrt(3) / 3 * y) / HEX
+    # куб координаталар менен тегеректөө
+    cx, cz = q, r
+    cy = -cx - cz
+    rx, ry, rz = round(cx), round(cy), round(cz)
+    dx, dy, dz = abs(rx - cx), abs(ry - cy), abs(rz - cz)
+    if dx > dy and dx > dz:
+        rx = -ry - rz
+    elif dy <= dz:
+        rz = -rx - ry
+    return int(rx), int(rz)
+
+
+def hex_center(q, r):
+    x = HEX * 3.0 / 2 * q
+    y = HEX * math.sqrt(3) * (r + q / 2.0)
+    return y, x / math.cos(math.radians(41.0))
+
+
+def surge_cells(minutes=30):
+    """Ар бир уюл: акыркы 30 мүн заказдар (талап) − бош айдоочулар (сунуш) → коэффициент ×1.0…×1.5."""
+    t0 = now() - minutes * 60
+    rows = query("SELECT p_lat, p_lon, status, cancel_by FROM rides WHERE created_at>? AND p_lat IS NOT NULL",
+                 (t0,), "all")
+    dem, sup = {}, {}
+    for x in rows:
+        w = 2 if x["status"] == "searching" or (x["status"] == "cancelled" and x["cancel_by"] == "system") else 1
+        k = hex_of(x["p_lat"], x["p_lon"])
+        dem[k] = dem.get(k, 0) + w
+    for d in online_drivers():
+        if not d.get("busy_ride") and d.get("lat") is not None:
+            k = hex_of(d["lat"], d["lon"])
+            sup[k] = sup.get(k, 0) + 1
+    out = {}
+    for k, n in dem.items():
+        kk = round(min(SURGE_MAX, 1 + 0.1 * max(0, n - sup.get(k, 0))), 1)
+        out[k] = {"k": kk, "n": n}
+    return out
+
+
+def cell_k(lat, lon):
+    if not SURGE_LOCAL or lat is None:
+        return 1.0
+    c = surge_cells().get(hex_of(lat, lon))
+    return c["k"] if c else 1.0
+
+
 def surge_k(city):
     """Заказ көп, айдоочу аз болсо баа 1.5 эсеге чейин көтөрүлөт."""
     waiting = query("SELECT COUNT(*) AS n FROM rides WHERE status='searching' AND city=?",
@@ -873,7 +934,7 @@ def quote(p_lat, p_lon, d_lat=None, d_lon=None, cls="econom"):
     prices — ар бир класстын баасы (класстын коэффициенти × тариф)."""
     city = city_of(p_lat, p_lon)
     t = get_tariff(city)
-    k = surge_k(city)
+    k = max(surge_k(city), cell_k(p_lat, p_lon))
     cfg = class_config()
     if cls not in cfg or not cfg[cls]["on"]:
         cls = next(c for c in cfg if cfg[c]["on"])

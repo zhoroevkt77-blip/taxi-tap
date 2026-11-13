@@ -316,7 +316,13 @@ class H(BaseHTTPRequestHandler):
             if u.path == "/api/d/heat":
                 if not core.get_driver(uid):
                     return self._json({"error": "auth"}, 401)
-                return self._json({"cells": core.demand_heat()})
+                d = core.get_driver(uid)
+                cells = [dict(zip(("lat", "lon"), core.hex_center(*key)), k=v["k"], n=v["n"])
+                         for key, v in core.surge_cells().items()]
+                here = core.cell_k(d.get("lat"), d.get("lon")) if d.get("lat") is not None else 1.0
+                city = core.surge_k(core.city_of(d["lat"], d["lon"])) if d.get("lat") is not None else 1.0
+                return self._json({"cells": cells, "r": core.HEX, "k_here": max(here, city),
+                                   "k_max": max([c["k"] for c in cells] + [city])})
             if u.path.startswith("/api/a/"):
                 if not core.is_admin(uid):
                     return self._json({"error": "auth"}, 401)

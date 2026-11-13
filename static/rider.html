@@ -101,7 +101,7 @@ input.f:focus{border-color:var(--navy)}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
 <link rel="preload" as="image" href="/static/h_taxi.webp"><link rel="preload" as="image" href="/static/h_box.webp"><link rel="preload" as="image" href="/static/h_girl.webp"><link rel="preload" as="image" href="/static/h_map.webp">
-<link rel="stylesheet" href="/static/theme.css?v=34">
+<link rel="stylesheet" href="/static/theme.css?v=35">
 </head>
 <body>
 <div id="map"></div>
@@ -490,8 +490,9 @@ async function viewQuote() {
     <input class="f lm" id="lmF" maxlength="60" placeholder="А белгиси: мис. көк дарбаза, дүкөндүн алдында" value="${esc(S.lmF || "")}">
     <div class="row"><span class="bul to lt">Б</span><div style="flex:1"><b>${esc(S.toAddr)}</b></div><input class="hn" id="hnT" placeholder="үй №" maxlength="12" value="${esc(S.hnT || "")}"></div>
     <input class="f lm" id="lmT" maxlength="60" placeholder="Б белгиси (милдеттүү эмес)" value="${esc(S.lmT || "")}">
-    <div class="cls" id="cls">${q.classes.map(c => `<div data-c="${c.id}"><i>${ICON[c.id] || "🚕"}</i><div class="muted">${esc(c.name)}</div><b>${priceTxt(c)}</b></div>`).join("")}</div>
-    <div class="muted" style="margin-top:6px">${sub}${q.surge > 1 ? ` · ⚡ ×${q.surge}` : ""} · <span id="qp"></span></div>
+    <div class="cls" id="cls">${q.classes.map(c => `<div data-c="${c.id}"><i>${ICON[c.id] || "🚕"}</i><div class="muted">${esc(c.name)}</div><b>${priceTxt(c)}${q.surge > 1 && c.price ? `<s>${Math.round(c.price / q.surge / 10) * 10} с</s>` : ""}</b></div>`).join("")}</div>
+    ${q.surge > 1 ? `<div class="surgebox"><span>💓</span>Талап жогору ×${q.surge} — баа бир аз кымбатыраак. Бир аздан кийин арзандашы мүмкүн.</div>` : ""}
+    <div class="muted" style="margin-top:6px">${sub} · <span id="qp"></span></div>
     <div id="extra"></div>
     <div class="chips" style="flex-wrap:wrap"><button id="promoOpen">🎁 Промокод</button><button id="otherOpen">👤 Башка адамга</button><button id="noteOpen">📝 Каалоо</button></div>
     <div id="promoBox"></div><div id="whenBox"></div><div id="otherBox"></div><div id="noteBox"></div>
