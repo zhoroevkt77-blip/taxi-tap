@@ -465,3 +465,13 @@ body.rnav .home{padding-bottom:calc(120px + env(safe-area-inset-bottom,0px))}
 .bnav.pro img{width:40px;height:40px}
 .bnav.pro a.big{font-size:14px;margin-top:-40px}.bnav.pro a.big img{width:74px;height:74px}
 body.dnav .sheet{bottom:calc(84px + env(safe-area-inset-bottom,0px));padding-bottom:44px}
+/* айдоочу: «Бүгүн» белгиси — максат шакеги / баланс аз */
+.ep{display:flex;align-items:center;gap:7px;background:#fff;border:0;border-radius:18px;padding:6px 11px 6px 6px;box-shadow:0 4px 16px rgba(20,20,30,.15);font:inherit;color:#16161a;text-align:left;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.ep.hide{display:none}
+.ep b{display:block;font-size:16px;font-weight:900;line-height:1.1;white-space:nowrap}.ep small{display:block;font-size:11px;color:#6b6b76;font-weight:600;white-space:nowrap}
+.ep .ring{width:42px;height:42px;flex:none;position:relative;display:block}.ep .ring svg{display:block}
+.ep .ring em{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:10.5px;font-weight:900;letter-spacing:-.3px}
+.ep.done{background:linear-gradient(135deg,#ffd23f,#ffb703)}.ep.done small{color:#3a2a00}
+.ep.bad{background:#e5343a;color:#fff;animation:epPulse 1.6s ease-in-out infinite}.ep.bad small{color:#ffe1e1}.ep .ei{font-size:22px;padding-left:4px}
+@keyframes epPulse{50%{box-shadow:0 4px 22px rgba(229,52,58,.55)}}
+body.dnav .sheet.folded{clip-path:inset(0 0 calc(100% - 92px) 0 round 22px 22px 0 0)}

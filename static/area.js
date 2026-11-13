@@ -91,7 +91,7 @@ window.SHEET = (function () {
     sheet.style.transform = cur ? `translateY(${cur}px)` : "";
     window.dispatchEvent(new Event("sheetmove"));
   }
-  function snap(c) { collapsed = c; set(c ? max() : 0, true); grab && grab.classList.toggle("down", c); if (c) sheet.scrollTop = 0; }
+  function snap(c) { collapsed = c; set(c ? max() : 0, true); grab && grab.classList.toggle("down", c); sheet.classList.toggle("folded", c); if (c) sheet.scrollTop = 0; }
   const interactive = el => el && el.closest && el.closest("input,textarea,select,.res,.cls,.chips,.quick,table,.lnk-b");
   function down(y, x, target) {
     st = {y, x, t: Date.now(), base: cur, fromGrab: !!(grab && grab.contains(target)), drag: false, decided: false,

@@ -81,7 +81,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=43">
+<link rel="stylesheet" href="/static/theme.css?v=46">
 </head>
 <body>
 <nav id="bnav" class="bnav pro"><a data-k="earn"><img src="/static/n_earn.webp" alt="">Киреше</a><a data-k="hist"><img src="/static/n_trips.webp" alt="">Сапарлар</a><a data-k="line" class="big on"><img src="/static/n_go.webp" alt="">Линия</a><a data-k="help"><img src="/static/n_help.webp" alt="">Жардам</a><a data-k="cab"><img src="/static/n_cab.webp" alt="">Кабинет</a></nav>
@@ -91,7 +91,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
     <div class="role drole"><a href="/">🧳 Жүргүнчү</a><a class="on">🚗 Айдоочу</a></div></div>
   <div class="rcol"><button class="state hide" id="stBadge" style="display:none">Офлайн</button>
     <button class="tbtn hide topav" id="cabBtn" aria-label="Менин кабинетим">👤</button>
-    <div class="r2"><div class="pill hide" id="earn"><span class="muted">Бүгүн</span><b id="earnV">0 с</b></div></div>
+    <div class="r2"><button class="ep hide" id="earn"></button></div>
     <div class="tools hide" id="tools"><button class="sbtn" id="heatBtn" aria-label="Коэффициент"><i>💓</i>×1.0</button><button class="tbtn sos" id="sosBtn" aria-label="SOS">🆘</button></div></div>
 </div>
 <div class="sheet"><div class="grab"></div><div id="view"></div></div>
@@ -194,11 +194,33 @@ function viewLogin(pending, link, err) {
   };
 }
 
+function ring(p, col) {
+  const r = 17, c = 2 * Math.PI * r, f = Math.max(0, Math.min(1, p));
+  return `<span class="ring"><svg width="42" height="42" viewBox="0 0 42 42"><circle cx="21" cy="21" r="${r}" fill="none" stroke="#eeeef2" stroke-width="5"/>
+    <circle cx="21" cy="21" r="${r}" fill="none" stroke="${col}" stroke-width="5" stroke-linecap="round" stroke-dasharray="${(c * f).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 21 21)"/></svg><em>${Math.round(f * 100)}%</em></span>`;
+}
+function earnPill() {
+  const e = $("#earn"), got = D.today.earned || 0, goal = D.goal || 1000;
+  const low = D.min_balance > 0 && D.balance < D.min_balance;
+  const key = [low, got, goal, D.balance].join("|"); if (e.dataset.k === key) return; e.dataset.k = key;
+  if (low) {
+    e.className = "ep bad";
+    e.innerHTML = `<span class="ei">⚠️</span><span><b>Баланс аз!</b><small>${D.balance} с · толуктоо ›</small></span>`;
+    e.onclick = () => { window.SHEET && SHEET.expand(); D.pending_topup ? viewCabinet("earn") : viewTopup(); };
+    return;
+  }
+  const done = got >= goal;
+  e.className = "ep" + (done ? " done" : "");
+  e.innerHTML = `${ring(got / goal, done ? "#16161a" : "#ffb703")}<span><b>${got} с</b><small>${done ? "🎉 Аткарылды!" : "Максат " + goal + " с"}</small></span>`;
+  e.onclick = () => { window.SHEET && SHEET.expand(); viewCabinet("earn"); };
+  if (done) { const day = new Date().toDateString();
+    try { if (localStorage.getItem("goalDay") !== day) { localStorage.setItem("goalDay", day); toast("🎉 Күндүк максат аткарылды: " + got + " с!", 3500); say("Күндүк максат аткарылды"); } } catch (x) {} }
+}
 function header() {
   const act = D.status === "active";
   $("#earn").classList.toggle("hide", !act); $("#tools").classList.toggle("hide", !act); $("#cabBtn").classList.toggle("hide", !act);
   if (!act) return;
-  $("#earnV").textContent = D.today.earned + " с";
+  earnPill();
   $("#stBadge").innerHTML = D.ride ? "🚕 Сапарда" : D.online ? "🟢 Линияда" : "▶ Линияга чыгуу";
   $("#stBadge").classList.toggle("on", D.online || !!D.ride);
   $("#sosBtn").classList.toggle("hide", !(D.online || D.ride));
@@ -303,6 +325,8 @@ function viewCabinet(part) {
     <p class="muted">Сумма сом менен. «Колуңузда» — жүргүнчүлөр төлөгөн акчадан комиссия кемитилгени.
     ${D.min_balance > 0 ? `Баланс ${D.min_balance} сомдон аз болсо, заказ келбейт.` : ""}</p>
     ${D.pending_topup ? `<div class="note">🕓 Чегиңиз текшерилүүдө.</div>` : `<button class="btn main" id="top">➕ Балансты толуктоо</button>`}
+    <div class="sw"><div><b>🎯 Күндүк максат</b><div class="muted">Бүгүн: ${D.today.earned} / ${D.goal} с</div></div>
+      <button class="btn ghost" id="goalCh" style="width:auto;margin:0;padding:10px 14px;font-size:14px">Өзгөртүү</button></div>
     <h3 style="margin:16px 0 6px">📊 Акыркы 7 күн</h3><div id="chart" class="chart"><p class="muted">Жүктөлүүдө…</p></div></div>
     <div${on(C)}>
     <div class="note"><b style="color:${actColor(D.activity)}">⚡ Активдүүлүк: ${D.activity ?? 100} / 100</b><br>
@@ -321,6 +345,9 @@ function viewCabinet(part) {
   bindLinks(); window.SHEET && SHEET.expand();
   $("#top") && ($("#top").onclick = viewTopup);
   $("#addAddr").onclick = viewAddAddr;
+  $("#goalCh").onclick = async () => { const v = prompt("Күндүк максат (сом):", D.goal); if (v === null) return;
+    const r = await api("/api/d/goal", {goal:+v}); if (r.error) return toast("100 сомдон 50 000 сомго чейин жазыңыз", 2500);
+    D = r; header(); viewCabinet("earn"); };
   $("#licUp") && ($("#licUp").onclick = viewLicense);
   $("#vc").onchange = e => { try { localStorage.setItem("voice", e.target.checked ? "on" : "off"); } catch (x) {} if (e.target.checked) say("Үн күйгүзүлдү"); };
   $("#navCh").onclick = () => openNav(null, true);
