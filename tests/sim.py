@@ -149,7 +149,7 @@ try:
         frame(r, dv, 15, "Админге шашылыш кабар кетти", "Telegram'га: айдоочу, унаа, жүргүнчү жана картадагы жери", 600)
         dv.click("#ovlX"); dv.evaluate("SHEET.expand()"); dv.wait_for_timeout(400)
         dv.evaluate("goOffline()"); dv.wait_for_timeout(1500)
-        dv.click("#cab"); dv.wait_for_timeout(1200)
+        dv.click("#bnav a[data-k=earn]"); dv.wait_for_timeout(1200)
         dv.evaluate("document.querySelector('#chart').scrollIntoView({block:'start'})")
         frame(r, dv, 16, "📊 Киреше графиги", "Акыркы 7 күн: киреше, сапар, орточо баа жана сааттык киреше", 800)
         br.close()

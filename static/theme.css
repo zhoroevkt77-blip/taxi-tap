@@ -432,3 +432,19 @@ button.state{white-space:normal!important;line-height:1.2;text-align:center;max-
 .sbtn.warm{color:#B0125B;box-shadow:0 0 0 2px #F0468A,0 4px 14px rgba(176,18,91,.25)}
 .gpsinfo{font-size:14px;font-weight:700;border-radius:14px;padding:10px 12px;margin:4px 0 0}
 .gpsinfo.good{background:#E7F9E9;color:#14532D}.gpsinfo.mid{background:#FFF3C4;color:#6B4400}.gpsinfo.bad{background:#FDECEC;color:#8A1C1C}
+/* ---- төмөнкү меню ---- */
+.bnav{display:none;position:fixed;left:0;right:0;bottom:0;z-index:10;background:#fff;justify-content:space-around;align-items:flex-end;
+  padding:7px 4px calc(8px + env(safe-area-inset-bottom,0px));box-shadow:0 -6px 24px rgba(20,20,30,.08);border-radius:22px 22px 0 0}
+body.dnav .bnav,body.rnav .bnav{display:flex}
+.bnav a{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11.5px;font-weight:700;color:#8a8a94;text-decoration:none;cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none}
+.bnav a i{font-style:normal;font-size:22px;line-height:28px;filter:grayscale(1);opacity:.7;transition:transform .15s}
+.bnav a:active i{transform:scale(.88)}
+.bnav a.on{color:#111}.bnav a.on i{filter:none;opacity:1}
+.bnav a:after{content:"";width:18px;height:3px;border-radius:2px;background:transparent;margin-top:1px}.bnav a.on:after{background:#ffb703}
+.bnav a.big{margin-top:-30px;color:#111}.bnav a.big:after{display:none}
+.bnav a.big i{width:62px;height:62px;border-radius:50%;background:linear-gradient(135deg,#ffd23f,#ffb703);display:flex;align-items:center;justify-content:center;
+  font-size:28px;filter:none;opacity:1;box-shadow:0 8px 20px rgba(255,183,3,.5);border:4px solid #fff}
+body.rnav .home{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))}
+body.dnav .sheet{bottom:calc(58px + env(safe-area-inset-bottom,0px));padding-bottom:14px;border-radius:22px}
+.faq{background:#f4f4f7;border-radius:14px;padding:12px 14px;margin:8px 0}.faq summary{font-weight:800;cursor:pointer}.faq p{margin:8px 0 0;color:#444;font-size:14px;line-height:1.45}
+body.rnav .bnav{z-index:45}

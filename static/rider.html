@@ -101,7 +101,7 @@ input.f:focus{border-color:var(--navy)}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
 <link rel="preload" as="image" href="/static/h_taxi.webp"><link rel="preload" as="image" href="/static/h_box.webp"><link rel="preload" as="image" href="/static/h_girl.webp"><link rel="preload" as="image" href="/static/h_map.webp">
-<link rel="stylesheet" href="/static/theme.css?v=38">
+<link rel="stylesheet" href="/static/theme.css?v=40">
 </head>
 <body>
 <div id="map"></div>
@@ -120,6 +120,7 @@ input.f:focus{border-color:var(--navy)}
 
 <div class="sheet" id="sheet"><div class="grab"></div><div id="view"></div></div>
 <div class="home hide" id="home"></div>
+<nav id="bnav" class="bnav"><a data-k="home" class="on"><i>🏠</i>Башкы</a><a data-k="trips"><i>🧾</i>Сапарлар</a><a data-k="go" class="big"><i>🚕</i>Чакыруу</a><a data-k="help"><i>💬</i>Жардам</a><a data-k="cab"><i>👤</i>Кабинет</a></nav>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="/static/area.js"></script>
@@ -288,6 +289,7 @@ function pollMe() {
 }
 
 function viewIdle() {
+  navOn("home");
   S.mode = "idle"; S.to = null; S.quote = null; S.hnT = ""; S.lmT = ""; setPin("from"); showA(false);
   S.openWhen = S.openOther = false;
   rideLayer.clearLayers(); driverMarker = null;
@@ -383,7 +385,29 @@ function viewStepB() {
 function homeOn(on) {
   $("#home").classList.toggle("hide", !on);
   document.body.classList.toggle("athome", on);
+  document.body.classList.toggle("rnav", on && (S.mode === "idle" || S.mode === "menu"));
 }
+function navOn(k) { document.querySelectorAll("#bnav a").forEach(a => a.classList.toggle("on", a.dataset.k === k)); }
+function viewHelp() {
+  navOn("help");
+  sheetBox(`<h2>💬 Жардам</h2>
+    ${ME_BOT ? `<a class="btn main" href="https://t.me/${esc(ME_BOT)}" target="_blank" style="display:block;text-align:center;text-decoration:none">✈️ Telegram аркылуу жазуу</a>` : ""}
+    <a class="btn red" href="tel:112" style="display:block;text-align:center;text-decoration:none">📞 Шашылыш: 112</a>
+    <details class="faq"><summary>Такси кантип чакырам?</summary><p>«Чакыруу» баскычын басып, кайдан (А) жана кайда (Б) барарыңызды тандаңыз — баасы дароо чыгат.</p></details>
+    <details class="faq"><summary>Канча төлөйм?</summary><p>Баасы заказ берерден мурун көрүнөт. Айдоочуга накталай төлөйсүз.</p></details>
+    <details class="faq"><summary>Айдоочу келбей жатса?</summary><p>Сапар бетинде «Чат» же «Жокко чыгаруу» баскычы бар. Суроо болсо Telegram'га жазыңыз.</p></details>
+    <details class="faq"><summary>Буюмумду унаада калтырдым</summary><p>«Сапарлар» бөлүмүнөн ошол сапарды таап, Telegram аркылуу бизге жазыңыз — айдоочуга кабарлайбыз.</p></details>
+    <a class="btn ghost" href="/terms" style="display:block;text-align:center;text-decoration:none">📄 Колдонуу шарттары</a>
+    <button class="btn ghost" id="bxX">Жабуу</button>`);
+}
+document.querySelectorAll("#bnav a").forEach(a => a.onclick = async () => {
+  const k = a.dataset.k;
+  if (k === "home") { if (S.ride) return viewRide(); return viewIdle(); }
+  if (k === "go") { S.cls = "econom"; return viewStepA(); }
+  if (k === "help") return viewHelp();
+  if (k === "cab" || k === "trips") { if (S.mode === "menu") { S.mode = prevView || "idle"; } await viewCabinet(); navOn(k);
+    if (k === "trips" && $("#qH")) $("#qH").click(); }
+});
 
 // ---------- сакталган даректер ----------
 let PLACES = null;
@@ -732,7 +756,8 @@ function sheetBox(html, after) {
   o.innerHTML = `<div class="rboxc">${html}</div>`; o.classList.add("on");
   const x = $("#bxX"); if (x) x.onclick = closeBox; if (after) after();
 }
-function closeBox() { const o = $("#rbox"); if (o) o.classList.remove("on"); }
+function closeBox() { const o = $("#rbox"); if (o) o.classList.remove("on");
+  const a = document.querySelector("#bnav a.on"); if (a && a.dataset.k === "help") navOn(S.mode === "menu" ? "cab" : "home"); }
 async function shareTrip() {
   const x = await api("/api/share", {}); if (!x.url) return;
   const text = "Мен Такси ТАП! менен баратам, сапарымды бул жерден көрө аласың:";
@@ -847,7 +872,7 @@ async function viewCabinet() {
   const me = await api("/api/me");
   if (!me.auth) return;
   ME_BOT = me.bot || ME_BOT; ME_AV = me.avatar || null; $("#menuBtn").innerHTML = avBtn();
-  prevView = S.mode; S.mode = "menu";
+  prevView = S.mode; S.mode = "menu"; navOn("cab");
   const drv = {active:"Айдоочу кабинети", pending:"Арызыңыз текшерилүүдө", rejected:"Арызды оңдоо", blocked:"Айдоочу кабинети"}[me.driver] || "Таксиде иштөө";
   const P = PLACES && !PLACES.error ? PLACES : await api("/api/places");
   const place = (k, ico, t) => `<div class="hrow"><span>${ico} <b>${t}</b> ${P[k] ? `<span class="muted">· ${esc(P[k].name || "белгиленген")}</span>` : `<span class="muted">· белгилене элек</span>`}</span>
