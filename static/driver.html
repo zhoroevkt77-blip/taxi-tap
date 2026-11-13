@@ -81,7 +81,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=47">
+<link rel="stylesheet" href="/static/theme.css?v=48">
 </head>
 <body>
 <nav id="bnav" class="bnav pro"><a data-k="earn"><img src="/static/n_earn.webp" alt="">Киреше</a><a data-k="hist"><img src="/static/n_trips.webp" alt="">Сапарлар</a><a data-k="line" class="big on"><img src="/static/n_go.webp" alt="">Линия</a><a data-k="help"><img src="/static/n_help.webp" alt="">Жардам</a><a data-k="cab"><img src="/static/n_cab.webp" alt="">Кабинет</a></nav>
@@ -212,7 +212,7 @@ function earnPill() {
   const done = got >= goal;
   e.className = "ep" + (done ? " done" : "");
   e.innerHTML = `${ring(got / goal, done ? "#16161a" : "#ffb703")}<span><b>${got} с</b><small>${done ? "🎉 Аткарылды!" : "Максат " + goal + " с"}</small></span>`;
-  e.onclick = () => { window.SHEET && SHEET.expand(); viewCabinet("earn"); };
+  e.onclick = () => openTab("earn");
   if (done) { const day = new Date().toDateString();
     try { if (localStorage.getItem("goalDay") !== day) { localStorage.setItem("goalDay", day); toast("🎉 Күндүк максат аткарылды: " + got + " с!", 3500); say("Күндүк максат аткарылды"); } } catch (x) {} }
 }
@@ -760,10 +760,14 @@ function confirmOut() {
   $("#lgYes").onclick = async () => { $("#lgYes").disabled = true; if (D && D.online) await api("/api/d/online", {on:false}); await api("/api/logout", {}); location.replace("/driver"); };
 }
 function navOn(k) { document.querySelectorAll("#bnav a").forEach(a => a.classList.toggle("on", a.dataset.k === k)); }
-document.querySelectorAll("#bnav a").forEach(a => a.onclick = () => {
-  const k = a.dataset.k; window.SHEET && SHEET.expand();
+// Ачык турган бөлүмдү кайра басса — панель жабылат, жабык болсо — ачылат
+function openTab(k) {
+  const cur = document.querySelector("#bnav a.on"), same = cur && cur.dataset.k === k;
+  if (same && window.SHEET) { SHEET.isOpen() ? SHEET.collapse() : SHEET.expand(); return; }
+  window.SHEET && SHEET.expand();
   if (k === "line") { lastView = ""; show(); } else if (k === "hist") viewHistory(); else if (k === "help") viewHelp(); else viewCabinet(k);
-});
+}
+document.querySelectorAll("#bnav a").forEach(a => a.onclick = () => openTab(a.dataset.k));
 function show() {
   if (!D || D.error) return;
   header();

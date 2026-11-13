@@ -481,3 +481,5 @@ body.dnav .sheet.folded{clip-path:inset(0 0 calc(100% - 92px) 0 round 22px 22px 
 .lg-ic{width:72px;height:72px;border-radius:50%;background:#fff1f1;display:flex;align-items:center;justify-content:center;font-size:36px;margin:4px auto 10px}
 .lg-warn{background:#fff8e6;border-radius:14px;padding:11px 12px;text-align:left;font-size:14px;line-height:1.4;margin:10px 0;color:#5a4300}
 .btn.lg-red{background:#e5343a!important;color:#fff!important;box-shadow:none}
+/* айдоочу: ачык панель «Бүгүн» белгисин жаап калбасын — кайра басып жаба алат */
+body.dnav .sheet{max-height:calc(100dvh - 318px - env(safe-area-inset-top,0px))!important}
