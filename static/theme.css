@@ -400,3 +400,22 @@ button.state{white-space:normal!important;line-height:1.2;text-align:center;max-
 #menuBtn{overflow:hidden}
 .cab-av{border:0;font-family:inherit;color:#16161a;display:grid!important}
 #cabBtn{overflow:hidden;padding:0}
+/* v33: жүргүнчүнүн кабинети — сиздин үлгү */
+.cab-hero{position:relative;min-height:190px;margin:calc(-1 * (env(safe-area-inset-top,0px) + 12px)) -16px 0;padding:calc(env(safe-area-inset-top,0px) + 12px) 16px 0;overflow:hidden}
+.cab-hdr{position:absolute;right:-4px;top:4px;width:58%;max-width:260px;pointer-events:none}
+.cab-hero .hh,.cab-hero .hrole{position:relative;z-index:1}
+.cab-card{position:relative;background:#fff;border-radius:30px;margin:-34px 0 14px;padding:18px 10px 16px;box-shadow:0 10px 30px rgba(20,20,30,.10),inset 0 0 0 1px rgba(0,0,0,.04);text-align:center}
+.cab-bk{position:absolute;left:12px;top:12px;width:40px!important;height:40px!important;font-size:22px!important}
+.cab-card .cab-av{width:84px;height:84px;margin:0 auto 6px;font-size:36px}
+.cab-card .cab-nm{font-size:26px;font-weight:900;margin:2px 0 0}
+.cab-card .cab-ph{font-size:17px;color:#2b2b33;font-weight:600;margin-bottom:12px}
+.cab-card .cab-q{grid-template-columns:repeat(4,1fr);gap:0;margin:0}
+.cab-card .cab-q>*{position:relative;font-size:14px}
+.cab-card .cab-q>*+*:before{content:"";position:absolute;left:0;top:14px;height:60px;border-left:1.5px solid #ececf0}
+.cab-card .cab-q img{width:70px;height:70px;border-radius:50%;object-fit:cover;box-shadow:0 4px 10px rgba(0,0,0,.08)}
+.ccard{display:flex;align-items:center;gap:14px;width:100%;margin-bottom:10px;padding:10px 14px 10px 10px;border:0;border-radius:22px;background:#fff;box-shadow:0 6px 18px rgba(20,20,30,.07),inset 0 0 0 1px rgba(0,0,0,.04);text-align:left;font-family:inherit;color:#16161a;text-decoration:none;cursor:pointer}
+.ccard .cimg{width:62px;height:62px;border-radius:16px;flex:none;object-fit:cover}
+.ccard .ct{flex:1;min-width:0}.ccard b{display:block;font-size:18px;font-weight:900}.ccard small{display:block;color:#5f5f6a;font-size:14px;margin-top:2px}
+.ccard em{font-style:normal;font-size:28px;color:#3a3a44;font-weight:300}
+.cab-out{display:block;width:100%;margin:14px 0 6px;border:0;border-radius:22px;padding:17px;font-size:19px;font-weight:900;font-family:inherit;background:linear-gradient(135deg,#ffd31a,#fcbc00);color:#16161a;box-shadow:0 10px 24px rgba(255,183,3,.4);cursor:pointer}
+#cabMore .lnks{background:#fff;border-radius:22px;padding:12px 14px;margin-bottom:12px;box-shadow:0 6px 18px rgba(20,20,30,.07)}

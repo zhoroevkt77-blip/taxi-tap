@@ -101,7 +101,7 @@ input.f:focus{border-color:var(--navy)}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
 <link rel="preload" as="image" href="/static/h_taxi.webp"><link rel="preload" as="image" href="/static/h_box.webp"><link rel="preload" as="image" href="/static/h_girl.webp"><link rel="preload" as="image" href="/static/h_map.webp">
-<link rel="stylesheet" href="/static/theme.css?v=32">
+<link rel="stylesheet" href="/static/theme.css?v=33">
 </head>
 <body>
 <div id="map"></div>
@@ -309,7 +309,7 @@ function minsTo(r) {
   const km = 2 * R * Math.asin(Math.sqrt(a)) * 1.3;
   return km > 60 ? "" : `${Math.max(2, Math.round(km / 25 * 60))} мүн`;
 }
-const PAGE_MODES = ["idle", "stepA", "stepB"];
+const PAGE_MODES = ["idle", "stepA", "stepB", "menu"];
 // ---------- 1-кадам: «Сизди кайдан алып кетсин?» ----------
 function viewStepA() {
   S.mode = "stepA"; S.to = null; setPin(null); showA(false); render(""); homeOn(true);
@@ -822,29 +822,31 @@ async function viewCabinet() {
   const P = PLACES && !PLACES.error ? PLACES : await api("/api/places");
   const place = (k, ico, t) => `<div class="hrow"><span>${ico} <b>${t}</b> ${P[k] ? `<span class="muted">· ${esc(P[k].name || "белгиленген")}</span>` : `<span class="muted">· белгилене элек</span>`}</span>
     <span><button class="lnk-b" style="width:auto;height:32px;padding:0 10px;font-size:13px" data-pl="${k}">${P[k] ? "Өзгөртүү" : "Кошуу"}</button>${P[k] ? ` <button class="lnk-b" style="width:32px;height:32px;font-size:13px" data-del="${k}">✕</button>` : ""}</span></div>`;
-  const li = (id, ico, t, sub, href) => `<${href ? `a href="${href}"` : "button"} class="crow" id="${id}"><span class="ci">${ico}</span><span class="ct"><b>${t}</b>${sub ? `<small>${sub}</small>` : ""}</span><em>›</em></${href ? "a" : "button"}>`;
+  const li = (id, img, t, sub, href) => `<${href ? `a href="${href}"` : "button"} class="ccard" id="${id}"><img class="cimg" src="/static/${img}.webp" alt=""><span class="ct"><b>${t}</b>${sub ? `<small>${sub}</small>` : ""}</span><em>›</em></${href ? "a" : "button"}>`;
   let promo = ""; try { promo = localStorage.getItem("promoPre") || ""; } catch (e) {}
-  render(`<div class="cab-top"><button class="st-back" id="close">‹</button></div>
-    <button class="cab-av" id="avBox">${me.avatar ? `<img src="${esc(me.avatar)}" alt="">` : esc((me.name || "?")[0].toUpperCase())}
-      <span class="cab-cam">📷</span></button>
-    <input type="file" accept="image/*" capture="user" id="avCam" hidden><input type="file" accept="image/*" id="avGal" hidden>
-    <p class="muted" style="text-align:center;margin:-2px 0 6px;font-size:13px">${me.avatar ? "Сүрөттү алмаштыруу үчүн тегеректи басыңыз" : "Сүрөт коюу үчүн тегеректи басыңыз"}</p>
-    <div class="cab-nm">${esc(me.name || "Жүргүнчү")}</div><div class="cab-ph">${esc(me.phone)}</div>
-    <div class="cab-q"><button id="qH"><span>🕘</span>Сапарлар</button><a href="${me.bot ? "https://t.me/" + me.bot : "/terms"}" target="_blank"><span>🎧</span>Колдоо</a>
-      <button id="qA"><span>📍</span>Даректер</button><button id="qS"><span>⚙️</span>Жөндөөлөр</button></div>
-    <div class="cgroup">${li("cPromo", "🎁", "Промокод", promo ? "Кийинки заказга: " + esc(promo) : "Промокод киргизүү")}
-      ${li("cPay", "💵", "Төлөм ыкмасы", "Накталай — айдоочуга түз")}</div>
-    <div class="cgroup">${li("cDrv", "🚕", drv, "Айдоочу болуп иштөө", "/driver")}
-      ${li("cMap", "🗺", "Картаны жакшыртуу", "Жер кошуу, катаны оңдоо")}
-      ${li("cSafe", "🛡", "Коопсуздук", "112, сапарды бөлүшүү")}
-      ${me.admin ? li("cAdm", "🛠", "Админ панели", "", "/admin") : ""}</div>
-    <div class="cgroup">${li("cInfo", "ℹ️", "Маалымат", "Колдонуу шарттары, купуялык", "/terms")}</div>
+  render(""); homeOn(true);
+  $("#home").innerHTML = `<div class="cab-hero"><img class="cab-hdr" src="/static/c_hdr.webp" alt="">
+      <div class="hh"><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b></div><button class="round" id="close" aria-label="Жабуу">${avBtn()}</button></div>
+      <div class="role hrole"><a class="on">🧳 Жүргүнчү</a><a href="/driver">🚗 Айдоочу</a></div></div>
+    <div class="cab-card"><button class="st-back cab-bk" id="close2" aria-label="Артка">‹</button>
+      <button class="cab-av" id="avBox">${me.avatar ? `<img src="${esc(me.avatar)}" alt="">` : esc((me.name || "?")[0].toUpperCase())}<span class="cab-cam">📷</span></button>
+      <input type="file" accept="image/*" capture="user" id="avCam" hidden><input type="file" accept="image/*" id="avGal" hidden>
+      <div class="cab-nm">${esc(me.name || "Жүргүнчү")}</div><div class="cab-ph">${esc(me.phone)}</div>
+      <div class="cab-q"><button id="qH"><img src="/static/c_trips.webp" alt="">Сапарлар</button><a href="${me.bot ? "https://t.me/" + me.bot : "/terms"}" target="_blank"><img src="/static/c_help.webp" alt="">Колдоо</a>
+        <button id="qA"><img src="/static/c_addr.webp" alt="">Даректер</button><button id="qS"><img src="/static/c_set.webp" alt="">Жөндөөлөр</button></div></div>
     <div id="cabMore"></div>
-    ${installHTML()}<button class="btn ghost" id="out">Чыгуу</button>`);
-  if (window.SHEET) SHEET.expand();
+    ${li("cPromo", "c_gift", "Промокод", promo ? "Кийинки заказга: " + esc(promo) : "Промокод киргизүү")}
+    ${li("cPay", "c_card", "Төлөм ыкмасы", "Накталай — айдоочуга түз")}
+    ${li("cDrv", "c_taxi", drv, "Айдоочу болуп иштөө", "/driver")}
+    ${li("cMap", "c_map", "Картаны жакшыртуу", "Жер кошуу, катаны оңдоо")}
+    ${li("cSafe", "c_shield", "Коопсуздук", "112, сапарды бөлүшүү")}
+    ${me.admin ? li("cAdm", "c_tools", "Админ панели", "", "/admin") : ""}
+    ${li("cInfo", "c_info", "Маалымат", "Колдонуу шарттары, купуялык", "/terms")}
+    ${installHTML()}<button class="cab-out" id="out">⎋ Чыгуу</button>`;
+  $("#home").scrollTop = 0;
   bindInstall();
   const more = html => { $("#cabMore").innerHTML = html; $("#cabMore").scrollIntoView({behavior:"smooth", block:"start"}); };
-  $("#close").onclick = () => { S.ride ? viewRide() : viewIdle(); };
+  $("#close").onclick = $("#close2").onclick = () => { S.ride ? viewRide() : viewIdle(); };
   $("#avBox").onclick = () => sheetBox(`<h2>📷 Профилдин сүрөтү</h2>
       <button class="btn main" id="avC">📸 Камера менен тартуу</button>
       <button class="btn ghost" id="avG">🖼 Галереядан тандоо</button>
