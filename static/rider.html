@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#fafafa">
 <title>Такси ТАП!</title>
 <link rel="manifest" href="/static/manifest.json">
-<link rel="apple-touch-icon" href="/static/icon-192.png?v=2">
+<link rel="apple-touch-icon" href="/static/icon-192.png?v=3">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 :root{--navy:#17365C;--navy2:#1E4574;--gold:#C9A03A;--gold2:#E3C368;--ink:#152741;--soft:#5A6880;
@@ -101,13 +101,13 @@ input.f:focus{border-color:var(--navy)}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
 <link rel="preload" as="image" href="/static/h_taxi.webp"><link rel="preload" as="image" href="/static/h_box.webp"><link rel="preload" as="image" href="/static/h_girl.webp"><link rel="preload" as="image" href="/static/h_map.webp">
-<link rel="stylesheet" href="/static/theme.css?v=28">
+<link rel="stylesheet" href="/static/theme.css?v=29">
 </head>
 <body>
 <div id="map"></div>
 
 <div class="top">
-  <div class="lcol"><div class="logo"><img src="/static/logo.png" alt="">Такси <b>ТАП!</b></div>
+  <div class="lcol"><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b></div>
     <div class="role"><a class="on">🧳 Жүргүнчүмүн</a><a href="/driver">🚗 Айдоочумун</a></div></div>
   <button class="round" id="menuBtn" aria-label="Кабинет">👤</button>
 </div>
@@ -275,9 +275,9 @@ function viewIdle() {
   if (P.home) rec.push({ico:"🏠", name:"Үй", sub:P.home.name || "", lat:P.home.lat, lon:P.home.lon});
   if (P.work) rec.push({ico:"💼", name:"Иш", sub:P.work.name || "", lat:P.work.lat, lon:P.work.lon});
   (P.recent || []).forEach(r => rec.push({ico:"🕘", name:r.name, sub:"Акыркы сапар", lat:r.lat, lon:r.lon}));
-  $("#home").innerHTML = `<div class="hh"><div class="logo"><img src="/static/logo.png" alt="">Такси <b>ТАП!</b></div><button class="round" id="hMenu" aria-label="Кабинет">👤</button></div>
+  $("#home").innerHTML = `<div class="hh"><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b></div><button class="round" id="hMenu" aria-label="Кабинет">👤</button></div>
     <div class="role hrole"><a class="on">✈️ Жүргүнчүмүн</a><a href="/driver">🚗 Айдоочумун</a></div>
-    <button class="haddr" id="hAddr"><small>📍 Сиз турган жер</small><b id="fromTxt">${esc(S.fromAddr || "Аныкталууда…")}</b><span>›</span></button>
+    <button class="haddr" id="hAddr"><small><img class="pinI" src="/static/pin.webp" alt="">Сиз турган жер</small><b id="fromTxt">${esc(S.fromAddr || "Аныкталууда…")}</b><span>›</span></button>
     <div class="tiles">${tile("tTaxi", "h_taxi.webp", "Такси", `<span id="taxiEta">${homeEta()}</span>`, true, !has("delivery"))}
       ${has("delivery") ? tile("tDel", "h_box.webp", "Жеткирүү", "Буюм, документ") : ""}</div>
     <div class="tiles2">${stile("tOther", "h_girl.webp", "Башка адамга такси заказ кылуу")}${stile("tMap", "h_map.webp", "Картадан<br>белгилөө")}</div>
