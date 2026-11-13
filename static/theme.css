@@ -430,3 +430,5 @@ button.state{white-space:normal!important;line-height:1.2;text-align:center;max-
 .surgebox span{font-size:20px}
 .cls s{color:#8a8a95;font-weight:600;font-size:12px;margin-left:4px}
 .sbtn.warm{color:#B0125B;box-shadow:0 0 0 2px #F0468A,0 4px 14px rgba(176,18,91,.25)}
+.gpsinfo{font-size:14px;font-weight:700;border-radius:14px;padding:10px 12px;margin:4px 0 0}
+.gpsinfo.good{background:#E7F9E9;color:#14532D}.gpsinfo.mid{background:#FFF3C4;color:#6B4400}.gpsinfo.bad{background:#FDECEC;color:#8A1C1C}

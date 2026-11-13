@@ -101,7 +101,7 @@ input.f:focus{border-color:var(--navy)}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
 <link rel="preload" as="image" href="/static/h_taxi.webp"><link rel="preload" as="image" href="/static/h_box.webp"><link rel="preload" as="image" href="/static/h_girl.webp"><link rel="preload" as="image" href="/static/h_map.webp">
-<link rel="stylesheet" href="/static/theme.css?v=35">
+<link rel="stylesheet" href="/static/theme.css?v=36">
 </head>
 <body>
 <div id="map"></div>
@@ -206,19 +206,45 @@ function setPin(kind) {
   $("#pinStick").classList.toggle("to", kind === "to");
 }
 NAV.init(map, {onLocate: () => locate(true)});
+// GPS: бир жолу эмес — 60 сек бою такыраак жайгашууну күтөбүз (биринчи жооп көбүнчө болжолдуу болот)
+S.gps = {state:"wait", acc:null, at:0};       // wait | ok | denied | off | out
+let gpsWatch = null, gpsStop = null;
+function gpsApply(p, force) {
+  const ll = [p.coords.latitude, p.coords.longitude], acc = Math.round(p.coords.accuracy ?? 999);
+  NAV.set(ll, p.coords.heading, p.coords.speed);
+  const better = S.gps.acc === null || acc < S.gps.acc - 5 || Date.now() - S.gps.at > 20000;
+  if (!better && !force) return;
+  S.gps = {state:"ok", acc, at:Date.now(), ll};
+  S.gpsBad = acc > 60 ? acc : 0;
+  if (!inArea(ll[0], ll[1])) { S.gps.state = "out";
+    if (force) toast(`Сиз ${window.AREA && AREA.name ? AREA.name + " районунун" : "аймактын"} сыртындасыз`, 2500);
+    gpsPaint(); return; }
+  if ((force || S.mode === "idle" || S.mode === "stepA") && !S.fromLock) {
+    map.setView(ll, S.gpsBad ? 17 : 16);
+    if (S.mode !== "idle") { S.from = ll; reverse(ll[0], ll[1]).then(a => { if (a !== null && !S.fromLock) { S.fromAddr = a; gpsPaint(); } }); }
+  }
+  gpsPaint();
+}
+function gpsPaint() {
+  const el = $("#gpsInfo"); if (!el) return;
+  const g = S.gps;
+  el.className = "gpsinfo " + (g.state === "ok" ? (S.gpsBad ? "mid" : "good") : "bad");
+  el.textContent = g.state === "ok" ? (S.gpsBad ? `📡 Болжолдуу (±${g.acc} м) — картадан тактаңыз` : `📡 GPS так (±${g.acc} м)`)
+    : g.state === "denied" ? "⛔ GPS'ке уруксат жок — браузердин жөндөөсүнөн уруксат бериңиз"
+    : g.state === "off" ? "⚠️ GPS күйгүзүлбөгөн же сигнал жок"
+    : g.state === "out" ? "Сиз иштөө аймагынын сыртындасыз"
+    : "⏳ GPS изделүүдө…";
+  if ($("#fromTxt") && S.mode === "stepA") $("#fromTxt").textContent = g.state === "ok" ? (S.fromAddr || "…") : "Жериңиз аныктала элек";
+}
 function locate(force) {
-  if (!navigator.geolocation) return;
-  navigator.geolocation.getCurrentPosition(p => {
-    const ll = [p.coords.latitude, p.coords.longitude];
-    NAV.set(ll, p.coords.heading, p.coords.speed);
-    S.gpsBad = p.coords.accuracy > 60 ? Math.round(p.coords.accuracy) : 0;
-    if (!inArea(ll[0], ll[1])) {               // аймактан сырткары — карта борборунда калат
-      if (force) $("#chipEta").textContent = `Сиз ${window.AREA && AREA.name ? AREA.name + " районунун" : "аймактын"} сыртындасыз`;
-      return;
-    }
-    if (force || S.mode === "idle") map.setView(ll, S.gpsBad ? 17 : 16);
-    if (S.gpsBad && (S.mode === "idle")) toast(`📡 GPS так эмес (±${S.gpsBad} м). Картаны жылдырып, А пинди так турган жериңизге коюңуз.`);
-  }, () => {}, {enableHighAccuracy:true, timeout:8000});
+  if (!navigator.geolocation) { S.gps.state = "off"; return gpsPaint(); }
+  const err = e => { if (S.gps.state === "ok") return; S.gps.state = e && e.code === 1 ? "denied" : "off"; gpsPaint();
+    if (force && e && e.code === 1) toast("GPS'ке уруксат берилген эмес. Браузердин жөндөөсүнөн «Жайгашкан жер» уруксатын күйгүзүңүз.", 4000); };
+  navigator.geolocation.getCurrentPosition(p => gpsApply(p, force), err, {enableHighAccuracy:true, timeout:10000, maximumAge:0});
+  if (gpsWatch === null) {
+    gpsWatch = navigator.geolocation.watchPosition(p => gpsApply(p, false), err, {enableHighAccuracy:true, maximumAge:5000, timeout:30000});
+    clearTimeout(gpsStop); gpsStop = setTimeout(() => { navigator.geolocation.clearWatch(gpsWatch); gpsWatch = null; }, 90000);
+  }
 }
 
 // ---------- көрүнүштөр ----------
@@ -318,9 +344,12 @@ function viewStepA() {
     <button class="st-big y" id="aHere"><span class="i">📍</span><span class="tx">Азыр турган жеримден (GPS)<small id="fromTxt">${esc(S.fromAddr || "Аныкталууда…")}</small></span><em>›</em></button>
     <button class="st-big" id="aMap"><span class="i">🗺</span><span class="tx">Картадан белгилейм<small>Пинди так жериңизге коёсуз</small></span><em>›</em></button>
     <button class="st-big" id="aType"><span class="i">✍️</span><span class="tx">Жазып табам<small>Көчө, дүкөн, мекеме…</small></span><em>›</em></button>
-    ${S.gpsBad ? `<p class="st-warn">📡 GPS так эмес (±${S.gpsBad} м) — «Картадан белгилейм» тандаганыңыз жакшы.</p>` : ""}`;
+    <p class="gpsinfo" id="gpsInfo"></p>`;
+  gpsPaint(); if (S.gps.state !== "ok") locate(false);
   $("#sBack").onclick = viewIdle;
-  $("#aHere").onclick = () => { if (!S.from) return toast("Жериңиз аныктала элек — «Картадан белгилейм» басыңыз", 2500); S.fromLock = true; picked("А"); viewStepB(); };
+  $("#aHere").onclick = () => {
+    if (S.gps.state !== "ok") { locate(true); return toast(S.gps.state === "denied" ? "GPS'ке уруксат бериңиз же «Картадан белгилейм» басыңыз" : "Жериңиз аныктала элек — бир аз күтүңүз же «Картадан белгилейм» басыңыз", 3000); }
+    if (S.gps.ll) S.from = S.gps.ll; S.fromLock = true; picked("А"); viewStepB(); };
   $("#aMap").onclick = viewPickFrom;
   $("#aType").onclick = () => viewSearch("from");
   window.scrollTo(0, 0); $("#home").scrollTop = 0;
