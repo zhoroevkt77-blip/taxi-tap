@@ -646,7 +646,11 @@ class Bot(unittest.TestCase):
         self.assertTrue(self.sent[-1][1]["reply_markup"]["keyboard"][0][0]["request_contact"])
         bot.handle_update({"message": {"chat": {"id": 70, "type": "private"}, "from": {"id": 70},
                                        "contact": {"user_id": 70, "phone_number": "996555777000"}}})
-        self.assertIn("ырасталды", self.sent[-2][1]["text"])
+        texts = [x[1].get("text", "") for x in self.sent]
+        self.assertTrue(any("ырасталды" in t for t in texts))
+        back = [x[1] for x in self.sent if "Сайтка кайтуу" in x[1].get("text", "")]
+        if (core.SITE_URL or "").startswith("https://"):
+            self.assertEqual(back[0]["reply_markup"]["inline_keyboard"][0][0]["url"], core.SITE_URL + "/")
         uid = "ph:+996555777000"
         self.assertEqual(core.get_user(uid)["tg_uid"], "tg:70")
         self.sent.clear()

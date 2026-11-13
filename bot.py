@@ -168,6 +168,9 @@ def handle_update(up):
         uid = core.web_session_verify(tok, c.get("phone_number") or "", tg)
         if uid:
             send(chat, L("web_ok"), {"remove_keyboard": True})
+            url = site({"driver": "/driver", "admin": "/admin"}.get((s or {}).get("kind"), "/"))
+            if url.startswith("https://"):
+                send(chat, L("web_back"), {"inline_keyboard": [[{"text": L("btn_web_back"), "url": url}]]})
             send(chat, L("notify_on"), notify_kb(core.get_user(uid)))
         elif s and s.get("kind") == "admin":
             send(chat, L("not_admin"), {"remove_keyboard": True})
