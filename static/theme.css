@@ -552,3 +552,4 @@ body.dnav .sheet{max-height:calc(100dvh - 318px - env(safe-area-inset-top,0px))!
 .work a img,.work a span{width:64px;height:46px;border-radius:23px;object-fit:cover;background:#f0f0f3;display:grid;place-items:center;font-size:28px}
 .work a small{font-size:11.5px;color:#6b6b76;font-weight:600}
 .role a .rpk{font-size:22px;line-height:1;width:30px;text-align:center}
+#home.hbg .st-big:not(.y){background:#fff;box-shadow:0 6px 16px rgba(20,20,30,.07),inset 0 0 0 1px rgba(0,0,0,.04)}#home.hbg .st-back{background:#fff;box-shadow:0 4px 12px rgba(20,20,30,.1)}

@@ -101,7 +101,7 @@ input.f:focus{border-color:var(--navy)}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
 <link rel="preload" as="image" href="/static/h_taxi.webp"><link rel="preload" as="image" href="/static/h_box.webp"><link rel="preload" as="image" href="/static/h_girl.webp"><link rel="preload" as="image" href="/static/h_map.webp">
-<link rel="stylesheet" href="/static/theme.css?v=58">
+<link rel="stylesheet" href="/static/theme.css?v=59">
 </head>
 <body>
 <div id="map"></div>
@@ -387,7 +387,7 @@ function homeOn(on) {
   document.body.classList.toggle("athome", on);
   document.body.classList.toggle("rnav", on && (S.mode === "idle" || S.mode === "menu"));
   $("#home").classList.toggle("cabbg", on && S.mode === "menu");
-  $("#home").classList.toggle("hbg", on && S.mode === "idle");
+  $("#home").classList.toggle("hbg", on && ["idle", "stepA", "stepB"].includes(S.mode));
 }
 function navOn(k) { document.querySelectorAll("#bnav a").forEach(a => a.classList.toggle("on", a.dataset.k === k)); }
 function viewHelp() {
