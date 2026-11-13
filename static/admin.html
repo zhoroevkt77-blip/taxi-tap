@@ -31,6 +31,7 @@ main{padding:12px;max-width:1100px;margin:0 auto}
 .item .main{flex:1;min-width:170px}.item .main b{display:block}
 .muted{color:var(--soft);font-size:13px}
 .btn{border:0;border-radius:10px;padding:8px 12px;font-size:13px;font-weight:700;cursor:pointer;background:var(--paper);color:var(--ink)}
+.acts{display:flex;gap:6px;flex-wrap:wrap}.item .main{flex:1;min-width:220px}a.btn{text-decoration:none;display:inline-block}
 .btn.ok{background:var(--ok);color:#fff}.btn.bad{background:#FCEBEB;color:var(--bad)}.btn.gold{background:var(--gold);color:#16161a}
 .tag{font-size:12px;font-weight:700;padding:3px 8px;border-radius:8px;white-space:nowrap}
 .t-searching{background:#FAEEDA;color:#854F0B}.t-scheduled{background:#EEEDFE;color:#3C3489}.t-accepted,.t-arrived{background:#E6F1FB;color:#0C447C}
@@ -78,6 +79,7 @@ td input.f{padding:7px 8px;max-width:90px;min-width:58px}
   <button data-t="tariffs">Тарифтер</button>
   <button data-t="addr">Даректер</button>
   <button data-t="area">Аймак</button>
+  <button data-t="parks">Парктар</button>
 </nav>
 <main id="main"></main>
 
@@ -319,6 +321,51 @@ async function refresh() {
   if (tab === "map") drawMap();
 }
 // ---------- каржы ----------
+// ---------- Таксопарктар ----------
+async function viewParks(edit) {
+  const X = await api("/api/a/parks"), P = X.parks || [];
+  const money = v => Math.round(v || 0).toLocaleString("ru-RU") + " с";
+  const e = edit || {};
+  $("#main").innerHTML = `
+    <div class="panel"><h3>🏢 Таксопарктар (${P.length})</h3>
+      ${P.length ? P.map(p => `<div class="item"><div class="main"><b>${esc(p.name)}</b> ${p.active ? "" : '<span class="muted">· өчүк</span>'}
+        <div class="muted">☎ ${esc(p.phone)} · үлүш ${p.share}% · жүргүнчү бонусу ${money(p.ref_bonus)} · промокод <b>${esc(p.promo || "—")}</b></div>
+        <div class="muted">Айдоочулар: ${p.drivers} (линияда ${p.online}) · Ушул ай: ${p.month.rides} сапар, ${money(p.month.gross)} жүгүртүү, тапканы <b>${money(p.month.earned)}</b></div>
+        <div style="margin-top:4px">Калдык: <b style="color:var(--ok)">${money(p.balance)}</b> <span class="muted">(төлөнгөн ${money(p.paid)})</span></div></div>
+        <div class="acts"><a class="btn" href="/park?id=${p.id}" target="_blank">Кабинети</a>
+          <button class="btn" data-ed="${p.id}">Өзгөртүү</button><button class="btn gold" data-pay="${p.id}">💸 Төлөдүм</button></div></div>`).join("")
+        : `<div class="empty">Азырынча парк жок. Төмөндөн кошуңуз.</div>`}</div>
+    <div class="panel"><h3>${e.id ? "✏️ " + esc(e.name) : "➕ Жаңы парк"}</h3><div class="fset">
+      <div><label>Парктын аты</label><input class="f" id="pkN" value="${esc(e.name || "")}" placeholder="Нур-Такси"></div>
+      <div><label>Ээсинин номери (ушул номер менен кабинетке кирет)</label><input class="f" id="pkP" value="${esc(e.phone || "")}" placeholder="0700 123 456"></div>
+      <div><label>Комиссиядан үлүш, %</label><input class="f" id="pkS" inputmode="decimal" value="${e.share ?? 30}"></div>
+      <div><label>Жаңы жүргүнчү үчүн бонус, сом</label><input class="f" id="pkB" inputmode="decimal" value="${e.ref_bonus ?? 20}"></div>
+      <div><label>Промокод (QR да ушул)</label><input class="f" id="pkC" value="${esc(e.promo || "")}" placeholder="NUR50" style="text-transform:uppercase"></div>
+      <div><label>Промокоддун арзандатуусу, сом</label><input class="f" id="pkA" inputmode="decimal" value="50"></div>
+    </div><div style="padding:0 14px 14px"><button class="btn" id="pkSave">${e.id ? "Сактоо" : "Паркты кошуу"}</button>${e.id ? ` <button class="btn ghost" id="pkCancel">Жокко чыгаруу</button>` : ""}<div class="err" id="pkErr"></div></div></div>
+    <div class="panel"><h3>🚕 Айдоочуну паркка кошуу / чыгаруу</h3><div class="fset">
+      <div><label>Айдоочунун номери</label><input class="f" id="pdP" placeholder="0700 123 456"></div>
+      <div><label>Парк</label><select class="f" id="pdK"><option value="">— Парксыз (өз алдынча) —</option>${P.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join("")}</select></div>
+    </div><div style="padding:0 14px 14px"><button class="btn" id="pdGo">Сактоо</button><div class="err" id="pdErr"></div></div></div>`;
+  $("#pkSave").onclick = async () => {
+    const r = await api("/api/a/park", {id:e.id, name:$("#pkN").value, phone:$("#pkP").value, share:+$("#pkS").value, ref_bonus:+$("#pkB").value,
+      promo:$("#pkC").value, promo_amount:+$("#pkA").value});
+    if (r.error) return $("#pkErr").textContent = "Текшериңиз: аты, номери, үлүш 0–100, промокод башка паркта жокпу.";
+    viewParks();
+  };
+  if ($("#pkCancel")) $("#pkCancel").onclick = () => viewParks();
+  document.querySelectorAll("[data-ed]").forEach(b => b.onclick = () => viewParks(P.find(p => p.id == b.dataset.ed)));
+  document.querySelectorAll("[data-pay]").forEach(b => b.onclick = async () => {
+    const p = P.find(x => x.id == b.dataset.pay), v = prompt(`${p.name}: канча сом төлөдүңүз? (калдык ${Math.round(p.balance)} с)`, Math.max(0, Math.round(p.balance)));
+    if (!v) return; await api("/api/a/park_payout", {park_id:p.id, amount:+v, note:"админ"}); viewParks();
+  });
+  $("#pdGo").onclick = async () => {
+    const r = await api("/api/a/park_driver", {phone:$("#pdP").value, park_id:$("#pdK").value || null});
+    $("#pdErr").textContent = r.result === "ok" ? "✓ Сакталды" : r.result === "no_driver" ? "Мындай айдоочу жок" : "Ката";
+    if (r.result === "ok") setTimeout(() => viewParks(), 700);
+  };
+}
+
 async function viewFinance() {
   const F = await api("/api/a/finance"), c = F.config, T = F.totals;
   const money = v => (v || 0).toLocaleString("ru-RU") + " с";
@@ -568,7 +615,7 @@ async function addrForm(x, K, q) {
 function show(t) {
   tab = t; lyr = null;
   document.querySelectorAll("nav button").forEach(b => b.classList.toggle("on", b.dataset.t === t));
-  ({map:viewMap, drivers:viewDrivers, topups:viewTopups, rides:viewRides, tariffs:viewTariffs, area:viewArea, finance:viewFinance, addr:() => viewAddr("")})[t]();
+  ({map:viewMap, drivers:viewDrivers, topups:viewTopups, rides:viewRides, tariffs:viewTariffs, area:viewArea, finance:viewFinance, parks:viewParks, addr:() => viewAddr("")})[t]();
 }
 document.querySelectorAll("nav button").forEach(b => b.onclick = () => show(b.dataset.t));
 async function boot() {

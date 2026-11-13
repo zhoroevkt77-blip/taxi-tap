@@ -915,3 +915,39 @@ class LocalSurge(unittest.TestCase):
         self.assertLess(core.haversine_km(lat, lon, *p0), 0.5)
         for r in core.query("SELECT id, passenger FROM rides WHERE status='searching'", (), "all"):
             core.cancel(r["id"], r["passenger"])
+
+
+class Parks(unittest.TestCase):
+    def test_park_flow(self):
+        import parks
+        core.init_db(); offline_all()
+        old = core.commission_pct
+        core.commission_pct = lambda: 10.0
+        try:
+            pid = parks.save("Нур-Такси", "0700 777 001", share=30, ref_bonus=20, promo="NUR50", promo_amount=50)
+            self.assertTrue(pid)
+            self.assertEqual(parks.by_owner(core.phone_uid("0700 777 001"))["name"], "Нур-Такси")
+            d = make_driver("0700 000 161", "Парктын", (41.0380, 72.7470), 0)
+            self.assertEqual(parks.attach_driver("0700 000 161", pid, by_park=pid), "ok")
+            p = rider("0555 000 161")
+            self.assertTrue(parks.set_ref(p, "nur50"))
+            self.assertFalse(parks.set_ref(p, "NUR50"))                 # бир жолу гана
+            q = core.quote(41.0377, 72.7470, 41.0300, 72.7560)
+            rid = core.create_ride(p, q, 41.0377, 72.7470, 41.0300, 72.7560)
+            core.offer(rid, d); core.accept(rid, d)
+            core.advance(rid, d); core.advance(rid, d); core.advance(rid, d)
+            st = parks.stats(pid)["periods"]["today"]
+            price = core.get_ride(rid)["price"]
+            fee = int(price * 10 / 100.0 + 0.5)
+            self.assertEqual(st["rides"], 1)
+            self.assertEqual(st["fee"], fee)
+            self.assertEqual(st["share"], round(fee * 0.3))
+            self.assertEqual(st["refs_active"], 1)
+            self.assertEqual(st["earned"], round(fee * 0.3) + 20)
+            self.assertTrue(parks.add_payout(pid, 10))
+            self.assertEqual(parks.stats(pid)["balance"], st["earned"] - 10)
+            self.assertEqual(parks.park_name_of_driver(d), "Нур-Такси")
+            self.assertEqual(parks.attach_driver("0700 000 161", None, by_park=pid + 99), "not_yours")
+            self.assertEqual(len(parks.admin_list()), 1)
+        finally:
+            core.commission_pct = old

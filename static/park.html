@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="ky">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#fafafa">
+<title>Таксопарк кабинети — Такси ТАП!</title>
+<link rel="apple-touch-icon" href="/static/icon-192.png?v=3">
+<link rel="stylesheet" href="/static/theme.css?v=37">
+<style>
+body{margin:0;font-family:Inter,system-ui,sans-serif;background:#f6f6f8;color:#16161a}
+.wrap{max-width:560px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 14px) 16px 40px}
+.hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.logo{display:flex;align-items:center;gap:8px;font-weight:900;font-size:20px;background:none!important;box-shadow:none!important;border:0!important;padding:0!important}
+.logo img{width:36px;height:36px;border-radius:10px}.logo b{color:#ffb703}
+.tag{background:#16161a;color:#ffc61a;font-size:11px;font-weight:900;border-radius:8px;padding:4px 8px;letter-spacing:.5px}
+h1{font-size:26px;font-weight:900;margin:8px 0 2px}
+.muted{color:#6b6b76;font-size:14px}
+.per{display:flex;gap:8px;margin:14px 0 10px;overflow-x:auto}
+.per button{border:0;background:#fff;border-radius:14px;padding:10px 14px;font-weight:800;font-family:inherit;font-size:14px;box-shadow:0 3px 10px rgba(20,20,30,.06);cursor:pointer;white-space:nowrap}
+.per button.on{background:linear-gradient(135deg,#ffd31a,#fcbc00)}
+.big{background:#16161a;color:#fff;border-radius:24px;padding:18px;margin-bottom:12px}
+.big .v{font-size:34px;font-weight:900;color:#ffc61a}
+.big .s{color:#c9c9cf;font-size:13px;margin-top:4px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.st{background:#fff;border-radius:18px;padding:12px 14px;box-shadow:0 4px 14px rgba(20,20,30,.06)}
+.st span{display:block;color:#6b6b76;font-size:13px}.st b{font-size:21px;font-weight:900}
+.card{background:#fff;border-radius:22px;padding:14px 16px;margin-top:14px;box-shadow:0 6px 18px rgba(20,20,30,.07)}
+.card h2{font-size:18px;font-weight:900;margin:0 0 8px}
+.dr{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #eee}
+.dr:last-child{border-bottom:0}
+.dot{width:10px;height:10px;border-radius:50%;background:#c9c9cf;flex:none}.dot.on{background:#1D9E75}.dot.busy{background:#ffb703}
+.dr .i{flex:1;min-width:0}.dr b{display:block;font-size:15px}.dr small{color:#6b6b76;font-size:12.5px}
+.dr .n{text-align:right;font-size:13px;color:#3a3a44;white-space:nowrap}.dr .n b{font-size:15px}
+.x{border:0;background:#f1f1f4;border-radius:10px;width:30px;height:30px;cursor:pointer;font-size:13px}
+.row{display:flex;gap:8px;margin-top:10px}
+input.f{flex:1;border:1.5px solid #e3e3e8;border-radius:14px;padding:12px;font-size:16px;font-family:inherit;min-width:0}
+.btn{border:0;border-radius:14px;padding:12px 16px;font-weight:900;font-size:15px;font-family:inherit;cursor:pointer;background:linear-gradient(135deg,#ffd31a,#fcbc00);color:#16161a}
+.btn.g{background:#f1f1f4}
+.qr{display:flex;gap:14px;align-items:center}
+.qr #qr{width:140px;height:140px;flex:none;background:#f6f6f8;border-radius:14px;display:grid;place-items:center;overflow:hidden}
+.qr #qr img,.qr #qr svg{width:132px;height:132px}
+.code{font-size:26px;font-weight:900;letter-spacing:1px}
+.err{color:#b42318;font-size:13px;margin-top:6px}.ok{color:#16764f;font-size:13px;margin-top:6px}
+.note{background:#fff8e6;border-radius:14px;padding:10px 12px;font-size:13.5px;margin-top:10px}
+.pay{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0f0f3;font-size:14px}
+#sticker{display:none}
+@media print{body *{visibility:hidden}#sticker,#sticker *{visibility:visible}#sticker{display:block;position:fixed;inset:0}}
+.stk{width:90mm;border:3px solid #16161a;border-radius:16px;padding:8mm;text-align:center;font-family:Inter,system-ui,sans-serif;margin:10mm auto}
+.stk h3{font-size:22pt;margin:0}.stk h3 b{color:#e9a100}.stk p{font-size:12pt;margin:4mm 0}
+.stk .c{font-size:20pt;font-weight:900;background:#ffc61a;border-radius:8px;padding:2mm 4mm;display:inline-block}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><p class="muted">Жүктөлүүдө…</p></div>
+<div id="sticker"></div>
+<script src="/static/qr.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const api = (u, b) => fetch(u, b ? {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(b)} : {})
+  .then(r => r.json()).catch(() => ({error:"net"}));
+const fmt = n => Math.round(n || 0).toLocaleString("ru-RU").replace(/,/g, " ");
+let ST = null, PER = "month";
+const PN = {today:"Бүгүн", week:"Ушул жума", month:"Ушул ай", all:"Баары"};
+
+async function boot() {
+  const me = await api("/api/me");
+  if (!me.auth) {
+    $("#app").innerHTML = `<div class="hd"><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b></div><span class="tag">ПАРК</span></div>
+      <h1>Таксопарк кабинети</h1><p class="muted">Кирүү үчүн адегенде парктын ээсинин номери менен сайтка кириңиз.</p>
+      <a class="btn" href="/" style="display:inline-block;text-decoration:none;margin-top:12px">Кирүү</a>`;
+    return;
+  }
+  const id = new URLSearchParams(location.search).get("id");
+  ST = await api("/api/park/state" + (id ? "?id=" + id : ""));
+  if (ST.error) {
+    $("#app").innerHTML = `<div class="hd"><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b></div><span class="tag">ПАРК</span></div>
+      <h1>Таксопарк кабинети</h1><p class="muted">Бул номерге парк катталган эмес. Паркыңызды кошуу үчүн Такси ТАП! админине кайрылыңыз.</p>
+      <a class="btn g" href="/" style="display:inline-block;text-decoration:none;margin-top:12px">Башкы бетке</a>`;
+    return;
+  }
+  draw();
+}
+
+function draw() {
+  const p = ST.park, s = ST.stats, P = s.periods[PER];
+  const link = (ST.site || location.origin) + "/p/" + (p.promo || "");
+  $("#app").innerHTML = `<div class="hd"><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b></div><span class="tag">ПАРК</span></div>
+    <h1>🏢 ${esc(p.name)}</h1><p class="muted">Айдоочулар: ${s.drivers_total} · линияда: <b style="color:#1D9E75">${s.drivers_online}</b></p>
+    <div class="per">${Object.keys(PN).map(k => `<button data-p="${k}" class="${k === PER ? "on" : ""}">${PN[k]}</button>`).join("")}</div>
+    <div class="big"><div class="s">Сизге төлөнө турган калдык</div><div class="v">${fmt(s.balance)} сом</div>
+      <div class="s">Бардык убакта тапкан: ${fmt(s.periods.all.earned)} с · төлөнгөн: ${fmt(s.paid)} с</div></div>
+    <div class="grid">
+      <div class="st"><span>Сапарлар</span><b>${P.rides}</b></div>
+      <div class="st"><span>Жүгүртүү</span><b>${fmt(P.gross)} с</b></div>
+      <div class="st"><span>Комиссиядан үлүш (${p.share}%)</span><b>${fmt(P.share)} с</b></div>
+      <div class="st"><span>Жаңы жүргүнчүлөр</span><b>${P.refs} <small style="font-size:13px;color:#6b6b76">(${P.refs_active} сапарда)</small></b></div>
+      <div class="st"><span>Жүргүнчү бонусу</span><b>${fmt(P.bonus)} с</b></div>
+      <div class="st"><span>${PN[PER]} тапкан</span><b style="color:#16764f">${fmt(P.earned)} с</b></div>
+    </div>
+    ${ST.commission_pct > 0 ? "" : `<div class="note">ℹ️ Азыр пилот: Такси ТАП! комиссия албайт (0%), ошондуктан комиссиядан үлүш 0. Жүргүнчү бонустары эсептеле берет.</div>`}
+    <div class="card"><h2>🚕 Айдоочулар</h2>
+      ${ST.drivers.length ? ST.drivers.map(d => `<div class="dr"><span class="dot ${d.busy ? "busy" : d.online ? "on" : ""}"></span>
+        <div class="i"><b>${esc(d.name || d.phone)}</b><small>${esc(d.car)} · ${esc(d.plate)} · ★${Number(d.rating ?? 5).toFixed(1)} · ⚡${d.activity}${d.status !== "active" ? " · " + esc(d.status) : ""}</small></div>
+        <div class="n"><b>${d.today}</b> бүгүн<br>${d.week_rides} · ${fmt(d.week_gross)} с/жума</div>
+        <button class="x" data-rm="${esc(d.uid)}" aria-label="Чыгаруу">✕</button></div>`).join("")
+        : `<p class="muted">Азырынча айдоочу жок. Айдоочу адегенде сайтта «Айдоочу болуу» аркылуу катталып, текшерүүдөн өтүшү керек, андан кийин аны бул жерге номери менен кошосуз.</p>`}
+      <div class="row"><input class="f" id="dph" placeholder="Айдоочунун номери: 0700 123 456" inputmode="tel"><button class="btn" id="dadd">Кошуу</button></div>
+      <div id="dmsg"></div></div>
+    <div class="card"><h2>📣 Жүргүнчүлөрдү тартуу</h2>
+      ${p.promo ? `<div class="qr"><div id="qr"></div><div><div class="muted">Промокод</div><div class="code">${esc(p.promo)}</div>
+        <div class="muted" style="margin-top:4px">Жаңы жүргүнчү ушул код же QR менен биринчи сапарын бүтүрсө — сизге <b>${fmt(p.ref_bonus)} сом</b>.</div></div></div>
+        <div class="row"><button class="btn" id="print">🖨 Стикерди басып чыгаруу</button><button class="btn g" id="copy">🔗 Шилтеме</button></div>
+        <p class="muted" style="margin-top:8px;word-break:break-all">${esc(link)}</p>`
+        : `<p class="muted">Паркыңызга промокод коюлган эмес — админге кайрылыңыз.</p>`}
+    </div>
+    <div class="card"><h2>💸 Төлөмдөр</h2>
+      ${ST.payouts.length ? ST.payouts.map(x => `<div class="pay"><span>${new Date(x.at * 1000).toLocaleDateString("ru-RU")}${x.note ? " · " + esc(x.note) : ""}</span><b>${fmt(x.amount)} с</b></div>`).join("")
+        : `<p class="muted">Азырынча төлөм болгон жок. Калдыкты Такси ТАП! админи айына бир жолу которуп берет.</p>`}
+      <div class="note">Шарт: парктын айдоочулары төлөгөн комиссиянын <b>${p.share}%</b>ы + ар бир жаңы жүргүнчү үчүн <b>${fmt(p.ref_bonus)} сом</b>. Такси ТАП! комиссиясы азыр: ${ST.commission_pct}%.</div></div>`;
+  document.querySelectorAll("[data-p]").forEach(b => b.onclick = () => { PER = b.dataset.p; draw(); });
+  document.querySelectorAll("[data-rm]").forEach(b => b.onclick = async () => {
+    if (!confirm("Айдоочуну парктан чыгарасызбы?")) return;
+    await api("/api/park/remove_driver", {uid:b.dataset.rm}); refresh(); });
+  $("#dadd").onclick = async () => {
+    const x = await api("/api/park/add_driver", {phone:$("#dph").value});
+    const M = {ok:"✓ Айдоочу кошулду", no_driver:"Бул номер менен катталган айдоочу жок", other_park:"Бул айдоочу башка паркта"};
+    $("#dmsg").className = x.result === "ok" ? "ok" : "err"; $("#dmsg").textContent = M[x.result] || "Ката";
+    if (x.result === "ok") setTimeout(refresh, 600);
+  };
+  if (p.promo) {
+    if (window.qrSvg) $("#qr").innerHTML = qrSvg(link, 132);
+    $("#copy").onclick = async () => { try { await navigator.clipboard.writeText(link); alert("Шилтеме көчүрүлдү"); } catch (e) { prompt("Шилтеме:", link); } };
+    $("#print").onclick = () => {
+      $("#sticker").innerHTML = `<div class="stk"><h3>Такси <b>ТАП!</b></h3><p>Телефон менен сканерлеп, таксини оңой чакырыңыз</p>
+        ${window.qrSvg ? qrSvg(link, 220) : ""}
+        <p>Биринчи сапарга арзандатуу:</p><div class="c">${esc(p.promo)}</div><p style="font-size:10pt">${esc(p.name)}</p></div>`;
+      window.print();
+    };
+  }
+}
+async function refresh() { const id = new URLSearchParams(location.search).get("id"); ST = await api("/api/park/state" + (id ? "?id=" + id : "")); if (!ST.error) draw(); }
+boot(); setInterval(refresh, 30000);
+</script>
+</body>
+</html>

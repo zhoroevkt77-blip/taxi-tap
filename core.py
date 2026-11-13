@@ -260,6 +260,13 @@ SCHEMA = [
         id {_PK}, name TEXT, kind TEXT, lat REAL, lon REAL, aliases TEXT, area TEXT,
         source TEXT, hidden INTEGER DEFAULT 0, osm_key TEXT, created_at REAL)""",
     "CREATE INDEX IF NOT EXISTS idx_rides_status ON rides(status)",
+    f"""CREATE TABLE IF NOT EXISTS parks (
+        id {_PK}, name TEXT, owner_uid TEXT, phone TEXT,
+        share REAL DEFAULT 30,           -- комиссиянын канча %ы паркка
+        ref_bonus REAL DEFAULT 20,       -- парк тарткан жаңы жүргүнчүнүн биринчи сапары үчүн, сом
+        promo TEXT, active INTEGER DEFAULT 1, created_at REAL)""",
+    f"""CREATE TABLE IF NOT EXISTS park_payouts (
+        id {_PK}, park_id INTEGER, amount REAL, note TEXT, at REAL)""",
     "CREATE INDEX IF NOT EXISTS idx_tx_kind ON balance_tx(kind, at)",
     "CREATE INDEX IF NOT EXISTS idx_drivers_online ON drivers(online, status)",
 ]
@@ -271,7 +278,7 @@ NEW_COLUMNS = {
     "addresses": {"approx": "INTEGER DEFAULT 0",        # жери болжолдуу (аты гана белгилүү)
                   "status": "TEXT DEFAULT 'ok'",        # ok | pending (жүргүнчү/айдоочу сунуштаган)
                   "votes": "INTEGER DEFAULT 0", "suggested_by": "TEXT"},
-    "users": {"tg_uid": "TEXT", "notify": "INTEGER DEFAULT 1", "terms_at": "REAL",
+    "users": {"park_ref": "INTEGER", "park_ref_at": "REAL", "tg_uid": "TEXT", "notify": "INTEGER DEFAULT 1", "terms_at": "REAL",
               "places": "TEXT",                              # {"home": {...}, "work": {...}}
               "p_rating": "REAL", "p_rated": "INTEGER DEFAULT 0",
               "avatar": "TEXT"},                             # профилдин сүрөтү (uploads ичиндеги файл)   # айдоочулар берген баа
@@ -283,7 +290,8 @@ NEW_COLUMNS = {
                 "home_lat": "REAL", "home_lon": "REAL", "home_on": "INTEGER DEFAULT 0",
                 "home_day": "TEXT", "home_uses": "INTEGER DEFAULT 0",
                 "out_since": "REAL",
-                "activity": "INTEGER DEFAULT 100"},   # активдүүлүк 0..100 (Яндекс Pro'догудай)              # аймактан сыртка чыккан убакыт
+                "activity": "INTEGER DEFAULT 100",
+                "park_id": "INTEGER"},                # таксопарк (жок болсо — өз алдынча)   # активдүүлүк 0..100 (Яндекс Pro'догудай)              # аймактан сыртка чыккан убакыт
     "balance_tx": {"claimed": "REAL"},
     "rides": {"note": "TEXT", "source": "TEXT",   # source: web | phone (диспетчер)
               "promo": "TEXT", "discount": "REAL DEFAULT 0",

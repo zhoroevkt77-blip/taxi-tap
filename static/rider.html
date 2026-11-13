@@ -690,7 +690,7 @@ function viewChat() {
 }
 function carCard(d) {
   return `<div class="dcard"><div class="dinfo"><b class="dname">${esc(d.name || "Айдоочу")} <span>★${Number(d.rating ?? 5).toFixed(2)}</span></b>
-      <div class="dcar">${esc(d.color || "")} ${esc(d.car || "")}</div><div class="kgplate">${esc(d.plate || "")}</div></div>
+      <div class="dcar">${esc(d.color || "")} ${esc(d.car || "")}${d.park ? ` · <b>${esc(d.park)}</b>` : ""}</div><div class="kgplate">${esc(d.plate || "")}</div></div>
     <div class="dside"><span class="dcarico">🚗</span><a class="dcall" href="tel:${esc(d.phone)}" aria-label="Чалуу">📞</a></div></div>`;
 }
 // Сапардагы баскычтар: Сактоо · Бөлүшүү · Коопсуздук · Деталдар
@@ -870,6 +870,7 @@ async function viewCabinet() {
     ${li("cDrv", "c_taxi", drv, "Айдоочу болуп иштөө", "/driver")}
     ${li("cMap", "c_map", "Картаны жакшыртуу", "Жер кошуу, катаны оңдоо")}
     ${li("cSafe", "c_shield", "Коопсуздук", "112, сапарды бөлүшүү")}
+    ${me.park ? li("cPark", "c_taxi", "🏢 Таксопарк кабинети", esc(me.park), "/park") : ""}
     ${me.admin ? li("cAdm", "c_tools", "Админ панели", "", "/admin") : ""}
     ${li("cInfo", "c_info", "Маалымат", "Колдонуу шарттары, купуялык", "/terms")}
     ${installHTML()}<button class="cab-out" id="out">⎋ Чыгуу</button>`;
@@ -926,8 +927,11 @@ async function viewCabinet() {
   };
 }
 
+// Парктын QR/шилтемеси: /?ref=КОД → кирген соң бир жолу жөнөтөбүз
+try { const rf = new URLSearchParams(location.search).get("ref"); if (rf) { localStorage.setItem("parkRef", rf); localStorage.setItem("promoPre", rf.toUpperCase()); history.replaceState(null, "", "/"); } } catch (e) {}
 async function boot() {
-  const me = await api("/api/me"); ME_BOT = me.bot || ""; ME_AV = me.avatar || null; $("#menuBtn").innerHTML = avBtn();
+  const me = await api("/api/me");
+  try { const rf = localStorage.getItem("parkRef"); if (me.auth && rf) { api("/api/ref", {code:rf}); localStorage.removeItem("parkRef"); } } catch (e) {} ME_BOT = me.bot || ""; ME_AV = me.avatar || null; $("#menuBtn").innerHTML = avBtn();
   await areaReady;
   if (!me.auth) return viewLogin(me.pending, me.link);
   const r = await api("/api/ride");

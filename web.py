@@ -23,6 +23,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
 import addrbook
+import parks
 import core
 import flow
 import ops
@@ -34,7 +35,8 @@ COOKIE = "tt"
 MAX_BODY = 9 * 1024 * 1024          # 3 документ (браузерде кичирейтилген)
 PAGES = {"/": "rider.html", "/index.html": "rider.html",
          "/driver": "driver.html", "/driver/": "driver.html",
-         "/admin": "admin.html", "/admin/": "admin.html", "/terms": "terms.html"}
+         "/admin": "admin.html", "/admin/": "admin.html", "/terms": "terms.html",
+         "/park": "park.html", "/park/": "park.html"}
 SITE_URL = (os.environ.get("SITE_URL") or "").rstrip("/")
 
 # Out'торду жеткирүүчү: bot.py өзүнүкүн коёт (Telegram). Сайт өзү абалды окуйт.
@@ -99,6 +101,7 @@ def ride_view(r):
         d = core.get_driver(r["driver"]) or {}
         du = core.get_user(r["driver"]) or {}
         v["driver"] = {"name": du.get("name") or "", "phone": du.get("phone") or "",
+                       "park": parks.park_name_of_driver(r["driver"]),
                        "rating": d.get("rating"), "car": d.get("car_model"),
                        "color": d.get("car_color"), "plate": d.get("car_plate")}
         if r["status"] != "completed" and d.get("lat") is not None:
@@ -255,6 +258,13 @@ class H(BaseHTTPRequestHandler):
                 return self._file(os.path.join(STATIC, PAGES[u.path]))
             if u.path.startswith("/t/"):
                 return self._file(os.path.join(STATIC, "track.html"))
+            if u.path.startswith("/p/"):           # парктын QR'ы → башкы бет + код
+                code = parks.norm_code(u.path[3:])
+                self.send_response(302)
+                self.send_header("Location", "/?ref=" + code)
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+                return
             if u.path == "/api/track":
                 r = core.ride_by_share((q.get("t") or [""])[0])
                 if not r:
@@ -296,6 +306,13 @@ class H(BaseHTTPRequestHandler):
                 return self._json({"error": "auth"}, 401)
             if u.path == "/api/ride":
                 return self._json({"ride": ride_view(core.last_ride_of(uid))})
+            if u.path == "/api/park/state":
+                p = parks.by_owner(uid) or (parks.get(int((q.get("id") or ["0"])[0] or 0)) if core.is_admin(uid) else None)
+                if not p:
+                    return self._json({"error": "not_park"}, 403)
+                st = parks.state(p["id"])
+                st["site"] = SITE_URL
+                return self._json(st)
             if u.path == "/api/places":
                 pl = core.get_places(uid)
                 pl["popular"] = addrbook.popular()
@@ -344,7 +361,8 @@ class H(BaseHTTPRequestHandler):
                            "driver": d["status"] if d else None,
                            "admin": core.is_admin(s["uid"]),
                            "notify": bool(u.get("notify", 1)), "tg": bool(u.get("tg_uid")),
-                           "avatar": core.avatar_url(u), "bot": BOT_USERNAME})
+                           "avatar": core.avatar_url(u), "bot": BOT_USERNAME,
+                           "park": (parks.by_owner(s["uid"]) or {}).get("name")})
 
     def _near(self, q):
         p = _point([(q.get("lat") or [None])[0], (q.get("lon") or [None])[0]])
@@ -453,6 +471,7 @@ class H(BaseHTTPRequestHandler):
                 if err:
                     return self._json({"error": "promo", "message": err}, 400)
                 promo = core.promo_norm(b.get("promo"))
+                parks.set_ref(uid, promo)
             at = _num(b.get("at"))
             if at is not None and not (core.now() + core.SCHEDULE_MIN - 120 <= at <= core.now() + core.SCHEDULE_MAX):
                 return self._json({"error": "bad_time"}, 400)
@@ -471,6 +490,18 @@ class H(BaseHTTPRequestHandler):
                 return self._json({"error": "cant_cancel"}, 409)
             deliver(outs)
             return self._json({"ride": ride_view(core.get_ride(r["id"]))})
+        if path == "/api/ref":
+            return self._json({"ok": parks.set_ref(uid, _txt(b.get("code"), 20))})
+        if path.startswith("/api/park/"):
+            p = parks.by_owner(uid)
+            if not p:
+                return self._json({"error": "not_park"}, 403)
+            act = path[10:]
+            if act == "add_driver":
+                return self._json({"result": parks.attach_driver(_txt(b.get("phone"), 20), p["id"], by_park=p["id"])})
+            if act == "remove_driver":
+                return self._json({"result": parks.attach_driver(_txt(b.get("uid"), 40), None, by_park=p["id"])})
+            return self._json({"error": "not_found"}, 404)
         if path == "/api/avatar":
             img = b.get("img")
             name = core.set_avatar(uid, img if isinstance(img, str) and img else None)
@@ -599,6 +630,8 @@ class H(BaseHTTPRequestHandler):
     def _admin_get(self, action, q):
         if action == "overview":
             return self._json(core.admin_overview())
+        if action == "parks":
+            return self._json({"parks": parks.admin_list()})
         if action == "addr":
             return self._json({"items": addrbook.admin_list((q.get("q") or [""])[0][:60],
                                                             only=(q.get("only") or [""])[0] or None),
@@ -637,6 +670,17 @@ class H(BaseHTTPRequestHandler):
         return self._json({"error": "not_found"}, 404)
 
     def _admin_post(self, admin, action, b):
+        if action == "park":
+            pid = parks.save(_txt(b.get("name"), 60), _txt(b.get("phone"), 20), b.get("share") or 0, b.get("ref_bonus") or 0,
+                             _txt(b.get("promo"), 20), b.get("promo_amount") or 50, pid=int(b.get("id") or 0) or None,
+                             active=b.get("active", True) is not False)
+            return self._json({"id": pid} if pid else {"error": "bad"}, 200 if pid else 400)
+        if action == "park_driver":
+            pid = int(b.get("park_id") or 0) or None
+            return self._json({"result": parks.attach_driver(_txt(b.get("phone"), 20), pid)})
+        if action == "park_payout":
+            ok = parks.add_payout(int(b.get("park_id") or 0), float(b.get("amount") or 0), _txt(b.get("note"), 120))
+            return self._json({"ok": ok}, 200 if ok else 400)
         if action == "driver":
             target = _txt(b.get("uid"), 40)
             if not core.get_driver(target):
