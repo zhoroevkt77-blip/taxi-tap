@@ -101,7 +101,7 @@ input.f:focus{border-color:var(--navy)}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
 <link rel="preload" as="image" href="/static/h_taxi.webp"><link rel="preload" as="image" href="/static/h_box.webp"><link rel="preload" as="image" href="/static/h_girl.webp"><link rel="preload" as="image" href="/static/h_map.webp">
-<link rel="stylesheet" href="/static/theme.css?v=29">
+<link rel="stylesheet" href="/static/theme.css?v=30">
 </head>
 <body>
 <div id="map"></div>
@@ -275,7 +275,7 @@ function viewIdle() {
   if (P.home) rec.push({ico:"🏠", name:"Үй", sub:P.home.name || "", lat:P.home.lat, lon:P.home.lon});
   if (P.work) rec.push({ico:"💼", name:"Иш", sub:P.work.name || "", lat:P.work.lat, lon:P.work.lon});
   (P.recent || []).forEach(r => rec.push({ico:"🕘", name:r.name, sub:"Акыркы сапар", lat:r.lat, lon:r.lon}));
-  $("#home").innerHTML = `<div class="hh"><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b></div><button class="round" id="hMenu" aria-label="Кабинет">👤</button></div>
+  $("#home").innerHTML = `<div class="hh"><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b></div><button class="round" id="hMenu" aria-label="Кабинет">${avBtn()}</button></div>
     <div class="role hrole"><a class="on">✈️ Жүргүнчүмүн</a><a href="/driver">🚗 Айдоочумун</a></div>
     <button class="haddr" id="hAddr"><small><img class="pinI" src="/static/pin.webp" alt="">Сиз турган жер</small><b id="fromTxt">${esc(S.fromAddr || "Аныкталууда…")}</b><span>›</span></button>
     <div class="tiles">${tile("tTaxi", "h_taxi.webp", "Такси", `<span id="taxiEta">${homeEta()}</span>`, true, !has("delivery"))}
@@ -756,7 +756,19 @@ function viewDone(r) {
     S.ride = null; S.seen = 0; loadPlaces(true); viewIdle();
   };
 }
-let ME_BOT = "";
+let ME_BOT = "", ME_AV = null;
+// Сүрөттү браузерде чарчы кылып кесип, 400 px'ке кичирейтет
+function avShrink(file) {
+  return new Promise(res => {
+    const rd = new FileReader();
+    rd.onload = () => { const im = new Image(); im.onload = () => {
+      const s = Math.min(im.width, im.height), c = document.createElement("canvas"); c.width = c.height = 400;
+      c.getContext("2d").drawImage(im, (im.width - s) / 2, (im.height - s) / 2, s, s, 0, 0, 400, 400);
+      res(c.toDataURL("image/jpeg", 0.85)); }; im.src = rd.result; };
+    rd.readAsDataURL(file);
+  });
+}
+const avBtn = () => ME_AV ? `<img src="${esc(ME_AV)}" alt="" class="avbtn">` : "👤";
 const me_bot = () => ME_BOT;
 function viewRide() {
   const r = S.ride; S.mode = "ride"; setPin(null);
@@ -804,7 +816,7 @@ async function viewCabinet() {
   if (S.mode === "login" || S.mode === "menu") return;
   const me = await api("/api/me");
   if (!me.auth) return;
-  ME_BOT = me.bot || ME_BOT;
+  ME_BOT = me.bot || ME_BOT; ME_AV = me.avatar || null; $("#menuBtn").innerHTML = avBtn();
   prevView = S.mode; S.mode = "menu";
   const drv = {active:"Айдоочу кабинети", pending:"Арызыңыз текшерилүүдө", rejected:"Арызды оңдоо", blocked:"Айдоочу кабинети"}[me.driver] || "Таксиде иштөө";
   const P = PLACES && !PLACES.error ? PLACES : await api("/api/places");
@@ -813,7 +825,9 @@ async function viewCabinet() {
   const li = (id, ico, t, sub, href) => `<${href ? `a href="${href}"` : "button"} class="crow" id="${id}"><span class="ci">${ico}</span><span class="ct"><b>${t}</b>${sub ? `<small>${sub}</small>` : ""}</span><em>›</em></${href ? "a" : "button"}>`;
   let promo = ""; try { promo = localStorage.getItem("promoPre") || ""; } catch (e) {}
   render(`<div class="cab-top"><button class="st-back" id="close">‹</button></div>
-    <div class="cab-av">${esc((me.name || "?")[0].toUpperCase())}</div>
+    <label class="cab-av" id="avBox">${me.avatar ? `<img src="${esc(me.avatar)}" alt="">` : esc((me.name || "?")[0].toUpperCase())}
+      <span class="cab-cam">📷</span><input type="file" accept="image/*" id="avIn" hidden></label>
+    ${me.avatar ? `<p style="text-align:center;margin:-2px 0 6px"><button class="lnk-b" id="avDel" style="width:auto;height:30px;padding:0 12px;font-size:13px">Сүрөттү алып салуу</button></p>` : `<p class="muted" style="text-align:center;margin:-2px 0 6px;font-size:13px">Сүрөт коюу үчүн тегеректи басыңыз</p>`}
     <div class="cab-nm">${esc(me.name || "Жүргүнчү")}</div><div class="cab-ph">${esc(me.phone)}</div>
     <div class="cab-q"><button id="qH"><span>🕘</span>Сапарлар</button><a href="${me.bot ? "https://t.me/" + me.bot : "/terms"}" target="_blank"><span>🎧</span>Колдоо</a>
       <button id="qA"><span>📍</span>Даректер</button><button id="qS"><span>⚙️</span>Жөндөөлөр</button></div>
@@ -830,6 +844,15 @@ async function viewCabinet() {
   bindInstall();
   const more = html => { $("#cabMore").innerHTML = html; $("#cabMore").scrollIntoView({behavior:"smooth", block:"start"}); };
   $("#close").onclick = () => { S.ride ? viewRide() : viewIdle(); };
+  $("#avIn").onchange = async e => {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    toast("Сүрөт жүктөлүүдө…", 1500);
+    const img = await avShrink(f), x = await api("/api/avatar", {img});
+    if (x.error) return toast("Сүрөттү жүктөй алган жокпуз — башкасын тандап көрүңүз", 2500);
+    ME_AV = x.avatar; S.mode = prevView; viewCabinet(); toast("✓ Сүрөт коюлду", 1500);
+  };
+  if ($("#avDel")) $("#avDel").onclick = async () => { if (!confirm("Сүрөттү алып салабызбы?")) return;
+    await api("/api/avatar", {img:null}); ME_AV = null; S.mode = prevView; viewCabinet(); };
   $("#out").onclick = async () => { await api("/api/logout", {}); location.reload(); };
   $("#cPromo").onclick = () => { const v = prompt("Промокод (кийинки заказга колдонулат):", promo);
     if (v === null) return; try { v.trim() ? localStorage.setItem("promoPre", v.trim().toUpperCase()) : localStorage.removeItem("promoPre"); } catch (e) {}
@@ -862,7 +885,7 @@ async function viewCabinet() {
 }
 
 async function boot() {
-  const me = await api("/api/me"); ME_BOT = me.bot || "";
+  const me = await api("/api/me"); ME_BOT = me.bot || ""; ME_AV = me.avatar || null; $("#menuBtn").innerHTML = avBtn();
   await areaReady;
   if (!me.auth) return viewLogin(me.pending, me.link);
   const r = await api("/api/ride");

@@ -273,7 +273,8 @@ NEW_COLUMNS = {
                   "votes": "INTEGER DEFAULT 0", "suggested_by": "TEXT"},
     "users": {"tg_uid": "TEXT", "notify": "INTEGER DEFAULT 1", "terms_at": "REAL",
               "places": "TEXT",                              # {"home": {...}, "work": {...}}
-              "p_rating": "REAL", "p_rated": "INTEGER DEFAULT 0"},   # айдоочулар берген баа
+              "p_rating": "REAL", "p_rated": "INTEGER DEFAULT 0",
+              "avatar": "TEXT"},                             # профилдин сүрөтү (uploads ичиндеги файл)   # айдоочулар берген баа
     "web_sessions": {"agreed": "INTEGER DEFAULT 0"},
     "drivers": {"doc_license": "TEXT", "doc_techpass": "TEXT", "doc_car": "TEXT",
                 "reject_note": "TEXT",
@@ -1434,6 +1435,27 @@ def save_upload(data_url):
     with open(os.path.join(UPLOADS, name), "wb") as f:
         f.write(raw)
     return name
+
+
+def set_avatar(uid, data_url):
+    """Профилдин сүрөтүн сактайт (эскиси өчөт). None → сүрөттү алып салуу."""
+    old = (get_user(uid) or {}).get("avatar")
+    name = save_upload(data_url) if data_url else None
+    if data_url and not name:
+        return None
+    set_user(uid, avatar=name)
+    if old and old != name:
+        p = upload_path(old)
+        if p:
+            try:
+                os.remove(p)
+            except OSError:
+                pass
+    return name or ""
+
+
+def avatar_url(u):
+    return ("/av/" + u["avatar"]) if u and u.get("avatar") else None
 
 
 def upload_path(name):

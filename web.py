@@ -264,6 +264,8 @@ class H(BaseHTTPRequestHandler):
                 return self._file(os.path.join(STATIC, "sw.js"))
             if u.path.startswith("/static/"):
                 return self._file(os.path.join(STATIC, os.path.basename(u.path)))
+            if u.path.startswith("/av/"):          # профилдин сүрөтү (аты кокус, тизмеленбейт)
+                return self._file(core.upload_path(u.path[4:]), private=True)
             if u.path == "/health":
                 return self._json({"ok": True})
             if u.path == "/api/me":
@@ -336,7 +338,7 @@ class H(BaseHTTPRequestHandler):
                            "driver": d["status"] if d else None,
                            "admin": core.is_admin(s["uid"]),
                            "notify": bool(u.get("notify", 1)), "tg": bool(u.get("tg_uid")),
-                           "bot": BOT_USERNAME})
+                           "avatar": core.avatar_url(u), "bot": BOT_USERNAME})
 
     def _near(self, q):
         p = _point([(q.get("lat") or [None])[0], (q.get("lon") or [None])[0]])
@@ -463,6 +465,12 @@ class H(BaseHTTPRequestHandler):
                 return self._json({"error": "cant_cancel"}, 409)
             deliver(outs)
             return self._json({"ride": ride_view(core.get_ride(r["id"]))})
+        if path == "/api/avatar":
+            img = b.get("img")
+            name = core.set_avatar(uid, img if isinstance(img, str) and img else None)
+            if name is None:
+                return self._json({"error": "bad_image"}, 400)
+            return self._json({"ok": True, "avatar": ("/av/" + name) if name else None})
         if path == "/api/place":
             p = _point(b.get("p")) if b.get("p") else None
             ok = core.set_place(uid, b.get("kind"), *(p or (None, None)), name=_txt(b.get("name"), 80))

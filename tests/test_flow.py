@@ -884,3 +884,16 @@ class RatingTags(unittest.TestCase):
         self.assertEqual(pr["car_ok"], 1)
         self.assertTrue(core.rate(rid, p, 1, tags=["rude"]))      # кайра — рейтинг өзгөрбөйт, тег жаңырат
         self.assertEqual(core.get_driver(d)["rating"], 5.0)
+
+
+class Avatar(unittest.TestCase):
+    def test_set_and_remove(self):
+        core.init_db()
+        u = rider("0555 000 141")
+        png = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+        n = core.set_avatar(u, png)
+        self.assertTrue(n and os.path.isfile(core.upload_path(n)))
+        self.assertEqual(core.avatar_url(core.get_user(u)), "/av/" + n)
+        self.assertIsNone(core.set_avatar(u, "data:text/plain;base64,aGk="))
+        self.assertEqual(core.set_avatar(u, None), "")
+        self.assertFalse(os.path.isfile(core.upload_path(n) or "/nope"))

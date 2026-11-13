@@ -391,3 +391,10 @@ button.state{white-space:normal!important;line-height:1.2;text-align:center;max-
 .r2{display:flex;gap:8px;align-items:center}.r2 .tbtn{width:50px;height:50px;font-size:22px}
 .pinI{height:16px;vertical-align:-3px;margin-right:5px}.logo img{border-radius:10px;background:#000}
 .hpin{height:16px;vertical-align:-3px;margin-right:5px}
+/* v30: профилдин сүрөтү */
+.cab-av{position:relative;cursor:pointer;overflow:visible}
+.cab-av img{width:100%;height:100%;border-radius:50%;object-fit:cover}
+.cab-cam{position:absolute;right:-2px;bottom:-2px;width:34px;height:34px;border-radius:50%;background:#16161a;color:#fff;display:grid;place-items:center;font-size:16px;border:3px solid #fff}
+.avbtn{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
+#hMenu{overflow:hidden;padding:0}
+#menuBtn{overflow:hidden}
