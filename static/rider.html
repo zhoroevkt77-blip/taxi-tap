@@ -928,9 +928,11 @@ async function viewCabinet() {
 }
 
 // Парктын QR/шилтемеси: /?ref=КОД → кирген соң бир жолу жөнөтөбүз
+try { if (new URLSearchParams(location.search).get("next") === "park") localStorage.setItem("nextPark", "1"); } catch (e) {}
 try { const rf = new URLSearchParams(location.search).get("ref"); if (rf) { localStorage.setItem("parkRef", rf); localStorage.setItem("promoPre", rf.toUpperCase()); history.replaceState(null, "", "/"); } } catch (e) {}
 async function boot() {
   const me = await api("/api/me");
+  try { if (me.auth && localStorage.getItem("nextPark")) { localStorage.removeItem("nextPark"); if (me.park || me.admin) return location.replace("/park"); } } catch (e) {}
   try { const rf = localStorage.getItem("parkRef"); if (me.auth && rf) { api("/api/ref", {code:rf}); localStorage.removeItem("parkRef"); } } catch (e) {} ME_BOT = me.bot || ""; ME_AV = me.avatar || null; $("#menuBtn").innerHTML = avBtn();
   await areaReady;
   if (!me.auth) return viewLogin(me.pending, me.link);
