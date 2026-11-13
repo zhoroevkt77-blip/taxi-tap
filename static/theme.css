@@ -448,3 +448,19 @@ body.rnav .home{padding-bottom:calc(100px + env(safe-area-inset-bottom,0px))}
 body.dnav .sheet{bottom:calc(58px + env(safe-area-inset-bottom,0px));padding-bottom:14px;border-radius:22px}
 .faq{background:#f4f4f7;border-radius:14px;padding:12px 14px;margin:8px 0}.faq summary{font-weight:800;cursor:pointer}.faq p{margin:8px 0 0;color:#444;font-size:14px;line-height:1.45}
 body.rnav .bnav{z-index:45}
+/* жүргүнчүнүн менюсу — сүрөттүү (Kake'нин макети) */
+.bnav.pro{left:8px;right:8px;bottom:calc(8px + env(safe-area-inset-bottom,0px));border-radius:30px;padding:8px 2px 9px;
+  box-shadow:0 10px 30px rgba(20,20,30,.16),inset 6px 0 0 #ffc61a,inset -6px 0 0 #ffc61a}
+.bnav.pro a{position:relative;color:#1b1b20;font-size:13px;font-weight:800;gap:3px}
+.bnav.pro a+a:before{content:"";position:absolute;left:0;top:14%;height:62%;width:1px;background:#ececf0}
+.bnav.pro a.big:before,.bnav.pro a.big+a:before{display:none}
+.bnav.pro img{width:44px;height:44px;object-fit:contain;transition:transform .15s}
+.bnav.pro a:active img{transform:scale(.88)}
+.bnav.pro a:after{width:34px;height:4px;margin-top:2px}
+.bnav.pro a.big{margin-top:-44px;font-size:15px}
+.bnav.pro a.big img{width:82px;height:82px;border-radius:50%;box-shadow:0 0 0 5px #fff,0 10px 26px rgba(255,170,0,.55)}
+body.rnav .home{padding-bottom:calc(120px + env(safe-area-inset-bottom,0px))}
+.bnav.pro{box-shadow:0 10px 30px rgba(20,20,30,.16),inset 4px 0 0 #ffc61a,inset -4px 0 0 #ffc61a;padding:8px 6px 8px}
+.bnav.pro a{font-size:12px;letter-spacing:-.2px;white-space:nowrap}
+.bnav.pro img{width:40px;height:40px}
+.bnav.pro a.big{font-size:14px;margin-top:-40px}.bnav.pro a.big img{width:74px;height:74px}
