@@ -304,6 +304,7 @@ function viewCabinet() {
     <div class="note"><b style="color:${actColor(D.activity)}">⚡ Активдүүлүк: ${D.activity ?? 100} / 100</b><br>
       <span class="muted">Заказ алсаңыз жана бүтүрсөңүз +1, сунушка жооп бербесеңиз же «Жок» десеңиз −3, кабыл алгандан кийин жокко чыгарсаңыз −10.
       Активдүүлүгү жогору айдоочуга заказ биринчи келет.</span></div>
+    <div id="praise"></div>
     <div class="sw"><div><b>🔊 Заказды үн менен айтуу</b><div class="muted">«Жаңы заказ, 80 сом, 1,2 километр»</div></div>
       <input type="checkbox" id="vc" ${voiceOn() ? "checked" : ""} style="width:24px;height:24px"></div>
     <div class="sw"><div><b>🧭 Навигатор</b><div class="muted">${esc((NAVS[navPref()] || {t:"Тандала элек"}).t)}</div></div>
@@ -319,6 +320,12 @@ function viewCabinet() {
   $("#hist").onclick = viewHistory; $("#addAddr").onclick = viewAddAddr;
   $("#vc").onchange = e => { try { localStorage.setItem("voice", e.target.checked ? "on" : "off"); } catch (x) {} if (e.target.checked) say("Үн күйгүзүлдү"); };
   $("#navCh").onclick = () => openNav(null, true);
+  api("/api/d/praise").then(x => { const el = $("#praise"); if (!el || !x) return;
+    if (!(x.good || []).length && !(x.bad || []).length && !x.car_ok && !x.car_bad) return;
+    el.innerHTML = `<div class="note"><b>💬 Жүргүнчүлөрдүн пикири</b> <span class="muted">(ким жазганы жашыруун)</span>
+      ${(x.good || []).length ? `<div style="margin-top:6px">${x.good.map(([t, n]) => `<span class="ptag">👍 ${esc(t)} ×${n}</span>`).join("")}</div>` : ""}
+      ${(x.bad || []).length ? `<div style="margin-top:6px">${x.bad.map(([t, n]) => `<span class="ptag bad">⚠️ ${esc(t)} ×${n}</span>`).join("")}</div>` : ""}
+      ${x.car_ok || x.car_bad ? `<div class="muted" style="margin-top:6px">Унаанын абалы: 👍 ${x.car_ok} · 👎 ${x.car_bad}</div>` : ""}</div>`; });
   api("/api/d/daily").then(x => {
     const ds = x.days || [], mx = Math.max(1, ...ds.map(d => d.earned)), el = $("#chart"); if (!el) return;
     const wd = ["Жк", "Дш", "Шй", "Шр", "Бш", "Жм", "Иш"];

@@ -82,6 +82,7 @@ def ride_view(r):
     v = {k: r[k] for k in ("id", "status", "city", "price", "dist_km", "surge",
                            "p_lat", "p_lon", "d_lat", "d_lon", "cancel_by")}
     v["cls"] = r.get("cls") or "econom"
+    v["p_addr"], v["d_addr"] = r.get("p_addr"), r.get("d_addr")
     v["other_name"], v["other_phone"] = r.get("other_name"), r.get("other_phone")
     v["wait"] = _wait(r)
     if r["status"] in ("accepted", "arrived", "in_trip"):
@@ -305,6 +306,8 @@ class H(BaseHTTPRequestHandler):
                 return self._json(driver_state(uid))
             if u.path == "/api/d/history":
                 return self._json({"rides": core.driver_history(uid)})
+            if u.path == "/api/d/praise":
+                return self._json(core.driver_praise(uid))
             if u.path == "/api/d/daily":
                 return self._json({"days": core.driver_daily(uid)})
             if u.path == "/api/d/heat":
@@ -483,7 +486,11 @@ class H(BaseHTTPRequestHandler):
             return self._json({"url": "%s/t/%s" % (base, tok)})
         if path == "/api/rate":
             rid, stars = int(b.get("id") or 0), int(b.get("stars") or 0)
-            return self._json({"ok": core.rate(rid, uid, max(1, min(5, stars)))})
+            tags = b.get("tags") if isinstance(b.get("tags"), list) else None
+            car = b.get("car_ok")
+            return self._json({"ok": core.rate(rid, uid, max(1, min(5, stars)), tags=tags,
+                                               comment=b.get("comment") if isinstance(b.get("comment"), str) else None,
+                                               car_ok=None if car is None else bool(car))})
         return self._json({"error": "not_found"}, 404)
 
     # ---------- айдоочу ----------

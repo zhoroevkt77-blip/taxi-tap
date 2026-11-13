@@ -866,3 +866,21 @@ class AreaList(unittest.TestCase):
             except OSError:
                 pass
             core.reset_area(); core.AREA_ON = old_on
+
+
+class RatingTags(unittest.TestCase):
+    def test_tags_comment_praise(self):
+        core.init_db(); offline_all()
+        d = make_driver("0700 000 131", "Мактоо", (41.0380, 72.7470), 0)
+        p = rider("0555 000 131")
+        q = core.quote(41.0377, 72.7470, 41.0300, 72.7560)
+        rid = core.create_ride(p, q, 41.0377, 72.7470, 41.0300, 72.7560)
+        core.offer(rid, d); core.accept(rid, d)
+        core.advance(rid, d); core.advance(rid, d); core.advance(rid, d)
+        self.assertEqual(core.get_ride(rid)["status"], "completed")
+        self.assertTrue(core.rate(rid, p, 5, tags=["polite", "clean", "hack"], comment="Рахмат", car_ok=True))
+        pr = core.driver_praise(d)
+        self.assertEqual(dict(pr["good"]), {"Сылык мамиле": 1, "Салон таза": 1})
+        self.assertEqual(pr["car_ok"], 1)
+        self.assertTrue(core.rate(rid, p, 1, tags=["rude"]))      # кайра — рейтинг өзгөрбөйт, тег жаңырат
+        self.assertEqual(core.get_driver(d)["rating"], 5.0)

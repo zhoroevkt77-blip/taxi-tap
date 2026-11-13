@@ -267,6 +267,7 @@ SCHEMA = [
 
 # Эски базага жаңы тилкелер (таблица мурун түзүлгөн болсо)
 NEW_COLUMNS = {
+    "ratings": {"tags": "TEXT", "comment": "TEXT", "car_ok": "INTEGER"},   # мактоо/нааразычылык, пикир (жашыруун)
     "addresses": {"approx": "INTEGER DEFAULT 0",        # жери болжолдуу (аты гана белгилүү)
                   "status": "TEXT DEFAULT 'ok'",        # ok | pending (жүргүнчү/айдоочу сунуштаган)
                   "votes": "INTEGER DEFAULT 0", "suggested_by": "TEXT"},
@@ -1135,18 +1136,61 @@ def cancel(rid, by, allowed=("scheduled", "searching", "accepted", "arrived")):
     return r
 
 
-def rate(rid, passenger, stars):
+GOOD_TAGS = {"care": "Камкордук", "music": "Жагымдуу музыка", "polite": "Сылык мамиле",
+             "talk": "Кызыктуу маек", "clean": "Салон таза", "smooth": "Жайлуу айдоо"}
+BAD_TAGS = {"rude": "Орой мамиле", "dirty": "Салон кир", "unsafe": "Кооптуу айдоо",
+            "route": "Жолду билбейт", "late": "Кечикти", "smoke": "Тамеки жыты"}
+
+
+def rate(rid, passenger, stars, tags=None, comment=None, car_ok=None):
+    """Жүргүнчүнүн баасы (бир жолу). Кийин мактоолорду/пикирди толуктаса болот (rate_extra)."""
     r = get_ride(rid)
     if not r or r["passenger"] != passenger or r["status"] != "completed":
         return False
     if query("SELECT ride_id FROM ratings WHERE ride_id=?", (rid,), "one"):
-        return False
-    query("INSERT INTO ratings (ride_id, stars, at) VALUES (?, ?, ?)", (rid, stars, now()))
+        if tags is None and comment is None and car_ok is None:
+            return False                                   # кайра баалоо — жок
+        return rate_extra(rid, passenger, tags, comment, car_ok)
+    tg = ",".join(t for t in (tags or []) if t in GOOD_TAGS or t in BAD_TAGS)[:200]
+    query("INSERT INTO ratings (ride_id, stars, at, tags, comment, car_ok) VALUES (?, ?, ?, ?, ?, ?)",
+          (rid, stars, now(), tg or None, (comment or "").strip()[:300] or None,
+           None if car_ok is None else (1 if car_ok else 0)))
     d = get_driver(r["driver"])
     n = (d["rated"] or 0) + 1
     avg = ((d["rating"] or 5.0) * (n - 1) + stars) / n
     set_driver(r["driver"], rating=round(avg, 2), rated=n)
     return True
+
+
+def rate_extra(rid, passenger, tags=None, comment=None, car_ok=None):
+    r = get_ride(rid)
+    if not r or r["passenger"] != passenger:
+        return False
+    f = {}
+    if tags is not None:
+        f["tags"] = ",".join(t for t in tags if t in GOOD_TAGS or t in BAD_TAGS)[:200] or None
+    if comment is not None:
+        f["comment"] = comment.strip()[:300] or None
+    if car_ok is not None:
+        f["car_ok"] = 1 if car_ok else 0
+    if f:
+        query("UPDATE ratings SET %s WHERE ride_id=?" % ", ".join(k + "=?" for k in f), tuple(f.values()) + (rid,))
+    return True
+
+
+def driver_praise(uid):
+    """Айдоочуга: кайсы мактоолор канча жолу айтылды (ким айтканы жашыруун)."""
+    rows = query("SELECT g.tags, g.car_ok FROM ratings g JOIN rides r ON r.id=g.ride_id WHERE r.driver=?", (uid,), "all")
+    cnt, car = {}, [0, 0]
+    for x in rows:
+        for t in (x["tags"] or "").split(","):
+            if t:
+                cnt[t] = cnt.get(t, 0) + 1
+        if x["car_ok"] is not None:
+            car[0 if x["car_ok"] else 1] += 1
+    good = sorted(((GOOD_TAGS[k], n) for k, n in cnt.items() if k in GOOD_TAGS), key=lambda z: -z[1])
+    bad = sorted(((BAD_TAGS[k], n) for k, n in cnt.items() if k in BAD_TAGS), key=lambda z: -z[1])
+    return {"good": good, "bad": bad, "car_ok": car[0], "car_bad": car[1]}
 
 
 def rate_passenger(rid, driver, stars):

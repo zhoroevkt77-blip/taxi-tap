@@ -301,3 +301,52 @@ body.athome .top,body.athome #pin,body.athome .navbtns,body.athome .sheet{visibi
 .schip{background:#fff3c4;border-radius:12px;padding:6px 10px;font-weight:700;font-size:14px}
 .schip b{cursor:pointer;color:#b07a00;margin-left:4px}
 #obSel{font-size:16px;font-weight:700;padding:12px;border-radius:12px;width:100%}
+/* v22: сапар/баалоо/кабинет — Яндекстин логикасы */
+.rh{cursor:pointer;font-size:24px!important}
+.dcard{display:flex;gap:12px;align-items:center;padding:6px 0 10px;border-top:1px solid #eee;margin-top:6px}
+.dinfo{flex:1;min-width:0}
+.dname{font-size:19px;font-weight:900;display:block}.dname span{font-weight:800}
+.dcar{color:#5f5f6a;font-size:15px;margin:2px 0 8px}
+.kgplate{display:inline-block;border:2.5px solid #16161a;border-radius:9px;padding:3px 12px;font-size:27px;font-weight:900;letter-spacing:1px;font-family:Inter,system-ui,sans-serif}
+.dside{display:flex;align-items:center;gap:10px}
+.dcarico{font-size:52px;filter:drop-shadow(0 4px 4px rgba(0,0,0,.15))}
+.dcall{width:56px;height:56px;border-radius:18px;background:#f1f1f4;display:grid;place-items:center;font-size:24px;text-decoration:none}
+.acts{display:flex;gap:8px;overflow-x:auto;margin:8px -16px 6px;padding:0 16px 4px;scrollbar-width:none}
+.acts::-webkit-scrollbar{display:none}
+.acts button{flex:none;border:0;background:#f1f1f4;border-radius:16px;padding:13px 16px;font-weight:800;font-size:15px;font-family:inherit;color:#16161a;cursor:pointer}
+.rbox{position:fixed;inset:0;z-index:3500;background:rgba(0,0,0,.35);display:none;align-items:flex-end}
+.rbox.on{display:flex}
+.rboxc{background:#fff;width:100%;border-radius:24px 24px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));max-height:85vh;overflow:auto;animation:instIn .2s ease}
+.done-h{font-size:24px;font-weight:900;padding:4px 0 12px;border-bottom:1px solid #eee}
+.done-car{text-align:center;font-size:64px;margin-top:8px}
+.done-q{text-align:center;font-size:26px!important;font-weight:900;margin:2px 0 4px!important}
+.stars.big{font-size:46px;gap:10px}
+.stars.big span.on{color:#ffc61a;text-shadow:0 2px 10px rgba(255,183,3,.45)}
+.tagrow{display:flex;gap:10px;overflow-x:auto;margin:10px -16px;padding:4px 16px 8px;scrollbar-width:none}
+.tagrow::-webkit-scrollbar{display:none}
+.tg{flex:none;width:104px;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:13.5px;font-weight:800;color:#16161a;font-family:inherit;cursor:pointer;text-align:center}
+.tg span{width:76px;height:76px;border-radius:50%;background:#f4f4f7;display:grid;place-items:center;font-size:38px;transition:.15s}
+.tg.on span{background:linear-gradient(135deg,#ffd84d,#ffb703);box-shadow:0 6px 16px rgba(255,183,3,.45);transform:scale(1.06)}
+.carq{display:flex;align-items:center;gap:8px;border:1.5px solid #eee;border-radius:18px;padding:10px 12px;margin:6px 0}
+.carq span{flex:1;font-size:14.5px;font-weight:600}
+.carq button{border:0;background:#f1f1f4;border-radius:14px;padding:10px 16px;font-weight:800;font-family:inherit;cursor:pointer}
+.carq button.on{background:#16161a;color:#fff}
+.dlist{background:#fafafb;border-radius:20px;margin:12px 0 10px;overflow:hidden}
+.drow{display:flex;align-items:center;gap:14px;width:100%;padding:14px;border:0;background:none;border-bottom:1px solid #eee;text-align:left;font-family:inherit;color:#16161a;text-decoration:none;cursor:pointer}
+.drow:last-child{border-bottom:0}
+.drow span{font-size:22px;width:30px;text-align:center}.drow b{flex:1;font-size:16px}.drow b small{display:block;font-weight:600;color:#7a7a85;font-size:13px}
+.drow em{font-style:normal;color:#9a9aa5;font-size:20px}
+.cab-top{display:flex}
+.cab-av{width:96px;height:96px;border-radius:50%;margin:-10px auto 8px;background:linear-gradient(135deg,#ffd84d,#ffb703);display:grid;place-items:center;font-size:42px;font-weight:900;box-shadow:0 8px 20px rgba(255,183,3,.35)}
+.cab-nm{text-align:center;font-size:24px;font-weight:900}
+.cab-ph{text-align:center;color:#7a7a85;margin-bottom:14px}
+.cab-q{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px}
+.cab-q>*{border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:13px;font-weight:800;color:#16161a;text-decoration:none;font-family:inherit;cursor:pointer}
+.cab-q span{width:58px;height:58px;border-radius:50%;background:#f1f1f4;display:grid;place-items:center;font-size:24px}
+.cgroup{background:#f6f6f8;border-radius:20px;margin-bottom:12px;overflow:hidden}
+.crow{display:flex;align-items:center;gap:14px;width:100%;padding:14px;border:0;background:none;border-bottom:1px solid #ebebef;text-align:left;font-family:inherit;color:#16161a;text-decoration:none;cursor:pointer}
+.crow:last-child{border-bottom:0}
+.crow .ci{font-size:22px;width:30px;text-align:center}.crow .ct{flex:1}.crow b{display:block;font-size:16px}.crow small{color:#7a7a85;font-size:13px}
+.crow em{font-style:normal;color:#9a9aa5;font-size:20px}
+.ptag{display:inline-block;background:#effaf3;color:#16764f;border-radius:12px;padding:5px 10px;margin:3px 4px 0 0;font-size:13px;font-weight:800}
+.ptag.bad{background:#fdecec;color:#b42318}
