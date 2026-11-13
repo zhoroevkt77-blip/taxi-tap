@@ -394,7 +394,9 @@ async function viewArea() {
       <div class="item"><div class="main"><span class="muted">Азыркы чек: <b>${esc(src)}</b>. Жүргүнчүлөр ушул чектин ичинде гана заказ бере алат.</span></div></div></div>
     <div class="panel"><h3>📋 Тизмеден тандоо (облус → район / шаар)</h3>
       <div class="item"><div class="main" style="width:100%">
+        <input class="f" id="geoQ" placeholder="🔍 Издөө: мис. Кант, Ноокат, Талас…" autocomplete="off">
         <select class="f" id="obSel"></select>
+        <p class="muted" id="geoCnt" style="margin:0 0 6px"></p>
         <div id="unitList" class="ulist"></div>
         <div class="muted" style="margin-top:8px">Тандалды:</div><div id="selChips" class="schips"></div>
         <button class="btn gold" id="selSave" style="margin-top:10px">✓ Ушул аймакта иштейбиз</button>
@@ -423,17 +425,31 @@ async function areaPicker(a) {
   const ob0 = (sel[0] && sel[0].ob) || "Жалал-Абад облусу";
   $("#obSel").innerHTML = GEO.map(o => `<option${o.name === ob0 ? " selected" : ""}>${esc(o.name)}</option>`).join("");
   const has = (ob, n) => sel.some(x => x.ob === ob && x.name === n);
+  const cnt = GEO.reduce((a, o) => { o.units.forEach(u => { a[u.kind === "city" ? "c" : "d"]++; a.t += (u.towns || []).length; }); return a; }, {c:0, d:0, t:0});
+  $("#geoCnt").textContent = `${GEO.length} облус/шаар · ${cnt.d} район · ${cnt.c} облустук шаар · ${cnt.t} райондук шаар`;
   function list() {
-    const o = GEO.find(x => x.name === $("#obSel").value);
-    const row = (n, kind, sub) => `<label class="urow${sub ? " sub" : ""}"><input type="checkbox" data-n="${esc(n)}" ${has(o.name, n) ? "checked" : ""}>
-      <span>${kind === "district" ? "🗺" : "🏙"} ${esc(n)}</span></label>`;
-    $("#unitList").innerHTML = o.units.map(u => row(u.name, u.kind) + (u.towns || []).map(t => row(t.name, "town", true)).join("")).join("");
+    const q = ($("#geoQ").value || "").trim().toLowerCase();
+    const row = (ob, n, kind, sub, showOb) => `<label class="urow${sub ? " sub" : ""}"><input type="checkbox" data-ob="${esc(ob)}" data-n="${esc(n)}" ${has(ob, n) ? "checked" : ""}>
+      <span>${kind === "district" ? "🗺" : "🏙"} ${esc(n)}${showOb ? ` <small class="muted">· ${esc(ob)}</small>` : ""}</span></label>`;
+    if (q) {
+      const out = [];
+      GEO.forEach(o => o.units.forEach(u => {
+        if (u.name.toLowerCase().includes(q)) out.push(row(o.name, u.name, u.kind, false, true));
+        (u.towns || []).forEach(t => { if (t.name.toLowerCase().includes(q)) out.push(row(o.name, t.name, "town", false, true)); });
+      }));
+      $("#unitList").innerHTML = out.join("") || `<p class="muted">Табылган жок</p>`;
+    } else {
+      const o = GEO.find(x => x.name === $("#obSel").value);
+      $("#unitList").innerHTML = o.units.map(u => row(o.name, u.name, u.kind) + (u.towns || []).map(t => row(o.name, t.name, "town", true)).join("")).join("");
+    }
+    $("#obSel").style.display = q ? "none" : "";
     $("#unitList").querySelectorAll("input").forEach(c => c.onchange = () => {
-      const n = c.dataset.n;
-      sel = c.checked ? sel.concat([{name:n, ob:o.name}]) : sel.filter(x => key(x) !== o.name + "|" + n);
+      const n = c.dataset.n, ob = c.dataset.ob;
+      sel = c.checked ? sel.concat([{name:n, ob}]) : sel.filter(x => key(x) !== ob + "|" + n);
       chips();
     });
   }
+  $("#geoQ").oninput = list;
   function chips() {
     $("#selChips").innerHTML = sel.length ? sel.map((x, i) => `<span class="schip">${esc(x.name)} <b data-i="${i}">✕</b></span>`).join("") : `<span class="muted">— эч нерсе —</span>`;
     $("#selChips").querySelectorAll("b").forEach(b => b.onclick = () => { sel.splice(+b.dataset.i, 1); chips(); list(); });
