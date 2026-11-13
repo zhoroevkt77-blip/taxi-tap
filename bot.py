@@ -227,7 +227,16 @@ def main():
     threading.Thread(target=dispatch_worker, daemon=True).start()
     threading.Thread(target=ops.backup_worker, daemon=True).start()
     if API:
-        ops.notify_admins("🟢 Такси ТАП! иштеп баштады (жаңы версия же кайра жүргүзүлдү).")
+        # Күнүнө бир гана жолу кабарлайт — ар бир жаңыртууда эмес
+        day = str(int(core.day_start()))
+        try:
+            first = core.get_setting("start_day") != day
+            if first:
+                core.set_setting("start_day", day)
+        except Exception:
+            first = True
+        if first:
+            ops.notify_admins("🟢 Такси ТАП! бүгүн иштеп турат (күнүнө бир жолу гана кабарлайм).")
 
     if not API:
         while True:
