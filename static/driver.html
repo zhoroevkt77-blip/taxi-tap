@@ -81,7 +81,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=27">
+<link rel="stylesheet" href="/static/theme.css?v=28">
 </head>
 <body>
 <div id="map"></div>
@@ -89,8 +89,8 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
   <div class="lcol"><div class="logo"><img src="/static/icon-192.png" alt="">Такси <b>ТАП!</b></div>
     <div class="role drole"><a href="/">🧳 Жүргүнчү</a><a class="on">🚗 Айдоочу</a></div></div>
   <div class="rcol"><button class="state hide" id="stBadge">Офлайн</button>
-    <div class="pill hide" id="earn"><span class="muted">Бүгүн</span><b id="earnV">0 с</b></div>
-    <div class="tools hide" id="tools"><button class="tbtn" id="cabBtn" aria-label="Менин кабинетим">👤</button><button class="tbtn" id="heatBtn" aria-label="Заказ көп жерлер">🔥</button><button class="tbtn sos" id="sosBtn" aria-label="SOS">🆘</button></div></div>
+    <div class="r2"><button class="tbtn hide" id="cabBtn" aria-label="Менин кабинетим">👤</button><div class="pill hide" id="earn"><span class="muted">Бүгүн</span><b id="earnV">0 с</b></div></div>
+    <div class="tools hide" id="tools"><button class="tbtn" id="heatBtn" aria-label="Заказ көп жерлер">🔥</button><button class="tbtn sos" id="sosBtn" aria-label="SOS">🆘</button></div></div>
 </div>
 <div class="sheet"><div class="grab"></div><div id="view"></div></div>
 <div class="offer hide" id="offer"><div class="ocard" id="ocard"></div></div>
@@ -194,7 +194,7 @@ function viewLogin(pending, link, err) {
 
 function header() {
   const act = D.status === "active";
-  $("#earn").classList.toggle("hide", !act); $("#stBadge").classList.toggle("hide", !act); $("#tools").classList.toggle("hide", !act);
+  $("#earn").classList.toggle("hide", !act); $("#stBadge").classList.toggle("hide", !act); $("#tools").classList.toggle("hide", !act); $("#cabBtn").classList.toggle("hide", !act);
   if (!act) return;
   $("#earnV").textContent = D.today.earned + " с";
   $("#stBadge").innerHTML = D.ride ? "🚕 Сапарда" : D.online ? "🟢 Линияда" : "▶ Линияга чыгуу";

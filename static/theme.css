@@ -388,3 +388,4 @@ button.state{white-space:normal!important;line-height:1.2;text-align:center;max-
 #tOther b{font-size:13.5px;line-height:1.25}
 #tOther img{max-width:38%;height:78px}#tOther{gap:4px}
 .tools{flex-wrap:wrap;justify-content:flex-end;max-width:132px}
+.r2{display:flex;gap:8px;align-items:center}.r2 .tbtn{width:50px;height:50px;font-size:22px}
