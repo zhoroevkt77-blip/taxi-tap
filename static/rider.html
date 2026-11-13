@@ -101,7 +101,7 @@ input.f:focus{border-color:var(--navy)}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
 <link rel="preload" as="image" href="/static/h_taxi.webp"><link rel="preload" as="image" href="/static/h_box.webp"><link rel="preload" as="image" href="/static/h_girl.webp"><link rel="preload" as="image" href="/static/h_map.webp">
-<link rel="stylesheet" href="/static/theme.css?v=36">
+<link rel="stylesheet" href="/static/theme.css?v=38">
 </head>
 <body>
 <div id="map"></div>
@@ -339,7 +339,7 @@ const PAGE_MODES = ["idle", "stepA", "stepB", "menu"];
 // ---------- 1-кадам: «Сизди кайдан алып кетсин?» ----------
 function viewStepA() {
   S.mode = "stepA"; S.to = null; setPin(null); showA(false); render(""); homeOn(true);
-  $("#home").innerHTML = `<div class="st-top"><button class="st-back" id="sBack">‹</button><div class="st-steps"><i class="on"></i><i></i></div></div>
+  $("#home").innerHTML = `<div class="st-top"><button class="st-back" id="sBack">‹</button><div class="st-steps"><i class="on">А</i><b></b><i>Б</i></div></div>
     <h1 class="st-h">Сизди кайдан<br>алып кетсин?</h1><p class="st-sub">А точка — айдоочу ушул жерге келет</p>
     <button class="st-big y" id="aHere"><span class="i">📍</span><span class="tx">Азыр турган жеримден (GPS)<small id="fromTxt">${esc(S.fromAddr || "Аныкталууда…")}</small></span><em>›</em></button>
     <button class="st-big" id="aMap"><span class="i">🗺</span><span class="tx">Картадан белгилейм<small>Пинди так жериңизге коёсуз</small></span><em>›</em></button>
@@ -367,7 +367,7 @@ function viewStepB() {
   (P.popular || []).forEach(r => { if (!seen.has(r.name.toLowerCase())) L3.push(r); });
   const all = L1.concat(L2, L3); let k = 0;
   const sec = (t, arr) => arr.length ? (t ? `<div class="st-sec">${t}</div>` : "") + arr.map(r => it(r, k++)).join("") : "";
-  $("#home").innerHTML = `<div class="st-top"><button class="st-back" id="sBack">‹</button><div class="st-steps"><i class="on"></i><i class="on"></i></div></div>
+  $("#home").innerHTML = `<div class="st-top"><button class="st-back" id="sBack">‹</button><div class="st-steps"><i class="ok">А</i><b class="ok"></b><i class="on">Б</i></div></div>
     <h1 class="st-h">Кайда барасыз?</h1><p class="st-sub">📍 ${esc(S.fromAddr || "А точка")} → ?</p>
     <div class="st-two"><button id="bType">✍️ Жазып табам</button><button id="bMap">🗺 Картадан</button></div>
     ${sec("", L1)}${sec("АКЫРКЫ САПАРЛАР", L2)}${sec("КӨП БАРЫШАТ", L3)}
