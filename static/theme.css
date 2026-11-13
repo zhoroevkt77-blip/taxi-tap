@@ -511,3 +511,21 @@ body.dnav .sheet{max-height:calc(100dvh - 318px - env(safe-area-inset-top,0px))!
 #home.cabbg .ccard b{font-size:16px;font-weight:800;line-height:1.2}#home.cabbg .ccard small{font-size:13px;margin-top:1px;line-height:1.25}
 #home.cabbg .ccard em{font-size:24px;font-weight:700;color:#16161a}
 #home.cabbg .cab-out{width:74%;margin:14px auto 6px;padding:11px;font-size:17px;border-radius:22px}
+/* ===== Бирдиктүү өлчөмдөр (жүргүнчүнүн кабинетиндей) — айдоочунун кабинети ===== */
+.sheet.cabbg{position:fixed}
+.sheet.cabbg::before{content:"";position:absolute;left:0;right:0;top:0;height:170px;pointer-events:none;border-radius:22px 22px 0 0;opacity:.5;
+  background:url(/static/cb_tl.webp) left top/34% auto no-repeat,url(/static/cb_tr.webp) right top/36% auto no-repeat}
+.sheet.cabbg>*{position:relative;z-index:1}
+.sheet.cabbg h2{font-size:23px;font-weight:900;margin:2px 0 10px}
+.sheet.cabbg .note{font-size:14px;line-height:1.4;padding:11px 13px;border-radius:18px!important;box-shadow:0 6px 16px rgba(20,20,30,.06)}
+.sheet.cabbg .sw{background:#fff;border-radius:18px;padding:10px 12px!important;margin:7px 0;box-shadow:0 6px 16px rgba(20,20,30,.07),inset 0 0 0 1px rgba(0,0,0,.04);border:0!important}
+.sheet.cabbg .sw b{font-size:16px;font-weight:800}.sheet.cabbg .sw .muted{font-size:13px}
+.sheet.cabbg .stat{background:#fff!important;border-radius:18px!important;box-shadow:0 6px 16px rgba(20,20,30,.07),inset 0 0 0 1px rgba(0,0,0,.04)}
+.sheet.cabbg .stat .muted{font-size:13px}.sheet.cabbg .stat b{font-size:20px!important;font-weight:900}
+.sheet.cabbg .btn{font-size:16px!important;font-weight:800!important;border-radius:20px!important}
+.sheet.cabbg .faq{background:#fff;border-radius:18px;box-shadow:0 6px 16px rgba(20,20,30,.07),inset 0 0 0 1px rgba(0,0,0,.04)}.sheet.cabbg .faq summary{font-size:15px}
+.sheet.cabbg .hist .row{font-size:14px}
+/* ===== Парктын кабинети: ошол эле фон жана өлчөмдөр ===== */
+.pkbg{position:absolute;left:0;right:0;top:0;height:220px;pointer-events:none;opacity:.55;
+  background:url(/static/cb_tl.webp) left top/40% auto no-repeat,url(/static/cb_tr.webp) right top/42% auto no-repeat}
+.pkbg+.wrap{position:relative}

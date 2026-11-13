@@ -81,7 +81,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=55">
+<link rel="stylesheet" href="/static/theme.css?v=56">
 </head>
 <body>
 <nav id="bnav" class="bnav pro"><a data-k="earn"><img src="/static/n_earn.webp" alt="">Киреше</a><a data-k="hist"><img src="/static/n_trips.webp" alt="">Сапарлар</a><a data-k="line" class="big on"><img src="/static/n_go.webp" alt="">Линия</a><a data-k="help"><img src="/static/n_help.webp" alt="">Жардам</a><a data-k="cab"><img src="/static/n_cab.webp" alt="">Кабинет</a></nav>
@@ -770,7 +770,8 @@ function confirmOut() {
   $("#lgNo").onclick = closeOverlay;
   $("#lgYes").onclick = async () => { $("#lgYes").disabled = true; if (D && D.online) await api("/api/d/online", {on:false}); await api("/api/logout", {}); location.replace("/driver"); };
 }
-function navOn(k) { document.querySelectorAll("#bnav a").forEach(a => a.classList.toggle("on", a.dataset.k === k)); }
+function navOn(k) { document.querySelectorAll("#bnav a").forEach(a => a.classList.toggle("on", a.dataset.k === k));
+  const sh = document.querySelector(".sheet"); if (sh) sh.classList.toggle("cabbg", k !== "line"); }
 // Ачык турган бөлүмдү кайра басса — панель жабылат, жабык болсо — ачылат
 function openTab(k) {
   const cur = document.querySelector("#bnav a.on"), same = cur && cur.dataset.k === k;
