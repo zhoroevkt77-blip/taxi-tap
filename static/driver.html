@@ -202,7 +202,8 @@ function ring(p, col) {
 function earnPill() {
   const e = $("#earn"), got = D.today.earned || 0, goal = D.goal || 1000;
   const low = D.min_balance > 0 && D.balance < D.min_balance;
-  const key = [low, got, goal, D.balance].join("|"); if (e.dataset.k === key) return; e.dataset.k = key;
+  let hid = false; try { hid = localStorage.getItem("earnHide") === "1"; } catch (x) {}
+  const key = [low, got, goal, D.balance, hid].join("|"); if (e.dataset.k === key) return; e.dataset.k = key;
   if (low) {
     e.className = "ep bad";
     e.innerHTML = `<span class="ei">⚠️</span><span><b>Баланс аз!</b><small>${D.balance} с · толуктоо ›</small></span>`;
@@ -210,9 +211,15 @@ function earnPill() {
     return;
   }
   const done = got >= goal;
+  // Басса — сумма жашырылат, кайра басса — көрүнөт (жанындагы адам көрбөсүн)
+  e.onclick = () => { try { localStorage.setItem("earnHide", hid ? "0" : "1"); } catch (x) {} earnPill(); };
+  if (hid) {
+    e.className = "ep";
+    e.innerHTML = `<span class="ring"><svg width="42" height="42" viewBox="0 0 42 42"><circle cx="21" cy="21" r="17" fill="none" stroke="#eeeef2" stroke-width="5"/></svg><em style="font-size:17px">🙈</em></span><span><b>••• с</b><small>Басып көрүү</small></span>`;
+    return;
+  }
   e.className = "ep" + (done ? " done" : "");
   e.innerHTML = `${ring(got / goal, done ? "#16161a" : "#ffb703")}<span><b>${got} с</b><small>${done ? "🎉 Аткарылды!" : "Максат " + goal + " с"}</small></span>`;
-  e.onclick = () => openTab("earn");
   if (done) { const day = new Date().toDateString();
     try { if (localStorage.getItem("goalDay") !== day) { localStorage.setItem("goalDay", day); toast("🎉 Күндүк максат аткарылды: " + got + " с!", 3500); say("Күндүк максат аткарылды"); } } catch (x) {} }
 }
