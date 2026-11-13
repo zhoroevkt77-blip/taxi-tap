@@ -384,3 +384,6 @@ button.state{white-space:normal!important;line-height:1.2;text-align:center;max-
 .stile{gap:6px;padding-right:8px}
 .stile img{height:84px;max-width:46%}
 .stile b{font-size:15px}
+.tile.big .art{-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 40%),linear-gradient(180deg,transparent 0,#000 16%);-webkit-mask-composite:source-in;mask-image:linear-gradient(90deg,transparent 0,#000 40%),linear-gradient(180deg,transparent 0,#000 16%);mask-composite:intersect}
+#tOther b{font-size:13.5px;line-height:1.25}
+#tOther img{max-width:38%;height:78px}#tOther{gap:4px}
