@@ -529,3 +529,18 @@ body.dnav .sheet{max-height:calc(100dvh - 318px - env(safe-area-inset-top,0px))!
 .pkbg{position:absolute;left:0;right:0;top:0;height:220px;pointer-events:none;opacity:.55;
   background:url(/static/cb_tl.webp) left top/40% auto no-repeat,url(/static/cb_tr.webp) right top/42% auto no-repeat}
 .pkbg+.wrap{position:relative}
+/* ===== Башкы бет (жүргүнчү): ошол эле фон жана өлчөмдөр ===== */
+#home.hbg::before{content:"";position:absolute;left:0;right:0;top:0;height:260px;pointer-events:none;opacity:.5;z-index:0;
+  background:url(/static/cb_tl.webp) left top/42% auto no-repeat,url(/static/cb_tr.webp) right top/44% auto no-repeat}
+#home.hbg>*{position:relative;z-index:1}
+#home.hbg .haddr b{font-size:22px;font-weight:900}
+#home.hbg .tile b{font-size:22px!important}#home.hbg .tile small{font-size:14px!important}
+#home.hbg .stile b{font-size:15px}
+#home.hbg .hsearch{font-size:18px;height:56px;border-radius:20px;background:#fff!important}
+#home.hbg .hrec .rec{background:#fff;border:0;border-radius:20px;padding:4px 12px 4px 4px;margin-bottom:7px;box-shadow:0 6px 16px rgba(20,20,30,.07),inset 0 0 0 1px rgba(0,0,0,.04)}
+#home.hbg .hrec .pi{width:64px!important;height:46px!important;border-radius:23px!important;font-size:26px!important}
+#home.hbg .hrec .rt b{font-size:16px;font-weight:800}#home.hbg .hrec .rt small{font-size:13px}
+#home.hbg .hrec .chev{color:#16161a;font-weight:700;font-size:24px}
+#home.hbg .tile:not(.big),#home.hbg .stile{background:#fff}
+/* айдоочунун «Линия» бөлүмү */
+.sheet.cabbg .stat b{font-size:20px!important}.sheet.cabbg .btn.go{font-size:18px!important}
