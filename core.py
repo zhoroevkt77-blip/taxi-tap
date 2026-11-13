@@ -262,7 +262,7 @@ SCHEMA = [
     "CREATE INDEX IF NOT EXISTS idx_rides_status ON rides(status)",
     f"""CREATE TABLE IF NOT EXISTS parks (
         id {_PK}, name TEXT, owner_uid TEXT, phone TEXT,
-        share REAL DEFAULT 30,           -- комиссиянын канча %ы паркка
+        share REAL DEFAULT 30,           -- комиссиянын канча пайызы паркка
         ref_bonus REAL DEFAULT 20,       -- парк тарткан жаңы жүргүнчүнүн биринчи сапары үчүн, сом
         promo TEXT, active INTEGER DEFAULT 1, created_at REAL)""",
     f"""CREATE TABLE IF NOT EXISTS park_payouts (
