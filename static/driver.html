@@ -81,7 +81,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=48">
+<link rel="stylesheet" href="/static/theme.css?v=50">
 </head>
 <body>
 <nav id="bnav" class="bnav pro"><a data-k="earn"><img src="/static/n_earn.webp" alt="">Киреше</a><a data-k="hist"><img src="/static/n_trips.webp" alt="">Сапарлар</a><a data-k="line" class="big on"><img src="/static/n_go.webp" alt="">Линия</a><a data-k="help"><img src="/static/n_help.webp" alt="">Жардам</a><a data-k="cab"><img src="/static/n_cab.webp" alt="">Кабинет</a></nav>
@@ -199,6 +199,8 @@ function ring(p, col) {
   return `<span class="ring"><svg width="42" height="42" viewBox="0 0 42 42"><circle cx="21" cy="21" r="${r}" fill="none" stroke="#eeeef2" stroke-width="5"/>
     <circle cx="21" cy="21" r="${r}" fill="none" stroke="${col}" stroke-width="5" stroke-linecap="round" stroke-dasharray="${(c * f).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 21 21)"/></svg><em>${Math.round(f * 100)}%</em></span>`;
 }
+const EYE = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>`;
+const EYE_OFF = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.6 5.1A10.4 10.4 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-2.6 3.6M6.6 6.6C3.9 8.3 2 12 2 12s3.6 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="M3 3l18 18"/></svg>`;
 function earnPill() {
   const e = $("#earn"), got = D.today.earned || 0, goal = D.goal || 1000;
   const low = D.min_balance > 0 && D.balance < D.min_balance;
@@ -215,11 +217,11 @@ function earnPill() {
   e.onclick = () => { try { localStorage.setItem("earnHide", hid ? "0" : "1"); } catch (x) {} earnPill(); };
   if (hid) {
     e.className = "ep";
-    e.innerHTML = `<span class="ring"><svg width="42" height="42" viewBox="0 0 42 42"><circle cx="21" cy="21" r="17" fill="none" stroke="#eeeef2" stroke-width="5"/></svg><em style="font-size:17px">🙈</em></span><span><b>••• с</b><small>Басып көрүү</small></span>`;
+    e.innerHTML = `<span class="ring"><svg width="42" height="42" viewBox="0 0 42 42"><circle cx="21" cy="21" r="17" fill="none" stroke="#eeeef2" stroke-width="5"/></svg><em>•••</em></span><span><b>••• с</b><small>жашыруун</small></span><span class="eye">${EYE_OFF}</span>`;
     return;
   }
   e.className = "ep" + (done ? " done" : "");
-  e.innerHTML = `${ring(got / goal, done ? "#16161a" : "#ffb703")}<span><b>${got} с</b><small>${done ? "🎉 Аткарылды!" : "Максат " + goal + " с"}</small></span>`;
+  e.innerHTML = `${ring(got / goal, done ? "#16161a" : "#ffb703")}<span><b>${got} с</b><small>${done ? "🎉 Аткарылды!" : "максат " + goal}</small></span><span class="eye">${EYE}</span>`;
   if (done) { const day = new Date().toDateString();
     try { if (localStorage.getItem("goalDay") !== day) { localStorage.setItem("goalDay", day); toast("🎉 Күндүк максат аткарылды: " + got + " с!", 3500); say("Күндүк максат аткарылды"); } } catch (x) {} }
 }
