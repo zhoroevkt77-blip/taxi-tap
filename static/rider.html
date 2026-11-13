@@ -315,7 +315,7 @@ function viewStepA() {
   S.mode = "stepA"; S.to = null; setPin(null); showA(false); render(""); homeOn(true);
   $("#home").innerHTML = `<div class="st-top"><button class="st-back" id="sBack">‹</button><div class="st-steps"><i class="on"></i><i></i></div></div>
     <h1 class="st-h">Сизди кайдан<br>алып кетсин?</h1><p class="st-sub">А точка — айдоочу ушул жерге келет</p>
-    <button class="st-big y" id="aHere"><span class="i">📍</span><span class="tx">Ушул жерден<small id="fromTxt">${esc(S.fromAddr || "Аныкталууда…")}</small></span><em>›</em></button>
+    <button class="st-big y" id="aHere"><span class="i">📍</span><span class="tx">Азыр турган жеримден (GPS)<small id="fromTxt">${esc(S.fromAddr || "Аныкталууда…")}</small></span><em>›</em></button>
     <button class="st-big" id="aMap"><span class="i">🗺</span><span class="tx">Картадан белгилейм<small>Пинди так жериңизге коёсуз</small></span><em>›</em></button>
     <button class="st-big" id="aType"><span class="i">✍️</span><span class="tx">Жазып табам<small>Көчө, дүкөн, мекеме…</small></span><em>›</em></button>
     ${S.gpsBad ? `<p class="st-warn">📡 GPS так эмес (±${S.gpsBad} м) — «Картадан белгилейм» тандаганыңыз жакшы.</p>` : ""}`;
