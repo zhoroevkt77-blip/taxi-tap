@@ -53,7 +53,7 @@ function instBar() {
   const ios = /iphone|ipad/i.test(navigator.userAgent);
   const can = !!window.INSTALL;
   const d = document.createElement("div"); d.id = "instBar";
-  d.innerHTML = `<img src="/static/icon-192.png" alt=""><div><b>Такси ТАП! тиркемеси</b><small>${can ? "Телефонго орнотуп алыңыз — бир басуу менен ачылат"
+  d.innerHTML = `<img src="/static/logo.png" alt=""><div><b>Такси ТАП! тиркемеси</b><small>${can ? "Телефонго орнотуп алыңыз — бир басуу менен ачылат"
     : ios ? "Safari: «Бөлүшүү» ⬆️ → «На экран „Домой“»" : "Браузердин менюсу ⋮ → «Башкы экранга кошуу»"}</small></div>
     ${can ? `<button id="instGo">Орнотуу</button>` : ""}<button id="instX" aria-label="Жабуу">✕</button>`;
   document.body.appendChild(d);
