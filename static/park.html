@@ -24,7 +24,8 @@ h1{font-size:26px;font-weight:900;margin:8px 0 2px}
 .big .s{color:#c9c9cf;font-size:13px;margin-top:4px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .st{background:#fff;border-radius:18px;padding:12px 14px;box-shadow:0 4px 14px rgba(20,20,30,.06)}
-.st span{display:block;color:#6b6b76;font-size:13px}.st b{font-size:21px;font-weight:900}
+.st span{display:block;color:#6b6b76;font-size:13px}.st b{font-size:21px;font-weight:900}.st i{display:block;font-style:normal;font-size:11.5px;line-height:1.3;color:#8a8a94;margin-top:4px}
+.how{background:#fff;border-radius:18px;padding:12px 16px;margin:12px 0;box-shadow:0 4px 14px rgba(20,20,30,.06)}.how summary{font-weight:800;cursor:pointer}.how p{margin:8px 0;font-size:14px;line-height:1.45;color:#333}
 .card{background:#fff;border-radius:22px;padding:14px 16px;margin-top:14px;box-shadow:0 6px 18px rgba(20,20,30,.07)}
 .card h2{font-size:18px;font-weight:900;margin:0 0 8px}
 .dr{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #eee}
@@ -61,6 +62,7 @@ const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt
 const api = (u, b) => fetch(u, b ? {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(b)} : {})
   .then(r => r.json()).catch(() => ({error:"net"}));
 const fmt = n => Math.round(n || 0).toLocaleString("ru-RU").replace(/,/g, " ");
+const f1 = n => (Math.round((n || 0) * 10) / 10).toLocaleString("ru-RU");
 let ST = null, PER = "month";
 const PN = {today:"Бүгүн", week:"Ушул жума", month:"Ушул ай", all:"Баары"};
 
@@ -92,13 +94,20 @@ function draw() {
     <div class="big"><div class="s">Сизге төлөнө турган калдык</div><div class="v">${fmt(s.balance)} сом</div>
       <div class="s">Бардык убакта тапкан: ${fmt(s.periods.all.earned)} с · төлөнгөн: ${fmt(s.paid)} с</div></div>
     <div class="grid">
-      <div class="st"><span>Сапарлар</span><b>${P.rides}</b></div>
-      <div class="st"><span>Жүгүртүү</span><b>${fmt(P.gross)} с</b></div>
-      <div class="st"><span>Комиссиядан үлүш (${p.share}%)</span><b>${fmt(P.share)} с</b></div>
-      <div class="st"><span>Жаңы жүргүнчүлөр</span><b>${P.refs} <small style="font-size:13px;color:#6b6b76">(${P.refs_active} сапарда)</small></b></div>
-      <div class="st"><span>Жүргүнчү бонусу</span><b>${fmt(P.bonus)} с</b></div>
-      <div class="st"><span>${PN[PER]} тапкан</span><b style="color:#16764f">${fmt(P.earned)} с</b></div>
+      <div class="st"><span>Сапарлар</span><b>${P.rides}</b><i>Парктын айдоочулары бүтүргөн сапарлар</i></div>
+      <div class="st"><span>Жүгүртүү</span><b>${fmt(P.gross)} с</b><i>Ошол сапарлар үчүн жүргүнчүлөр төлөгөн жалпы акча</i></div>
+      <div class="st"><span>Комиссиядан үлүш (${p.share}%)</span><b>${fmt(P.share)} с</b><i>Такси ТАП! айдоочулардан алган комиссиянын ${p.share}% сизге</i></div>
+      <div class="st"><span>Жаңы жүргүнчүлөр</span><b>${P.refs} <small style="font-size:13px;color:#6b6b76">(${P.refs_active} сапарда)</small></b><i>QR же промокод менен келгендер · кашаада: биринчи сапарын бүтүргөндөр</i></div>
+      <div class="st"><span>Жүргүнчү бонусу</span><b>${fmt(P.bonus)} с</b><i>Ар бир жаңы жүргүнчүнүн биринчи сапары үчүн ${fmt(p.ref_bonus)} сом</i></div>
+      <div class="st"><span>${PN[PER]} тапкан</span><b style="color:#16764f">${fmt(P.earned)} с</b><i>Комиссиядан үлүш + жүргүнчү бонусу</i></div>
     </div>
+    <details class="how"><summary>❓ Кантип эсептелет? Мисал</summary>
+      <p>Сиздин айдоочу 100 сомдук сапар бүтүрдү дейли:</p>
+      <p>• <b>Жүгүртүүгө</b> 100 сом кошулат.</p>
+      <p>• Такси ТАП! айдоочудан комиссия алат${ST.commission_pct > 0 ? ` (азыр ${ST.commission_pct}%) — ${f1(ST.commission_pct)} сом` : " (мисалы 10% — 10 сом)"}.
+        Анын <b>${p.share}%</b> сизге: ${f1(100 * (ST.commission_pct > 0 ? ST.commission_pct : 10) / 100 * p.share / 100)} сом.</p>
+      <p>• Эгер ал жүргүнчү сиздин QR же <b>${esc(p.promo || "промокод")}</b> аркылуу келип, бул анын биринчи сапары болсо — дагы <b>${fmt(p.ref_bonus)} сом</b> бонус. Бонус бир жүргүнчү үчүн бир жолу гана, ал катталгандан кийин 30 күндүн ичинде сапар бүтүрсө берилет.</p>
+      <p>• Тапканыңыз «Сизге төлөнө турган калдык» болуп чогулат, админ төлөгөндө «төлөнгөн» болуп кемийт.</p></details>
     ${ST.commission_pct > 0 ? "" : `<div class="note">ℹ️ Азыр пилот: Такси ТАП! комиссия албайт (0%), ошондуктан комиссиядан үлүш 0. Жүргүнчү бонустары эсептеле берет.</div>`}
     <div class="card"><h2>🚕 Айдоочулар</h2>
       ${ST.drivers.length ? ST.drivers.map(d => `<div class="dr"><span class="dot ${d.busy ? "busy" : d.online ? "on" : ""}"></span>
