@@ -101,7 +101,7 @@ input.f:focus{border-color:var(--navy)}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
 <link rel="preload" as="image" href="/static/h_taxi.webp"><link rel="preload" as="image" href="/static/h_box.webp"><link rel="preload" as="image" href="/static/h_girl.webp"><link rel="preload" as="image" href="/static/h_map.webp">
-<link rel="stylesheet" href="/static/theme.css?v=54">
+<link rel="stylesheet" href="/static/theme.css?v=55">
 </head>
 <body>
 <div id="map"></div>
@@ -386,6 +386,7 @@ function homeOn(on) {
   $("#home").classList.toggle("hide", !on);
   document.body.classList.toggle("athome", on);
   document.body.classList.toggle("rnav", on && (S.mode === "idle" || S.mode === "menu"));
+  $("#home").classList.toggle("cabbg", on && S.mode === "menu");
 }
 function navOn(k) { document.querySelectorAll("#bnav a").forEach(a => a.classList.toggle("on", a.dataset.k === k)); }
 function viewHelp() {
@@ -891,15 +892,12 @@ async function viewCabinet() {
   const li = (id, img, t, sub, href) => `<${href ? `a href="${href}"` : "button"} class="ccard" id="${id}"><img class="cimg" src="/static/${img}.webp" alt=""><span class="ct"><b>${t}</b>${sub ? `<small>${sub}</small>` : ""}</span><em>›</em></${href ? "a" : "button"}>`;
   let promo = ""; try { promo = localStorage.getItem("promoPre") || ""; } catch (e) {}
   render(""); homeOn(true);
-  $("#home").innerHTML = `<div class="cab-hero"><img class="cab-hdr" src="/static/c_hdr.webp" alt="">
-      <div class="hh"><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b></div><button class="round" id="close" aria-label="Жабуу">${avBtn()}</button></div>
-      <div class="role hrole"><a class="on"><img src="/static/r_bag.webp" alt="">Жүргүнчү</a><a href="/driver"><img src="/static/r_car.webp" alt="" class="rc">Айдоочу</a></div></div>
-    <div class="cab-card"><button class="st-back cab-bk" id="close2" aria-label="Артка">‹</button>
+  $("#home").innerHTML = `<div class="cab2">
       <button class="cab-av" id="avBox">${me.avatar ? `<img src="${esc(me.avatar)}" alt="">` : esc((me.name || "?")[0].toUpperCase())}<span class="cab-cam">📷</span></button>
       <input type="file" accept="image/*" capture="user" id="avCam" hidden><input type="file" accept="image/*" id="avGal" hidden>
       <div class="cab-nm">${esc(me.name || "Жүргүнчү")}</div><div class="cab-ph">${esc(me.phone)}</div>
       <div class="cab-q"><button id="qH"><img src="/static/c_trips.webp" alt="">Сапарлар</button><a href="${me.bot ? "https://t.me/" + me.bot : "/terms"}" target="_blank"><img src="/static/c_help.webp" alt="">Колдоо</a>
-        <button id="qA"><img src="/static/c_addr.webp" alt="">Даректер</button><button id="qS"><img src="/static/c_set.webp" alt="">Жөндөөлөр</button></div></div>
+        <button id="qA"><img src="/static/c_addr.webp" alt="">Даректер</button><button id="qS"><img src="/static/c_set.webp" alt="">Жөндөөлөр</button></div>
     <div id="cabMore"></div>
     ${li("cPromo", "c_gift", "Промокод", promo ? "Кийинки заказга: " + esc(promo) : "Промокод киргизүү")}
     ${li("cPay", "c_card", "Төлөм ыкмасы", "Накталай — айдоочуга түз")}
@@ -913,7 +911,6 @@ async function viewCabinet() {
   $("#home").scrollTop = 0;
   bindInstall();
   const more = html => { $("#cabMore").innerHTML = html; $("#cabMore").scrollIntoView({behavior:"smooth", block:"start"}); };
-  $("#close").onclick = $("#close2").onclick = () => { S.ride ? viewRide() : viewIdle(); };
   $("#avBox").onclick = () => sheetBox(`<h2>📷 Профилдин сүрөтү</h2>
       <button class="btn main" id="avC">📸 Камера менен тартуу</button>
       <button class="btn ghost" id="avG">🖼 Галереядан тандоо</button>

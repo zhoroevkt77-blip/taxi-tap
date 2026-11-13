@@ -495,3 +495,19 @@ body.dnav .sheet{max-height:calc(100dvh - 318px - env(safe-area-inset-top,0px))!
 .role a.on{background:linear-gradient(180deg,#ffe25a,#ffc400 60%,#ffb300)!important;box-shadow:0 6px 16px rgba(255,170,0,.45),inset 0 2px 0 rgba(255,255,255,.55)!important;border:0!important}
 .drole a{font-size:12px!important;padding:3px 8px 3px 3px!important;gap:2px}.drole a img{width:22px;height:22px}.drole a img.rc{width:30px;height:20px}
 .lnk-t b .lki{height:26px;width:26px;object-fit:contain;vertical-align:-7px;margin-right:2px}.lnk-t b .lki.rc{width:38px;height:24px;vertical-align:-6px}
+/* ===== Жүргүнчүнүн кабинети — Kake'нин макети (фон + чакан өлчөмдөр) ===== */
+#home.cabbg{background-color:#fff;background-image:url(/static/cb_tl.webp),url(/static/cb_tr.webp),url(/static/cb_bl.webp),url(/static/cb_br.webp);
+  background-repeat:no-repeat;background-size:46% auto,48% auto,22% auto,22% auto;background-position:left top,right top,left bottom,right bottom;background-attachment:local}
+.cab2{text-align:center;padding-top:6px}
+.cab2 .cab-av{width:84px;height:84px;margin:0 auto 4px;border:4px solid #ffc400;box-shadow:0 8px 22px rgba(255,170,0,.35);background:#fff;font-size:34px}
+.cab2 .cab-cam{width:30px;height:30px;font-size:14px;right:-4px;bottom:-2px}
+.cab2 .cab-nm{font-size:23px;font-weight:900;line-height:1.15}
+.cab2 .cab-ph{font-size:16px;font-weight:700;color:#16161a;margin:2px 0 12px}
+.cab2 .cab-q{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:0 0 12px}
+.cab2 .cab-q>*{background:#fff;border-radius:18px;padding:8px 2px 8px;gap:4px;font-size:13px;font-weight:800;box-shadow:0 6px 16px rgba(20,20,30,.08),inset 0 0 0 1px rgba(0,0,0,.04)}
+.cab2 .cab-q img{width:46px;height:46px;border-radius:50%;object-fit:cover}
+#home.cabbg .ccard{gap:12px;margin-bottom:7px;padding:4px 12px 4px 4px;border-radius:20px;min-height:48px}
+#home.cabbg .ccard .cimg{width:64px;height:46px;border-radius:23px;object-fit:cover;background:#f0f0f3}
+#home.cabbg .ccard b{font-size:16px;font-weight:800;line-height:1.2}#home.cabbg .ccard small{font-size:13px;margin-top:1px;line-height:1.25}
+#home.cabbg .ccard em{font-size:24px;font-weight:700;color:#16161a}
+#home.cabbg .cab-out{width:74%;margin:14px auto 6px;padding:11px;font-size:17px;border-radius:22px}
