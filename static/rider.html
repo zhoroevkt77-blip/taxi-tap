@@ -101,7 +101,7 @@ input.f:focus{border-color:var(--navy)}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
 <link rel="preload" as="image" href="/static/h_taxi.webp"><link rel="preload" as="image" href="/static/h_box.webp"><link rel="preload" as="image" href="/static/h_girl.webp"><link rel="preload" as="image" href="/static/h_map.webp">
-<link rel="stylesheet" href="/static/theme.css?v=57">
+<link rel="stylesheet" href="/static/theme.css?v=58">
 </head>
 <body>
 <div id="map"></div>
@@ -304,7 +304,7 @@ function viewIdle() {
   if (P.work) rec.push({ico:"💼", name:"Иш", sub:P.work.name || "", lat:P.work.lat, lon:P.work.lon});
   (P.recent || []).forEach(r => rec.push({ico:"🕘", name:r.name, sub:"Акыркы сапар", lat:r.lat, lon:r.lon}));
   $("#home").innerHTML = `<div class="hh"><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b></div><button class="round" id="hMenu" aria-label="Кабинет">${avBtn()}</button></div>
-    <div class="role hrole"><a class="on"><img src="/static/r_bag.webp" alt="">Жүргүнчү</a><a href="/driver"><img src="/static/r_car.webp" alt="" class="rc">Айдоочу</a></div>
+    <div class="role hrole"><a class="on"><img src="/static/r_bag.webp" alt="">Жүргүнчү</a>${role2()}</div>
     <button class="haddr" id="hAddr"><small><img class="pinI" src="/static/pin.webp" alt="">Сиз турган жер</small><b id="fromTxt">${esc(S.fromAddr || "Аныкталууда…")}</b><span>›</span></button>
     <div class="tiles">${tile("tTaxi", "h_taxi.webp", "Такси", `<span id="taxiEta">${homeEta()}</span>`, true, !has("delivery"))}
       ${has("delivery") ? tile("tDel", "h_box.webp", "Жеткирүү", "Буюм, документ") : ""}</div>
@@ -886,7 +886,6 @@ async function viewCabinet() {
   if (!me.auth) return;
   ME_BOT = me.bot || ME_BOT; ME_AV = me.avatar || null; $("#menuBtn").innerHTML = avBtn();
   prevView = S.mode; S.mode = "menu"; navOn("cab");
-  const drv = {active:"Айдоочу кабинети", pending:"Арызыңыз текшерилүүдө", rejected:"Арызды оңдоо", blocked:"Айдоочу кабинети"}[me.driver] || "Таксиде иштөө";
   const P = PLACES && !PLACES.error ? PLACES : await api("/api/places");
   const place = (k, ico, t) => `<div class="hrow"><span>${ico} <b>${t}</b> ${P[k] ? `<span class="muted">· ${esc(P[k].name || "белгиленген")}</span>` : `<span class="muted">· белгилене элек</span>`}</span>
     <span><button class="lnk-b" style="width:auto;height:32px;padding:0 10px;font-size:13px" data-pl="${k}">${P[k] ? "Өзгөртүү" : "Кошуу"}</button>${P[k] ? ` <button class="lnk-b" style="width:32px;height:32px;font-size:13px" data-del="${k}">✕</button>` : ""}</span></div>`;
@@ -902,11 +901,9 @@ async function viewCabinet() {
     <div id="cabMore"></div>
     ${li("cPromo", "c_gift", "Промокод", promo ? "Кийинки заказга: " + esc(promo) : "Промокод киргизүү")}
     ${li("cPay", "c_card", "Төлөм ыкмасы", "Накталай — айдоочуга түз")}
-    ${li("cDrv", "c_car", drv, "Айдоочу болуп иштөө", "/driver")}
+    ${me.driver ? "" : li("cDrv", "c_car", "Таксиде иштөө", "Айдоочу болуп катталуу", "/driver")}
     ${li("cMap", "c_map", "Картаны жакшыртуу", "Жер кошуу, катаны оңдоо")}
     ${li("cSafe", "c_shield", "Коопсуздук", "112, сапарды бөлүшүү")}
-    ${me.park ? li("cPark", "c_car", "🏢 Таксопарк кабинети", esc(me.park), "/park") : ""}
-    ${me.admin ? li("cAdm", "c_tools", "Админ панели", "", "/admin") : ""}
     ${li("cInfo", "c_info", "Маалымат", "Колдонуу шарттары, купуялык", "/terms")}
     ${installHTML()}<button class="cab-out" id="out">🚪 Чыгуу</button>`;
   $("#home").scrollTop = 0;
@@ -964,8 +961,11 @@ async function viewCabinet() {
 // Парктын QR/шилтемеси: /?ref=КОД → кирген соң бир жолу жөнөтөбүз
 try { if (new URLSearchParams(location.search).get("next") === "park") localStorage.setItem("nextPark", "1"); } catch (e) {}
 try { const rf = new URLSearchParams(location.search).get("ref"); if (rf) { localStorage.setItem("parkRef", rf); localStorage.setItem("promoPre", rf.toUpperCase()); history.replaceState(null, "", "/"); } } catch (e) {}
+let ME_ROLE = {};
+const role2 = () => ME_ROLE.park && !ME_ROLE.driver ? `<a href="/park"><span class="rpk">🏢</span>Парк</a>` : `<a href="/driver"><img src="/static/r_car.webp" alt="" class="rc">Айдоочу</a>`;
 async function boot() {
-  const me = await api("/api/me");
+  const me = await api("/api/me"); ME_ROLE = {park:me.park, driver:me.driver, admin:me.admin};
+  if (ME_ROLE.park && !ME_ROLE.driver) document.querySelectorAll(".role a[href='/driver']").forEach(a => a.outerHTML = role2());
   try { if (me.auth && localStorage.getItem("nextPark")) { localStorage.removeItem("nextPark"); if (me.park || me.admin) return location.replace("/park"); } } catch (e) {}
   try { const rf = localStorage.getItem("parkRef"); if (me.auth && rf) { api("/api/ref", {code:rf}); localStorage.removeItem("parkRef"); } } catch (e) {} ME_BOT = me.bot || ""; ME_AV = me.avatar || null; $("#menuBtn").innerHTML = avBtn();
   await areaReady;

@@ -81,7 +81,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=57">
+<link rel="stylesheet" href="/static/theme.css?v=58">
 </head>
 <body>
 <nav id="bnav" class="bnav pro"><a data-k="earn"><img src="/static/n_earn.webp" alt="">Киреше</a><a data-k="hist"><img src="/static/n_trips.webp" alt="">Сапарлар</a><a data-k="line" class="big on"><img src="/static/n_go.webp" alt="">Линия</a><a data-k="help"><img src="/static/n_help.webp" alt="">Жардам</a><a data-k="cab"><img src="/static/n_cab.webp" alt="">Кабинет</a></nav>
@@ -318,12 +318,19 @@ function viewHome() {
   }
 }
 
+let ME_D = {};
+function workHTML() {
+  if (!ME_D.park && !ME_D.admin) return "";
+  return `<div class="work"><h4>💼 Менин ишим</h4><div class="wg">
+    ${ME_D.park ? `<a href="/park"><span>🏢</span>Таксопарк<small>${esc(ME_D.park)}</small></a>` : ""}
+    ${ME_D.admin ? `<a href="/admin"><img src="/static/c_tools.webp" alt="">Админ<small>Башкаруу</small></a>` : ""}</div></div>`;
+}
 function viewCabinet(part) {
   part = part === "earn" ? "earn" : "cab"; navOn(part);
   const f = D.finance || {}, row = (t, k) => { const x = f[k] || {rides:0, gross:0, fee:0, net:0};
     return `<tr><td>${t}</td><td>${x.rides}</td><td>${x.gross}</td><td>${x.fee}</td><td><b>${x.net}</b></td></tr>`; };
   const E = part === "earn", C = !E, on = c => c ? "" : ' style="display:none"';
-  render(`<h2>${E ? "💰 Киреше" : "Менин кабинетим"}</h2>
+  render(`<h2>${E ? "💰 Киреше" : "Менин кабинетим"}</h2>${C ? workHTML() : ""}
     <div${on(C)}><div class="note">🚕 Тарифтериңиз: <b>${(D.classes || []).map(c => esc((D.class_names || {})[c] || c)).join(", ")}</b><br>💼 Комиссия: <b>${esc(D.tariff)}</b>
       <div class="muted">Комфорт же Минивэн тарифине өтүү үчүн админге кайрылыңыз.</div></div></div>
     <div class="grid"><div class="stat"><span class="muted">Баланс</span><b style="color:${D.balance < D.min_balance ? "var(--bad)" : "inherit"}">${D.balance} с</b></div>
@@ -812,7 +819,7 @@ async function refresh() {
 }
 
 async function boot() {
-  const m = await api("/api/me");
+  const m = await api("/api/me"); ME_D = m;
   if (!m.auth) return viewLogin(m.pending, m.link);
   if (m.avatar) $("#cabBtn").innerHTML = `<img src="${esc(m.avatar)}" alt="" class="avbtn">`;
   await refresh();
