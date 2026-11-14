@@ -576,3 +576,4 @@ body.dnav .sheet{max-height:calc(100dvh - 318px - env(safe-area-inset-top,0px))!
 .areachip{position:fixed;left:12px;right:12px;top:calc(176px + env(safe-area-inset-top,0px));z-index:900;display:flex;align-items:center;gap:10px;background:#fff;border-radius:20px;padding:8px 10px;box-shadow:0 8px 24px rgba(0,0,0,.18);border:2px solid #ffc400}
 .areachip img{width:52px;height:40px;border-radius:14px;object-fit:cover}.areachip span{flex:1;min-width:0}.areachip b{display:block;font-size:15px;font-weight:900}.areachip small{font-size:12px;color:#6b6b76}
 .areachip button{border:0;background:#f1f1f4;width:36px;height:36px;border-radius:50%;font-size:16px;cursor:pointer}
+.done-car img{width:170px;height:auto;filter:drop-shadow(0 10px 14px rgba(0,0,0,.18))}

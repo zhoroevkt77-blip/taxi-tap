@@ -101,7 +101,7 @@ input.f:focus{border-color:var(--navy)}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
 <link rel="preload" as="image" href="/static/h_taxi.webp"><link rel="preload" as="image" href="/static/h_box.webp"><link rel="preload" as="image" href="/static/h_girl.webp"><link rel="preload" as="image" href="/static/h_map.webp">
-<link rel="stylesheet" href="/static/theme.css?v=61">
+<link rel="stylesheet" href="/static/theme.css?v=62">
 </head>
 <body>
 <div id="map"></div>
@@ -761,7 +761,7 @@ function sheetBox(html, after) {
   const x = $("#bxX"); if (x) x.onclick = closeBox; if (after) after();
 }
 function confirmOut() {
-  if (S.ride) return sheetBox(`<div class="lgx"><div class="lg-ic" style="background:#fff6dd">🚕</div><h2>Азыр чыгууга болбойт</h2>
+  if (S.ride) return sheetBox(`<div class="lgx"><div class="lg-ic" style="background:#fff6dd"><img src="/static/r_car.webp" alt="" style="width:56px"></div><h2>Азыр чыгууга болбойт</h2>
       <p class="muted">Сизде жүрүп жаткан сапар бар. Адегенде сапарды бүтүрүңүз же жокко чыгарыңыз.</p>
       <button class="btn main" id="lgBack">Сапарга кайтуу</button></div>`, () => { $("#lgBack").onclick = () => { closeBox(); viewRide(); }; });
   sheetBox(`<div class="lgx"><div class="lg-ic">🚪</div><h2>Аккаунттан чыгасызбы?</h2>
@@ -796,7 +796,7 @@ function viewDone(r) {
   render(`${head}
     ${r.discount ? `<p class="muted" style="margin:-4px 0 6px">🎁 Промокод: −${Math.round(r.discount)} сом</p>` : ""}${r.wait.fee ? `<p class="muted" style="margin:-4px 0 6px">⏳ Күтүү: +${r.wait.fee} сом (баада бар)</p>` : ""}
     ${r.rated ? `<p class="muted" style="text-align:center;margin:14px 0">✓ Бааңыз кабыл алынды. Рахмат!</p>` : `
-    <div class="done-car">🚕</div><h2 class="done-q" id="dq">Сапар кандай болду?</h2><p class="muted" style="text-align:center;margin:0">Пикириңиз жашыруун калат</p>
+    <div class="done-car"><img src="/static/r_car.webp" alt=""></div><h2 class="done-q" id="dq">Сапар кандай болду?</h2><p class="muted" style="text-align:center;margin:0">Пикириңиз жашыруун калат</p>
     <div class="stars big" id="stars">${[1,2,3,4,5].map(n => `<span data-n="${n}">★</span>`).join("")}</div>
     <div class="tagrow" id="tags"></div>
     <input class="f hide" id="cm" maxlength="300" placeholder="Пикир…">
