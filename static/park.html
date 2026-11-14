@@ -81,6 +81,16 @@ const api = (u, b) => fetch(u, b ? {method:"POST", headers:{"Content-Type":"appl
   .then(r => r.json()).catch(() => ({error:"net"}));
 const fmt = n => Math.round(n || 0).toLocaleString("ru-RU").replace(/,/g, " ");
 const dm = t => { const d = new Date(t * 1000); return String(d.getDate()).padStart(2, "0") + "." + String(d.getMonth() + 1).padStart(2, "0"); };
+// Кийинки төлөмгө чейин канча калды (Бишкек убактысы = сервердин period_starts)
+function payHead(s) {
+  const t = s.pay_time, hm = x => { const [h, m] = x.split(":"); return h * 3600 + m * 60; };
+  const now = Date.now() / 1000, mon = s.this_monday, a = mon + hm(t.from), b = mon + hm(t.to);
+  const hhmm = u => new Date(u * 1000).toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"});
+  if (s.paid_this_week) return `✅ Ушул аптанын төлөмү берилди · ${dm(s.paid_this_week)}, ${hhmm(s.paid_this_week)}`;
+  if (now < b && now >= mon && s.due > 0) return now >= a ? `💸 Бүгүн төлөм күнү · саат ${t.from}–${t.to}` : `📅 Бүгүн төлөм күнү · саат ${t.from}дөн баштап`;
+  const left = s.next_pay + hm(t.from) - now, d = Math.floor(left / 86400), h = Math.floor(left % 86400 / 3600);
+  return `📅 Дүйшөмбү, ${dm(s.next_pay)} · саат ${t.from}–${t.to}<br><span style="color:#ffc61a">⏳ Төлөмгө ${d ? d + " күн " : ""}${h} саат калды</span>`;
+}
 const f1 = n => (Math.round((n || 0) * 10) / 10).toLocaleString("ru-RU");
 let ST = null, PER = "month";
 const PN = {today:"Бүгүн", week:"Ушул жума", month:"Ушул ай", all:"Баары"};
@@ -124,14 +134,14 @@ function draw() {
   $("#app").innerHTML = `<div class="hd"><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b></div><span class="tag">ПАРК</span></div>
     <h1>🏢 ${esc(p.name)}</h1><p class="muted">Айдоочулар: ${s.drivers_total} · линияда: <b style="color:#1D9E75">${s.drivers_online}</b></p>
     <div class="per">${Object.keys(PN).map(k => `<button data-p="${k}" class="${k === PER ? "on" : ""}">${PN[k]}</button>`).join("")}</div>
-    <div class="big"><div class="s">📅 Дүйшөмбү, ${dm(s.next_pay)} — кийинки төлөм</div>
+    <div class="big"><div class="s">${payHead(s)}</div>
       <div class="wk"><div><div class="s">Бул дүйшөмбүдө төлөнөт</div><div class="v">${fmt(s.due)} сом</div></div>
         <div><div class="s">Ушул апта топтолууда</div><div class="v2">${fmt(s.this_week)} с</div></div></div>
-      <div class="s">Ар дүйшөмбүдө өткөн аптада тапканыңыз төлөнөт · ✅ бардыгы төлөнгөн: <b style="color:#fff">${fmt(s.paid)} с</b></div></div>
+      <div class="s">Ар дүйшөмбүдө, саат ${s.pay_time.from}–${s.pay_time.to} аралыгында өткөн аптада тапканыңыз төлөнөт · ✅ бардыгы төлөнгөн: <b style="color:#fff">${fmt(s.paid)} с</b></div></div>
     <div class="card"><h2>✅ Төлөнгөн акчалар</h2>
-      ${ST.payouts.length ? ST.payouts.map(x => `<div class="pay"><span><b>${new Date(x.at * 1000).toLocaleDateString("ru-RU")}</b>${x.note ? "<br><small>" + esc(x.note) + "</small>" : ""}</span><b style="color:#16764f">+${fmt(x.amount)} с</b></div>`).join("")
+      ${ST.payouts.length ? ST.payouts.map(x => `<div class="pay"><span><b>${new Date(x.at * 1000).toLocaleDateString("ru-RU")}, ${new Date(x.at * 1000).toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"})}</b>${x.note ? "<br><small>" + esc(x.note) + "</small>" : ""}</span><b style="color:#16764f">+${fmt(x.amount)} с</b></div>`).join("")
         + `<div class="pay" style="border:0"><span>Бардыгы</span><b>${fmt(s.paid)} с</b></div>`
-        : `<p class="muted">Азырынча төлөм болгон жок. Биринчи төлөм — дүйшөмбү, ${dm(s.next_pay)}.</p>`}</div>
+        : `<p class="muted">Азырынча төлөм болгон жок. Биринчи төлөм — дүйшөмбү, ${dm(s.next_pay)}, саат ${s.pay_time.from}–${s.pay_time.to}.</p>`}</div>
     <div class="grid">
       <div class="st"><span>Сапарлар</span><b>${P.rides}</b><i>Парктын айдоочулары бүтүргөн сапарлар</i></div>
       <div class="st"><span>Жүгүртүү</span><b>${fmt(P.gross)} с</b><i>Ошол сапарлар үчүн жүргүнчүлөр төлөгөн жалпы акча</i></div>
@@ -166,7 +176,7 @@ function draw() {
       <p class="muted" style="margin-top:8px;word-break:break-all">${esc(link)}</p>
       <p class="muted" style="font-size:12.5px">Ар бир айдоочуңуздун да өзүнүн QR'ы бар (айдоочунун кабинетинде) — ким канча жүргүнчү тартканы көрүнөт.</p>
     </div>
-    <div class="note">Шарт: парктын айдоочулары төлөгөн комиссиянын <b>${p.share}%</b>ы + ар бир жаңы жүргүнчү үчүн <b>${fmt(p.ref_bonus)} сом</b>. Такси ТАП! комиссиясы азыр: ${ST.commission_pct}%. Төлөм — ар дүйшөмбүдө.</div>`;
+    <div class="note">Шарт: парктын айдоочулары төлөгөн комиссиянын <b>${p.share}%</b>ы + ар бир жаңы жүргүнчү үчүн <b>${fmt(p.ref_bonus)} сом</b>. Такси ТАП! комиссиясы азыр: ${ST.commission_pct}%. Төлөм — ар дүйшөмбүдө, саат ${s.pay_time.from}–${s.pay_time.to}.</div>`;
   document.querySelectorAll("[data-p]").forEach(b => b.onclick = () => { PER = b.dataset.p; draw(); });
   document.querySelectorAll("[data-rm]").forEach(b => b.onclick = async () => {
     if (!confirm("Айдоочуну парктан чыгарасызбы?")) return;

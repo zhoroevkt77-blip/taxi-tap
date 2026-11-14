@@ -1051,3 +1051,15 @@ class AreaMerge(unittest.TestCase):
         self.assertEqual(len(core._rings(core.area_geojson())), before + (0 if core._area["source"] == "custom" else 1))
         self.assertTrue(core.in_area(41.105, 72.802))
         core.reset_area()
+
+
+class ParkPayTime(unittest.TestCase):
+    def test_pay_time(self):
+        import parks
+        core.init_db()
+        self.assertEqual(parks.pay_time(), {"from": "10:00", "to": "18:00"})
+        self.assertFalse(parks.set_pay_time("18:00", "10:00"))
+        self.assertFalse(parks.set_pay_time("25:00", "26:00"))
+        self.assertTrue(parks.set_pay_time("09:30", "17:00"))
+        self.assertEqual(parks.pay_time()["from"], "09:30")
+        core.set_setting("park_pay_time", {})

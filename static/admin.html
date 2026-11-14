@@ -341,6 +341,10 @@ async function viewParks(edit) {
   const e = edit || {};
   $("#main").innerHTML = `
     <div class="panel"><h3>🏢 Таксопарктар (${P.length})</h3>
+      <div class="item"><div class="main" style="width:100%"><label class="muted">🕙 Апталык төлөм убактысы (ар дүйшөмбү)</label>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:4px"><input class="f" id="ptA" type="time" value="${X.pay_time?.from || "10:00"}" style="margin:0;max-width:130px">—
+        <input class="f" id="ptB" type="time" value="${X.pay_time?.to || "18:00"}" style="margin:0;max-width:130px"><button class="btn gold" id="ptS">Сактоо</button></div>
+        <p class="muted" style="margin:6px 0 0">Парктарга ушул саат көрүнөт; сизге эскертүү дүйшөмбү күнү ушул саатта келет.</p></div></div>
       ${P.length ? P.map(p => `<div class="item"><div class="main"><b>${esc(p.name)}</b> ${p.active ? "" : '<span class="muted">· өчүк</span>'}
         <div class="muted">☎ ${esc(p.phone)} · үлүш ${p.share}% · жүргүнчү бонусу ${money(p.ref_bonus)} · промокод <b>${esc(p.promo || "—")}</b></div>
         <div class="muted">Айдоочулар: ${p.drivers} (линияда ${p.online}) · Ушул ай: ${p.month.rides} сапар, ${money(p.month.gross)} жүгүртүү, тапканы <b>${money(p.month.earned)}</b></div>
@@ -369,6 +373,8 @@ async function viewParks(edit) {
   };
   if ($("#pkCancel")) $("#pkCancel").onclick = () => viewParks();
   document.querySelectorAll("[data-ed]").forEach(b => b.onclick = () => viewParks(P.find(p => p.id == b.dataset.ed)));
+  $("#ptS").onclick = async () => { const r = await api("/api/a/park_pay_time", {from:$("#ptA").value, to:$("#ptB").value});
+    toast(r.ok ? "✓ Төлөм убактысы сакталды" : "Убакыт туура эмес", 2500); };
   document.querySelectorAll("[data-pay]").forEach(b => b.onclick = async () => {
     const p = P.find(x => x.id == b.dataset.pay), v = prompt(`${p.name}: ${p.week} апта үчүн канча сом төлөдүңүз?`, Math.max(0, Math.round(p.due)));
     if (!v) return; await api("/api/a/park_payout", {park_id:p.id, amount:+v, note:"апта " + p.week}); viewParks();

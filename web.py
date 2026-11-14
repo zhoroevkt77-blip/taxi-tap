@@ -679,7 +679,7 @@ class H(BaseHTTPRequestHandler):
         if action == "overview":
             return self._json(core.admin_overview())
         if action == "parks":
-            return self._json({"parks": parks.admin_list()})
+            return self._json({"parks": parks.admin_list(), "pay_time": parks.pay_time()})
         if action == "addr":
             return self._json({"items": addrbook.admin_list((q.get("q") or [""])[0][:60],
                                                             only=(q.get("only") or [""])[0] or None),
@@ -726,6 +726,9 @@ class H(BaseHTTPRequestHandler):
         if action == "park_driver":
             pid = int(b.get("park_id") or 0) or None
             return self._json({"result": parks.attach_driver(_txt(b.get("phone"), 20), pid)})
+        if action == "park_pay_time":
+            ok = parks.set_pay_time(_txt(b.get("from"), 5), _txt(b.get("to"), 5))
+            return self._json({"ok": ok, "pay_time": parks.pay_time()}, 200 if ok else 400)
         if action == "park_payout":
             pk = parks.get(int(b.get("park_id") or 0))
             amt = float(b.get("amount") or 0)

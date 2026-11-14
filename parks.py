@@ -215,6 +215,9 @@ def stats(pid):
     due = max(0, round(out["all"]["earned"] - out["week"]["earned"] - paid))
     return {"periods": out, "paid": round(paid), "balance": round(out["all"]["earned"] - paid),
             "due": due, "this_week": out["week"]["earned"], "next_pay": per["week"] + 7 * 86400,
+            "pay_time": pay_time(), "this_monday": per["week"],
+            "paid_this_week": core.query("SELECT MAX(at) AS t FROM park_payouts WHERE park_id=? AND at>=?",
+                                         (pid, per["week"]), "one")["t"],
             "drivers_total": len(ds), "drivers_online": sum(1 for d in ds if d.get("online"))}
 
 
@@ -253,10 +256,31 @@ def add_payout(pid, amount, note=""):
     return True
 
 
+def pay_time():
+    """Төлөм убактысы (Бишкек убактысы): {"from": "10:00", "to": "18:00"}."""
+    t = core.get_setting("park_pay_time") or {}
+    return {"from": t.get("from") or "10:00", "to": t.get("to") or "18:00"}
+
+
+def set_pay_time(a, b):
+    import re
+    ok = lambda x: bool(re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d", x or ""))
+    if not (ok(a) and ok(b)) or a >= b:
+        return False
+    core.set_setting("park_pay_time", {"from": a, "to": b})
+    return True
+
+
+def _hm(s):
+    h, m = s.split(":")
+    return int(h) * 3600 + int(m) * 60
+
+
 def weekly_reminder():
     """Дүйшөмбү күнү бир жолу: төлөнө турган парктардын тизмеси (админге)."""
     per = core.period_starts()
-    if core.now() - per["week"] > 2 * 86400:          # дүйшөмбү же шейшемби гана
+    since = core.now() - per["week"]
+    if since < _hm(pay_time()["from"]) or since > 2 * 86400:   # дүйшөмбү, төлөм саатынан баштап
         return []
     key = str(int(per["week"]))
     if core.get_setting("park_pay_week") == key:
