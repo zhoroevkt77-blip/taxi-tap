@@ -81,7 +81,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=71">
+<link rel="stylesheet" href="/static/theme.css?v=72">
 </head>
 <body>
 <nav id="bnav" class="bnav pro"><a data-k="earn"><img src="/static/n_earn.webp?v=9" alt="">Киреше</a><a data-k="hist"><img src="/static/n_trips.webp?v=9" alt="">Сапарлар</a><a data-k="line" class="big on"><img src="/static/n_go.webp?v=9" alt="">Линия</a><a data-k="help"><img src="/static/n_help.webp?v=9" alt="">Жардам</a><a data-k="cab"><img src="/static/n_cab.webp?v=9" alt="">Кабинет</a></nav>
@@ -373,7 +373,7 @@ function viewCabinet(part) {
   const f = D.finance || {}, row = (t, k) => { const x = f[k] || {rides:0, gross:0, fee:0, net:0};
     return `<tr><td>${t}</td><td>${x.rides}</td><td>${x.gross}</td><td>${x.fee}</td><td><b>${x.net}</b></td></tr>`; };
   const E = part === "earn", C = !E, on = c => c ? "" : ' style="display:none"';
-  render(`<h2>${E ? "💰 Киреше" : "Менин кабинетим"}</h2>${C ? `<button class="carrow" id="myCar"><img src="${carImg(D.car_color)}" alt=""><span><b>Менин унаам</b><small>${esc(carText(D.car_color, D.car_model))}</small></span>${kgPlate(D.car_plate)}<em>›</em></button>` + workHTML() + myQrHTML() : ""}
+  render(`<h2>${E ? "💰 Киреше" : "Менин кабинетим"}</h2>${C ? `<button class="carrow" id="myCar"><img src="${carImg(D.car_color)}" alt=""><span><b>Менин унаам</b><small>${esc(carText(D.car_color, D.car_model))}</small><div style="margin-top:4px">${kgPlate(D.car_plate)}</div></span><em>›</em></button>` + workHTML() + myQrHTML() : ""}
     <div${on(C)}><div class="note">🚕 Тарифтериңиз: <b>${(D.classes || []).map(c => esc((D.class_names || {})[c] || c)).join(", ")}</b><br>💼 Комиссия: <b>${esc(D.tariff)}</b>
       <div class="muted">Комфорт же Минивэн тарифине өтүү үчүн админге кайрылыңыз.</div></div></div>
     <div class="grid"><div class="stat"><span class="muted">Баланс</span><b style="color:${D.balance < D.min_balance ? "var(--bad)" : "inherit"}">${D.balance} с</b></div>
