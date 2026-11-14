@@ -1073,3 +1073,20 @@ class CarPlate(unittest.TestCase):
         self.assertIsNone(core.norm_plate("12 345"))
         self.assertIsNone(core.norm_plate("10KG123AB"))
         self.assertEqual(core.car_text("Асфальт", "Хюндай Солярис"), "Асфальт түстө Хюндай Солярис")
+
+
+class FixedRoutes(unittest.TestCase):
+    def test_fixed_price(self):
+        core.init_db()
+        a = {"name": "Борбор", "lat": 41.0377, "lon": 72.7470}
+        b = {"name": "Арал", "lat": 41.0600, "lon": 72.7800}
+        self.assertFalse(core.set_fixed_routes([{"a": a, "b": b, "price": 5}]))
+        self.assertTrue(core.set_fixed_routes([{"a": a, "b": b, "price": 150}]))
+        m = core.fixed_match(41.0380, 72.7472, 41.0601, 72.7801)
+        self.assertEqual(m["label"], "Борбор → Арал")
+        self.assertEqual(core.fixed_match(41.0601, 72.7801, 41.0380, 72.7472)["label"], "Арал → Борбор")
+        self.assertIsNone(core.fixed_match(41.0380, 72.7472, 41.20, 72.90))
+        q = core.quote(41.0380, 72.7472, 41.0601, 72.7801)
+        if q.get("city") and not q.get("dest_out"):
+            self.assertEqual(q["price"], 150); self.assertEqual(q["fixed"], "Борбор → Арал")
+        core.set_fixed_routes([])

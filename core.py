@@ -980,6 +980,45 @@ def price_of(t, km, minutes, k=1.0):
     return int(max(t["min_price"] * k, math.floor(raw / 10.0 + 0.5) * 10))
 
 
+# ==================== Туруктуу баалар (айылдар) ====================
+# Админ «А → Б = N сом» деп коёт. Кайдан (А тегерегинде) кайда (Б тегерегинде) барса — баа ушул,
+# талап коэффициенти тийбейт. Эки тарапка тең иштейт. Класс коэффициенти (Комфорт ×1.3) көбөйтүлөт.
+FIXED_R_KM = 2.0
+
+
+def fixed_routes():
+    return get_setting("fixed_routes") or []
+
+
+def set_fixed_routes(items):
+    out = []
+    for i, x in enumerate(items or []):
+        try:
+            a, b = x["a"], x["b"]
+            r = {"id": int(x.get("id") or (i + 1)),
+                 "a": {"name": str(a["name"])[:40], "lat": float(a["lat"]), "lon": float(a["lon"])},
+                 "b": {"name": str(b["name"])[:40], "lat": float(b["lat"]), "lon": float(b["lon"])},
+                 "price": int(float(x["price"])), "r": float(x.get("r") or FIXED_R_KM)}
+        except (KeyError, TypeError, ValueError):
+            return False
+        if not (10 <= r["price"] <= 20000 and 0.3 <= r["r"] <= 10):
+            return False
+        out.append(r)
+    if len(out) > 100:
+        return False
+    set_setting("fixed_routes", out)
+    return True
+
+
+def fixed_match(p_lat, p_lon, d_lat, d_lon):
+    near = lambda pt, lat, lon, r: haversine_km(pt["lat"], pt["lon"], lat, lon) <= r
+    for x in fixed_routes():
+        for a, b in ((x["a"], x["b"]), (x["b"], x["a"])):
+            if near(a, p_lat, p_lon, x["r"]) and near(b, d_lat, d_lon, x["r"]):
+                return dict(x, label="%s → %s" % (a["name"], b["name"]))
+    return None
+
+
 def quote(p_lat, p_lon, d_lat=None, d_lon=None, cls="econom"):
     """Маршрут → баа (price_of). Баа заказ берилгенде белгиленет, жолдо өзгөрбөйт.
     prices — ар бир класстын баасы (класстын коэффициенти × тариф)."""
@@ -998,6 +1037,11 @@ def quote(p_lat, p_lon, d_lat=None, d_lon=None, cls="econom"):
         return base
     rt = route(p_lat, p_lon, d_lat, d_lon)
     km, minutes = rt["km"], rt["min"]
+    fx = fixed_match(p_lat, p_lon, d_lat, d_lon)
+    if fx:
+        prices = {c: int(round(fx["price"] * cfg[c]["k"] / 10.0) * 10) for c in cfg if cfg[c]["on"]}
+        return dict(base, surge=1.0, dist_km=round(km, 1), minutes=round(minutes), price=prices[cls],
+                    prices=prices, route=rt, fixed=fx["label"])
     prices = {c: price_of(t, km, minutes, k * cfg[c]["k"]) for c in cfg if cfg[c]["on"]}
     return dict(base, dist_km=round(km, 1), minutes=round(minutes), price=prices[cls],
                 prices=prices, route=rt)

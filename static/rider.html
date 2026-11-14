@@ -548,6 +548,7 @@ async function viewQuote() {
     <div class="row"><span class="bul to lt">Б</span><div style="flex:1"><b>${esc(S.toAddr)}</b></div><input class="hn" id="hnT" placeholder="үй №" maxlength="12" value="${esc(S.hnT || "")}"></div>
     <input class="f lm" id="lmT" maxlength="60" placeholder="Б белгиси (милдеттүү эмес)" value="${esc(S.lmT || "")}">
     <div class="cls" id="cls">${q.classes.map(c => `<div data-c="${c.id}"><i>${ICON[c.id] || "🚕"}</i><div class="muted">${esc(c.name)}</div><b>${priceTxt(c)}${q.surge > 1 && c.price ? `<s>${Math.round(c.price / q.surge / 10) * 10} с</s>` : ""}</b></div>`).join("")}</div>
+    ${q.fixed ? `<div class="fixbox"><img src="/static/c_map.webp" alt=""><span><b>Туруктуу баа</b>${esc(q.fixed)} — баа өзгөрбөйт</span></div>` : ""}
     ${q.surge > 1 ? `<div class="surgebox"><span>💓</span>Талап жогору ×${q.surge} — баа бир аз кымбатыраак. Бир аздан кийин арзандашы мүмкүн.</div>` : ""}
     <div class="muted" style="margin-top:6px">${sub} · <span id="qp"></span></div>
     <div id="extra"></div>

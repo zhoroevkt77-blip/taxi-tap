@@ -451,7 +451,7 @@ class H(BaseHTTPRequestHandler):
             t = q["tariff"]
             cfg = core.class_config()
             return self._json({"city": q["city"], "price": q["price"], "dist_km": q["dist_km"],
-                               "minutes": q.get("minutes"), "surge": q["surge"],
+                               "minutes": q.get("minutes"), "surge": q["surge"], "fixed": q.get("fixed"),
                                "route": (q.get("route") or {}).get("coords"),
                                "classes": [{"id": c, "name": cfg[c]["name"], "price": pr,
                                             "min": int(t["min_price"] * cfg[c]["k"])}
@@ -683,6 +683,8 @@ class H(BaseHTTPRequestHandler):
             return self._json(core.admin_overview())
         if action == "parks":
             return self._json({"parks": parks.admin_list(), "pay_time": parks.pay_time()})
+        if action == "fixed_routes":
+            return self._json({"items": core.fixed_routes(), "r": core.FIXED_R_KM})
         if action == "addr":
             return self._json({"items": addrbook.admin_list((q.get("q") or [""])[0][:60],
                                                             only=(q.get("only") or [""])[0] or None),
@@ -729,6 +731,9 @@ class H(BaseHTTPRequestHandler):
         if action == "park_driver":
             pid = int(b.get("park_id") or 0) or None
             return self._json({"result": parks.attach_driver(_txt(b.get("phone"), 20), pid)})
+        if action == "fixed_routes":
+            ok = core.set_fixed_routes(b.get("items"))
+            return self._json({"ok": ok, "items": core.fixed_routes()}, 200 if ok else 400)
         if action == "park_pay_time":
             ok = parks.set_pay_time(_txt(b.get("from"), 5), _txt(b.get("to"), 5))
             return self._json({"ok": ok, "pay_time": parks.pay_time()}, 200 if ok else 400)

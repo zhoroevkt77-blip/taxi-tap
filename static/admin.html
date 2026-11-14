@@ -300,7 +300,9 @@ async function viewTariffs() {
       <div><label>Акысыз мүнөт</label><input class="f" id="wFree" inputmode="decimal" value="${wait.free_min}"></div>
       <div><label>Андан кийин, сом/мүн</label><input class="f" id="wPer" inputmode="decimal" value="${wait.per_min}"></div></div>
       <div style="padding:0 14px 14px"><button class="btn gold" id="wSave">Сактоо</button> <span class="muted" id="wMsg"></span>
-      <p class="muted">Айдоочу «Келдим» баскандан кийин эсептелет жана сапардын баасына кошулат.</p></div></div>`;
+      <p class="muted">Айдоочу «Келдим» баскандан кийин эсептелет жана сапардын баасына кошулат.</p></div></div>
+    <div class="panel" id="fxP"></div>`;
+  fixedPanel();
   const saveCl = async flip => {
     const out = {}; Object.keys(classes).forEach(c => out[c] = {k:+$(`[data-ck=${c}]`).value, on:c === flip ? !classes[c].on : classes[c].on});
     const x = await api("/api/a/classes", {classes:out});
@@ -637,6 +639,47 @@ async function addrForm(x, K, q) {
   const del = $("#dDel");
   if (del) del.onclick = async () => { if (!confirm("Бул даректи биротоло өчүрөсүзбү?")) return; await api("/api/a/addr_delete", {id:DF.id}); viewAddr(q); };
   $("#dN").focus();
+}
+// ---------- Туруктуу баалар (айылдар) ----------
+let FX = [], fxNew = {};
+async function fixedPanel() {
+  const r = await api("/api/a/fixed_routes"); FX = r.items || [];
+  const box = $("#fxP"); if (!box) return;
+  const pick = k => `<div style="position:relative"><input class="f" id="fx${k}" placeholder="${k === "A" ? "Кайдан: мис. Базар-Коргон борбору" : "Кайда: мис. Арал айылы"}" autocomplete="off" style="margin:0" value="${esc(fxNew[k]?.name || "")}">
+    <div class="fxdd" id="fx${k}d"></div></div>`;
+  box.innerHTML = `<h3>📌 Туруктуу баалар (айылдарга)</h3>
+    ${FX.length ? FX.map(x => `<div class="item"><div class="main"><b>${esc(x.a.name)} ⇄ ${esc(x.b.name)}</b>
+      <span class="muted">Эки тарапка тең · ${x.r} км тегерегинде · талап коэффициенти тийбейт</span></div>
+      <b style="font-size:18px;white-space:nowrap">${x.price} с</b><button class="btn" data-fxdel="${x.id}">✕</button></div>`).join("")
+      : `<div class="empty">Азырынча жок. Мисалы: «Базар-Коргон борбору ⇄ Арал = 150 сом».</div>`}
+    <div class="item"><div class="main" style="width:100%;display:grid;gap:8px">${pick("A")}${pick("B")}
+      <div style="display:flex;gap:8px"><input class="f" id="fxPr" inputmode="numeric" placeholder="Баасы, сом" style="margin:0;max-width:140px">
+      <button class="btn gold" id="fxAdd">➕ Кошуу</button></div>
+      <p class="muted" style="margin:0">Жүргүнчү А'нын ${r.r || 2} км тегерегинен Б'нын ${r.r || 2} км тегерегине барса (же тескерисинче) — баа ушул болот. Комфорт/Минивэн үчүн коэффициент көбөйтүлөт.</p></div></div>`;
+  ["A", "B"].forEach(k => {
+    let tm; const inp = $("#fx" + k), dd = $("#fx" + k + "d");
+    inp.oninput = () => { clearTimeout(tm); fxNew[k] = null; tm = setTimeout(async () => {
+      const q = inp.value.trim(); if (q.length < 2) return dd.innerHTML = "";
+      const c = (window.AREA && AREA.center) || [41.04, 72.75];
+      const x = await (await fetch(`/api/addr?q=${encodeURIComponent(q)}&lat=${c[0]}&lon=${c[1]}`)).json();
+      dd.innerHTML = (x.items || []).slice(0, 6).map((it, i) => `<div data-i="${i}">${esc(it.name)}<small>${esc(it.addr || it.sub || "")}</small></div>`).join("");
+      dd.querySelectorAll("[data-i]").forEach(el => el.onclick = () => { const it = x.items[+el.dataset.i];
+        fxNew[k] = {name: it.name, lat: it.lat, lon: it.lon};
+        inp.value = fxNew[k].name; dd.innerHTML = ""; });
+    }, 300); };
+  });
+  $("#fxAdd").onclick = async () => {
+    const pr = +$("#fxPr").value;
+    if (!fxNew.A || !fxNew.B) return toast("Кайдан жана кайда — тизмеден тандаңыз", 2500);
+    if (!(pr >= 10)) return toast("Баасын жазыңыз", 2000);
+    const items = FX.concat([{id: Math.max(0, ...FX.map(x => x.id)) + 1, a: fxNew.A, b: fxNew.B, price: pr}]);
+    const r = await api("/api/a/fixed_routes", {items}); if (!r.ok) return toast("Ката", 2000);
+    fxNew = {}; toast("✓ Туруктуу баа кошулду", 2000); fixedPanel();
+  };
+  box.querySelectorAll("[data-fxdel]").forEach(b => b.onclick = async () => {
+    if (!confirm("Өчүрөсүзбү?")) return;
+    await api("/api/a/fixed_routes", {items: FX.filter(x => x.id != b.dataset.fxdel)}); fixedPanel();
+  });
 }
 function show(t) {
   tab = t; lyr = null;

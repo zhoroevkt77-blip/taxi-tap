@@ -590,3 +590,5 @@ body.dnav .sheet{max-height:calc(100dvh - 318px - env(safe-area-inset-top,0px))!
 .kgp input#rpN{width:30%}.kgp input#rpL{flex:1;text-transform:uppercase}
 .hide{display:none!important}
 #rb,#rmS{height:50px;padding:0 12px!important;font-size:16px!important;font-weight:600;appearance:auto}.kgp select{max-width:64px}
+.fixbox{display:flex;align-items:center;gap:10px;background:#eef9f1;border:1px solid #bfe8cd;border-radius:16px;padding:8px 12px;margin:8px 0;font-size:13.5px;color:#1d5b36}.fixbox img{width:44px;height:32px;border-radius:12px;object-fit:cover}.fixbox b{display:block;font-size:15px;color:#16161a}
+.fxdd{position:absolute;left:0;right:0;top:100%;z-index:50;background:#fff;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.15);overflow:hidden}.fxdd div{padding:9px 12px;cursor:pointer;border-bottom:1px solid #f0f0f3;font-weight:700}.fxdd div:hover{background:#fffaf0}.fxdd small{display:block;color:#888;font-weight:500}
