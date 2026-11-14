@@ -126,6 +126,18 @@ def notify_kb(u):
                                   "callback_data": "notify:%d" % (0 if on else 1)}]]}
 
 
+def welcome_kb(u):
+    """Сайтка өтүү баскычтары + билдирүү жөндөөсү."""
+    rows = []
+    if core.SITE_URL.startswith("https://"):
+        rows += [[{"text": L("btn_go_rider"), "url": site("/")}],
+                 [{"text": L("btn_go_driver"), "url": site("/driver")}]]
+    n = notify_kb(u)
+    if n:
+        rows += n["inline_keyboard"]
+    return {"inline_keyboard": rows} if rows else None
+
+
 def handle_update(up):
     if "callback_query" in up:
         cb = up["callback_query"]
@@ -137,7 +149,7 @@ def handle_update(up):
             api("answerCallbackQuery", callback_query_id=cb["id"],
                 text=L("notify_on" if on else "notify_off"))
             api("editMessageReplyMarkup", chat_id=cb["message"]["chat"]["id"],
-                message_id=cb["message"]["message_id"], reply_markup=notify_kb(_user_by_tg(tg)))
+                message_id=cb["message"]["message_id"], reply_markup=welcome_kb(_user_by_tg(tg)))
         else:
             api("answerCallbackQuery", callback_query_id=cb["id"])
         return
@@ -162,7 +174,7 @@ def handle_update(up):
             return
         tok = _pending.pop(chat, None)
         if not tok:
-            send(chat, L("welcome", site=site("/")), {"remove_keyboard": True})
+            send(chat, L("welcome", site=site("/")), welcome_kb(_user_by_tg(tg)) or {"remove_keyboard": True})
             return
         s = core.web_session(tok)
         uid = core.web_session_verify(tok, c.get("phone_number") or "", tg)
@@ -179,7 +191,7 @@ def handle_update(up):
         return
 
     # /start жана башка нерселер: сайттын дареги + билдирүү жөндөөсү
-    send(chat, L("welcome", site=site("/")), notify_kb(_user_by_tg(tg)) or {"remove_keyboard": True})
+    send(chat, L("welcome", site=site("/")), welcome_kb(_user_by_tg(tg)) or {"remove_keyboard": True})
 
 
 # ==================== Иштетүү ====================
