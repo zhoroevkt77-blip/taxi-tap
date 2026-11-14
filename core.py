@@ -681,11 +681,8 @@ def set_area_units(names):
     os.makedirs(DATA_DIR, exist_ok=True)
     with open(_sel_path(), "w", encoding="utf-8") as f:
         json.dump([{"name": u["name"], "ob": u["ob"]} for u in units], f, ensure_ascii=False)
-    try:
-        os.remove(_custom_path())                       # тизмеден тандалды — колго тартылган чек өчөт
-    except OSError:
-        pass
     _apply_units(units)
+    _merge_custom()                                     # колго тартылган кошумча чек сакталат
     return {"ok": True, "units": [{"name": u["name"], "approx": u["approx"]} for u in units]}
 
 
@@ -737,7 +734,9 @@ def set_custom_area(points):
     os.makedirs(DATA_DIR, exist_ok=True)
     with open(_custom_path(), "w", encoding="utf-8") as f:
         json.dump(gj, f)
-    _area.update(geojson=gj, source="custom")
+    _area.update(geojson=None, source="bbox")
+    _load_area_base(fetch=False)                        # тизмедеги аймак + ушул кошумча
+    _merge_custom()
     return True
 
 
@@ -750,16 +749,37 @@ def reset_area():
     load_area(fetch=False)
 
 
-def load_area(fetch=True):
-    """Аймактын чеги: админ тарткан → сакталган OSM → OpenStreetMap'тен жүктөө."""
-    if not AREA_ON:
-        return
+def _merge_custom():
+    """Колго тартылган чекти тизмеден тандалган аймакка КОШОТ (алмаштырбайт)."""
+    global AREA_BBOX
     try:
         with open(_custom_path(), encoding="utf-8") as f:
-            _area.update(geojson=json.load(f), source="custom")
-            return
+            extra = json.load(f)
     except (OSError, ValueError):
-        pass
+        return
+    if _area.get("source") in ("list+custom", "custom"):
+        return                                          # мурунтан кошулган
+    polys = []
+    base = _area.get("geojson")
+    if base and _area.get("source") in ("list", "osm"):
+        polys = [base["coordinates"]] if base["type"] == "Polygon" else list(base["coordinates"])
+    had = bool(polys)
+    polys += [extra["coordinates"]] if extra["type"] == "Polygon" else list(extra["coordinates"])
+    _area.update(geojson={"type": "MultiPolygon", "coordinates": polys},
+                 source="list+custom" if had else "custom")
+    pts = [p for r in _rings(_area["geojson"]) for p in r]
+    AREA_BBOX = [min(p[1] for p in pts), min(p[0] for p in pts), max(p[1] for p in pts), max(p[0] for p in pts)]
+
+
+def load_area(fetch=True):
+    """Аймактын чеги: тизмеден тандалган (же OSM) + админ колго тарткан кошумча."""
+    if not AREA_ON:
+        return
+    _load_area_base(fetch)
+    _merge_custom()
+
+
+def _load_area_base(fetch=True):
     try:                                                # тизмеден тандалган райондор/шаарлар
         with open(_sel_path(), encoding="utf-8") as f:
             sel = json.load(f)

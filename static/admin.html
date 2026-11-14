@@ -450,7 +450,7 @@ async function viewFinance() {
 let amap = null, alyr = null, draw = null;
 async function viewArea() {
   const a = await (await fetch("/api/area")).json();
-  const src = {custom:"өзүңүз тарткан чек", osm:"OpenStreetMap'теги райондун чеги", list:"тизмеден тандалган (OpenStreetMap чектери)", bbox:"болжолдуу төрт бурчтук"}[a.source] || a.source;
+  const src = {"list+custom":"тизмеден тандалган + өзүңүз тарткан кошумча", custom:"өзүңүз тарткан чек", osm:"OpenStreetMap'теги райондун чеги", list:"тизмеден тандалган (OpenStreetMap чектери)", bbox:"болжолдуу төрт бурчтук"}[a.source] || a.source;
   $("#main").innerHTML = `<div class="panel"><h3>Иштөө аймагы: ${esc(a.name)}</h3>
       <div class="item"><div class="main"><span class="muted">Азыркы чек: <b>${esc(src)}</b>. Жүргүнчүлөр ушул чектин ичинде гана заказ бере алат.</span></div></div>
       <div class="item"><div class="main" style="width:100%"><label class="muted">Аймактын аты (кардарларга ушундай көрүнөт)</label>
@@ -537,12 +537,12 @@ async function areaPicker(a) {
 function areaTools(a) {
   const t = $("#tools");
   if (!draw) {
-    t.innerHTML = `<button class="btn gold" id="aNew">✏️ Жаңы чек тартуу</button>
-      ${a.source === "custom" ? `<button class="btn" id="aReset">↺ Тизмедеги чекке кайтаруу</button>` : ""}`;
-    $("#hint").textContent = "«Жаңы чек тартуу» басып, картаны аймактын четтери боюнча кезек-кезек басыңыз. Кеминде 3 чекит.";
+    t.innerHTML = `<button class="btn gold" id="aNew">✏️ Кошумча жер тартуу</button>
+      ${a.source === "custom" || a.source === "list+custom" ? `<button class="btn" id="aReset">✕ Тарткан кошумчаны өчүрүү</button>` : ""}`;
+    $("#hint").textContent = "Тизмеде жок айылды (мис. Сузак айылы) кошуу үчүн: «Кошумча жер тартуу» басып, картаны анын четтери боюнча кезек-кезек басыңыз. Тарткан жер тизмедеги аймакка КОШУЛАТ.";
     $("#aNew").onclick = () => { draw = []; alyr.clearLayers(); drawPreview(); areaTools(a); };
     const r = $("#aReset");
-    if (r) r.onclick = async () => { if (!confirm("Өзүңүз тарткан чекти өчүрүп, тизмеден тандалган чекке кайтасызбы?")) return;
+    if (r) r.onclick = async () => { if (!confirm("Өзүңүз тарткан кошумча жерди өчүрөсүзбү? Тизмедеги аймак калат.")) return;
       await api("/api/a/area", {reset:true}); setTimeout(viewArea, 1500); };
     return;
   }

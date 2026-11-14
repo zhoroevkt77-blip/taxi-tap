@@ -1039,3 +1039,15 @@ class AreaTitle(unittest.TestCase):
             self.assertEqual(core.area_gen(), "Базар-Коргон жана Сузак аймагынын")
         core.set_setting("area_title", "")
         self.assertIsNone(core.area_title())
+
+
+class AreaMerge(unittest.TestCase):
+    def test_custom_adds_to_list(self):
+        if not core.AREA_ON:
+            return
+        before = len(core._rings(core.area_geojson()))
+        ok = core.set_custom_area([[41.10, 72.80], [41.11, 72.80], [41.11, 72.81]])
+        self.assertTrue(ok)
+        self.assertEqual(len(core._rings(core.area_geojson())), before + (0 if core._area["source"] == "custom" else 1))
+        self.assertTrue(core.in_area(41.105, 72.802))
+        core.reset_area()
