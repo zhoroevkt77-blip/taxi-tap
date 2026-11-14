@@ -101,7 +101,7 @@ input.f:focus{border-color:var(--navy)}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
 <link rel="preload" as="image" href="/static/h_taxi.webp"><link rel="preload" as="image" href="/static/h_box.webp"><link rel="preload" as="image" href="/static/h_girl.webp"><link rel="preload" as="image" href="/static/h_map.webp">
-<link rel="stylesheet" href="/static/theme.css?v=62">
+<link rel="stylesheet" href="/static/theme.css?v=63">
 </head>
 <body>
 <div id="map"></div>
@@ -718,7 +718,7 @@ function viewChat() {
 }
 function carCard(d) {
   return `<div class="dcard"><div class="dinfo"><b class="dname">${esc(d.name || "Айдоочу")} <span>★${Number(d.rating ?? 5).toFixed(2)}</span></b>
-      <div class="dcar">${esc(d.color || "")} ${esc(d.car || "")}${d.park ? ` · <b>${esc(d.park)}</b>` : ""}</div><div class="kgplate">${esc(d.plate || "")}</div></div>
+      <div class="dcar">${esc(carText(d.color, d.car))}${d.park ? ` · <b>${esc(d.park)}</b>` : ""}</div><div class="kgplate">${esc(d.plate || "")}</div></div>
     <div class="dside"><span class="dcarico">🚗</span><a class="dcall" href="tel:${esc(d.phone)}" aria-label="Чалуу">📞</a></div></div>`;
 }
 // Сапардагы баскычтар: Сактоо · Бөлүшүү · Коопсуздук · Деталдар
@@ -749,7 +749,7 @@ function rideInfo(r) {
     <div class="hrow"><span>Аралык</span><b>${r.dist_km ? r.dist_km.toFixed(1) + " км" : "—"}</b></div>
     <div class="hrow"><span>💵 Накталай</span><b>${r.pay ? r.pay + " сом" : "тариф боюнча"}</b></div>
     <div class="hrow"><span>Айдоочу</span><b>${esc(d.name || "")} ★${d.rating ?? "5"}</b></div>
-    <div class="hrow"><span>Унаа</span><b>${esc(d.color || "")} ${esc(d.car || "")} · ${esc(d.plate || "")}</b></div>
+    <div class="hrow"><span>Унаа</span><b>${esc(carText(d.color, d.car))}, ${esc(d.plate || "")}</b></div>
     <div class="hrow"><span>Ташуучу</span><b>Такси ТАП! · өз алдынча айдоочу</b></div>
     <button class="btn ghost" id="bxX">Жабуу</button>`);
 }

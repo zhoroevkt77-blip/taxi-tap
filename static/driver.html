@@ -81,7 +81,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=62">
+<link rel="stylesheet" href="/static/theme.css?v=63">
 </head>
 <body>
 <nav id="bnav" class="bnav pro"><a data-k="earn"><img src="/static/n_earn.webp" alt="">Киреше</a><a data-k="hist"><img src="/static/n_trips.webp" alt="">Сапарлар</a><a data-k="line" class="big on"><img src="/static/n_go.webp" alt="">Линия</a><a data-k="help"><img src="/static/n_help.webp" alt="">Жардам</a><a data-k="cab"><img src="/static/n_cab.webp" alt="">Кабинет</a></nav>
@@ -308,7 +308,7 @@ function viewHome() {
     bindHome();
     $("#off").onclick = goOffline;
   } else {
-    render(`<h2>Салам, ${esc(D.name || "айдоочу")}!</h2><p class="muted">${esc(D.car_color)} ${esc(D.car_model)}, ${esc(D.car_plate)}</p>
+    render(`<h2>Салам, ${esc(D.name || "айдоочу")}!</h2><p class="muted">${esc(carText(D.car_color, D.car_model))}, ${esc(D.car_plate)}</p>
       ${low ? `<p class="err">Баланс жетишсиз — заказдар келбейт.</p>` : ""}${outHTML()}
       <button class="btn go" id="on">Линияга чыгуу</button>
       <div class="err" id="er"></div>${stats}${topup}
@@ -723,6 +723,52 @@ function viewLicense() {
   };
 }
 
+// ---------- Унаа: түс, марка/модель, номер ----------
+const CAR_COLORS = [["Ак", "#ffffff"], ["Кара", "#16161a"], ["Күмүш", "linear-gradient(135deg,#f2f2f5,#a9adb5)"], ["Боз", "#8d9199"],
+  ["Асфальт", "#4b5058"], ["Көк", "#1f5fbf"], ["Кызыл", "#d4252f"], ["Жашыл", "#2f8f4e"], ["Сары", "#ffc61a"], ["Күрөң", "#7a4a2a"], ["Кызгылт", "#c9a07a"]];
+const CAR_MODELS = {
+  "Тойота": ["Камри", "Королла", "Приус", "Аква", "Ярис", "Витц", "Авенсис", "Эстима", "Альфард", "Хайландер", "РАВ4", "Ленд Крузер"],
+  "Хюндай": ["Солярис", "Соната", "Элантра", "Акцент", "Аванте", "Гетц", "Грандеур", "Туссан", "Санта Фе", "Старекс"],
+  "Киа": ["Рио", "К5", "Оптима", "Серато", "Спортейдж", "Соренто", "Карнивал", "Морнинг"],
+  "Хонда": ["Фит", "Цивик", "Аккорд", "Одиссей", "Степвагон", "CR-V", "Инсайт"],
+  "Лексус": ["ES", "RX", "GS", "LX"], "Мерседес-Бенц": ["E-класс", "C-класс", "S-класс", "Вито", "Спринтер"],
+  "Дэу": ["Нексия", "Матиз", "Джентра", "Ласетти"], "Шевроле": ["Кобальт", "Нексия", "Спарк", "Малибу", "Каптива", "Ласетти"],
+  "Ниссан": ["Тиида", "Ноут", "Алмера", "Икс-Трейл", "Серена"], "Мазда": ["Мазда 3", "Мазда 6", "Демио", "Премаси"],
+  "Фольксваген": ["Пассат", "Гольф", "Поло", "Джетта", "Шаран"], "Лада": ["Гранта", "Веста", "Приора", "Калина", "Ларгус", "Нива"],
+  "BYD": ["Хан", "Сонг", "Чейзер 05", "Сил"], "Субару": ["Легаси", "Аутбек", "Форестер", "Импреза"],
+  "Митсубиси": ["Лансер", "Аутлендер", "Паджеро", "Делика"], "Ауди": ["А4", "А6", "Q5", "Q7"], "БМВ": ["3", "5", "X5"]};
+const PLATE_REG = {"01":"Бишкек", "02":"Ош ш.", "03":"Баткен", "04":"Жалал-Абад", "05":"Нарын", "06":"Ош обл.", "07":"Талас", "08":"Чүй", "09":"Ысык-Көл"};
+const CYR_LAT = {А:"A", В:"B", Е:"E", К:"K", М:"M", Н:"H", О:"O", Р:"P", С:"C", Т:"T", У:"Y", Х:"X", Г:"G", Д:"D", Л:"L", И:"I", Ф:"F", З:"Z", Ж:"J"};
+function plateVal() {
+  const n = $("#rpN").value.replace(/\D/g, ""), l = $("#rpL").value.toUpperCase().replace(/[А-ЯЁ]/g, c => CYR_LAT[c] || "").replace(/[^A-Z]/g, "");
+  return n.length === 3 && l.length >= 2 ? `${$("#rpR").value}KG${n}${l}` : "";
+}
+function carForm() {
+  // мурунку маалыматты толтуруу
+  const pm = /^(0[1-9])KG(\d{3})([A-Z]{2,3})$/.exec(D.car_plate || "");
+  if (pm) { $("#rpR").value = pm[1]; $("#rpN").value = pm[2]; $("#rpL").value = pm[3]; }
+  const prev = () => { const p = plateVal(); $("#carPrev").innerHTML = ($("#rc").value && $("#rm").value) || p
+    ? `${PLATE_REG[$("#rpR").value]} · жүргүнчүгө ушундай көрүнөт: <b>${esc(carText($("#rc").value, $("#rm").value) || "…")}, ${p || "…"}</b>` : ""; };
+  const pickColor = (n, typed) => { $("#rcP").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.c === n));
+    $("#rc").classList.toggle("hide", n !== "*"); if (n !== "*") $("#rc").value = n; else if (!typed) { $("#rc").value = ""; $("#rc").focus(); } prev(); };
+  $("#rcP").querySelectorAll("button").forEach(b => b.onclick = () => pickColor(b.dataset.c));
+  if (D.car_color) pickColor(CAR_COLORS.some(c => c[0] === D.car_color) ? D.car_color : "*", true);
+  const setModels = (b, keep) => { const m = CAR_MODELS[b] || [];
+    $("#rmS").innerHTML = `<option value="">Модели…</option>${m.map(x => `<option>${x}</option>`).join("")}<option value="*">✏️ Башка</option>`;
+    $("#rmS").disabled = !b || b === "*"; $("#rmS").classList.toggle("hide", b === "*"); $("#rm").classList.toggle("hide", b !== "*");
+    if (!keep) $("#rm").value = b === "*" ? "" : ""; };
+  $("#rb").onchange = () => { setModels($("#rb").value); if ($("#rb").value === "*") $("#rm").focus(); prev(); };
+  $("#rmS").onchange = () => { const v = $("#rmS").value, b = $("#rb").value;
+    if (v === "*") { $("#rm").classList.remove("hide"); $("#rm").value = b + " "; $("#rm").focus(); } else { $("#rm").classList.add("hide"); $("#rm").value = v ? b + " " + v : ""; } prev(); };
+  if (D.car_model) { const b = Object.keys(CAR_MODELS).find(k => D.car_model.startsWith(k + " "));
+    if (b) { $("#rb").value = b; setModels(b, true); const m = D.car_model.slice(b.length + 1);
+      if (CAR_MODELS[b].includes(m)) $("#rmS").value = m; else { $("#rmS").value = "*"; $("#rm").classList.remove("hide"); } }
+    else { $("#rb").value = "*"; setModels("*", true); } }
+  ["#rc", "#rm", "#rpN", "#rpL", "#rpR"].forEach(s => $(s).addEventListener("input", prev));
+  $("#rpL").addEventListener("input", () => { const e = $("#rpL"); e.value = e.value.toUpperCase().replace(/[А-ЯЁ]/g, c => CYR_LAT[c] || "").replace(/[^A-Z]/g, ""); });
+  $("#rpN").addEventListener("input", () => { const e = $("#rpN"); e.value = e.value.replace(/\D/g, ""); if (e.value.length === 3) $("#rpL").focus(); });
+  prev();
+}
 function viewRegister() {
   $("#earn").classList.add("hide");
   const again = D.status === "rejected" || D.status === "pending";
@@ -730,9 +776,17 @@ function viewRegister() {
   render(`<h2>${again ? "Арызды оңдоо" : "Айдоочу болуу"}</h2>
     ${D.status === "rejected" ? `<div class="note">Арыз кабыл алынган жок.${D.reject_note ? " Себеби: " + esc(D.reject_note) : ""}</div>` : ""}
     <label class="l">Аты-жөнүңүз</label><input class="f" id="rn" value="${esc(D.name || "")}" autocomplete="name">
-    <label class="l">Унаа (марка, модель)</label><input class="f" id="rm" placeholder="Toyota Camry" value="${esc(D.car_model || "")}">
-    <div class="two"><div><label class="l">Түсү</label><input class="f" id="rc" placeholder="Ак" value="${esc(D.car_color || "")}"></div>
-    <div><label class="l">Мамлекеттик номери</label><input class="f" id="rp" placeholder="01 123 ABC" value="${esc(D.car_plate || "")}" style="text-transform:uppercase"></div></div>
+    <label class="l">Унаанын түсү</label>
+    <div class="cpick" id="rcP">${CAR_COLORS.map(([n, c]) => `<button type="button" data-c="${n}" style="--c:${c}"><i></i>${n}</button>`).join("")}<button type="button" data-c="*"><i class="o">✏️</i>Башка</button></div>
+    <input class="f hide" id="rc" placeholder="Түсүн жазыңыз" value="${esc(D.car_color || "")}">
+    <label class="l">Маркасы жана модели</label>
+    <div class="two"><select class="f" id="rb"><option value="">Маркасы…</option>${Object.keys(CAR_MODELS).map(b => `<option>${b}</option>`).join("")}<option value="*">✏️ Башка</option></select>
+      <select class="f" id="rmS" disabled><option value="">Модели…</option></select></div>
+    <input class="f hide" id="rm" placeholder="Мис. Хюндай Солярис" value="${esc(D.car_model || "")}">
+    <label class="l">Мамлекеттик номери</label>
+    <div class="kgp"><select id="rpR">${Object.entries(PLATE_REG).map(([k, v]) => `<option value="${k}" ${k === "04" ? "selected" : ""}>${k}</option>`).join("")}</select>
+      <span class="kg"><b>🇰🇬</b>KG</span><input id="rpN" inputmode="numeric" maxlength="3" placeholder="338"><input id="rpL" maxlength="3" placeholder="APG" autocapitalize="characters"></div>
+    <p class="muted" id="carPrev" style="margin:-2px 0 8px"></p>
     <label class="l">Документтердин сүрөтү${again ? " (өзгөрбөсө жүктөбөй эле коюңуз)" : ""}</label>
     <div class="docs">
       <div class="doc" id="dl"><i>🪪</i>Айдоочулук күбөлүк<input type="file" accept="image/*"></div>
@@ -746,15 +800,18 @@ function viewRegister() {
     <div class="err" id="er"></div><button class="btn main" id="send">Арызды жөнөтүү</button>
     `);
   docInput($("#dl"), docs, "license"); docInput($("#dt"), docs, "techpass"); docInput($("#dc"), docs, "car"); docInput($("#ds"), docs, "selfie");
+  carForm();
   $("#send").onclick = async () => {
-    const body = {name:$("#rn").value, model:$("#rm").value, color:$("#rc").value, plate:$("#rp").value, lic_until:$("#rl").value, ...docs};
-    if (!body.name.trim() || !body.model.trim() || !body.color.trim() || !body.plate.trim()) return $("#er").textContent = "Бардык талааларды толтуруңуз.";
+    const plate = plateVal();
+    const body = {name:$("#rn").value, model:$("#rm").value, color:$("#rc").value, plate, lic_until:$("#rl").value, ...docs};
+    if (!body.name.trim() || !body.model.trim() || !body.color.trim()) return $("#er").textContent = "Аты-жөнүңүздү, унаанын түсүн жана маркасын тандаңыз.";
+    if (!plate) return $("#er").textContent = "Номерди толук жазыңыз: 3 цифра жана 2–3 латын тамгасы (мис. 338 APG).";
     if (!again && Object.keys(docs).length < 4) return $("#er").textContent = "Төрт сүрөттү тең жүктөңүз (селфи да).";
     if (!body.lic_until) return $("#er").textContent = "Күбөлүктүн мөөнөтүн жазыңыз.";
     $("#send").disabled = true; $("#send").textContent = "Жөнөтүлүүдө…";
     const r = await api("/api/d/register", body);
     if (r.error) { $("#send").disabled = false; $("#send").textContent = "Арызды жөнөтүү";
-      return $("#er").textContent = LIC_ERR[r.error] || (r.error.startsWith("doc_") ? "Документтин сүрөтүн жүктөңүз." : "Ката. Талааларды текшериңиз."); }
+      return $("#er").textContent = r.error === "plate" ? "Номер туура эмес. Мисалы: 04 KG 338 APG." : LIC_ERR[r.error] || (r.error.startsWith("doc_") ? "Документтин сүрөтүн жүктөңүз." : "Ката. Талааларды текшериңиз."); }
     D = r; lastView = ""; show();
   };
 }
@@ -824,7 +881,7 @@ function show() {
     if (!D.status || D.status === "rejected") return viewRegister();
     if (D.status === "pending") return render(`<h2>Арызыңыз текшерилүүдө</h2>
       <p class="muted">Админ документтериңизди карап чыгып, ырастайт. Адатта бир нече саат ичинде.${D.tg ? " Жыйынтыгы Telegram'га келет." : ""}</p>
-      <div class="note">🚗 ${esc(D.car_color)} ${esc(D.car_model)}, <b>${esc(D.car_plate)}</b></div>
+      <div class="note">🚗 ${esc(carText(D.car_color, D.car_model))}, <b>${esc(D.car_plate)}</b></div>
       <button class="btn ghost" id="edit">Арызды оңдоо</button>`) || ($("#edit").onclick = viewRegister);
     return render(`<h2>Аккаунт бөгөттөлгөн</h2><p class="muted">Админ менен байланышыңыз.</p>`);
   }

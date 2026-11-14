@@ -1577,6 +1577,27 @@ def upload_path(name):
     return p if name and os.path.isfile(p) else None
 
 
+# ---------- Унаа: номер жана бирдиктүү сап ----------
+_PLATE_CYR = dict(zip("АВЕКМНОРСТУХГДЛИФЗЖ", "ABEKMHOPCTYXGDLIFZJ"))
+PLATE_REGIONS = {"01": "Бишкек", "02": "Ош шаары", "03": "Баткен", "04": "Жалал-Абад", "05": "Нарын",
+                 "06": "Ош облусу", "07": "Талас", "08": "Чүй", "09": "Ысык-Көл"}
+
+
+def norm_plate(raw):
+    """«04 KG 338 APG», «04338арг» → «04KG338APG». Туура эмес болсо — None."""
+    import re
+    s = "".join(_PLATE_CYR.get(c, c) for c in (raw or "").upper())
+    s = re.sub(r"[^0-9A-Z]", "", s)
+    m = re.fullmatch(r"(0[1-9])(?:KG)?(\d{3})([A-Z]{2,3})", s)
+    return "%sKG%s%s" % m.groups() if m else None
+
+
+def car_text(color, model):
+    """«Асфальт түстө Хюндай Солярис»."""
+    color, model = (color or "").strip(), (model or "").strip()
+    return ("%s түстө %s" % (color, model)) if color and model else (model or color)
+
+
 def register_driver(uid, name, model, color, plate, docs):
     """Сайттан айдоочу болуу арызы. docs: {'license','techpass','car'} → файл аттары."""
     if name:

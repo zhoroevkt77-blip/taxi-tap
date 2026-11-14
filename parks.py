@@ -229,7 +229,7 @@ def driver_rows(pid):
         n, gross = _rides([d["uid"]], per["week"])
         t, _ = _rides([d["uid"]], per["today"])
         rows.append({"uid": d["uid"], "name": u.get("name") or "", "phone": u.get("phone") or "",
-                     "car": "%s %s" % (d.get("car_color") or "", d.get("car_model") or ""), "plate": d.get("car_plate") or "",
+                     "car": core.car_text(d.get("car_color"), d.get("car_model")), "plate": d.get("car_plate") or "",
                      "status": d.get("status"), "online": bool(d.get("online")), "busy": bool(d.get("busy_ride")),
                      "rating": d.get("rating"), "activity": d.get("activity") if d.get("activity") is not None else 100,
                      "balance": round(d.get("balance") or 0), "today": t, "week_rides": n, "week_gross": gross})

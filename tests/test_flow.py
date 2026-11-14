@@ -770,7 +770,7 @@ class Http(unittest.TestCase):
         self.assertTrue(st["offer"])
         st = drv("/api/d/accept", {"id": st["offer"]["id"]})
         self.assertEqual(st["ride"]["status"], "accepted")
-        self.assertEqual(pas("/api/ride")["ride"]["driver"]["plate"], "01 777 KGA")
+        self.assertEqual(pas("/api/ride")["ride"]["driver"]["plate"], "01KG777KGA")
         for _ in range(3):
             st = drv("/api/d/step", {"id": st["ride"]["id"]})
         self.assertIsNone(st["ride"])
@@ -1063,3 +1063,13 @@ class ParkPayTime(unittest.TestCase):
         self.assertTrue(parks.set_pay_time("09:30", "17:00"))
         self.assertEqual(parks.pay_time()["from"], "09:30")
         core.set_setting("park_pay_time", {})
+
+
+class CarPlate(unittest.TestCase):
+    def test_norm_plate(self):
+        self.assertEqual(core.norm_plate("04 KG 338 APG"), "04KG338APG")
+        self.assertEqual(core.norm_plate("04338арг"), "04KG338APG")
+        self.assertEqual(core.norm_plate("01 777 kga"), "01KG777KGA")
+        self.assertIsNone(core.norm_plate("12 345"))
+        self.assertIsNone(core.norm_plate("10KG123AB"))
+        self.assertEqual(core.car_text("Асфальт", "Хюндай Солярис"), "Асфальт түстө Хюндай Солярис")

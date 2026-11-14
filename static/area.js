@@ -58,6 +58,9 @@ function showAreaOnMap(map, onClose) {
   document.body.appendChild(c);
 }
 
+// «Асфальт түстө Хюндай Солярис»
+function carText(color, model) { color = (color || "").trim(); model = (model || "").trim(); return color && model ? `${color} түстө ${model}` : (model || color); }
+
 // ---------- тиркеме катары орнотуу (PWA) ----------
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
 window.INSTALL = null;

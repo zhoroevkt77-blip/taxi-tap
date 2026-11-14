@@ -37,7 +37,7 @@ def driver_accept(uid, rid):
     if d["lat"] is not None:
         km = eta_km(d, r)
         eta = L("eta", m=max(1, round(km / core.AVG_SPEED_KMH * 60)))
-    return [note(r["passenger"], "p_found", "/", car="%s %s" % (d["car_color"], d["car_model"]),
+    return [note(r["passenger"], "p_found", "/", car=core.car_text(d["car_color"], d["car_model"]),
                  plate=d["car_plate"], eta=eta)]
 
 
@@ -75,7 +75,7 @@ def driver_sos(uid, p):
     if r:
         core.log_event(r["id"], "sos", uid)
     return [note(a, "a_sos", "/admin", name=u.get("name") or "", phone=u.get("phone") or "",
-                 car="%s %s, %s" % (d.get("car_color") or "", d.get("car_model") or "", d.get("car_plate") or ""),
+                 car="%s, %s" % (core.car_text(d.get("car_color"), d.get("car_model")), d.get("car_plate") or ""),
                  where=where, ride=ride) for a in core.admins()]
 
 

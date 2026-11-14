@@ -567,6 +567,9 @@ class H(BaseHTTPRequestHandler):
             color, plate = _txt(b.get("color"), 20), _txt(b.get("plate"), 15).upper()
             if not (name and model and color and plate):
                 return self._json({"error": "fields"}, 400)
+            plate = core.norm_plate(plate)
+            if not plate:
+                return self._json({"error": "plate"}, 400)
             docs = {}
             for k in ("license", "techpass", "car", "selfie"):
                 docs[k] = core.save_upload(b.get(k)) if b.get(k) else (d or {}).get("doc_" + k)
