@@ -716,7 +716,7 @@ class H(BaseHTTPRequestHandler):
             return self._json({"promos": core.list_promos()})
         if action == "tariffs":
             return self._json({"tariffs": core.all_tariffs(), "classes": core.class_config(),
-                               "wait": core.wait_config()})
+                               "wait": core.wait_config(), "activity_km": core.activity_km()})
         if action == "finance":
             return self._json(core.admin_finance())
         if action == "backup":
@@ -808,6 +808,10 @@ class H(BaseHTTPRequestHandler):
             if not core.set_class_config(b.get("classes")):
                 return self._json({"error": "bad"}, 400)
             return self._json({"classes": core.class_config()})
+        if action == "activity_km":
+            if not core.set_activity_km(_num(b.get("km"))):
+                return self._json({"error": "bad"}, 400)
+            return self._json({"activity_km": core.activity_km()})
         if action == "wait":
             if not core.set_wait_config(_num(b.get("free_min")), _num(b.get("per_min"))):
                 return self._json({"error": "bad"}, 400)

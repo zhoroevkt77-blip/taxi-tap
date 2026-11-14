@@ -1123,6 +1123,21 @@ def set_wait_config(free_min, per_min):
     return True
 
 
+def activity_km():
+    """Активдүүлүк 0 болгон айдоочу ушунча км «алысыраак» эсептелет (100 → 0)."""
+    try:
+        return float(get_setting("activity_km") if get_setting("activity_km") is not None else 0.8)
+    except (TypeError, ValueError):
+        return 0.8
+
+
+def set_activity_km(v):
+    if v is None or not (0 <= v <= 5):
+        return False
+    set_setting("activity_km", v)
+    return True
+
+
 def wait_fee_for(r, at=None):
     """Айдоочу келгенден кийин акысыз мүнөттөр, андан ары ар бир баштал мүнөт акылуу."""
     if not r.get("arrived_at"):

@@ -350,7 +350,7 @@ async function viewRides() {
 
 // ---------- тарифтер ----------
 async function viewTariffs() {
-  const {tariffs, classes, wait} = await api("/api/a/tariffs");
+  const {tariffs, classes, wait, activity_km: actKm = 0.8} = await api("/api/a/tariffs");
   $("#main").innerHTML = `<div class="panel"><h3>Тарифтер — күйгүзүү / өчүрүү</h3>
       ${Object.entries(classes).map(([c, x]) => `<div class="item"><div class="main"><b>${{econom:"🚕", comfort:"🚘", minivan:"🚐", delivery:"📦"}[c] || ""} ${esc(x.name)}</b>
         <span class="muted">${x.on ? "Жүргүнчүлөргө көрүнөт" : "Өчүк — жүргүнчүлөр тандай албайт"}</span></div>
@@ -369,8 +369,16 @@ async function viewTariffs() {
       <div><label>Андан кийин, сом/мүн</label><input class="f" id="wPer" inputmode="decimal" value="${wait.per_min}"></div></div>
       <div style="padding:0 14px 14px"><button class="btn gold" id="wSave">Сактоо</button> <span class="muted" id="wMsg"></span>
       <p class="muted">Айдоочу «Келдим» баскандан кийин эсептелет жана сапардын баасына кошулат.</p></div></div>
+    <div class="panel"><h3>⚡ Активдүүлүктүн таасири</h3><div class="fset">
+      <div><label>Активдүүлүгү 0 болгон айдоочу канча км «алысыраак» эсептелет</label><input class="f" id="akm" inputmode="decimal" value="${actKm}"></div></div>
+      <div style="padding:0 14px 14px"><button class="btn gold" id="akSave">Сактоо</button> <span class="muted" id="akMsg"></span>
+      <p class="muted">Заказ эң жакын айдоочуга берилет. Активдүүлүгү 50 болсо — жарымы (${actKm} → +${+(actKm / 2).toFixed(2)} км). Демейки 0.8 км; 0 — таасири жок, чоңойтсоңуз активдүү айдоочуга көбүрөөк артыкчылык (жүргүнчү узагыраак күтүшү мүмкүн).</p></div></div>
     <div class="panel" id="fxP"></div>`;
   fixedPanel();
+  $("#akSave").onclick = async () => {
+    const x = await api("/api/a/activity_km", {km:$("#akm").value});
+    $("#akMsg").textContent = x.error ? "Текшериңиз: 0–5 км." : "✓ Сакталды";
+  };
   const saveCl = async flip => {
     const out = {}; Object.keys(classes).forEach(c => out[c] = {k:+$(`[data-ck=${c}]`).value, on:c === flip ? !classes[c].on : classes[c].on});
     const x = await api("/api/a/classes", {classes:out});

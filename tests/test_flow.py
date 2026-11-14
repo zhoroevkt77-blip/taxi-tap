@@ -1093,6 +1093,17 @@ class ParkShareTerm(unittest.TestCase):
         core.query("DELETE FROM parks WHERE id=?", (pid,))
 
 
+class ActivityKm(unittest.TestCase):
+    def test_setting(self):
+        core.init_db()
+        self.assertEqual(core.activity_km(), 0.8)
+        self.assertFalse(core.set_activity_km(9))
+        self.assertTrue(core.set_activity_km(1.5))
+        self.assertEqual(core.activity_km(), 1.5)
+        core.set_setting("activity_km", None)
+        self.assertEqual(core.activity_km(), 0.8)
+
+
 class CarPlate(unittest.TestCase):
     def test_norm_plate(self):
         self.assertEqual(core.norm_plate("04 KG 338 APG"), "04KG338APG")

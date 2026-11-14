@@ -54,8 +54,9 @@ def candidates(ride, radius_km):
         dist = core.haversine_km(d["lat"], d["lon"], cur["d_lat"], cur["d_lon"]) + end_km + 0.5
         if dist <= radius_km:
             out.append((dist, -(d["rating"] or 5.0), d))
-    # Активдүүлүгү төмөн айдоочу «алысыраак» эсептелет: 100 → 0 км, 0 → +0.8 км
-    out.sort(key=lambda x: (round(x[0] + (100 - (x[2].get("activity") if x[2].get("activity") is not None else 100)) * 0.008, 1), x[1]))
+    # Активдүүлүгү төмөн айдоочу «алысыраак» эсептелет: 100 → 0 км, 0 → +activity_km (демейки 0.8)
+    w = core.activity_km() / 100.0
+    out.sort(key=lambda x: (round(x[0] + (100 - (x[2].get("activity") if x[2].get("activity") is not None else 100)) * w, 1), x[1]))
     return [(dist, d) for dist, _, d in out]
 
 
