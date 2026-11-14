@@ -131,10 +131,10 @@ def driver_state(uid):
     st = {"name": u.get("name"), "phone": u.get("phone"), "status": d.get("status"),
           "reject_note": d.get("reject_note"),
           "lic_until": d.get("lic_until"), "lic_left": core.lic_days_left(d),
-          "goal": int(d.get("goal") or 0) or 1000,
+          "goal": int(d.get("goal") or 0) or 1000, "car_year": d.get("car_year"),
           "qr": _driver_qr(uid, d),
           "car_model": d.get("car_model"), "car_color": d.get("car_color"),
-          "car_plate": d.get("car_plate"),
+          "car_plate": d.get("car_plate"), "park": parks.park_name_of_driver(uid) if d else None,
           "online": bool(d and (core.is_available(d) or d.get("busy_ride"))),
           "balance": int(d.get("balance") or 0), "min_balance": core.min_balance(),
           "tariff": core.finance_mode_text(), "pct_now": core.commission_pct(),
@@ -629,6 +629,12 @@ class H(BaseHTTPRequestHandler):
                 core.driver_location(uid, p[0], p[1], live_period=60)
             else:
                 core.set_driver(uid, online=0, live_until=None)
+            return self._json(driver_state(uid))
+        if action == "car_year":
+            y = int(_num(b.get("year")) or 0)
+            if not 1980 <= y <= 2030:
+                return self._json({"error": "year"}, 400)
+            core.set_driver(uid, car_year=y)
             return self._json(driver_state(uid))
         if action == "goal":
             g = int(_num(b.get("goal")) or 0)

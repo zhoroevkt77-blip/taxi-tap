@@ -298,7 +298,8 @@ NEW_COLUMNS = {
                 "park_id": "INTEGER",
                 "doc_selfie": "TEXT",                # күбөлүктү кармап тартылган селфи
                 "lic_until": "TEXT",
-                "goal": "INTEGER"},                  # күндүк максат (сом)                # күбөлүктүн мөөнөтү YYYY-MM-DD                # таксопарк (жок болсо — өз алдынча)   # активдүүлүк 0..100 (Яндекс Pro'догудай)              # аймактан сыртка чыккан убакыт
+                "goal": "INTEGER",
+                "car_year": "INTEGER"},                  # күндүк максат (сом)                # күбөлүктүн мөөнөтү YYYY-MM-DD                # таксопарк (жок болсо — өз алдынча)   # активдүүлүк 0..100 (Яндекс Pro'догудай)              # аймактан сыртка чыккан убакыт
     "balance_tx": {"claimed": "REAL"},
     "rides": {"note": "TEXT", "source": "TEXT",   # source: web | phone (диспетчер)
               "promo": "TEXT", "discount": "REAL DEFAULT 0",

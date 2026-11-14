@@ -58,6 +58,18 @@ function showAreaOnMap(map, onClose) {
   document.body.appendChild(c);
 }
 
+// Унаанын сүрөтү: айдоочу тандаган түскө боёлгон
+const CAR_IMG = {"Ак":"ak", "Кара":"kara", "Күмүш":"kumush", "Боз":"boz", "Асфальт":"asfalt", "Көк":"kok", "Кызыл":"kyzyl",
+  "Жашыл":"jashyl", "Сары":"sary", "Күрөң":"kuron", "Кызгылт":"kyzgylt"};
+function carImg(color) {
+  const c = (color || "").trim(), k = CAR_IMG[c] || Object.entries(CAR_IMG).find(([n]) => c.toLowerCase().startsWith(n.toLowerCase().slice(0, 4)))?.[1] || "ak";
+  return `/static/car_${k}.webp?v=1`;
+}
+// KG номер рамкасы: «04KG338APG» → [04 | 🇰🇬KG | 338 APG]
+function kgPlate(p) {
+  const m = /^(0[1-9])KG(\d{3})([A-Z]{2,3})$/.exec(p || "");
+  return m ? `<span class="kgpl"><b>${m[1]}</b><i>🇰🇬<br>KG</i><b>${m[2]} ${m[3]}</b></span>` : `<span class="kgpl"><b>${String(p || "").replace(/[<>&"]/g, "")}</b></span>`;
+}
 // «Асфальт түстө Хюндай Солярис»
 function carText(color, model) { color = (color || "").trim(); model = (model || "").trim(); return color && model ? `${color} түстө ${model}` : (model || color); }
 

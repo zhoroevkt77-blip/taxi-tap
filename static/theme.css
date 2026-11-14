@@ -627,3 +627,18 @@ img[src*="/static/c_"]:not([src*="c_car."]):not([src*="c_hdr"]):not([src*="c_tax
 #home.hbg::before{height:380px;opacity:1;background:url(/static/cb_tr.webp?v=9) right 0 top 140px/30% auto no-repeat}
 .pkbg{opacity:1;background:url(/static/cb_tr.webp?v=9) right 0 top 30px/34% auto no-repeat}
 #home.cabbg{background-size:100% auto,40% auto,36% auto,100% auto;background-position:left top,right 0 top 260px,right 0 bottom 64px,left bottom 64px}
+/* унаа: KG номер, сүрөт, «Менин унаам» */
+.kgpl{display:inline-flex;align-items:stretch;border:2px solid #16161a;border-radius:7px;overflow:hidden;background:#fff;font-weight:900;color:#16161a;vertical-align:middle;line-height:1}
+.kgpl b{padding:3px 6px;font-size:15px;letter-spacing:.5px;display:flex;align-items:center;white-space:nowrap}.kgpl b:first-child{border-right:1.5px solid #16161a}
+.kgpl i{font-style:normal;font-size:7px;line-height:1.1;text-align:center;padding:2px 3px;border-right:1.5px solid #16161a;display:flex;flex-direction:column;justify-content:center}
+.dcarimg{width:110px;height:auto;filter:drop-shadow(0 6px 6px rgba(0,0,0,.15))}
+.carrow{display:flex;align-items:center;gap:10px;width:100%;border:0;background:#fff;border-radius:22px;padding:8px 12px 8px 6px;margin:0 0 12px;box-shadow:0 8px 20px rgba(20,20,30,.07);font-family:inherit;text-align:left;cursor:pointer;color:#16161a}
+.carrow>img{width:96px;height:auto;flex:none}.carrow span{flex:1;min-width:0}.carrow b{display:block;font-size:16px;font-weight:900}.carrow small{font-size:12.5px;color:#6b6b76}
+.carrow .kgpl b{font-size:12px;padding:2px 4px}.carrow em{font-style:normal;font-size:22px;font-weight:700}
+.mycar{text-align:center}.mycar h2{margin:4px 0 8px}.mycar .kgpl b{font-size:22px;padding:3px 9px}.mycar .kgpl i{font-size:9px}
+.mcimg{display:block;width:100%;max-width:420px;margin:14px auto 6px;filter:drop-shadow(0 12px 10px rgba(0,0,0,.18))}
+.mcard{background:#fff;border-radius:22px;padding:6px 14px;box-shadow:0 8px 20px rgba(20,20,30,.07);text-align:left;margin-top:8px}
+.mcard h3{margin:10px 2px 4px;font-size:18px}
+.mrow{display:flex;align-items:center;gap:12px;padding:11px 2px;border-bottom:1px solid #f0f0f3;font-size:15px;color:#16161a;text-decoration:none}.mrow:last-child{border:0}
+.mrow i{font-style:normal;width:28px;text-align:center;font-size:19px}.mrow span{flex:1;font-weight:700}.mrow em{font-style:normal;color:#555;font-weight:600;text-align:right}
+.mrow small{display:block;color:#888;font-weight:500;font-size:12.5px}

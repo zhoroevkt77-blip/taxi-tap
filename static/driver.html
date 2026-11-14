@@ -81,7 +81,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=70">
+<link rel="stylesheet" href="/static/theme.css?v=71">
 </head>
 <body>
 <nav id="bnav" class="bnav pro"><a data-k="earn"><img src="/static/n_earn.webp?v=9" alt="">Киреше</a><a data-k="hist"><img src="/static/n_trips.webp?v=9" alt="">Сапарлар</a><a data-k="line" class="big on"><img src="/static/n_go.webp?v=9" alt="">Линия</a><a data-k="help"><img src="/static/n_help.webp?v=9" alt="">Жардам</a><a data-k="cab"><img src="/static/n_cab.webp?v=9" alt="">Кабинет</a></nav>
@@ -351,12 +351,29 @@ function bindMyQr() {
   $("#qrSh").onclick = () => QRS.share({link:q.link, title:"Такси ТАП!",
     text:`🚕 Такси ТАП! — ${D.area_label ? D.area_label + ": " : ""}бир басууда такси.\nАйдоочуңуз: ${D.name || ""} («${q.park}») 👇`});
 }
+function viewCar() {
+  navOn("cab");
+  const tar = (D.classes || []).map(c => ({econom:"Эконом", comfort:"Комфорт", minivan:"Минивэн", delivery:"Жеткирүү"}[c] || c)).join(", ");
+  render(`<div class="mycar"><button class="btn ghost" id="cBack" style="width:auto;margin:0 0 6px;padding:8px 14px">‹ Артка</button>
+    <h2>${esc(D.car_model || "Унаа")}</h2>${kgPlate(D.car_plate)}
+    <img class="mcimg" src="${carImg(D.car_color)}" alt="">
+    <div class="mcard"><h3>Унаа жөнүндө</h3>
+      <div class="mrow"><i>🏢</i><span>Парк</span><em>${esc(D.park || "Өз алдынча")}</em></div>
+      <div class="mrow"><i>🎨</i><span>Түсү</span><em>${esc(D.car_color || "—")}</em></div>
+      <div class="mrow" id="cYear" style="cursor:pointer"><i>📅</i><span>Чыгарылган жылы</span><em>${D.car_year || "<u>жазуу</u>"}</em></div>
+      <div class="mrow"><i>🚕</i><span>Тарифтер</span><em>${esc(tar || "Эконом")}</em></div>
+      <div class="mrow"><i>✏️</i><span>Өзгөртүү<small>Түсүн, номерин же унааны алмаштыруу үчүн админге кайрылыңыз</small></span></div></div></div>`);
+  window.SHEET && SHEET.expand();
+  $("#cBack").onclick = () => viewCabinet();
+  $("#cYear").onclick = async () => { const v = prompt("Унаанын чыгарылган жылы:", D.car_year || ""); if (!v) return;
+    const r = await api("/api/d/car_year", {year:+v}); if (r.error) return toast("Жылды туура жазыңыз (мис. 2018)", 2200); D = r; viewCar(); };
+}
 function viewCabinet(part) {
   part = part === "earn" ? "earn" : "cab"; navOn(part);
   const f = D.finance || {}, row = (t, k) => { const x = f[k] || {rides:0, gross:0, fee:0, net:0};
     return `<tr><td>${t}</td><td>${x.rides}</td><td>${x.gross}</td><td>${x.fee}</td><td><b>${x.net}</b></td></tr>`; };
   const E = part === "earn", C = !E, on = c => c ? "" : ' style="display:none"';
-  render(`<h2>${E ? "💰 Киреше" : "Менин кабинетим"}</h2>${C ? workHTML() + myQrHTML() : ""}
+  render(`<h2>${E ? "💰 Киреше" : "Менин кабинетим"}</h2>${C ? `<button class="carrow" id="myCar"><img src="${carImg(D.car_color)}" alt=""><span><b>Менин унаам</b><small>${esc(carText(D.car_color, D.car_model))}</small></span>${kgPlate(D.car_plate)}<em>›</em></button>` + workHTML() + myQrHTML() : ""}
     <div${on(C)}><div class="note">🚕 Тарифтериңиз: <b>${(D.classes || []).map(c => esc((D.class_names || {})[c] || c)).join(", ")}</b><br>💼 Комиссия: <b>${esc(D.tariff)}</b>
       <div class="muted">Комфорт же Минивэн тарифине өтүү үчүн админге кайрылыңыз.</div></div></div>
     <div class="grid"><div class="stat"><span class="muted">Баланс</span><b style="color:${D.balance < D.min_balance ? "var(--bad)" : "inherit"}">${D.balance} с</b></div>
@@ -387,6 +404,7 @@ function viewCabinet(part) {
   bindLinks(); window.SHEET && SHEET.expand();
   $("#top") && ($("#top").onclick = viewTopup);
   $("#addAddr").onclick = viewAddAddr; $("#cabOut").onclick = confirmOut; bindMyQr();
+  $("#myCar") && ($("#myCar").onclick = viewCar);
   $("#goalCh").onclick = async () => { const v = prompt("Күндүк максат (сом):", D.goal); if (v === null) return;
     const r = await api("/api/d/goal", {goal:+v}); if (r.error) return toast("100 сомдон 50 000 сомго чейин жазыңыз", 2500);
     D = r; header(); viewCabinet("earn"); };

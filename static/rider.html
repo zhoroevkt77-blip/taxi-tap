@@ -101,7 +101,7 @@ input.f:focus{border-color:var(--navy)}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
 <link rel="preload" as="image" href="/static/h_taxi.webp?v=9"><link rel="preload" as="image" href="/static/h_box.webp?v=9"><link rel="preload" as="image" href="/static/h_girl.webp?v=9"><link rel="preload" as="image" href="/static/h_map.webp?v=9">
-<link rel="stylesheet" href="/static/theme.css?v=70">
+<link rel="stylesheet" href="/static/theme.css?v=71">
 </head>
 <body>
 <div id="map"></div>
@@ -719,8 +719,8 @@ function viewChat() {
 }
 function carCard(d) {
   return `<div class="dcard"><div class="dinfo"><b class="dname">${esc(d.name || "Айдоочу")} <span>★${Number(d.rating ?? 5).toFixed(2)}</span></b>
-      <div class="dcar">${esc(carText(d.color, d.car))}${d.park ? ` · <b>${esc(d.park)}</b>` : ""}</div><div class="kgplate">${esc(d.plate || "")}</div></div>
-    <div class="dside"><span class="dcarico">🚗</span><a class="dcall" href="tel:${esc(d.phone)}" aria-label="Чалуу">📞</a></div></div>`;
+      <div class="dcar">${esc(carText(d.color, d.car))}${d.park ? ` · <b>${esc(d.park)}</b>` : ""}</div><div style="margin-top:6px">${kgPlate(d.plate)}</div></div>
+    <div class="dside"><img class="dcarimg" src="${carImg(d.color)}" alt=""><a class="dcall" href="tel:${esc(d.phone)}" aria-label="Чалуу">📞</a></div></div>`;
 }
 // Сапардагы баскычтар: Сактоо · Бөлүшүү · Коопсуздук · Деталдар
 function actRow(r) {
