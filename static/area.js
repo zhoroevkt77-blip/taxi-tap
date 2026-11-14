@@ -67,7 +67,9 @@ function carImg(color) {
 }
 // KG номер рамкасы: «04KG338APG» → [04 | 🇰🇬KG | 338 APG]
 function kgPlate(p) {
-  const m = /^(0[1-9])KG(\d{3})([A-Z]{2,3})$/.exec(p || "");
+  const CY = {А:"A", В:"B", Е:"E", К:"K", М:"M", Н:"H", О:"O", Р:"P", С:"C", Т:"T", У:"Y", Х:"X", Г:"G", Д:"D", Л:"L", И:"I", Ф:"F", З:"Z", Ж:"J"};
+  const n = String(p || "").toUpperCase().replace(/[А-ЯЁ]/g, c => CY[c] || c).replace(/[^0-9A-Z]/g, "");
+  const m = /^(0[1-9])(?:KG)?(\d{3})([A-Z]{2,3})$/.exec(n);
   return m ? `<span class="kgpl"><b>${m[1]}</b><i>🇰🇬<br>KG</i><b>${m[2]} ${m[3]}</b></span>` : `<span class="kgpl"><b>${String(p || "").replace(/[<>&"]/g, "")}</b></span>`;
 }
 // «Асфальт түстө Хюндай Солярис»

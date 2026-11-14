@@ -322,6 +322,13 @@ def init_db():
                 query("ALTER TABLE %s ADD COLUMN %s %s" % (table, col, typ))
             except Exception:
                 pass                      # тилке мурунтан бар
+    try:                                  # эски номерлер → «04KG338APG» (бир жолу)
+        for d in query("SELECT uid, car_plate FROM drivers WHERE car_plate IS NOT NULL", (), "all"):
+            n = norm_plate(d["car_plate"])
+            if n and n != d["car_plate"]:
+                query("UPDATE drivers SET car_plate=? WHERE uid=?", (n, d["uid"]))
+    except Exception:
+        pass
     os.makedirs(UPLOADS, exist_ok=True)
 
 
