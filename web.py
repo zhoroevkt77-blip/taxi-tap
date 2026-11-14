@@ -780,7 +780,8 @@ class H(BaseHTTPRequestHandler):
         if action == "tariff":
             city = _txt(b.get("city"))
             vals = [_num(b.get(k)) for k in ("base", "per_km", "per_min", "min_price")]
-            if city not in core.CITIES or any(v is None or v < 0 for v in vals):
+            known = set(core.CITIES) | {t["city"] for t in core.all_tariffs()}
+            if city not in known or any(v is None or v < 0 for v in vals):
                 return self._json({"error": "bad"}, 400)
             core.set_tariff(city, *vals)
             return self._json({"ok": True})

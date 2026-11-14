@@ -381,7 +381,7 @@ async function viewTariffs() {
   $("#main").querySelectorAll("[data-i]").forEach(b => b.onclick = async () => {
     const i = +b.dataset.i, v = k => $(`#t${i}${k}`).value;
     const r = await api("/api/a/tariff", {city:tariffs[i].city, base:v("base"), per_km:v("per_km"), per_min:v("per_min"), min_price:v("min_price")});
-    b.textContent = r.ok ? "✓ Сакталды" : "Ката"; setTimeout(() => viewTariffs(), 900);
+    b.textContent = r.ok ? "✓ Сакталды" : "Ката"; if (!r.ok) toast("Бардык талааларды сан менен толтуруңуз (0 же андан көп)", 3000); setTimeout(() => viewTariffs(), r.ok ? 900 : 2500);
   });
 }
 
