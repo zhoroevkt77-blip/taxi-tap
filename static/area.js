@@ -53,7 +53,7 @@ function showAreaOnMap(map, onClose) {
   window.SHEET && SHEET.collapse && SHEET.collapse();
   document.querySelectorAll(".areachip").forEach(x => x.remove());
   const c = document.createElement("div"); c.className = "areachip";
-  c.innerHTML = `<img src="/static/c_map.webp?v=8" alt=""><span><b>${a.title || a.name}</b><small>Сары сызыктын ичинде заказ келет</small></span><button aria-label="Жабуу">✕</button>`;
+  c.innerHTML = `<img src="/static/c_map.webp?v=9" alt=""><span><b>${a.title || a.name}</b><small>Сары сызыктын ичинде заказ келет</small></span><button aria-label="Жабуу">✕</button>`;
   c.querySelector("button").onclick = () => { c.remove(); if (_areaHl) { _areaHl.remove(); _areaHl = null; } onClose && onClose(); };
   document.body.appendChild(c);
 }
@@ -172,8 +172,8 @@ function linksHTML(bot) {
   const row = (id, ico, title, url, sub) => `<div class="lnk"><div class="lnk-t"><b>${ico} ${title}</b><span>${url.replace(/^https?:\/\//, "")}</span>${sub ? `<small>${sub}</small>` : ""}</div>
     <button class="lnk-b" data-copy="${url}">📋</button><button class="lnk-b" data-share="${url}" data-title="${title}">📤</button></div>`;
   return `<div class="lnks"><h3 style="margin:4px 0 8px">🔗 Такси ТАП! шилтемелери</h3>
-    ${row("p", '<img class="lki" src="/static/r_bag.webp?v=8" alt="">', "Жүргүнчүлөр үчүн", o + "/", "Таксини ушул жерден чакырышат")}
-    ${row("d", '<img class="lki rc" src="/static/r_car.webp?v=8" alt="">', "Айдоочулар үчүн", o + "/driver", "Айдоочу болуп катталуу")}
+    ${row("p", '<img class="lki" src="/static/r_bag.webp?v=9" alt="">', "Жүргүнчүлөр үчүн", o + "/", "Таксини ушул жерден чакырышат")}
+    ${row("d", '<img class="lki rc" src="/static/r_car.webp?v=9" alt="">', "Айдоочулар үчүн", o + "/driver", "Айдоочу болуп катталуу")}
     ${bot ? row("b", "✈️", "Telegram бот", "https://t.me/" + bot, "Номерди ырастоо жана билдирүүлөр") : ""}
     <p class="muted" style="margin:6px 0 0">📋 — көчүрүү, 📤 — WhatsApp, Telegram аркылуу жөнөтүү.</p></div>`;
 }

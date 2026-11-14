@@ -42,7 +42,7 @@
     if (!styled) { const s = document.createElement("style"); s.textContent = css; document.head.appendChild(s); styled = true; }
     const full = o.text + "\n" + o.link;
     const ov = document.createElement("div"); ov.className = "qrs-ov";
-    ov.innerHTML = `<div class="qrs-b"><div class="g"></div><h3><img src="/static/c_gift.webp?v=8" alt="">Бөлүшүү</h3>
+    ov.innerHTML = `<div class="qrs-b"><div class="g"></div><h3><img src="/static/c_gift.webp?v=9" alt="">Бөлүшүү</h3>
       <div class="qrs-g">
         <button data-k="wa"><div class="qrs-i" style="background:linear-gradient(135deg,#3ddc6f,#1fa855)">${I.wa}</div>WhatsApp</button>
         <button data-k="tg"><div class="qrs-i" style="background:linear-gradient(135deg,#45b5f0,#1f88d6)">${I.tg}</div>Telegram</button>
