@@ -68,7 +68,7 @@ td input.f{padding:7px 8px;max-width:90px;min-width:58px}
 .docs{flex-wrap:wrap}.chk{margin:10px 0 2px;padding:10px 12px;border-radius:12px;background:#fff8e1}.chk label{font-weight:500!important;color:#222!important;font-size:14px!important;display:flex!important;gap:8px;align-items:flex-start}.chk input{width:18px;height:18px;flex:none;margin-top:1px}
 .btn:disabled{opacity:.4;cursor:not-allowed}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=60">
+<link rel="stylesheet" href="/static/theme.css?v=61">
 </head>
 <body class="adm">
 <header><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b><span class="ver">Админ</span></div><div class="live" id="live"></div></header>
@@ -452,7 +452,11 @@ async function viewArea() {
   const a = await (await fetch("/api/area")).json();
   const src = {custom:"өзүңүз тарткан чек", osm:"OpenStreetMap'теги райондун чеги", list:"тизмеден тандалган (OpenStreetMap чектери)", bbox:"болжолдуу төрт бурчтук"}[a.source] || a.source;
   $("#main").innerHTML = `<div class="panel"><h3>Иштөө аймагы: ${esc(a.name)}</h3>
-      <div class="item"><div class="main"><span class="muted">Азыркы чек: <b>${esc(src)}</b>. Жүргүнчүлөр ушул чектин ичинде гана заказ бере алат.</span></div></div></div>
+      <div class="item"><div class="main"><span class="muted">Азыркы чек: <b>${esc(src)}</b>. Жүргүнчүлөр ушул чектин ичинде гана заказ бере алат.</span></div></div>
+      <div class="item"><div class="main" style="width:100%"><label class="muted">Аймактын аты (кардарларга ушундай көрүнөт)</label>
+        <div style="display:flex;gap:8px;margin-top:4px"><input class="f" id="atT" value="${esc(a.title || "")}" placeholder="${esc(a.name)} — мис. Базар-Коргон жана Сузак" style="flex:1;margin:0">
+        <button class="btn gold" id="atS">Сактоо</button></div>
+        <p class="muted" style="margin:6px 0 0">Мисалы, айдоочуга: «Такси ТАП! <b id="atP">${esc(a.title || a.name)}</b> аймагында гана иштейт». Бош калса — тандалган аймактын аты колдонулат.</p></div></div></div>
     <div class="panel"><h3>📋 Тизмеден тандоо (облус → район / шаар)</h3>
       <div class="item"><div class="main" style="width:100%">
         <input class="f" id="geoQ" placeholder="🔍 Издөө: мис. Кант, Ноокат, Талас…" autocomplete="off">
@@ -468,6 +472,8 @@ async function viewArea() {
     <div class="tools" id="tools"></div>
     <p class="muted" id="hint"></p>`;
   areaPicker(a);
+  $("#atT").oninput = () => $("#atP").textContent = $("#atT").value.trim() || a.name;
+  $("#atS").onclick = async () => { const r = await api("/api/a/area_title", {title:$("#atT").value}); toast(r.error ? "Ката" : "✓ Аймактын аты сакталды", 2500); };
   amap = L.map("amap", {zoomControl:true}).setView(a.center, 11);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:"© OpenStreetMap"}).addTo(amap);
   alyr = L.layerGroup().addTo(amap);

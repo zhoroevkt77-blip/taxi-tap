@@ -1027,3 +1027,15 @@ class ParkQR(unittest.TestCase):
         core.query("UPDATE users SET park_ref=NULL, park_ref_drv=NULL WHERE uid=?", (u,))
         core.set_driver(d, park_id=None)
         core.query("DELETE FROM parks WHERE id=?", (pid,))
+
+
+class AreaTitle(unittest.TestCase):
+    def test_title(self):
+        core.init_db()
+        core.set_setting("area_title", "Базар-Коргон жана Сузак")
+        self.assertEqual(core.area_title(), "Базар-Коргон жана Сузак")
+        self.assertEqual(core.area_label(), "Базар-Коргон жана Сузак")
+        if core.AREA_ON:
+            self.assertEqual(core.area_gen(), "Базар-Коргон жана Сузак аймагынын")
+        core.set_setting("area_title", "")
+        self.assertIsNone(core.area_title())

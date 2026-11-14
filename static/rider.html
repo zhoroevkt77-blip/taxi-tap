@@ -101,7 +101,7 @@ input.f:focus{border-color:var(--navy)}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
 <link rel="preload" as="image" href="/static/h_taxi.webp"><link rel="preload" as="image" href="/static/h_box.webp"><link rel="preload" as="image" href="/static/h_girl.webp"><link rel="preload" as="image" href="/static/h_map.webp">
-<link rel="stylesheet" href="/static/theme.css?v=60">
+<link rel="stylesheet" href="/static/theme.css?v=61">
 </head>
 <body>
 <div id="map"></div>
@@ -218,7 +218,7 @@ function gpsApply(p, force) {
   S.gps = {state:"ok", acc, at:Date.now(), ll};
   S.gpsBad = acc > 60 ? acc : 0;
   if (!inArea(ll[0], ll[1])) { S.gps.state = "out";
-    if (force) toast(`Сиз ${window.AREA && AREA.name ? AREA.name + " районунун" : "аймактын"} сыртындасыз`, 2500);
+    if (force) toast(`Сиз иштөө аймагынын сыртындасыз${window.AREA && AREA.label ? " (" + AREA.label + ")" : ""}`, 2500);
     gpsPaint(); return; }
   if ((force || S.mode === "idle" || S.mode === "stepA") && !S.fromLock) {
     map.setView(ll, S.gpsBad ? 17 : 16);
@@ -230,7 +230,9 @@ function gpsPaint() {
   const el = $("#gpsInfo"); if (!el) return;
   const g = S.gps;
   el.className = "gpsinfo " + (g.state === "ok" ? (S.gpsBad ? "mid" : "good") : "bad");
-  el.textContent = g.state === "ok" ? (S.gpsBad ? `📡 Болжолдуу (±${g.acc} м) — картадан тактаңыз` : `📡 GPS так (±${g.acc} м)`)
+  if (g.state === "out") { el.innerHTML = `Сиз иштөө аймагынын сыртындасыз <button class="gpsarea" id="gpsArea"><img src="/static/c_map.webp" alt="">Аймакты көрүү</button>`;
+    $("#gpsArea").onclick = () => { homeOn(false); showAreaOnMap(map, () => viewStepA()); }; }
+  else el.textContent = g.state === "ok" ? (S.gpsBad ? `📡 Болжолдуу (±${g.acc} м) — картадан тактаңыз` : `📡 GPS так (±${g.acc} м)`)
     : g.state === "denied" ? "⛔ GPS'ке уруксат жок — браузердин жөндөөсүнөн уруксат бериңиз"
     : g.state === "off" ? "⚠️ GPS күйгүзүлбөгөн же сигнал жок"
     : g.state === "out" ? "Сиз иштөө аймагынын сыртындасыз"
@@ -533,7 +535,7 @@ async function viewQuote() {
   const q = await api("/api/quote", {p:S.from, d:S.to});
   if (q.route) { routeSeq++; drawRoute(q.route); }
   if (q.error) { render(`<h2>Кечиресиз</h2><p class="muted">${q.error === "dest_out"
-      ? `Такси ТАП! ${esc((window.AREA && AREA.gen && AREA.gen !== "иштөө аймагынын") ? AREA.gen : "иштөө аймагынын")} ичинде гана иштейт. Шаар аралык каттамдарга бара албайбыз.`
+      ? `Такси ТАП! ${esc(window.AREA && AREA.label ? AREA.label + " аймагынын" : "иштөө аймагынын")} ичинде гана иштейт. Шаар аралык каттамдарга бара албайбыз.`
       : "Бул жерде Такси ТАП! азырынча иштебейт."}</p><button class="btn ghost" id="back">Артка</button>`); $("#back").onclick = viewIdle; return; }
   S.quote = q;
   if (!q.classes.some(c => c.id === S.cls)) S.cls = q.classes[0].id;

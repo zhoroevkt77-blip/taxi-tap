@@ -149,7 +149,7 @@ def driver_state(uid):
                    "left": core.home_uses_left(d) if d else 0,
                    "p": [d["home_lat"], d["home_lon"]] if d.get("home_lat") is not None else None},
           "in_area": (core.in_area(d["lat"], d["lon"]) if d and d.get("lat") is not None and core.AREA_ON else None),
-          "area_name": core.AREA_CITY if core.AREA_ON else "", "area_gen": core.area_gen(),
+          "area_name": core.AREA_CITY if core.AREA_ON else "", "area_gen": core.area_gen(), "area_title": core.area_title(), "area_label": core.area_label(),
           "bot": BOT_USERNAME,
           "notify": bool(u.get("notify", 1)), "tg": bool(u.get("tg_uid")),
           "pending_topup": bool(d and core.query(
@@ -838,6 +838,9 @@ class H(BaseHTTPRequestHandler):
             if pct is None or mb is None or not core.set_finance_config(pct, fu, mb):
                 return self._json({"error": "bad"}, 400)
             return self._json(core.admin_finance())
+        if action == "area_title":
+            core.set_setting("area_title", _txt(b.get("title"), 60).strip())
+            return self._json(core.area_info())
         if action == "area_sel":
             r = core.set_area_units(b.get("units") or [])
             if r.get("error"):

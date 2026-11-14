@@ -40,6 +40,24 @@ async function setupArea(map, opts = {}) {
   } catch (err) { return null; }
 }
 
+// «🗺 Аймакты көрүү»: иштөө аймагынын чегин сары сызык менен көрсөтөт
+let _areaHl = null;
+function showAreaOnMap(map, onClose) {
+  const a = window.AREA; if (!a || !a.geojson) return;
+  const rings = areaRings(a.geojson).map(r => r.map(([lon, lat]) => [lat, lon]));
+  if (_areaHl) _areaHl.remove();
+  _areaHl = L.layerGroup().addTo(map);
+  rings.forEach(r => L.polygon(r, {color:"#ffb703", weight:5, fillColor:"#ffc61a", fillOpacity:.12, interactive:false}).addTo(_areaHl));
+  const pts = rings.flat();
+  if (pts.length) { if (map.setMaxBounds) map.setMaxBounds(null); map.fitBounds(L.latLngBounds(pts), {padding:[40, 40]}); }
+  window.SHEET && SHEET.collapse && SHEET.collapse();
+  document.querySelectorAll(".areachip").forEach(x => x.remove());
+  const c = document.createElement("div"); c.className = "areachip";
+  c.innerHTML = `<img src="/static/c_map.webp" alt=""><span><b>${a.title || a.name}</b><small>Сары сызыктын ичинде заказ келет</small></span><button aria-label="Жабуу">✕</button>`;
+  c.querySelector("button").onclick = () => { c.remove(); if (_areaHl) { _areaHl.remove(); _areaHl = null; } onClose && onClose(); };
+  document.body.appendChild(c);
+}
+
 // ---------- тиркеме катары орнотуу (PWA) ----------
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
 window.INSTALL = null;

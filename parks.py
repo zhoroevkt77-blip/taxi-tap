@@ -279,7 +279,7 @@ def state(pid):
     promo = core.query("SELECT amount FROM promos WHERE code=? AND active=1", (p["promo"],), "one") if p.get("promo") else None
     return {"park": dict({k: p[k] for k in ("id", "name", "phone", "share", "ref_bonus", "promo", "code")},
                          promo_amount=int(promo["amount"]) if promo else 0),
-            "qr": qr_stats(pid),
+            "qr": qr_stats(pid), "area": core.area_label(),
             "stats": stats(pid), "drivers": driver_rows(pid), "payouts": payouts(pid),
             "commission_pct": core.commission_pct()}
 

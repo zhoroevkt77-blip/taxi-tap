@@ -539,10 +539,26 @@ def unit_city(name):
     return name
 
 
+def area_title():
+    """Админ жазган кардарларга көрүнгөн ат (мис. «Базар-Коргон жана Сузак»). Жок болсо — None."""
+    try:
+        t = (get_setting("area_title") or "").strip()
+    except Exception:
+        t = ""
+    return t or None
+
+
+def area_label():
+    """Билдирүүлөр үчүн: «Базар-Коргон жана Сузак» же «Базар-Коргон району»."""
+    return area_title() or (AREA_NAME if AREA_ON else "")
+
+
 def area_gen():
     """Илик жөндөмө: «Базар-Коргон районунун», «Манас шаарынын», же «иштөө аймагынын»."""
     if not AREA_ON:
         return "иштөө аймагынын"
+    if area_title():
+        return area_title() + " аймагынын"
     names = [u["name"] for u in _area["units"]] or [AREA_NAME]
     if len(names) != 1:
         return "иштөө аймагынын"
@@ -690,7 +706,7 @@ def area_info():
             "center": list(CITIES.get(AREA_CITY) or ((min(lats) + max(lats)) / 2,
                                                      (min(lons) + max(lons)) / 2)),
             "bbox": [min(lats), min(lons), max(lats), max(lons)],
-            "geojson": gj, "source": _area["source"], "gen": area_gen(),
+            "geojson": gj, "source": _area["source"], "gen": area_gen(), "title": area_title(), "label": area_label(),
             "units": [{"name": u["name"], "approx": u.get("approx")} for u in _area["units"]],
             "selection": area_selection()}
 

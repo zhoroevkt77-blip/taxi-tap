@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#fafafa">
 <title>Таксопарк кабинети — Такси ТАП!</title>
 <link rel="apple-touch-icon" href="/static/icon-192.png?v=4">
-<link rel="stylesheet" href="/static/theme.css?v=60">
+<link rel="stylesheet" href="/static/theme.css?v=61">
 <style>
 body{margin:0;font-family:Inter,system-ui,sans-serif;background:#fff;color:#16161a;position:relative}
 .wrap{max-width:560px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 14px) 16px 40px}
@@ -114,7 +114,7 @@ function printTpl(k, p, link) {
   if (k === "card") return Array(8).fill(`<div class="pv"><div>${qrSvg(link, 150)}</div><div><b class="t">ТАКСИ <span>ТАП!</span></b>
       <div class="s">Бир басууда такси</div><div class="n">${esc(p.name)}</div><div class="s">код ${esc(p.code)}</div></div></div>`).join("");
   if (k === "shop") return `<div class="pp">${hd}<div class="pb"><p class="big1">Такси керекпи?</p><p>Телефондун камерасы менен сканерлеңиз — бир басууда чакырасыз</p>
-      ${qrSvg(link, 420)}${disc}<p class="pm">код <b>${esc(p.code)}</b> · Базар-Коргон району</p></div><div class="pf">${esc(p.name)}</div></div>`;
+      ${qrSvg(link, 420)}${disc}<p class="pm">код <b>${esc(p.code)}</b> · ${esc(ST.area || "")}</p></div><div class="pf">${esc(p.name)}</div></div>`;
   return Array(2).fill(`<div class="ps">${hd}<div class="pb"><p>Кийинки жолу телефондон чакырыңыз!</p>${qrSvg(link, 230)}${disc}
       <p class="pm">Камера менен сканерлеңиз · код <b>${esc(p.code)}</b></p></div><div class="pf">${esc(p.name)}</div></div>`).join("");
 }
@@ -180,7 +180,7 @@ function draw() {
   if (window.qrSvg) $("#qr").innerHTML = qrSvg(link, 132);
   document.querySelectorAll("[data-t]").forEach(b => b.onclick = () => { TK = b.dataset.t; draw(); });
   $("#share").onclick = () => QRS.share({link, title:"Такси ТАП!",
-    text:`🚕 Такси ТАП! — Базар-Коргондо бир басууда такси.${p.promo_amount ? `\nБиринчи сапарга −${p.promo_amount} сом!` : ""}\n«${p.name}» 👇`});
+    text:`🚕 Такси ТАП! — ${ST.area ? ST.area + ": " : ""}бир басууда такси.${p.promo_amount ? `\nБиринчи сапарга −${p.promo_amount} сом!` : ""}\n«${p.name}» 👇`});
   $("#print").onclick = () => { $("#sticker").innerHTML = printTpl(TK, p, link); setTimeout(() => window.print(), 150); };
 }
 async function refresh() { const id = new URLSearchParams(location.search).get("id"); ST = await api("/api/park/state" + (id ? "?id=" + id : "")); if (!ST.error) draw(); }

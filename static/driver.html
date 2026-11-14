@@ -81,7 +81,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=60">
+<link rel="stylesheet" href="/static/theme.css?v=61">
 </head>
 <body>
 <nav id="bnav" class="bnav pro"><a data-k="earn"><img src="/static/n_earn.webp" alt="">Киреше</a><a data-k="hist"><img src="/static/n_trips.webp" alt="">Сапарлар</a><a data-k="line" class="big on"><img src="/static/n_go.webp" alt="">Линия</a><a data-k="help"><img src="/static/n_help.webp" alt="">Жардам</a><a data-k="cab"><img src="/static/n_cab.webp" alt="">Кабинет</a></nav>
@@ -281,10 +281,13 @@ function viewAddAddr() {
   $("#an").focus();
 }
 
+document.addEventListener("click", e => { if (e.target.closest && e.target.closest("#areaShow")) showAreaOnMap(map); });
 function outHTML() {
   if (D.in_area !== false) return "";
-  return `<div class="note" style="background:#fdecef!important;border-color:#f5c2cb!important">⚠️ <b>Сиз ${esc(D.area_gen || "иштөө аймагынын")} сыртындасыз.</b>
-    Такси ТАП! сервиси ${!D.area_gen || D.area_gen === "иштөө аймагынын" ? "иштөө аймагында" : esc(D.area_gen) + " аймагында"} гана иштейт — бул жерде заказ келбейт. Аймакка киргенде заказдар өзү келе баштайт.</div>`;
+  const nm = D.area_title || (D.area_gen && D.area_gen !== "иштөө аймагынын" ? D.area_gen.replace(/нун$|нын$|нүн$|нин$/, "") : "");
+  return `<div class="outn"><img src="/static/c_map.webp" alt=""><div><b>Сиз иштөө аймагынын сыртындасыз</b>
+    <span>Такси ТАП! ${nm ? `<b>${esc(nm)}</b> аймагында` : "иштөө аймагында"} гана иштейт — бул жерде заказ келбейт. Аймакка киргенде заказдар өзү келе баштайт.</span>
+    <button class="btn ghost ib" id="areaShow"><img src="/static/c_map.webp" alt="">Аймакты картадан көрүү</button></div></div>`;
 }
 
 function viewHome() {
@@ -346,7 +349,7 @@ function bindMyQr() {
     o.onclick = () => o.remove(); document.body.appendChild(o);
   };
   $("#qrSh").onclick = () => QRS.share({link:q.link, title:"Такси ТАП!",
-    text:`🚕 Такси ТАП! — Базар-Коргондо бир басууда такси.\nАйдоочуңуз: ${D.name || ""} («${q.park}») 👇`});
+    text:`🚕 Такси ТАП! — ${D.area_label ? D.area_label + ": " : ""}бир басууда такси.\nАйдоочуңуз: ${D.name || ""} («${q.park}») 👇`});
 }
 function viewCabinet(part) {
   part = part === "earn" ? "earn" : "cab"; navOn(part);
