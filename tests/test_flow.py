@@ -371,6 +371,26 @@ class Features(unittest.TestCase):
         self.assertEqual((dr["busy_ride"], dr["next_ride"]), (rid2, None))
         self.assertEqual(flow.driver_step(d, rid2)[0]["to"], p2)                     # келди
 
+    def test_away_reminder(self):
+        p = rider("0555 000 079")
+        d = make_driver("0700 000 079", "Качкын", NEAR, 0)
+        rid = order(p, KARAKOL, DEST)
+        dispatch.tick(); flow.driver_accept(d, rid)
+        core.driver_seen(d)
+        self.assertEqual(core.away_drivers(), [])
+        core.query("UPDATE drivers SET seen_at=? WHERE uid=?", (core.now() - 90, d))
+        outs = [o for o in dispatch.tick() if o["to"] == d]
+        self.assertEqual(len(outs), 1)
+        self.assertIn("кайтыңыз", outs[0]["text"])
+        self.assertFalse([o for o in dispatch.tick() if o["to"] == d])          # бир гана жолу
+        self.assertGreaterEqual(core.away_min(d), 1)
+        flow.driver_step(d, rid)                                                  # келди → жаңы этап
+        self.assertEqual(len([o for o in dispatch.tick() if o["to"] == d]), 1)
+        flow.driver_step(d, rid)                                                  # сапарда — эскертпейт
+        core.query("UPDATE drivers SET away_note=NULL WHERE uid=?", (d,))
+        self.assertFalse([o for o in dispatch.tick() if o["to"] == d])
+        flow.driver_step(d, rid)
+
     def test_home_mode_places_share(self):
         p = rider("0555 000 077")
         d = make_driver("0700 000 077", "Үй", NEAR, 0)

@@ -344,7 +344,7 @@ async function viewRides() {
   $("#main").innerHTML = `<div class="panel"><h3>Акыркы сапарлар</h3><div class="scroll"><table>
     <tr><th>№</th><th>Убакыт</th><th>Шаар</th><th>Жүргүнчү</th><th>Айдоочу</th><th>Баа</th><th>Абалы</th></tr>
     ${rides.map(r => `<tr><td>${r.id}</td><td>${when(r.created_at)}</td><td>${esc(r.city)}</td><td>${esc(r.p_name)}<div class="muted">${esc(r.p_phone)}</div></td>
-      <td>${esc(r.d_name || "—")}</td><td>${r.price ? r.price + " с" : "тариф"}</td><td>${tag(r.status)}${r.status === "cancelled" ? `<div class="muted">${r.cancel_by === "system" ? "айдоочу табылган жок" : r.cancel_by === "admin" ? "админ" : r.cancel_by === r.driver ? "айдоочу" : "жүргүнчү"}</div>` : ""}</td></tr>`).join("")}
+      <td>${esc(r.d_name || "—")}${r.d_away ? `<div style="color:var(--bad)">📵 ${r.d_away} мүн тиркемеде жок</div>` : ""}</td><td>${r.price ? r.price + " с" : "тариф"}</td><td>${tag(r.status)}${r.status === "cancelled" ? `<div class="muted">${r.cancel_by === "system" ? "айдоочу табылган жок" : r.cancel_by === "admin" ? "админ" : r.cancel_by === r.driver ? "айдоочу" : "жүргүнчү"}</div>` : ""}</td></tr>`).join("")}
     </table>${rides.length ? "" : `<div class="empty">Сапар жок.</div>`}</div></div>`;
 }
 

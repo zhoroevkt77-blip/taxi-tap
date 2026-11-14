@@ -288,6 +288,7 @@ NEW_COLUMNS = {
     "parks": {"code": "TEXT", "scans": "INTEGER DEFAULT 0",
               "share_months": "INTEGER DEFAULT 6", "share_after": "REAL DEFAULT 50"},   # QR коду (автоматтык) жана сканерлөөлөр
     "drivers": {"qr_scans": "INTEGER DEFAULT 0",
+                "seen_at": "REAL", "away_note": "TEXT",   # сайт акыркы жолу ачык турган убакыт / эскертилген этап
                 "doc_license": "TEXT", "doc_techpass": "TEXT", "doc_car": "TEXT",
                 "reject_note": "TEXT",
                 "classes": "TEXT",                 # 'econom,delivery,comfort,minivan'
@@ -1499,6 +1500,38 @@ def toward_home(d, ride):
     return after_km <= now_km - 1.0
 
 
+# ==================== Заказда тиркемеден чыгып кетүү ====================
+AWAY_SEC = 60             # сайт ушунча убакыт ачылбаса — Telegram'га эскертүү
+
+
+def driver_seen(uid):
+    query("UPDATE drivers SET seen_at=? WHERE uid=?", (now(), uid))
+
+
+def away_drivers():
+    """Жүргүнчү күтүп жаткан (accepted/arrived) заказы бар, бирок сайты AWAY_SEC'тен
+    ашык ачылбаган айдоочулар. Ар бир этапта бир гана жолу: [(driver_uid, ride)]."""
+    out, t = [], now()
+    for d in query("SELECT uid, busy_ride, seen_at, away_note FROM drivers WHERE busy_ride IS NOT NULL "
+                   "AND seen_at IS NOT NULL AND seen_at<?", (t - AWAY_SEC,), "all"):
+        r = get_ride(d["busy_ride"])
+        if not r or r["status"] not in ("accepted", "arrived"):
+            continue
+        key = "%s:%s" % (r["id"], r["status"])
+        if d["away_note"] == key:
+            continue
+        query("UPDATE drivers SET away_note=? WHERE uid=?", (key, d["uid"]))
+        out.append((d["uid"], r))
+    return out
+
+
+def away_min(uid):
+    d = query("SELECT busy_ride, seen_at FROM drivers WHERE uid=?", (uid,), "one")
+    if not d or not d["busy_ride"] or not d["seen_at"] or now() - d["seen_at"] < AWAY_SEC:
+        return 0
+    return int((now() - d["seen_at"]) // 60) or 1
+
+
 # ==================== Кийинки заказ (сапар бүтө электе) ====================
 CHAIN_KM = 1.5            # азыркы сапардын аягынан жаңы заказга чейин
 
@@ -1890,11 +1923,14 @@ def admin_drivers():
 
 
 def admin_rides(limit=60):
-    return query("SELECT r.id, r.status, r.city, r.price, r.dist_km, r.created_at, r.cancel_by, "
+    rows = query("SELECT r.id, r.status, r.city, r.price, r.dist_km, r.created_at, r.cancel_by, "
                  "r.driver, p.name AS p_name, p.phone AS p_phone, du.name AS d_name "
                  "FROM rides r LEFT JOIN users p ON p.uid=r.passenger "
                  "LEFT JOIN users du ON du.uid=r.driver ORDER BY r.id DESC LIMIT ?",
                  (limit,), "all")
+    for r in rows:
+        r["d_away"] = away_min(r["driver"]) if r["driver"] and r["status"] in ("accepted", "arrived", "in_trip") else 0
+    return rows
 
 
 def all_tariffs():

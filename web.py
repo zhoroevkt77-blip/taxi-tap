@@ -340,6 +340,8 @@ class H(BaseHTTPRequestHandler):
                 near = _point([(q.get("lat") or [""])[0], (q.get("lon") or [""])[0]])
                 return self._json({"items": addrbook.search_all((q.get("q") or [""])[0][:60], near)})
             if u.path == "/api/d/state":
+                if (q.get("vis") or ["0"])[0] == "1":
+                    core.driver_seen(uid)
                 return self._json(driver_state(uid))
             if u.path == "/api/d/history":
                 return self._json({"rides": core.driver_history(uid)})
@@ -628,6 +630,8 @@ class H(BaseHTTPRequestHandler):
                     return self._json({"error": "need_location"}, 400)
                 core.driver_location(uid, p[0], p[1], live_period=60)
             else:
+                if d["busy_ride"] or d.get("next_ride"):
+                    return self._json({"error": "busy"}, 409)     # заказ аткарылып жатат
                 core.set_driver(uid, online=0, live_until=None)
             return self._json(driver_state(uid))
         if action == "car_year":

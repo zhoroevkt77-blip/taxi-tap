@@ -78,6 +78,10 @@ def tick():
     if pw:
         rows = "\n".join("• %s — %d сом" % (n, d) for n, d in pw)
         out += [note(a, "a_park_week", "/admin", rows=rows) for a in core.admins()]
+    for uid, r in core.away_drivers():
+        pu = core.get_user(r["passenger"]) or {}
+        out.append(note(uid, "d_away_" + r["status"], "/driver", name=pu.get("name") or "Жүргүнчү",
+                        addr=r.get("p_addr") or "—"))
     for uid, kind, days, date in core.lic_daily():
         out.append(note(uid, "d_lic_" + kind, "/driver", days=days, date=date))
     t = core.now()

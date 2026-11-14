@@ -88,7 +88,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 <div id="map"></div>
 <div class="top">
   <div class="lcol"><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b></div>
-    <div class="role drole"><a href="/"><img src="/static/r_bag.webp?v=9" alt="">Жүргүнчү</a><a class="on"><img src="/static/r_car.webp?v=9" alt="" class="rc">Айдоочу</a></div></div>
+    <div class="role drole"><a href="/" id="toRider"><img src="/static/r_bag.webp?v=9" alt="">Жүргүнчү</a><a class="on"><img src="/static/r_car.webp?v=9" alt="" class="rc">Айдоочу</a></div></div>
   <div class="rcol"><button class="state hide" id="stBadge" style="display:none">Офлайн</button>
     <button class="tbtn hide topav" id="cabBtn" aria-label="Менин кабинетим">👤</button>
     <div class="r2"><button class="ep hide" id="earn"></button></div>
@@ -596,10 +596,23 @@ async function goOnline(btn) {
   startGps(); wake(true); lastView = ""; show();
   if (window.SHEET && !D.ride) setTimeout(() => SHEET.collapse(), 400);   // карта толук көрүнсүн
 }
+function busyBox(title, text) {
+  overlay(`<div class="lgx"><div class="lg-ic" style="background:#fff6dd"><img src="/static/r_car.webp?v=9" alt="" style="width:56px"></div><h2>${title}</h2>
+      <p class="muted">${text}</p><button class="btn main" id="ovlX">Сапарга кайтуу</button></div>`);
+}
+const busy = () => D && (D.ride || D.next);
 async function goOffline() {
-  D = await api("/api/d/online", {on:false}); wake(false); lastView = ""; show(); window.SHEET && SHEET.expand();
+  if (busy()) return busyBox("⚠️ Сиз заказ аткарып жатасыз", "Сапар бүткөндөн кийин линиядан чыга аласыз." + (D.next ? " <b>Кийинки заказ да бар.</b>" : ""));
+  const r = await api("/api/d/online", {on:false});
+  if (r.error === "busy") return refresh();
+  D = r; wake(false); lastView = ""; show(); window.SHEET && SHEET.expand();
 }
 $("#cabBtn").onclick = () => { if (!D || D.status !== "active") return; window.SHEET && SHEET.expand(); D.ride ? null : viewCabinet(); };
+$("#toRider").onclick = e => { if (busy()) { e.preventDefault(); busyBox("Азыр болбойт", "Сапар бүткөнчө жүргүнчү режимине өтүүгө болбойт."); } };
+let extNav = 0;     // навигатор, чалуу — бул чыгуу эмес, эскертпейбиз
+document.addEventListener("click", e => { const a = e.target.closest && e.target.closest("a[href]"); if (a && !/^\/(?!\/)/.test(a.getAttribute("href"))) extNav = Date.now(); }, true);
+window.addEventListener("beforeunload", e => { if (busy() && Date.now() - extNav > 3000) { e.preventDefault(); e.returnValue = ""; } });
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && D && D.status === "active") refresh(); });
 $("#stBadge").onclick = () => {
   if (!D || D.status !== "active" || D.ride) return;
   if (D.online) { if (confirm("Линиядан чыгасызбы?")) goOffline(); }
@@ -630,14 +643,14 @@ const NAVS = {
 const navPref = () => { try { return localStorage.getItem("nav") || ""; } catch (e) { return ""; } };
 function openNav(p, choose) {
   const k = navPref();
-  if (k && NAVS[k] && !choose) return void (location.href = NAVS[k].u(p));
+  if (k && NAVS[k] && !choose) { extNav = Date.now(); return void (location.href = NAVS[k].u(p)); }
   overlay(`<h2>🧭 Кайсы навигатор менен барасыз?</h2>
     ${Object.entries(NAVS).map(([k, n]) => `<button class="btn ghost" data-nav="${k}">${n.t}</button>`).join("")}
     <label class="muted" style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="navRem" checked style="width:20px;height:20px"> Эстеп калсын (кабинеттен өзгөртсө болот)</label>
     <button class="btn ghost" id="ovlX">Жабуу</button>`);
   document.querySelectorAll("[data-nav]").forEach(b => b.onclick = () => {
     const k = b.dataset.nav; try { if ($("#navRem").checked) localStorage.setItem("nav", k); } catch (e) {}
-    closeOverlay(); if (p) location.href = NAVS[k].u(p);
+    closeOverlay(); if (p) { extNav = Date.now(); location.href = NAVS[k].u(p); }
   });
 }
 function overlay(html) { $("#ovlc").innerHTML = html; $("#ovl").classList.remove("hide"); const x = $("#ovlX"); if (x) x.onclick = closeOverlay; }
@@ -869,9 +882,7 @@ function viewHelp() {
   window.SHEET && SHEET.expand();
 }
 function confirmOut() {
-  if (D && D.ride) return overlay(`<div class="lgx"><div class="lg-ic" style="background:#fff6dd"><img src="/static/r_car.webp?v=9" alt="" style="width:56px"></div><h2>Азыр чыгууга болбойт</h2>
-      <p class="muted">Сизде жүрүп жаткан сапар бар. Адегенде сапарды бүтүрүңүз.</p>
-      <button class="btn main" id="ovlX">Сапарга кайтуу</button></div>`);
+  if (busy()) return busyBox("⚠️ Сиз заказ аткарып жатасыз", "Адегенде сапарды бүтүрүңүз же жокко чыгарыңыз.");
   overlay(`<div class="lgx"><div class="lg-ic">🚪</div><h2>Аккаунттан чыгасызбы?</h2>${D && D.online ? `<div class="lg-warn">🟢 Сиз азыр <b>линиядасыз</b>. Чыксаңыз линиядан да чыгасыз — заказ келбей калат.</div>` : ""}
       <p class="muted">Кайра кирүү үчүн номериңизди Telegram аркылуу кайра ырастайсыз.</p>
       <button class="btn lg-red" id="lgYes">Ооба, чыгуу</button><button class="btn ghost" id="lgNo">Калуу</button></div>`);
@@ -913,7 +924,7 @@ function show() {
 }
 
 async function refresh() {
-  const s = await api("/api/d/state");
+  const s = await api("/api/d/state?vis=" + (document.visibilityState === "visible" ? 1 : 0));
   if (s.error === "auth") { clearInterval(poll); return viewLogin(false); }
   D = s;
   show();
