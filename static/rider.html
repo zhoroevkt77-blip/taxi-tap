@@ -100,15 +100,15 @@ input.f:focus{border-color:var(--navy)}
 .quick{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
-<link rel="preload" as="image" href="/static/h_taxi.webp"><link rel="preload" as="image" href="/static/h_box.webp"><link rel="preload" as="image" href="/static/h_girl.webp"><link rel="preload" as="image" href="/static/h_map.webp">
-<link rel="stylesheet" href="/static/theme.css?v=67">
+<link rel="preload" as="image" href="/static/h_taxi.webp?v=8"><link rel="preload" as="image" href="/static/h_box.webp?v=8"><link rel="preload" as="image" href="/static/h_girl.webp?v=8"><link rel="preload" as="image" href="/static/h_map.webp?v=8">
+<link rel="stylesheet" href="/static/theme.css?v=69">
 </head>
 <body>
 <div id="map"></div>
 
 <div class="top">
   <div class="lcol"><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b></div>
-    <div class="role"><a class="on"><img src="/static/r_bag.webp" alt="">Жүргүнчү</a><a href="/driver"><img src="/static/r_car.webp" alt="" class="rc">Айдоочу</a></div></div>
+    <div class="role"><a class="on"><img src="/static/r_bag.webp?v=8" alt="">Жүргүнчү</a><a href="/driver"><img src="/static/r_car.webp?v=8" alt="" class="rc">Айдоочу</a></div></div>
   <button class="round" id="menuBtn" aria-label="Кабинет">👤</button>
 </div>
 
@@ -120,7 +120,7 @@ input.f:focus{border-color:var(--navy)}
 
 <div class="sheet" id="sheet"><div class="grab"></div><div id="view"></div></div>
 <div class="home hide" id="home"></div>
-<nav id="bnav" class="bnav pro"><a data-k="home" class="on"><img src="/static/n_home.webp" alt="">Башкы бет</a><a data-k="trips"><img src="/static/n_trips.webp" alt="">Сапарлар</a><a data-k="go" class="big"><img src="/static/n_go.webp" alt="">Чакыруу</a><a data-k="help"><img src="/static/n_help.webp" alt="">Жардам</a><a data-k="cab"><img src="/static/n_cab.webp" alt="">Кабинет</a></nav>
+<nav id="bnav" class="bnav pro"><a data-k="home" class="on"><img src="/static/n_home.webp?v=8" alt="">Башкы бет</a><a data-k="trips"><img src="/static/n_trips.webp?v=8" alt="">Сапарлар</a><a data-k="go" class="big"><img src="/static/n_go.webp?v=8" alt="">Чакыруу</a><a data-k="help"><img src="/static/n_help.webp?v=8" alt="">Жардам</a><a data-k="cab"><img src="/static/n_cab.webp?v=8" alt="">Кабинет</a></nav>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="/static/area.js"></script>
@@ -230,7 +230,7 @@ function gpsPaint() {
   const el = $("#gpsInfo"); if (!el) return;
   const g = S.gps;
   el.className = "gpsinfo " + (g.state === "ok" ? (S.gpsBad ? "mid" : "good") : "bad");
-  if (g.state === "out") { el.innerHTML = `Сиз иштөө аймагынын сыртындасыз <button class="gpsarea" id="gpsArea"><img src="/static/c_map.webp" alt="">Аймакты көрүү</button>`;
+  if (g.state === "out") { el.innerHTML = `Сиз иштөө аймагынын сыртындасыз <button class="gpsarea" id="gpsArea"><img src="/static/c_map.webp?v=8" alt="">Аймакты көрүү</button>`;
     $("#gpsArea").onclick = () => { homeOn(false); showAreaOnMap(map, () => viewStepA()); }; }
   else el.textContent = g.state === "ok" ? (S.gpsBad ? `📡 Болжолдуу (±${g.acc} м) — картадан тактаңыз` : `📡 GPS так (±${g.acc} м)`)
     : g.state === "denied" ? "⛔ GPS'ке уруксат жок — браузердин жөндөөсүнөн уруксат бериңиз"
@@ -306,11 +306,11 @@ function viewIdle() {
   if (P.work) rec.push({ico:"💼", name:"Иш", sub:P.work.name || "", lat:P.work.lat, lon:P.work.lon});
   (P.recent || []).forEach(r => rec.push({ico:"🕘", name:r.name, sub:"Акыркы сапар", lat:r.lat, lon:r.lon}));
   $("#home").innerHTML = `<div class="hh"><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b></div><button class="round" id="hMenu" aria-label="Кабинет">${avBtn()}</button></div>
-    <div class="role hrole"><a class="on"><img src="/static/r_bag.webp" alt="">Жүргүнчү</a>${role2()}</div>
-    <button class="haddr" id="hAddr"><small><img class="pinI" src="/static/pin.webp" alt="">Сиз турган жер</small><b id="fromTxt">${esc(S.fromAddr || "Аныкталууда…")}</b><span>›</span></button>
-    <div class="tiles">${tile("tTaxi", "h_taxi.webp", "Такси", `<span id="taxiEta">${homeEta()}</span>`, true, !has("delivery"))}
-      ${has("delivery") ? tile("tDel", "h_box.webp", "Жеткирүү", "Буюм, документ") : ""}</div>
-    <div class="tiles2">${stile("tOther", "h_girl.webp", "Башка адамга такси заказ кылуу")}${stile("tMap", "h_map.webp", "Картадан<br>белгилөө")}</div>
+    <div class="role hrole"><a class="on"><img src="/static/r_bag.webp?v=8" alt="">Жүргүнчү</a>${role2()}</div>
+    <button class="haddr" id="hAddr"><small><img class="pinI" src="/static/pin.webp?v=8" alt="">Сиз турган жер</small><b id="fromTxt">${esc(S.fromAddr || "Аныкталууда…")}</b><span>›</span></button>
+    <div class="tiles">${tile("tTaxi", "h_taxi.webp?v=8", "Такси", `<span id="taxiEta">${homeEta()}</span>`, true, !has("delivery"))}
+      ${has("delivery") ? tile("tDel", "h_box.webp?v=8", "Жеткирүү", "Буюм, документ") : ""}</div>
+    <div class="tiles2">${stile("tOther", "h_girl.webp?v=8", "Башка адамга такси заказ кылуу")}${stile("tMap", "h_map.webp?v=8", "Картадан<br>белгилөө")}</div>
     ${has("comfort") || has("minivan") ? `<div class="tiles3">${has("comfort") ? `<button class="sm" id="tComf"><span>🚘</span>Комфорт</button>` : ""}${has("minivan") ? `<button class="sm" id="tVan"><span>🚐</span>Минивэн</button>` : ""}</div>` : ""}
     <button class="hsearch" id="hSearch">🔍 <span>Каякка барасыз?</span><em>›</em></button>
     <div class="hrec">${rec.slice(0, 5).map((r, i) => `<button class="rec" data-i="${i}"><span class="pi">${r.ico}</span><span class="rt"><b>${esc(r.name)}</b><small>${esc(r.sub)}</small></span><span class="t">${minsTo(r)}</span><span class="chev">›</span></button>`).join("")}</div>
@@ -548,7 +548,7 @@ async function viewQuote() {
     <div class="row"><span class="bul to lt">Б</span><div style="flex:1"><b>${esc(S.toAddr)}</b></div><input class="hn" id="hnT" placeholder="үй №" maxlength="12" value="${esc(S.hnT || "")}"></div>
     <input class="f lm" id="lmT" maxlength="60" placeholder="Б белгиси (милдеттүү эмес)" value="${esc(S.lmT || "")}">
     <div class="cls" id="cls">${q.classes.map(c => `<div data-c="${c.id}"><i>${ICON[c.id] || "🚕"}</i><div class="muted">${esc(c.name)}</div><b>${priceTxt(c)}${q.surge > 1 && c.price ? `<s>${Math.round(c.price / q.surge / 10) * 10} с</s>` : ""}</b></div>`).join("")}</div>
-    ${q.fixed ? `<div class="fixbox"><img src="/static/c_map.webp" alt=""><span><b>Туруктуу баа</b>${esc(q.fixed)} — баа өзгөрбөйт</span></div>` : ""}
+    ${q.fixed ? `<div class="fixbox"><img src="/static/c_map.webp?v=8" alt=""><span><b>Туруктуу баа</b>${esc(q.fixed)} — баа өзгөрбөйт</span></div>` : ""}
     ${q.surge > 1 ? `<div class="surgebox"><span>💓</span>Талап жогору ×${q.surge} — баа бир аз кымбатыраак. Бир аздан кийин арзандашы мүмкүн.</div>` : ""}
     <div class="muted" style="margin-top:6px">${sub} · <span id="qp"></span></div>
     <div id="extra"></div>
@@ -762,7 +762,7 @@ function sheetBox(html, after) {
   const x = $("#bxX"); if (x) x.onclick = closeBox; if (after) after();
 }
 function confirmOut() {
-  if (S.ride) return sheetBox(`<div class="lgx"><div class="lg-ic" style="background:#fff6dd"><img src="/static/r_car.webp" alt="" style="width:56px"></div><h2>Азыр чыгууга болбойт</h2>
+  if (S.ride) return sheetBox(`<div class="lgx"><div class="lg-ic" style="background:#fff6dd"><img src="/static/r_car.webp?v=8" alt="" style="width:56px"></div><h2>Азыр чыгууга болбойт</h2>
       <p class="muted">Сизде жүрүп жаткан сапар бар. Адегенде сапарды бүтүрүңүз же жокко чыгарыңыз.</p>
       <button class="btn main" id="lgBack">Сапарга кайтуу</button></div>`, () => { $("#lgBack").onclick = () => { closeBox(); viewRide(); }; });
   sheetBox(`<div class="lgx"><div class="lg-ic">🚪</div><h2>Аккаунттан чыгасызбы?</h2>
@@ -797,7 +797,7 @@ function viewDone(r) {
   render(`${head}
     ${r.discount ? `<p class="muted" style="margin:-4px 0 6px">🎁 Промокод: −${Math.round(r.discount)} сом</p>` : ""}${r.wait.fee ? `<p class="muted" style="margin:-4px 0 6px">⏳ Күтүү: +${r.wait.fee} сом (баада бар)</p>` : ""}
     ${r.rated ? `<p class="muted" style="text-align:center;margin:14px 0">✓ Бааңыз кабыл алынды. Рахмат!</p>` : `
-    <div class="done-car"><img src="/static/r_car.webp" alt=""></div><h2 class="done-q" id="dq">Сапар кандай болду?</h2><p class="muted" style="text-align:center;margin:0">Пикириңиз жашыруун калат</p>
+    <div class="done-car"><img src="/static/r_car.webp?v=8" alt=""></div><h2 class="done-q" id="dq">Сапар кандай болду?</h2><p class="muted" style="text-align:center;margin:0">Пикириңиз жашыруун калат</p>
     <div class="stars big" id="stars">${[1,2,3,4,5].map(n => `<span data-n="${n}">★</span>`).join("")}</div>
     <div class="tagrow" id="tags"></div>
     <input class="f hide" id="cm" maxlength="300" placeholder="Пикир…">
@@ -892,15 +892,15 @@ async function viewCabinet() {
   const P = PLACES && !PLACES.error ? PLACES : await api("/api/places");
   const place = (k, ico, t) => `<div class="hrow"><span>${ico} <b>${t}</b> ${P[k] ? `<span class="muted">· ${esc(P[k].name || "белгиленген")}</span>` : `<span class="muted">· белгилене элек</span>`}</span>
     <span><button class="lnk-b" style="width:auto;height:32px;padding:0 10px;font-size:13px" data-pl="${k}">${P[k] ? "Өзгөртүү" : "Кошуу"}</button>${P[k] ? ` <button class="lnk-b" style="width:32px;height:32px;font-size:13px" data-del="${k}">✕</button>` : ""}</span></div>`;
-  const li = (id, img, t, sub, href) => `<${href ? `a href="${href}"` : "button"} class="ccard" id="${id}"><img class="cimg" src="/static/${img}.webp" alt=""><span class="ct"><b>${t}</b>${sub ? `<small>${sub}</small>` : ""}</span><em>›</em></${href ? "a" : "button"}>`;
+  const li = (id, img, t, sub, href) => `<${href ? `a href="${href}"` : "button"} class="ccard" id="${id}"><img class="cimg" src="/static/${img}.webp?v=8" alt=""><span class="ct"><b>${t}</b>${sub ? `<small>${sub}</small>` : ""}</span><em>›</em></${href ? "a" : "button"}>`;
   let promo = ""; try { promo = localStorage.getItem("promoPre") || ""; } catch (e) {}
   render(""); homeOn(true);
   $("#home").innerHTML = `<div class="cab2">
       <button class="cab-av" id="avBox">${me.avatar ? `<img src="${esc(me.avatar)}" alt="">` : esc((me.name || "?")[0].toUpperCase())}<span class="cab-cam">📷</span></button>
       <input type="file" accept="image/*" capture="user" id="avCam" hidden><input type="file" accept="image/*" id="avGal" hidden>
       <div class="cab-nm">${esc(me.name || "Жүргүнчү")}</div><div class="cab-ph">${esc(me.phone)}</div>
-      <div class="cab-q"><button id="qH"><img src="/static/c_trips.webp" alt="">Сапарлар</button><a href="${me.bot ? "https://t.me/" + me.bot : "/terms"}" target="_blank"><img src="/static/c_help.webp" alt="">Колдоо</a>
-        <button id="qA"><img src="/static/c_addr.webp" alt="">Даректер</button><button id="qS"><img src="/static/c_set.webp" alt="">Жөндөөлөр</button></div>
+      <div class="cab-q"><button id="qH"><img src="/static/c_trips.webp?v=8" alt="">Сапарлар</button><a href="${me.bot ? "https://t.me/" + me.bot : "/terms"}" target="_blank"><img src="/static/c_help.webp?v=8" alt="">Колдоо</a>
+        <button id="qA"><img src="/static/c_addr.webp?v=8" alt="">Даректер</button><button id="qS"><img src="/static/c_set.webp?v=8" alt="">Жөндөөлөр</button></div>
     <div id="cabMore"></div>
     ${li("cPromo", "c_gift", "Промокод", promo ? "Кийинки заказга: " + esc(promo) : "Промокод киргизүү")}
     ${li("cPay", "c_card", "Төлөм ыкмасы", "Накталай — айдоочуга түз")}
@@ -966,7 +966,7 @@ try { if (new URLSearchParams(location.search).get("next") === "park") localStor
 try { const qs = new URLSearchParams(location.search), rf = qs.get("ref"), pm = qs.get("promo");
   if (rf) { localStorage.setItem("parkRef", rf); if (pm) localStorage.setItem("promoPre", pm.toUpperCase()); history.replaceState(null, "", "/"); } } catch (e) {}
 let ME_ROLE = {};
-const role2 = () => ME_ROLE.park && !ME_ROLE.driver ? `<a href="/park"><span class="rpk">🏢</span>Парк</a>` : `<a href="/driver"><img src="/static/r_car.webp" alt="" class="rc">Айдоочу</a>`;
+const role2 = () => ME_ROLE.park && !ME_ROLE.driver ? `<a href="/park"><span class="rpk">🏢</span>Парк</a>` : `<a href="/driver"><img src="/static/r_car.webp?v=8" alt="" class="rc">Айдоочу</a>`;
 async function boot() {
   const me = await api("/api/me"); ME_ROLE = {park:me.park, driver:me.driver, admin:me.admin};
   if (ME_ROLE.park && !ME_ROLE.driver) document.querySelectorAll(".role a[href='/driver']").forEach(a => a.outerHTML = role2());

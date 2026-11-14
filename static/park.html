@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#fafafa">
 <title>Таксопарк кабинети — Такси ТАП!</title>
 <link rel="apple-touch-icon" href="/static/icon-192.png?v=4">
-<link rel="stylesheet" href="/static/theme.css?v=67">
+<link rel="stylesheet" href="/static/theme.css?v=69">
 <style>
 body{margin:0;font-family:Inter,system-ui,sans-serif;background:#fff;color:#16161a;position:relative}
 .wrap{max-width:560px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 14px) 16px 40px}
@@ -166,12 +166,12 @@ function draw() {
         : `<p class="muted">Азырынча айдоочу жок. Айдоочу адегенде сайтта «Айдоочу болуу» аркылуу катталып, текшерүүдөн өтүшү керек, андан кийин аны бул жерге номери менен кошосуз.</p>`}
       <div class="row"><input class="f" id="dph" placeholder="Айдоочунун номери: 0700 123 456" inputmode="tel"><button class="btn" id="dadd">Кошуу</button></div>
       <div id="dmsg"></div></div>
-    <div class="card"><h2 class="ih"><img src="/static/c_gift.webp" alt="">Жүргүнчүлөрдү тартуу</h2>
+    <div class="card"><h2 class="ih"><img src="/static/c_gift.webp?v=8" alt="">Жүргүнчүлөрдү тартуу</h2>
       <div class="qr"><div id="qr"></div><div><div class="muted">Паркыңыздын коду</div><div class="code">${esc(p.code)}</div>
         <div class="muted" style="margin-top:4px">Жаңы жүргүнчү ушул QR менен келип, биринчи сапарын бүтүрсө — сизге <b>${fmt(p.ref_bonus)} сом</b>.${p.promo_amount ? ` Ага биринчи сапарга <b>−${p.promo_amount} сом</b>.` : ""}</div></div></div>
       <div class="st3"><div><b>${ST.qr.scans}</b><small>сканерленди</small></div><div><b>${ST.qr.joined}</b><small>катталды</small></div><div><b>${ST.qr.rode}</b><small>сапар бүтүрдү</small></div></div>
       <div class="muted" style="margin:12px 0 6px">Басып чыгаруу үлгүсү</div>
-      <div class="tpl">${TPL.map(([k, im, t]) => `<button data-t="${k}" class="${k === TK ? "on" : ""}"><img src="/static/${im}.webp" alt="">${t}</button>`).join("")}</div>
+      <div class="tpl">${TPL.map(([k, im, t]) => `<button data-t="${k}" class="${k === TK ? "on" : ""}"><img src="/static/${im}.webp?v=8" alt="">${t}</button>`).join("")}</div>
       <div class="row"><button class="btn ib" id="print">${IC.print}Басып чыгаруу</button><button class="btn g ib" id="share">${IC.share}Бөлүшүү</button></div>
       <p class="muted" style="margin-top:8px;word-break:break-all">${esc(link)}</p>
       <p class="muted" style="font-size:12.5px">Ар бир айдоочуңуздун да өзүнүн QR'ы бар (айдоочунун кабинетинде) — ким канча жүргүнчү тартканы көрүнөт.</p>
