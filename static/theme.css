@@ -601,3 +601,21 @@ body.dnav .sheet{max-height:calc(100dvh - 318px - env(safe-area-inset-top,0px))!
 .dscls{display:flex;gap:6px;flex-wrap:wrap}.dscls button{border:2px solid #eee;background:#fff;border-radius:14px;padding:8px 12px;font:700 13px inherit;font-family:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:center}
 .dscls button b{font-size:16px}.dscls button.on{border-color:#ffb703;background:#fffaf0}
 .dspr{font-size:15px}.dspr:empty{display:none}
+/* ===== Жаңы стиль (Kake'нин макети 2): сары-кара жалпак сүрөтчөлөр, тилкелүү фон, шаар силуэти ===== */
+img[src*="/static/c_"]:not([src*="c_car."]):not([src*="c_hdr"]):not([src*="c_taxi"]),img[src*="/static/n_"]:not([src*="n_go"]){object-fit:contain!important;background:transparent!important;border-radius:0!important}
+#home.cabbg{background-color:#fafafb;background-image:url(/static/cb_tl.webp),url(/static/cb_tr.webp),url(/static/cb_br.webp),url(/static/cb_bl.webp);
+  background-size:62% auto,34% auto,30% auto,100% auto;background-position:left -2px top -2px,right -2px top 190px,right bottom 70px,left bottom 70px}
+.cab2 .cab-q img{width:44px;height:44px;border-radius:0}
+.cab2 .cab-q>*{border-radius:20px;box-shadow:0 8px 20px rgba(20,20,30,.08)}
+#home.cabbg .ccard{background:#fff;box-shadow:0 8px 20px rgba(20,20,30,.07);border-radius:22px;padding:8px 14px 8px 10px;min-height:60px}
+#home.cabbg .ccard .cimg{width:52px;height:52px}
+#home.cabbg .cab-out{background:linear-gradient(180deg,#ffd84a,#ffc400 60%,#ffb300)!important;color:#16161a!important;border:0!important;box-shadow:0 10px 24px rgba(255,170,0,.4)!important;
+  display:flex!important;align-items:center;justify-content:center;gap:10px;font-weight:900!important}
+#home.cabbg .cab-out svg{width:26px;height:26px}
+.sheet.cabbg::before{opacity:1;height:150px;background:url(/static/cb_tl.webp) left -2px top -2px/52% auto no-repeat,url(/static/cb_tr.webp) right -2px top -40px/26% auto no-repeat}
+.pkbg{opacity:1;background:url(/static/cb_tl.webp) left -2px top -2px/58% auto no-repeat,url(/static/cb_tr.webp) right -2px top 60px/30% auto no-repeat}
+#home.hbg::before{opacity:.9;background:url(/static/cb_tl.webp) left -2px top -2px/60% auto no-repeat,url(/static/cb_tr.webp) right -2px top 120px/30% auto no-repeat}
+.bnav.pro a:not(.big) img{width:34px!important;height:34px!important}
+.sheet.cabbg::before{height:170px;background:url(/static/cb_tr.webp) right -2px top -30px/30% auto no-repeat}
+#home.hbg::before{height:360px;background:url(/static/cb_tr.webp) right -2px top 150px/26% auto no-repeat}
+.pkbg{background:url(/static/cb_tr.webp) right -2px top 40px/32% auto no-repeat}
