@@ -642,3 +642,5 @@ img[src*="/static/c_"]:not([src*="c_car."]):not([src*="c_hdr"]):not([src*="c_tax
 .mrow{display:flex;align-items:center;gap:12px;padding:11px 2px;border-bottom:1px solid #f0f0f3;font-size:15px;color:#16161a;text-decoration:none}.mrow:last-child{border:0}
 .mrow i{font-style:normal;width:28px;text-align:center;font-size:19px}.mrow span{flex:1;font-weight:700}.mrow em{font-style:normal;color:#555;font-weight:600;text-align:right}
 .mrow small{display:block;color:#888;font-weight:500;font-size:12.5px}
+#home.cabbg{background-position:left 0 top -90px,right 0 top 260px,right 0 bottom 64px,left bottom 64px}
+.cab2 .cab-nm,.cab2 .cab-ph{text-shadow:0 0 6px #fff,0 0 12px #fff}
