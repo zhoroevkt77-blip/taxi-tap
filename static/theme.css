@@ -592,3 +592,12 @@ body.dnav .sheet{max-height:calc(100dvh - 318px - env(safe-area-inset-top,0px))!
 #rb,#rmS{height:50px;padding:0 12px!important;font-size:16px!important;font-weight:600;appearance:auto}.kgp select{max-width:64px}
 .fixbox{display:flex;align-items:center;gap:10px;background:#eef9f1;border:1px solid #bfe8cd;border-radius:16px;padding:8px 12px;margin:8px 0;font-size:13.5px;color:#1d5b36}.fixbox img{width:44px;height:32px;border-radius:12px;object-fit:cover}.fixbox b{display:block;font-size:15px;color:#16161a}
 .fxdd{position:absolute;left:0;right:0;top:100%;z-index:50;background:#fff;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.15);overflow:hidden}.fxdd div{padding:9px 12px;cursor:pointer;border-bottom:1px solid #f0f0f3;font-weight:700}.fxdd div:hover{background:#fffaf0}.fxdd small{display:block;color:#888;font-weight:500}
+/* ☎ Диспетчер */
+.dsf{padding:4px 14px 14px;display:grid;gap:8px}.dsf label{font-size:13px;color:var(--soft,#6b6b76);display:block;margin-bottom:3px}
+.dsf .two2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.dsf .f{margin:0!important}
+.dsrow{display:flex;gap:6px}.dsrow .btn{flex:none;padding:0 14px}
+.dsch{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.dsch:empty{display:none}
+.dsch button{border:0;background:#fffaf0;border:1px solid #ffe08a;border-radius:12px;padding:6px 10px;font:600 13px inherit;font-family:inherit;cursor:pointer}
+.dscls{display:flex;gap:6px;flex-wrap:wrap}.dscls button{border:2px solid #eee;background:#fff;border-radius:14px;padding:8px 12px;font:700 13px inherit;font-family:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:center}
+.dscls button b{font-size:16px}.dscls button.on{border-color:#ffb703;background:#fffaf0}
+.dspr{font-size:15px}.dspr:empty{display:none}

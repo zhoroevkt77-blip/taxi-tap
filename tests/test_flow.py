@@ -1090,3 +1090,17 @@ class FixedRoutes(unittest.TestCase):
         if q.get("city") and not q.get("dest_out"):
             self.assertEqual(q["price"], 150); self.assertEqual(q["fixed"], "Борбор → Арал")
         core.set_fixed_routes([])
+
+
+class Dispatcher(unittest.TestCase):
+    def test_client_and_phone_rides(self):
+        core.init_db()
+        uid = core.phone_uid("0700 000 771"); core.ensure_user(uid, "Айгүл эже")
+        q = core.quote(41.0380, 72.7472, 41.0420, 72.7520)
+        rid = core.create_ride(uid, q, 41.0380, 72.7472, 41.0420, 72.7520, source="phone", p_addr="Базар", d_addr="Аптека")
+        c = core.client_card(uid)
+        self.assertEqual(c["name"], "Айгүл эже"); self.assertEqual(c["active"], rid)
+        self.assertIn("Базар", [x["name"] for x in c["places"]])
+        pr = [x for x in core.phone_rides() if x["id"] == rid][0]
+        self.assertEqual((pr["p_addr"], pr["status"]), ("Базар", "searching"))
+        core.query("UPDATE rides SET status='cancelled' WHERE id=?", (rid,))

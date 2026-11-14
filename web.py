@@ -685,6 +685,11 @@ class H(BaseHTTPRequestHandler):
             return self._json({"parks": parks.admin_list(), "pay_time": parks.pay_time()})
         if action == "fixed_routes":
             return self._json({"items": core.fixed_routes(), "r": core.FIXED_R_KM})
+        if action == "client":
+            cu = core.phone_uid((q.get("phone") or [""])[0][:20])
+            return self._json(core.client_card(cu) if cu else {"error": "bad_phone"})
+        if action == "phone_rides":
+            return self._json({"rides": core.phone_rides()})
         if action == "addr":
             return self._json({"items": addrbook.admin_list((q.get("q") or [""])[0][:60],
                                                             only=(q.get("only") or [""])[0] or None),
@@ -826,7 +831,7 @@ class H(BaseHTTPRequestHandler):
                 return self._json({"error": "need_dest"}, 400)
             if core.active_ride_of(uid):
                 return self._json({"error": "have_active"}, 409)
-            q = core.quote(p[0], p[1], *(d or (None, None)))
+            q = core.quote(p[0], p[1], *(d or (None, None)), cls=b.get("cls") or "econom")
             if not q["city"]:
                 return self._json({"error": "no_city"}, 400)
             if q.get("dest_out"):
@@ -834,15 +839,18 @@ class H(BaseHTTPRequestHandler):
             u = core.ensure_user(uid, name)
             core.set_user(uid, phone=uid[3:], **({"name": name} if name and not u.get("name") else {}))
             rid = core.create_ride(uid, q, p[0], p[1], *(d or (None, None)), note=note or None,
-                                   source="phone")
+                                   source="phone", p_addr=_txt(b.get("p_addr"), 80) or None,
+                                   d_addr=_txt(b.get("d_addr"), 80) or None)
             return self._json({"ride": ride_view(core.get_ride(rid))})
         if action == "quote":
             p, d = _point(b.get("p")), _point(b.get("d"))
             if not p:
                 return self._json({"error": "bad_point"}, 400)
-            q = core.quote(p[0], p[1], *(d or (None, None)))
+            q = core.quote(p[0], p[1], *(d or (None, None)), cls=b.get("cls") or "econom")
+            cfg = core.class_config()
             return self._json({"city": q["city"], "price": q["price"], "dist_km": q["dist_km"],
-                               "dest_out": bool(q.get("dest_out"))})
+                               "dest_out": bool(q.get("dest_out")), "fixed": q.get("fixed"), "surge": q["surge"],
+                               "classes": [{"id": c, "name": cfg[c]["name"], "price": pr} for c, pr in q["prices"].items()]})
         if action == "finance":
             pct, mb = _num(b.get("percent")), _num(b.get("min_balance") or 0)
             fu = _txt(b.get("free_until"), 10) or None

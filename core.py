@@ -1764,6 +1764,41 @@ def passenger_history(uid, limit=20):
                  "FROM rides WHERE passenger=? ORDER BY id DESC LIMIT ?", (uid, limit), "all")
 
 
+def client_card(uid):
+    """Диспетчер үчүн: кардардын аты жана мурунку даректери (көп колдонгону биринчи)."""
+    u = get_user(uid) or {}
+    rows = query("SELECT p_lat, p_lon, p_addr, d_lat, d_lon, d_addr FROM rides WHERE passenger=? "
+                 "ORDER BY id DESC LIMIT 30", (uid,), "all")
+    seen = {}
+    for r in rows:
+        for lat, lon, a in ((r["p_lat"], r["p_lon"], r["p_addr"]), (r["d_lat"], r["d_lon"], r["d_addr"])):
+            if lat is None or not a:
+                continue
+            k = a.strip().lower()
+            if k in seen:
+                seen[k]["n"] += 1
+            else:
+                seen[k] = {"name": a, "lat": lat, "lon": lon, "n": 1}
+    places = sorted(seen.values(), key=lambda x: -x["n"])[:6]
+    act = active_ride_of(uid)
+    return {"name": u.get("name"), "rides": len(rows), "places": places, "active": act["id"] if act else None}
+
+
+def phone_rides(hours=24):
+    """Диспетчер берген заказдар (акыркы N саат): статус, айдоочу, унаа."""
+    rows = query("SELECT r.*, u.name AS p_name, u.phone AS p_phone, du.name AS d_name, du.phone AS d_phone, "
+                 "d.car_model, d.car_color, d.car_plate FROM rides r LEFT JOIN users u ON u.uid=r.passenger "
+                 "LEFT JOIN users du ON du.uid=r.driver LEFT JOIN drivers d ON d.uid=r.driver "
+                 "WHERE r.source='phone' AND r.created_at>=? ORDER BY r.id DESC LIMIT 50",
+                 (now() - hours * 3600,), "all")
+    return [{"id": r["id"], "status": r["status"], "price": r["price"], "cls": r.get("cls") or "econom",
+             "passenger": r["p_name"], "phone": r["p_phone"], "p_addr": r.get("p_addr"), "d_addr": r.get("d_addr"),
+             "note": r.get("note"), "at": r["created_at"],
+             "driver": ({"name": r["d_name"], "phone": r["d_phone"], "plate": r["car_plate"],
+                         "car": car_text(r["car_color"], r["car_model"])} if r.get("driver") else None)}
+            for r in rows]
+
+
 def driver_history(uid, limit=20):
     return query("SELECT id, status, price, dist_km, created_at, completed_at FROM rides "
                  "WHERE driver=? ORDER BY id DESC LIMIT ?", (uid, limit), "all")

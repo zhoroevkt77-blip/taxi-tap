@@ -68,12 +68,13 @@ td input.f{padding:7px 8px;max-width:90px;min-width:58px}
 .docs{flex-wrap:wrap}.chk{margin:10px 0 2px;padding:10px 12px;border-radius:12px;background:#fff8e1}.chk label{font-weight:500!important;color:#222!important;font-size:14px!important;display:flex!important;gap:8px;align-items:flex-start}.chk input{width:18px;height:18px;flex:none;margin-top:1px}
 .btn:disabled{opacity:.4;cursor:not-allowed}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=63">
+<link rel="stylesheet" href="/static/theme.css?v=64">
 </head>
 <body class="adm">
 <header><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b><span class="ver">Админ</span></div><div class="live" id="live"></div></header>
 <nav id="nav" class="hide">
   <button data-t="map" class="on">Карта</button>
+  <button data-t="disp">☎ Диспетчер</button>
   <button data-t="drivers">Айдоочулар<span class="badge hide" id="bD"></span></button>
   <button data-t="topups">Толуктоо<span class="badge hide" id="bT"></span></button>
   <button data-t="rides">Сапарлар</button>
@@ -123,9 +124,9 @@ function viewMap() {
     <div class="card"><span>Активдүү заказ</span><b>${s.active}</b><span>${s.searching} изделүүдө</span></div>
     <div class="card"><span>Бүгүн бүттү</span><b>${s.done_today}</b><span>${s.lost_today} айдоочусуз калды</span></div>
     <div class="card"><span>Бүгүнкү жүгүртүү</span><b>${s.gross_today.toLocaleString("ru-RU")} с</b><span>комиссия ${s.fee_today} с</span></div></div>
-    <div class="panel" id="po"><div class="item"><div class="main"><b>📞 Телефон аркылуу заказ</b>
-      <span class="muted">Кардар чалса — номерин жазып, картадан жерин басыңыз. Заказ жакынкы айдоочуга кетет, айдоочу кардарга өзү чалат.</span></div>
-      <button class="btn gold" id="poOpen">Жаңы заказ</button></div><div id="poForm"></div></div>
+    <div class="panel"><div class="item"><div class="main"><b>📞 Телефон аркылуу заказ</b>
+      <span class="muted">Кардар чалса — «☎ Диспетчер» бөлүмүнөн заказ бериңиз.</span></div>
+      <button class="btn gold" id="poOpen">☎ Диспетчер</button></div></div>
     <div id="map"></div>
     <div class="legend"><label style="cursor:pointer"><input type="checkbox" id="lostT"> <i style="background:#D8443A"></i>Айдоочусуз калгандар (7 күн)</label><span><i style="background:var(--ok)"></i>Бош айдоочу</span><span><i style="background:var(--navy)"></i>Сапардагы айдоочу</span><span><i style="background:var(--gold)"></i>Айдоочу изделүүдө</span><span><i style="background:#378ADD"></i>Жүргүнчү күтүп турат</span></div>
     <div class="panel"><h3>Активдүү заказдар</h3><div id="act"></div></div>`;
@@ -133,7 +134,6 @@ function viewMap() {
   setupArea(map, {minZoom:9, center:false});
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:"© OpenStreetMap"}).addTo(map);
   lyr = L.layerGroup().addTo(map); fitted = false; drawMap();
-  PO.lyr = L.layerGroup().addTo(map);
   const lostL = L.layerGroup().addTo(map);
   $("#lostT").onchange = async e => {
     lostL.clearLayers();
@@ -143,45 +143,108 @@ function viewMap() {
       .bindTooltip(new Date(x.created_at * 1000).toLocaleString("ru-RU", {day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit"})).addTo(lostL));
     if (!lost.length) alert("Акыркы 7 күндө айдоочусуз калган заказ жок.");
   };
-  map.on("click", e => { if (!PO.pick) return; PO[PO.pick] = [e.latlng.lat, e.latlng.lng]; PO.pick = null; phoneForm(); });
-  $("#poOpen").onclick = () => { Object.assign(PO, {open:true, p:null, d:null, pick:"p"}); phoneForm(); };
+  $("#poOpen").onclick = () => show("disp");
 }
 
-// ---------- телефон заказ (диспетчер) ----------
-const PO = {open:false, p:null, d:null, pick:null, lyr:null};
-async function phoneForm() {
-  const box = $("#poForm"); if (!box) return;
-  PO.lyr && PO.lyr.clearLayers();
-  if (!PO.open) { box.innerHTML = ""; return; }
-  if (PO.p) L.marker(PO.p, {icon:dot("#378ADD")}).addTo(PO.lyr);
-  if (PO.d) L.marker(PO.d, {icon:dot("#C9A03A")}).addTo(PO.lyr);
-  const keep = id => ($("#" + id) || {}).value || "";
-  const vals = {ph:keep("poPh"), nm:keep("poNm"), nt:keep("poNt")};
-  let price = "";
-  if (PO.p) { const q = await api("/api/a/quote", {p:PO.p, d:PO.d});
-    price = !q.city ? `<span class="err">Бул жер иштөө аймагынын сыртында</span>`
-      : q.dest_out ? `<span class="err">Бара турган жер райондун сыртында — шаар аралык каттам жок</span>`
-      : `Баасы: <b>${q.price ? q.price + " сом" : "тариф боюнча"}</b>${q.dist_km ? " · ~" + q.dist_km + " км" : ""}`; }
-  const pickTxt = k => PO.pick === k ? "👆 Картадан басыңыз…" : PO[k] ? "✓ Белгиленди (өзгөртүү)" : "Картадан белгилөө";
-  box.innerHTML = `<div class="fset">
-      <div><label>Телефон</label><input class="f" id="poPh" inputmode="tel" placeholder="0700 123 456" value="${esc(vals.ph)}"></div>
-      <div><label>Аты</label><input class="f" id="poNm" placeholder="Айгүл эже" value="${esc(vals.nm)}"></div>
-      <div><label>Кайдан</label><button class="btn" id="poP" style="width:100%">${pickTxt("p")}</button></div>
-      <div><label>Кайда</label><button class="btn" id="poD" style="width:100%">${pickTxt("d")}</button></div>
-      <div style="grid-column:1/-1"><label>Белги (айдоочуга көрүнөт)</label><input class="f" id="poNt" placeholder="Базардын жанында, көк дарбаза" value="${esc(vals.nt)}"></div>
-    </div><div style="padding:0 14px 14px"><div class="muted" style="margin-bottom:8px">${price}</div>
-      <button class="btn ok" id="poGo">Заказ берүү</button> <button class="btn" id="poX">Жабуу</button> <span class="err" id="poEr"></span></div>`;
-  $("#poP").onclick = () => { PO.pick = "p"; phoneForm(); };
-  $("#poD").onclick = () => { PO.pick = "d"; phoneForm(); };
-  $("#poX").onclick = () => { PO.open = false; phoneForm(); };
-  $("#poGo").onclick = async () => {
-    if (!PO.p) return $("#poEr").textContent = "Кайдан экенин картадан басыңыз.";
-    if (!PO.d) return $("#poEr").textContent = "Кайда барарын картадан басыңыз.";
-    const r = await api("/api/a/order", {phone:$("#poPh").value, name:$("#poNm").value, note:$("#poNt").value, p:PO.p, d:PO.d});
-    if (r.error) return $("#poEr").textContent = {bad_phone:"Номерди толук жазыңыз.", have_active:"Бул номерде активдүү заказ бар.",
-      no_city:"Бул жер иштөө аймагынын сыртында.", need_dest:"Кайда барарын картадан белгилеңиз.", dest_out:"Бара турган жер райондун сыртында.", bad_point:"Жерди белгилеңиз."}[r.error] || "Ката.";
-    PO.open = false; phoneForm(); refresh();
-  };
+// ---------- ☎ Диспетчер: телефон аркылуу заказ ----------
+const DS = {p:null, d:null, pa:"", da:"", pick:null, cls:"econom", client:null, lyr:null, map:null, t:null};
+const ST_TXT = {searching:["⏳ Айдоочу изделүүдө", "#C9A03A"], accepted:["🚕 Айдоочу келе жатат", "#378ADD"], arrived:["📍 Айдоочу жетти", "#1D9E75"],
+  in_trip:["🛣 Жолдо", "#17365C"], completed:["✅ Бүттү", "#1D9E75"], cancelled:["✕ Жокко чыкты", "#D8443A"], scheduled:["🕐 Алдын ала", "#888"]};
+async function viewDisp() {
+  $("#main").innerHTML = `<div class="panel"><h3>☎ Телефон аркылуу заказ</h3><div class="dsf">
+      <div class="two2"><div><label>Телефон</label><input class="f" id="dsPh" inputmode="tel" placeholder="0700 123 456" autocomplete="off"></div>
+        <div><label>Аты</label><input class="f" id="dsNm" placeholder="Айгүл эже"></div></div>
+      <div id="dsCl" class="muted"></div>
+      ${["p", "d"].map(k => `<div class="dsw"><label>${k === "p" ? "🅰 Кайдан" : "🅱 Кайда"}</label>
+        <div class="dsrow"><div style="position:relative;flex:1"><input class="f" id="ds${k}" placeholder="${k === "p" ? "Дарек, дүкөн, мекеме…" : "Кайда барат…"}" autocomplete="off">
+          <div class="fxdd" id="ds${k}dd"></div></div><button class="btn" id="ds${k}M" title="Картадан">🗺</button></div>
+        <div class="dsch" id="ds${k}C"></div></div>`).join("")}
+      <div id="dsCls" class="dscls"></div>
+      <div><label>Белги (айдоочуга көрүнөт)</label><input class="f" id="dsNt" placeholder="Базардын жанында, көк дарбаза"></div>
+      <div id="dsPr" class="dspr"></div>
+      <button class="btn ok" id="dsGo" style="width:100%;padding:14px;font-size:17px">Заказ берүү</button><span class="err" id="dsEr"></span>
+      <div id="dsMap" style="height:260px;border-radius:16px;margin-top:10px"></div><p class="muted" id="dsHint"></p></div></div>
+    <div class="panel"><h3>📋 Бүгүнкү телефон заказдар</h3><div id="dsList"><div class="empty">Жүктөлүүдө…</div></div></div>`;
+  DS.map = L.map("dsMap", {zoomControl:true}).setView((window.AREA && AREA.center) || [41.0377, 72.7470], 13);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:"© OpenStreetMap"}).addTo(DS.map);
+  DS.lyr = L.layerGroup().addTo(DS.map);
+  DS.map.on("click", async e => { if (!DS.pick) return; const k = DS.pick; DS.pick = null;
+    DS[k] = [e.latlng.lat, e.latlng.lng]; DS[k + "a"] = "Картадагы чекит";
+    try { const r = await (await fetch(`/api/rev?lat=${DS[k][0]}&lon=${DS[k][1]}`)).json(); DS[k + "a"] = r.addr || r.near || DS[k + "a"]; } catch (x) {}
+    $("#ds" + k).value = DS[k + "a"]; dsDraw(); });
+  ["p", "d"].forEach(k => {
+    let tm; const inp = $("#ds" + k), dd = $("#ds" + k + "dd");
+    inp.oninput = () => { clearTimeout(tm); DS[k] = null; dsDraw(); tm = setTimeout(async () => {
+      const q = inp.value.trim(); if (q.length < 2) return dd.innerHTML = "";
+      const c = (window.AREA && AREA.center) || [41.04, 72.75];
+      const x = await (await fetch(`/api/addr?q=${encodeURIComponent(q)}&lat=${c[0]}&lon=${c[1]}`)).json();
+      dd.innerHTML = (x.items || []).slice(0, 6).map((it, i) => `<div data-i="${i}">${esc(it.name)}<small>${esc(it.addr || it.sub || "")}</small></div>`).join("")
+        + `<div data-m="1">🗺 Картадан белгилөө</div>`;
+      dd.querySelectorAll("[data-i]").forEach(el => el.onclick = () => { const it = x.items[+el.dataset.i];
+        DS[k] = [it.lat, it.lon]; DS[k + "a"] = it.name; inp.value = it.name; dd.innerHTML = ""; dsDraw(); });
+      dd.querySelector("[data-m]").onclick = () => { dd.innerHTML = ""; dsPick(k); };
+    }, 300); };
+    $("#ds" + k + "M").onclick = () => dsPick(k);
+  });
+  let pt;
+  $("#dsPh").oninput = () => { clearTimeout(pt); pt = setTimeout(dsClient, 500); };
+  $("#dsGo").onclick = dsOrder;
+  dsDraw(); dsList();
+  clearInterval(DS.t); DS.t = setInterval(() => { if (tab === "disp") dsList(); else clearInterval(DS.t); }, 5000);
+}
+function dsPick(k) { DS.pick = k; $("#dsHint").textContent = (k === "p" ? "🅰 Кайдан" : "🅱 Кайда") + " — картадан басыңыз 👇"; $("#dsMap").scrollIntoView({behavior:"smooth", block:"center"}); }
+async function dsClient() {
+  const ph = $("#dsPh").value.replace(/\D/g, ""); DS.client = null;
+  if (ph.length < 9) { $("#dsCl").innerHTML = ""; ["p", "d"].forEach(k => $("#ds" + k + "C").innerHTML = ""); return; }
+  const c = await api("/api/a/client?phone=" + encodeURIComponent($("#dsPh").value)); if (c.error) return;
+  DS.client = c;
+  if (c.name && !$("#dsNm").value) $("#dsNm").value = c.name;
+  $("#dsCl").innerHTML = c.active ? `<span class="err">⚠️ Бул номерде активдүү заказ бар (№${c.active})</span>`
+    : c.rides ? `👤 Мурунку кардар · ${c.rides} заказ` : "🆕 Жаңы кардар";
+  ["p", "d"].forEach(k => { $("#ds" + k + "C").innerHTML = (c.places || []).map((x, i) => `<button data-pi="${i}">${esc(x.name)}</button>`).join("");
+    $("#ds" + k + "C").querySelectorAll("[data-pi]").forEach(b => b.onclick = () => { const x = c.places[+b.dataset.pi];
+      DS[k] = [x.lat, x.lon]; DS[k + "a"] = x.name; $("#ds" + k).value = x.name; dsDraw(); }); });
+}
+async function dsDraw() {
+  DS.lyr && DS.lyr.clearLayers();
+  const pts = [];
+  if (DS.p) { L.marker(DS.p, {icon:dot("#378ADD")}).bindTooltip("🅰").addTo(DS.lyr); pts.push(DS.p); }
+  if (DS.d) { L.marker(DS.d, {icon:dot("#C9A03A")}).bindTooltip("🅱").addTo(DS.lyr); pts.push(DS.d); }
+  if (pts.length && DS.map) DS.map.fitBounds(L.latLngBounds(pts.length > 1 ? pts : [pts[0], pts[0]]), {padding:[40, 40], maxZoom:15});
+  $("#dsHint").textContent = DS.pick ? "Картадан басыңыз 👇" : "";
+  if (!DS.p || !DS.d) { $("#dsPr").innerHTML = ""; $("#dsCls").innerHTML = ""; return; }
+  const q = await api("/api/a/quote", {p:DS.p, d:DS.d, cls:DS.cls});
+  if (!q.city) return $("#dsPr").innerHTML = `<span class="err">🅰 иштөө аймагынын сыртында</span>`;
+  if (q.dest_out) return $("#dsPr").innerHTML = `<span class="err">🅱 аймактын сыртында — шаар аралык каттам жок</span>`;
+  $("#dsCls").innerHTML = (q.classes || []).map(c => `<button data-c="${c.id}" class="${c.id === DS.cls ? "on" : ""}">${esc(c.name)}<b>${c.price ?? "—"} с</b></button>`).join("");
+  $("#dsCls").querySelectorAll("[data-c]").forEach(b => b.onclick = () => { DS.cls = b.dataset.c; dsDraw(); });
+  $("#dsPr").innerHTML = `Баасы: <b>${q.price} сом</b> · ~${q.dist_km} км${q.fixed ? ` · <span class="tag">📌 Туруктуу баа: ${esc(q.fixed)}</span>` : ""}${q.surge > 1 ? ` · 💓 ×${q.surge}` : ""}`;
+}
+async function dsOrder() {
+  $("#dsEr").textContent = "";
+  if (!DS.p) return $("#dsEr").textContent = "Кайдан экенин тандаңыз.";
+  if (!DS.d) return $("#dsEr").textContent = "Кайда барарын тандаңыз.";
+  $("#dsGo").disabled = true;
+  const r = await api("/api/a/order", {phone:$("#dsPh").value, name:$("#dsNm").value, note:$("#dsNt").value, p:DS.p, d:DS.d, cls:DS.cls, p_addr:DS.pa, d_addr:DS.da});
+  $("#dsGo").disabled = false;
+  if (r.error) return $("#dsEr").textContent = {bad_phone:"Номерди толук жазыңыз.", have_active:"Бул номерде активдүү заказ бар.",
+    no_city:"Бул жер иштөө аймагынын сыртында.", need_dest:"Кайда барарын тандаңыз.", dest_out:"Бара турган жер аймактын сыртында.", bad_point:"Жерди тандаңыз."}[r.error] || "Ката";
+  toast(`✓ Заказ №${r.ride.id} берилди — айдоочу изделүүдө`, 3000);
+  Object.assign(DS, {p:null, d:null, pa:"", da:"", cls:"econom", client:null});
+  ["dsPh", "dsNm", "dsp", "dsd", "dsNt"].forEach(id => $("#" + id).value = ""); $("#dsCl").innerHTML = ""; $("#dspC").innerHTML = $("#dsdC").innerHTML = "";
+  dsDraw(); dsList();
+}
+async function dsList() {
+  const box = $("#dsList"); if (!box) return;
+  const {rides} = await api("/api/a/phone_rides");
+  box.innerHTML = rides && rides.length ? rides.map(r => { const [t, c] = ST_TXT[r.status] || [r.status, "#888"];
+    return `<div class="item"><div class="main"><b>№${r.id} · ${esc(r.passenger || "")} <span class="tag" style="background:${c};color:#fff">${t}</span></b>
+      <span class="muted">☎ <a href="tel:+${esc(r.phone || "")}">${esc(r.phone || "")}</a> · ${esc(r.p_addr || "?")} → ${esc(r.d_addr || "?")} · <b>${r.price ?? "—"} с</b> · ${new Date(r.at * 1000).toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"})}</span>
+      ${r.driver ? `<span>🚕 <b>${esc(r.driver.name || "")}</b> · ${esc(r.driver.car)}, <b>${esc(r.driver.plate || "")}</b> · <a href="tel:+${esc(r.driver.phone || "")}">☎ айдоочуга чалуу</a></span>` : ""}</div>
+      ${["searching", "accepted", "arrived", "scheduled"].includes(r.status) ? `<button class="btn" data-dsx="${r.id}">Жокко чыгаруу</button>` : ""}</div>`; }).join("")
+    : `<div class="empty">Бүгүн телефон заказ болгон жок.</div>`;
+  box.querySelectorAll("[data-dsx]").forEach(b => b.onclick = async () => { if (!confirm("Заказды жокко чыгарасызбы?")) return;
+    await api("/api/a/cancel", {id:+b.dataset.dsx}); dsList(); });
 }
 const dot = c => L.divIcon({className:"", html:`<div class="mk" style="background:${c}"></div>`, iconSize:[24,24], iconAnchor:[12,12]});
 function drawMap() {
@@ -684,7 +747,7 @@ async function fixedPanel() {
 function show(t) {
   tab = t; lyr = null;
   document.querySelectorAll("nav button").forEach(b => b.classList.toggle("on", b.dataset.t === t));
-  ({map:viewMap, drivers:viewDrivers, topups:viewTopups, rides:viewRides, tariffs:viewTariffs, area:viewArea, finance:viewFinance, parks:viewParks, addr:() => viewAddr("")})[t]();
+  ({map:viewMap, disp:viewDisp, drivers:viewDrivers, topups:viewTopups, rides:viewRides, tariffs:viewTariffs, area:viewArea, finance:viewFinance, parks:viewParks, addr:() => viewAddr("")})[t]();
 }
 document.querySelectorAll("nav button").forEach(b => b.onclick = () => show(b.dataset.t));
 async function boot() {
