@@ -85,11 +85,35 @@ def all_parks():
     return core.query("SELECT * FROM parks ORDER BY id", (), "all")
 
 
-def save(name, owner_phone, share=30, ref_bonus=20, promo=None, promo_amount=50, pid=None, active=True):
+MONTH = 30.44 * 86400
+
+
+def share_until(p):
+    """Негизги үлүш ушул убакытка чейин (түзүлгөндөн share_months ай), андан кийин share_after."""
+    m = p.get("share_months")
+    if m is None or int(m) <= 0:
+        return None          # мөөнөтсүз
+    return (p.get("created_at") or core.now()) + int(m) * MONTH
+
+
+def share_now(p):
+    u = share_until(p)
+    if u is not None and core.now() >= u and p.get("share_after") is not None:
+        return float(p["share_after"])
+    return float(p.get("share") or 0)
+
+
+def save(name, owner_phone, share=80, ref_bonus=10, promo=None, promo_amount=50, pid=None, active=True,
+         share_months=6, share_after=50):
     """Паркты түзөт же өзгөртөт. Ээси телефон менен (сайтка ошол номер менен кирет)."""
     name = (name or "").strip()[:60]
     owner = core.phone_uid(owner_phone)
-    if not name or not owner or not (0 <= float(share) <= 100) or not (0 <= float(ref_bonus) <= 1000):
+    try:
+        share_months, share_after = int(share_months or 0), float(share_after if share_after is not None else 50)
+    except (TypeError, ValueError):
+        return None
+    if not name or not owner or not (0 <= float(share) <= 100) or not (0 <= float(ref_bonus) <= 1000) \
+            or not (0 <= share_months <= 120) or not (0 <= share_after <= 100):
         return None
     promo = norm_code(promo) or None
     if promo:
@@ -101,12 +125,15 @@ def save(name, owner_phone, share=30, ref_bonus=20, promo=None, promo_amount=50,
     core.ensure_user(owner, "")
     phone = owner[3:]
     if pid and get(pid):
-        core.query("UPDATE parks SET name=?, owner_uid=?, phone=?, share=?, ref_bonus=?, promo=?, active=? WHERE id=?",
-                   (name, owner, phone, float(share), float(ref_bonus), promo, 1 if active else 0, pid))
+        core.query("UPDATE parks SET name=?, owner_uid=?, phone=?, share=?, ref_bonus=?, promo=?, active=?, "
+                   "share_months=?, share_after=? WHERE id=?",
+                   (name, owner, phone, float(share), float(ref_bonus), promo, 1 if active else 0,
+                    share_months, share_after, pid))
         return pid
-    return core.query("INSERT INTO parks (name, owner_uid, phone, share, ref_bonus, promo, active, created_at) "
-                      "VALUES (?, ?, ?, ?, ?, ?, 1, ?)",
-                      (name, owner, phone, float(share), float(ref_bonus), promo, core.now()), "id")
+    return core.query("INSERT INTO parks (name, owner_uid, phone, share, ref_bonus, promo, active, created_at, "
+                      "share_months, share_after) VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?)",
+                      (name, owner, phone, float(share), float(ref_bonus), promo, core.now(),
+                       share_months, share_after), "id")
 
 
 def attach_driver(phone, pid, by_park=None):
@@ -161,12 +188,13 @@ def _drivers(pid):
     return core.query("SELECT * FROM drivers WHERE park_id=?", (pid,), "all")
 
 
-def _sum_commission(uids, since):
+def _sum_commission(uids, since, until=None):
     if not uids:
         return 0.0
     qs = ",".join("?" * len(uids))
     r = core.query("SELECT COALESCE(SUM(-amount),0) AS s FROM balance_tx WHERE kind='commission' AND status='done' "
-                   "AND at>=? AND driver IN (%s)" % qs, (since,) + tuple(uids), "one")
+                   "AND at>=? AND at<? AND driver IN (%s)" % qs,
+                   (since, until if until is not None else 1e12) + tuple(uids), "one")
     return float(r["s"] or 0)
 
 
@@ -204,9 +232,16 @@ def stats(pid):
     out = {}
     for k, since in (("today", per["today"]), ("week", per["week"]), ("month", per["month"]), ("all", 0)):
         n, gross = _rides(uids, since)
-        fee = _sum_commission(uids, since)
+        until = share_until(p)
+        if until is None:
+            fee = _sum_commission(uids, since)
+            share = round(fee * (p["share"] or 0) / 100.0)
+        else:   # мөөнөткө чейинки комиссия — негизги үлүш, кийинкиси — share_after
+            f1 = _sum_commission(uids, since, until)
+            f2 = _sum_commission(uids, max(since, until))
+            fee = f1 + f2
+            share = round(f1 * (p["share"] or 0) / 100.0 + f2 * (p["share_after"] or 0) / 100.0)
         refs, refs_active = _refs(pid, since)
-        share = round(fee * (p["share"] or 0) / 100.0)
         bonus = round(refs_active * (p["ref_bonus"] or 0))
         out[k] = {"rides": n, "gross": gross, "fee": round(fee), "share": share,
                   "refs": refs, "refs_active": refs_active, "bonus": bonus, "earned": share + bonus}
@@ -301,8 +336,10 @@ def state(pid):
     if not p:
         return None
     promo = core.query("SELECT amount FROM promos WHERE code=? AND active=1", (p["promo"],), "one") if p.get("promo") else None
-    return {"park": dict({k: p[k] for k in ("id", "name", "phone", "share", "ref_bonus", "promo", "code")},
-                         promo_amount=int(promo["amount"]) if promo else 0),
+    return {"park": dict({k: p[k] for k in ("id", "name", "phone", "share", "ref_bonus", "promo", "code",
+                                            "share_months", "share_after")},
+                         promo_amount=int(promo["amount"]) if promo else 0,
+                         share_until=share_until(p), share_now=share_now(p)),
             "qr": qr_stats(pid), "area": core.area_label(),
             "stats": stats(pid), "drivers": driver_rows(pid), "payouts": payouts(pid),
             "commission_pct": core.commission_pct()}
@@ -313,6 +350,8 @@ def admin_list():
     for p in all_parks():
         s = stats(p["id"])
         out.append({"id": p["id"], "name": p["name"], "phone": p["phone"], "share": p["share"],
+                    "share_months": p.get("share_months"), "share_after": p.get("share_after"),
+                    "share_until": share_until(p), "share_now": share_now(p),
                     "ref_bonus": p["ref_bonus"], "promo": p["promo"], "active": bool(p["active"]),
                     "drivers": s["drivers_total"], "online": s["drivers_online"],
                     "month": s["periods"]["month"], "balance": s["balance"], "paid": s["paid"],

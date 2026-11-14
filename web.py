@@ -737,7 +737,8 @@ class H(BaseHTTPRequestHandler):
         if action == "park":
             pid = parks.save(_txt(b.get("name"), 60), _txt(b.get("phone"), 20), b.get("share") or 0, b.get("ref_bonus") or 0,
                              _txt(b.get("promo"), 20), b.get("promo_amount") or 50, pid=int(b.get("id") or 0) or None,
-                             active=b.get("active", True) is not False)
+                             active=b.get("active", True) is not False,
+                             share_months=b.get("share_months", 6), share_after=b.get("share_after", 50))
             return self._json({"id": pid} if pid else {"error": "bad"}, 200 if pid else 400)
         if action == "park_driver":
             pid = int(b.get("park_id") or 0) or None

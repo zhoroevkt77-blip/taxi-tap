@@ -81,6 +81,9 @@ const api = (u, b) => fetch(u, b ? {method:"POST", headers:{"Content-Type":"appl
   .then(r => r.json()).catch(() => ({error:"net"}));
 const fmt = n => Math.round(n || 0).toLocaleString("ru-RU").replace(/,/g, " ");
 const dm = t => { const d = new Date(t * 1000); return String(d.getDate()).padStart(2, "0") + "." + String(d.getMonth() + 1).padStart(2, "0"); };
+const dmy = t => dm(t) + "." + new Date(t * 1000).getFullYear();
+const shareTerm = p => !p.share_until ? p.share + "%" : (Date.now() / 1000 < p.share_until
+  ? `${p.share}% (${dmy(p.share_until)} чейин, андан кийин ${p.share_after}%)` : `${p.share_after}%`);
 // Кийинки төлөмгө чейин канча калды (Бишкек убактысы = сервердин period_starts)
 function payHead(s) {
   const t = s.pay_time, hm = x => { const [h, m] = x.split(":"); return h * 3600 + m * 60; };
@@ -145,7 +148,7 @@ function draw() {
     <div class="grid">
       <div class="st"><span>Сапарлар</span><b>${P.rides}</b><i>Парктын айдоочулары бүтүргөн сапарлар</i></div>
       <div class="st"><span>Жүгүртүү</span><b>${fmt(P.gross)} с</b><i>Ошол сапарлар үчүн жүргүнчүлөр төлөгөн жалпы акча</i></div>
-      <div class="st"><span>Комиссиядан үлүш (${p.share}%)</span><b>${fmt(P.share)} с</b><i>Такси ТАП! айдоочулардан алган комиссиянын ${p.share}% сизге</i></div>
+      <div class="st"><span>Комиссиядан үлүш (${p.share_now}%)</span><b>${fmt(P.share)} с</b><i>Такси ТАП! айдоочулардан алган комиссиянын ${shareTerm(p)} сизге</i></div>
       <div class="st"><span>Жаңы жүргүнчүлөр</span><b>${P.refs} <small style="font-size:13px;color:#6b6b76">(${P.refs_active} сапарда)</small></b><i>QR же промокод менен келгендер · кашаада: биринчи сапарын бүтүргөндөр</i></div>
       <div class="st"><span>Жүргүнчү бонусу</span><b>${fmt(P.bonus)} с</b><i>Ар бир жаңы жүргүнчүнүн биринчи сапары үчүн ${fmt(p.ref_bonus)} сом</i></div>
       <div class="st"><span>${PN[PER]} тапкан</span><b style="color:#16764f">${fmt(P.earned)} с</b><i>Комиссиядан үлүш + жүргүнчү бонусу</i></div>
@@ -154,7 +157,7 @@ function draw() {
       <p>Сиздин айдоочу 100 сомдук сапар бүтүрдү дейли:</p>
       <p>• <b>Жүгүртүүгө</b> 100 сом кошулат.</p>
       <p>• Такси ТАП! айдоочудан комиссия алат${ST.commission_pct > 0 ? ` (азыр ${ST.commission_pct}%) — ${f1(ST.commission_pct)} сом` : " (мисалы 10% — 10 сом)"}.
-        Анын <b>${p.share}%</b> сизге: ${f1(100 * (ST.commission_pct > 0 ? ST.commission_pct : 10) / 100 * p.share / 100)} сом.</p>
+        Анын <b>${p.share_now}%</b> сизге: ${f1(100 * (ST.commission_pct > 0 ? ST.commission_pct : 10) / 100 * p.share_now / 100)} сом.${p.share_until && Date.now() / 1000 < p.share_until ? ` ${dmy(p.share_until)} баштап үлүш ${p.share_after}% болот.` : ""}</p>
       <p>• Эгер ал жүргүнчү сиздин QR же <b>${esc(p.promo || "промокод")}</b> аркылуу келип, бул анын биринчи сапары болсо — дагы <b>${fmt(p.ref_bonus)} сом</b> бонус. Бонус бир жүргүнчү үчүн бир жолу гана, ал катталгандан кийин 30 күндүн ичинде сапар бүтүрсө берилет.</p>
       <p>• Аптада (дүйшөмбүдөн жекшембиге чейин) тапканыңыз кийинки дүйшөмбүдө төлөнөт жана «✅ Төлөнгөн акчалар» тизмесине түшөт. Төлөнгөндө Telegram'га кабар келет.</p></details>
     ${ST.commission_pct > 0 ? "" : `<div class="note">ℹ️ Азыр пилот: Такси ТАП! комиссия албайт (0%), ошондуктан комиссиядан үлүш 0. Жүргүнчү бонустары эсептеле берет.</div>`}
@@ -176,7 +179,7 @@ function draw() {
       <p class="muted" style="margin-top:8px;word-break:break-all">${esc(link)}</p>
       <p class="muted" style="font-size:12.5px">Ар бир айдоочуңуздун да өзүнүн QR'ы бар (айдоочунун кабинетинде) — ким канча жүргүнчү тартканы көрүнөт.</p>
     </div>
-    <div class="note">Шарт: парктын айдоочулары төлөгөн комиссиянын <b>${p.share}%</b>ы + ар бир жаңы жүргүнчү үчүн <b>${fmt(p.ref_bonus)} сом</b>. Такси ТАП! комиссиясы азыр: ${ST.commission_pct}%. Төлөм — ар дүйшөмбүдө, саат ${s.pay_time.from}–${s.pay_time.to}.</div>`;
+    <div class="note">Шарт: парктын айдоочулары төлөгөн комиссиянын <b>${shareTerm(p)}</b> + ар бир жаңы жүргүнчү үчүн <b>${fmt(p.ref_bonus)} сом</b>. Такси ТАП! комиссиясы азыр: ${ST.commission_pct}%. Төлөм — ар дүйшөмбүдө, саат ${s.pay_time.from}–${s.pay_time.to}.</div>`;
   document.querySelectorAll("[data-p]").forEach(b => b.onclick = () => { PER = b.dataset.p; draw(); });
   document.querySelectorAll("[data-rm]").forEach(b => b.onclick = async () => {
     if (!confirm("Айдоочуну парктан чыгарасызбы?")) return;

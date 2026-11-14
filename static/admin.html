@@ -89,6 +89,11 @@ td input.f{padding:7px 8px;max-width:90px;min-width:58px}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="/static/area.js"></script>
 <script>
+function shareTxt(p) {
+  if (!p.share_until) return p.share + "%";
+  const d = new Date(p.share_until * 1000), ds = String(d.getDate()).padStart(2,"0") + "." + String(d.getMonth()+1).padStart(2,"0") + "." + d.getFullYear();
+  return Date.now() / 1000 < p.share_until ? `${p.share}% (${ds} чейин, андан кийин ${p.share_after}%)` : `${p.share_after}% (${ds} баштап)`;
+}
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const api = async (p, b) => (await fetch(p, b === undefined ? {credentials:"same-origin"} :
@@ -411,7 +416,7 @@ async function viewParks(edit) {
         <input class="f" id="ptB" type="time" value="${X.pay_time?.to || "18:00"}" style="margin:0;max-width:130px"><button class="btn gold" id="ptS">Сактоо</button></div>
         <p class="muted" style="margin:6px 0 0">Парктарга ушул саат көрүнөт; сизге эскертүү дүйшөмбү күнү ушул саатта келет.</p></div></div>
       ${P.length ? P.map(p => `<div class="item"><div class="main"><b>${esc(p.name)}</b> ${p.active ? "" : '<span class="muted">· өчүк</span>'}
-        <div class="muted">☎ ${esc(p.phone)} · үлүш ${p.share}% · жүргүнчү бонусу ${money(p.ref_bonus)} · промокод <b>${esc(p.promo || "—")}</b></div>
+        <div class="muted">☎ ${esc(p.phone)} · үлүш ${shareTxt(p)} · жүргүнчү бонусу ${money(p.ref_bonus)} · промокод <b>${esc(p.promo || "—")}</b></div>
         <div class="muted">Айдоочулар: ${p.drivers} (линияда ${p.online}) · Ушул ай: ${p.month.rides} сапар, ${money(p.month.gross)} жүгүртүү, тапканы <b>${money(p.month.earned)}</b></div>
         <div style="margin-top:4px;font-size:14px">📅 Бул дүйшөмбүдө төлөө (${esc(p.week)} чейин): <b style="color:${p.due > 0 ? "var(--ok)" : "inherit"}">${money(p.due)}</b>
           <span class="muted">· ушул апта: ${money(p.this_week)} · бардыгы төлөнгөн ${money(p.paid)}</span></div></div>
@@ -421,8 +426,10 @@ async function viewParks(edit) {
     <div class="panel"><h3>${e.id ? "✏️ " + esc(e.name) : "➕ Жаңы парк"}</h3><div class="fset">
       <div><label>Парктын аты</label><input class="f" id="pkN" value="${esc(e.name || "")}" placeholder="Нур-Такси"></div>
       <div><label>Ээсинин номери (ушул номер менен кабинетке кирет)</label><input class="f" id="pkP" value="${esc(e.phone || "")}" placeholder="0700 123 456"></div>
-      <div><label>Комиссиядан үлүш, %</label><input class="f" id="pkS" inputmode="decimal" value="${e.share ?? 30}"></div>
-      <div><label>Жаңы жүргүнчү үчүн бонус, сом</label><input class="f" id="pkB" inputmode="decimal" value="${e.ref_bonus ?? 20}"></div>
+      <div><label>Комиссиядан үлүш, % (алгачкы мөөнөт)</label><input class="f" id="pkS" inputmode="decimal" value="${e.share ?? 80}"></div>
+      <div><label>Мөөнөтү, ай (0 = мөөнөтсүз)</label><input class="f" id="pkM" inputmode="numeric" value="${e.share_months ?? 6}"></div>
+      <div><label>Мөөнөттөн кийинки үлүш, %</label><input class="f" id="pkF" inputmode="decimal" value="${e.share_after ?? 50}"></div>
+      <div><label>Жаңы жүргүнчү үчүн бонус, сом</label><input class="f" id="pkB" inputmode="decimal" value="${e.ref_bonus ?? 10}"></div>
       <div><label>Промокод (QR да ушул)</label><input class="f" id="pkC" value="${esc(e.promo || "")}" placeholder="NUR50" style="text-transform:uppercase"></div>
       <div><label>Промокоддун арзандатуусу, сом</label><input class="f" id="pkA" inputmode="decimal" value="50"></div>
     </div><div style="padding:0 14px 14px"><button class="btn" id="pkSave">${e.id ? "Сактоо" : "Паркты кошуу"}</button>${e.id ? ` <button class="btn ghost" id="pkCancel">Жокко чыгаруу</button>` : ""}<div class="err" id="pkErr"></div></div></div>
@@ -432,8 +439,9 @@ async function viewParks(edit) {
     </div><div style="padding:0 14px 14px"><button class="btn" id="pdGo">Сактоо</button><div class="err" id="pdErr"></div></div></div>`;
   $("#pkSave").onclick = async () => {
     const r = await api("/api/a/park", {id:e.id, name:$("#pkN").value, phone:$("#pkP").value, share:+$("#pkS").value, ref_bonus:+$("#pkB").value,
+      share_months:+$("#pkM").value, share_after:+$("#pkF").value,
       promo:$("#pkC").value, promo_amount:+$("#pkA").value});
-    if (r.error) return $("#pkErr").textContent = "Текшериңиз: аты, номери, үлүш 0–100, промокод башка паркта жокпу.";
+    if (r.error) return $("#pkErr").textContent = "Текшериңиз: аты, номери, үлүштөр 0–100, мөөнөт 0–120 ай, промокод башка паркта жокпу.";
     viewParks();
   };
   if ($("#pkCancel")) $("#pkCancel").onclick = () => viewParks();

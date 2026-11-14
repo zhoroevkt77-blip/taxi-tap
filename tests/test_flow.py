@@ -1065,6 +1065,34 @@ class ParkPayTime(unittest.TestCase):
         core.set_setting("park_pay_time", {})
 
 
+class ParkShareTerm(unittest.TestCase):
+    def test_share_drops_after_term(self):
+        import parks
+        core.init_db()
+        pid = parks.save("Мөөнөт-Парк", "0700 000 771", share=80, share_months=6, share_after=50)
+        self.assertIsNotNone(pid)
+        d = "tg:9900771"
+        core.ensure_user(d, "Т")
+        core.query("INSERT INTO drivers (uid, status) VALUES (?, 'active')", (d,))
+        core.set_driver(d, park_id=pid)
+        until = parks.share_until(parks.get(pid))
+        self.assertAlmostEqual(until - parks.get(pid)["created_at"], 6 * parks.MONTH, delta=1)
+        self.assertEqual(parks.share_now(parks.get(pid)), 80)
+        for amt, at in ((-100, until - 100), (-100, until + 100)):
+            core.query("INSERT INTO balance_tx (driver, amount, kind, status, at) VALUES (?, ?, 'commission', 'done', ?)",
+                       (d, amt, at))
+        st = parks.stats(pid)["periods"]["all"]
+        self.assertEqual(st["fee"], 200)
+        self.assertEqual(st["share"], 130)      # 80 + 50
+        core.query("UPDATE parks SET created_at=? WHERE id=?", (core.now() - 7 * parks.MONTH, pid))
+        self.assertEqual(parks.share_now(parks.get(pid)), 50)
+        self.assertIsNone(parks.save("X", "0700 000 772", share=80, share_after=150))
+        core.query("DELETE FROM balance_tx WHERE driver=?", (d,))
+        core.set_driver(d, park_id=None)
+        core.query("DELETE FROM drivers WHERE uid=?", (d,))
+        core.query("DELETE FROM parks WHERE id=?", (pid,))
+
+
 class CarPlate(unittest.TestCase):
     def test_norm_plate(self):
         self.assertEqual(core.norm_plate("04 KG 338 APG"), "04KG338APG")

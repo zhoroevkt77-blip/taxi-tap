@@ -285,7 +285,8 @@ NEW_COLUMNS = {
               "avatar": "TEXT",
               "park_ref_drv": "TEXT"},                       # QR'ын сканерлеткен айдоочу                             # профилдин сүрөтү (uploads ичиндеги файл)   # айдоочулар берген баа
     "web_sessions": {"agreed": "INTEGER DEFAULT 0"},
-    "parks": {"code": "TEXT", "scans": "INTEGER DEFAULT 0"},   # QR коду (автоматтык) жана сканерлөөлөр
+    "parks": {"code": "TEXT", "scans": "INTEGER DEFAULT 0",
+              "share_months": "INTEGER DEFAULT 6", "share_after": "REAL DEFAULT 50"},   # QR коду (автоматтык) жана сканерлөөлөр
     "drivers": {"qr_scans": "INTEGER DEFAULT 0",
                 "doc_license": "TEXT", "doc_techpass": "TEXT", "doc_car": "TEXT",
                 "reject_note": "TEXT",
