@@ -645,3 +645,10 @@ img[src*="/static/c_"]:not([src*="c_car."]):not([src*="c_hdr"]):not([src*="c_tax
 #home.cabbg{background-position:left 0 top -90px,right 0 top 260px,right 0 bottom 64px,left bottom 64px}
 .cab2 .cab-nm,.cab2 .cab-ph{text-shadow:0 0 6px #fff,0 0 12px #fff}
 #home.cabbg{background-position:left 0 top -95px,right 0 top 260px,right 0 bottom 64px,left bottom 64px}
+/* Тилкелер бардык панелдерде (жүргүнчү жана айдоочу): оң жакта, кесилбей */
+.rboxc{position:relative}
+.sheet::before,.rboxc::before{content:"";position:absolute;right:0;top:0;width:34%;max-width:170px;height:260px;pointer-events:none;z-index:0;border-radius:0 22px 0 0;
+  background:url(/static/cb_tr.webp?v=9) right 0 top -40px/100% auto no-repeat}
+.sheet.cabbg::before{left:auto;opacity:1;width:34%;height:260px;background:url(/static/cb_tr.webp?v=9) right 0 top -40px/100% auto no-repeat}
+.sheet>*,.rboxc>*{position:relative;z-index:1}
+.sheet .grab{z-index:2}
