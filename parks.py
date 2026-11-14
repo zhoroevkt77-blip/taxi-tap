@@ -25,8 +25,60 @@ def by_owner(uid):
 
 
 def by_code(code):
-    code = norm_code(code)
-    return core.query("SELECT * FROM parks WHERE promo=? AND active=1", (code,), "one") if code else None
+    code = norm_code((code or "").split("-")[0])
+    if not code:
+        return None
+    return (core.query("SELECT * FROM parks WHERE code=? AND active=1", (code,), "one")
+            or core.query("SELECT * FROM parks WHERE promo=? AND active=1", (code,), "one"))
+
+
+_LAT = dict(zip("абвгдеёжзийклмнңоөпрстуүфхцчшщыэюя",
+                ["A","B","V","G","D","E","E","J","Z","I","I","K","L","M","N","N","O","O","P","R","S","T","U","U","F","H","C","CH","SH","SH","Y","E","YU","YA"]))
+
+
+def ensure_code(p):
+    """Ар бир паркка автоматтык QR коду: аттын 3 тамгасы + id (мисалы DRV12)."""
+    if not p or p.get("code"):
+        return p
+    lat = "".join(_LAT.get(ch, ch.upper() if ch.isascii() and ch.isalpha() else "") for ch in (p["name"] or "").lower())
+    cons = "".join(c for c in lat if c not in "AEIOUY") or lat
+    base = (cons[:3] or "TAP") + str(p["id"])
+    code, n = base, 1
+    while core.query("SELECT id FROM parks WHERE (code=? OR promo=?) AND id<>?", (code, code, p["id"]), "one"):
+        n += 1; code = base + str(n)
+    core.query("UPDATE parks SET code=? WHERE id=?", (code, p["id"]))
+    p = dict(p); p["code"] = code
+    return p
+
+
+def drv_tag(uid):
+    """Айдоочунун QR'ы үчүн кыска белги (парктын коду + «-» + ушул)."""
+    import zlib
+    n, s, al = zlib.crc32(uid.encode()), "", "23456789ABCDEFGHJKMNPQRSTUVWXYZ"
+    for _ in range(4):
+        s += al[n % len(al)]; n //= len(al)
+    return s
+
+
+def driver_by_tag(pid, tag):
+    tag = (tag or "").upper()
+    for d in _drivers(pid):
+        if drv_tag(d["uid"]) == tag:
+            return d["uid"]
+    return None
+
+
+def scan(raw):
+    """/p/<КОД>[-<айдоочу>] ачылды: сканерди эсептейт. Кайтарат: (парк, айдоочу uid) же (None, None)."""
+    code, _, tag = (raw or "").strip().upper().partition("-")
+    p = by_code(code)
+    if not p:
+        return None, None
+    core.query("UPDATE parks SET scans=COALESCE(scans,0)+1 WHERE id=?", (p["id"],))
+    du = driver_by_tag(p["id"], tag) if tag else None
+    if du:
+        core.query("UPDATE drivers SET qr_scans=COALESCE(qr_scans,0)+1 WHERE uid=?", (du,))
+    return p, du
 
 
 def all_parks():
@@ -74,16 +126,35 @@ def attach_driver(phone, pid, by_park=None):
 
 
 def set_ref(uid, code):
-    """Жүргүнчү парктын коду/QR аркылуу келди. Бир гана жолу жана сапары жок болсо эсептелет."""
+    """Жүргүнчү парктын коду/QR аркылуу келди. Бир гана жолу жана сапары жок болсо эсептелет.
+    Код «КОД-АЙДООЧУ» болсо — QR'ын сканерлеткен айдоочу да белгиленет."""
+    code = (code or "").strip().upper()
     p = by_code(code)
+    tag = code.partition("-")[2]
     u = core.get_user(uid)
     if not p or not u or u.get("park_ref"):
         return False
     done = core.query("SELECT COUNT(*) AS n FROM rides WHERE passenger=? AND status='completed'", (uid,), "one")["n"]
     if done:
         return False
-    core.set_user(uid, park_ref=p["id"], park_ref_at=core.now())
+    du = driver_by_tag(p["id"], tag) if tag else None
+    core.set_user(uid, park_ref=p["id"], park_ref_at=core.now(), park_ref_drv=du)
     return True
+
+
+def qr_stats(pid, driver=None):
+    """QR воронкасы: сканерленди → катталды → биринчи сапарын бүтүрдү (бардык убакта)."""
+    if driver:
+        scans = (core.get_driver(driver) or {}).get("qr_scans") or 0
+        rows = core.query("SELECT uid FROM users WHERE park_ref=? AND park_ref_drv=?", (pid, driver), "all")
+    else:
+        scans = (get(pid) or {}).get("scans") or 0
+        rows = core.query("SELECT uid FROM users WHERE park_ref=?", (pid,), "all")
+    rides = 0
+    for u in rows:
+        if core.query("SELECT 1 AS x FROM rides WHERE passenger=? AND status='completed' LIMIT 1", (u["uid"],), "one"):
+            rides += 1
+    return {"scans": int(scans), "joined": len(rows), "rode": rides}
 
 
 def _drivers(pid):
@@ -202,10 +273,13 @@ def weekly_reminder():
 
 
 def state(pid):
-    p = get(pid)
+    p = ensure_code(get(pid))
     if not p:
         return None
-    return {"park": {k: p[k] for k in ("id", "name", "phone", "share", "ref_bonus", "promo")},
+    promo = core.query("SELECT amount FROM promos WHERE code=? AND active=1", (p["promo"],), "one") if p.get("promo") else None
+    return {"park": dict({k: p[k] for k in ("id", "name", "phone", "share", "ref_bonus", "promo", "code")},
+                         promo_amount=int(promo["amount"]) if promo else 0),
+            "qr": qr_stats(pid),
             "stats": stats(pid), "drivers": driver_rows(pid), "payouts": payouts(pid),
             "commission_pct": core.commission_pct()}
 

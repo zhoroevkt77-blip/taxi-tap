@@ -1001,3 +1001,29 @@ class ParkWeekly(unittest.TestCase):
         self.assertEqual(parks.stats(pid)["paid"], 50)
         core.query("DELETE FROM park_payouts WHERE park_id=?", (pid,))
         core.query("DELETE FROM parks WHERE id=?", (pid,))
+
+
+class ParkQR(unittest.TestCase):
+    def test_auto_code_scan_and_driver_ref(self):
+        import parks
+        core.init_db(); offline_all()
+        pid = parks.save("Драйв Базар-Коргон", "0700 000 881", share=30, ref_bonus=20)
+        p = parks.ensure_code(parks.get(pid))
+        self.assertTrue(p["code"].startswith("DRV"))
+        self.assertEqual(parks.by_code(p["code"].lower())["id"], pid)
+        d = make_driver("0700 000 882", "QR-Айдоочу", NEAR, 500)
+        core.set_driver(d, park_id=pid)
+        tag = parks.drv_tag(d)
+        pk, du = parks.scan(p["code"] + "-" + tag)
+        self.assertEqual((pk["id"], du), (pid, d))
+        parks.scan(p["code"])
+        self.assertEqual(parks.qr_stats(pid)["scans"], 2)
+        u = core.phone_uid("0700 000 883"); core.ensure_user(u, "Жаңы")
+        self.assertTrue(parks.set_ref(u, p["code"] + "-" + tag))
+        self.assertEqual(core.get_user(u)["park_ref_drv"], d)
+        st = parks.qr_stats(pid, driver=d)
+        self.assertEqual((st["scans"], st["joined"], st["rode"]), (1, 1, 0))
+        self.assertEqual(parks.state(pid)["park"]["code"], p["code"])
+        core.query("UPDATE users SET park_ref=NULL, park_ref_drv=NULL WHERE uid=?", (u,))
+        core.set_driver(d, park_id=None)
+        core.query("DELETE FROM parks WHERE id=?", (pid,))

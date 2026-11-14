@@ -282,9 +282,12 @@ NEW_COLUMNS = {
     "users": {"park_ref": "INTEGER", "park_ref_at": "REAL", "tg_uid": "TEXT", "notify": "INTEGER DEFAULT 1", "terms_at": "REAL",
               "places": "TEXT",                              # {"home": {...}, "work": {...}}
               "p_rating": "REAL", "p_rated": "INTEGER DEFAULT 0",
-              "avatar": "TEXT"},                             # профилдин сүрөтү (uploads ичиндеги файл)   # айдоочулар берген баа
+              "avatar": "TEXT",
+              "park_ref_drv": "TEXT"},                       # QR'ын сканерлеткен айдоочу                             # профилдин сүрөтү (uploads ичиндеги файл)   # айдоочулар берген баа
     "web_sessions": {"agreed": "INTEGER DEFAULT 0"},
-    "drivers": {"doc_license": "TEXT", "doc_techpass": "TEXT", "doc_car": "TEXT",
+    "parks": {"code": "TEXT", "scans": "INTEGER DEFAULT 0"},   # QR коду (автоматтык) жана сканерлөөлөр
+    "drivers": {"qr_scans": "INTEGER DEFAULT 0",
+                "doc_license": "TEXT", "doc_techpass": "TEXT", "doc_car": "TEXT",
                 "reject_note": "TEXT",
                 "classes": "TEXT",                 # 'econom,delivery,comfort,minivan'
                 "next_ride": "INTEGER",            # сапар бүтө электе алган кийинки заказ

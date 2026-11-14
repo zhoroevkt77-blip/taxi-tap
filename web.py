@@ -20,7 +20,7 @@ import time
 import traceback
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, quote, unquote, urlparse
 
 import addrbook
 import parks
@@ -113,6 +113,16 @@ def ride_view(r):
     return v
 
 
+def _driver_qr(uid, d):
+    """Парктын айдоочусуна өзүнүн QR'ы: /p/<парктын коду>-<айдоочунун белгиси>."""
+    p = parks.ensure_code(parks.get(d.get("park_id"))) if d.get("park_id") else None
+    if not p or not p.get("active"):
+        return None
+    code = p["code"] + "-" + parks.drv_tag(uid)
+    return {"code": code, "link": (SITE_URL or "") + "/p/" + code, "park": p["name"],
+            "stats": parks.qr_stats(p["id"], driver=uid)}
+
+
 def driver_state(uid):
     """Айдоочунун бети бардык абалын ушул бир суроо менен алат."""
     d = core.get_driver(uid) or {}
@@ -122,6 +132,7 @@ def driver_state(uid):
           "reject_note": d.get("reject_note"),
           "lic_until": d.get("lic_until"), "lic_left": core.lic_days_left(d),
           "goal": int(d.get("goal") or 0) or 1000,
+          "qr": _driver_qr(uid, d),
           "car_model": d.get("car_model"), "car_color": d.get("car_color"),
           "car_plate": d.get("car_plate"),
           "online": bool(d and (core.is_available(d) or d.get("busy_ride"))),
@@ -261,9 +272,13 @@ class H(BaseHTTPRequestHandler):
             if u.path.startswith("/t/"):
                 return self._file(os.path.join(STATIC, "track.html"))
             if u.path.startswith("/p/"):           # парктын QR'ы → башкы бет + код
-                code = parks.norm_code(u.path[3:])
+                raw = unquote(u.path[3:])[:30]
+                p, _du = parks.scan(raw)
+                loc = "/"
+                if p:
+                    loc = "/?ref=" + quote(raw.upper()) + ("&promo=" + quote(p["promo"]) if p.get("promo") else "")
                 self.send_response(302)
-                self.send_header("Location", "/?ref=" + code)
+                self.send_header("Location", loc)
                 self.send_header("Content-Length", "0")
                 self.end_headers()
                 return

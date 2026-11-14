@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#fafafa">
 <title>Таксопарк кабинети — Такси ТАП!</title>
 <link rel="apple-touch-icon" href="/static/icon-192.png?v=4">
-<link rel="stylesheet" href="/static/theme.css?v=59">
+<link rel="stylesheet" href="/static/theme.css?v=60">
 <style>
 body{margin:0;font-family:Inter,system-ui,sans-serif;background:#fff;color:#16161a;position:relative}
 .wrap{max-width:560px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 14px) 16px 40px}
@@ -47,16 +47,33 @@ input.f{flex:1;border:1.5px solid #e3e3e8;border-radius:14px;padding:12px;font-s
 .note{background:#fff8e6;border-radius:14px;padding:10px 12px;font-size:13.5px;margin-top:10px}
 .pay{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0f0f3;font-size:14px}
 #sticker{display:none}
-@media print{body *{visibility:hidden}#sticker,#sticker *{visibility:visible}#sticker{display:block;position:fixed;inset:0}}
-.stk{width:90mm;border:3px solid #16161a;border-radius:16px;padding:8mm;text-align:center;font-family:Inter,system-ui,sans-serif;margin:10mm auto}
-.stk h3{font-size:22pt;margin:0}.stk h3 b{color:#e9a100}.stk p{font-size:12pt;margin:4mm 0}
-.stk .c{font-size:20pt;font-weight:900;background:#ffc61a;border-radius:8px;padding:2mm 4mm;display:inline-block}
+@media print{body *{visibility:hidden}#sticker,#sticker *{visibility:visible}#sticker{display:block;position:absolute;left:0;top:0;width:100%}}
+.ih{display:flex;align-items:center;gap:10px}.ih img{width:52px;height:38px;border-radius:19px;object-fit:cover;background:#f0f0f3}
+.st3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.st3 div{background:#fffaf0;border-radius:14px;padding:8px;text-align:center}.st3 b{display:block;font-size:20px;font-weight:900}.st3 small{font-size:11px;color:#6b6b76}
+.tpl{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.tpl button{border:2px solid #eee;background:#fff;border-radius:14px;padding:8px 4px;font:800 12px Inter,system-ui,sans-serif;cursor:pointer;color:#16161a}
+.tpl button.on{border-color:#ffb703;background:#fffaf0}.tpl img{display:block;width:64px;height:46px;border-radius:23px;object-fit:cover;margin:0 auto 4px;background:#f0f0f3}
+.btn.ib{display:inline-flex;align-items:center;justify-content:center;gap:6px}.btn.ib svg{width:18px;height:18px}
+#sticker{font-family:Inter,system-ui,sans-serif;color:#16161a;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+#sticker .ph{background:linear-gradient(135deg,#ffd31a,#fcbc00);padding:4mm 5mm;display:flex;align-items:center;gap:3mm}
+#sticker .ph img{width:12mm;height:12mm;border-radius:3mm}#sticker .ph b{font-size:20pt;font-weight:900}#sticker .ph span{color:#fff}
+#sticker .pb{padding:4mm 5mm;text-align:center}#sticker .pb p{margin:2mm 0;font-weight:800;font-size:12pt}#sticker .pb .pm{font-size:9pt;font-weight:600;color:#555}
+#sticker .pf{background:#16161a;color:#ffc61a;text-align:center;font-weight:900;padding:2.5mm;font-size:11pt}
+#sticker .pd{display:inline-block;background:#ffc61a;border-radius:2mm;padding:1mm 3mm;font-weight:900;font-size:12pt;margin-top:2mm}
+#sticker .ps{width:95mm;border:1px solid #ddd;border-radius:6mm;overflow:hidden;margin:6mm auto;break-inside:avoid}
+#sticker .ps svg{width:58mm;height:58mm}
+#sticker .pp{width:180mm;border:1px solid #ddd;border-radius:8mm;overflow:hidden;margin:6mm auto}
+#sticker .pp .ph b{font-size:34pt}#sticker .pp .big1{font-size:30pt}#sticker .pp p{font-size:15pt}#sticker .pp svg{width:110mm;height:110mm}
+#sticker .pv{display:inline-flex;align-items:center;gap:3mm;width:85mm;height:55mm;border:1px dashed #bbb;padding:4mm;box-sizing:border-box;vertical-align:top;margin:1mm}
+#sticker .pv svg{width:36mm;height:36mm}#sticker .pv .t{font-size:15pt;font-weight:900}#sticker .pv .t span{color:#e9a100}
+#sticker .pv .s{font-size:9pt;color:#555}#sticker .pv .n{font-weight:800;font-size:11pt;margin-top:2mm}
 </style>
 </head>
 <body>
 <div class="pkbg"></div><div class="wrap" id="app"><p class="muted">Жүктөлүүдө…</p></div>
 <div id="sticker"></div>
 <script src="/static/qr.js"></script>
+<script src="/static/qrshare.js"></script>
 <script>
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -87,9 +104,23 @@ async function boot() {
   draw();
 }
 
+const TPL = [["car", "c_car", "Унаага стикер"], ["shop", "c_addr", "Дүкөнгө плакат"], ["card", "c_card", "Визитка"]];
+let TK = "car";
+const IC = {print:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/></svg>',
+  share:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>'};
+function printTpl(k, p, link) {
+  const hd = `<div class="ph"><img src="/static/logo.png?v=2" alt=""><b>ТАКСИ <span>ТАП!</span></b></div>`;
+  const disc = p.promo_amount ? `<div class="pd">Биринчи сапарга −${p.promo_amount} сом</div>` : "";
+  if (k === "card") return Array(8).fill(`<div class="pv"><div>${qrSvg(link, 150)}</div><div><b class="t">ТАКСИ <span>ТАП!</span></b>
+      <div class="s">Бир басууда такси</div><div class="n">${esc(p.name)}</div><div class="s">код ${esc(p.code)}</div></div></div>`).join("");
+  if (k === "shop") return `<div class="pp">${hd}<div class="pb"><p class="big1">Такси керекпи?</p><p>Телефондун камерасы менен сканерлеңиз — бир басууда чакырасыз</p>
+      ${qrSvg(link, 420)}${disc}<p class="pm">код <b>${esc(p.code)}</b> · Базар-Коргон району</p></div><div class="pf">${esc(p.name)}</div></div>`;
+  return Array(2).fill(`<div class="ps">${hd}<div class="pb"><p>Кийинки жолу телефондон чакырыңыз!</p>${qrSvg(link, 230)}${disc}
+      <p class="pm">Камера менен сканерлеңиз · код <b>${esc(p.code)}</b></p></div><div class="pf">${esc(p.name)}</div></div>`).join("");
+}
 function draw() {
   const p = ST.park, s = ST.stats, P = s.periods[PER];
-  const link = (ST.site || location.origin) + "/p/" + (p.promo || "");
+  const link = (ST.site || location.origin) + "/p/" + (p.code || "");
   $("#app").innerHTML = `<div class="hd"><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b></div><span class="tag">ПАРК</span></div>
     <h1>🏢 ${esc(p.name)}</h1><p class="muted">Айдоочулар: ${s.drivers_total} · линияда: <b style="color:#1D9E75">${s.drivers_online}</b></p>
     <div class="per">${Object.keys(PN).map(k => `<button data-p="${k}" class="${k === PER ? "on" : ""}">${PN[k]}</button>`).join("")}</div>
@@ -125,12 +156,15 @@ function draw() {
         : `<p class="muted">Азырынча айдоочу жок. Айдоочу адегенде сайтта «Айдоочу болуу» аркылуу катталып, текшерүүдөн өтүшү керек, андан кийин аны бул жерге номери менен кошосуз.</p>`}
       <div class="row"><input class="f" id="dph" placeholder="Айдоочунун номери: 0700 123 456" inputmode="tel"><button class="btn" id="dadd">Кошуу</button></div>
       <div id="dmsg"></div></div>
-    <div class="card"><h2>📣 Жүргүнчүлөрдү тартуу</h2>
-      ${p.promo ? `<div class="qr"><div id="qr"></div><div><div class="muted">Промокод</div><div class="code">${esc(p.promo)}</div>
-        <div class="muted" style="margin-top:4px">Жаңы жүргүнчү ушул код же QR менен биринчи сапарын бүтүрсө — сизге <b>${fmt(p.ref_bonus)} сом</b>.</div></div></div>
-        <div class="row"><button class="btn" id="print">🖨 Стикерди басып чыгаруу</button><button class="btn g" id="copy">🔗 Шилтеме</button></div>
-        <p class="muted" style="margin-top:8px;word-break:break-all">${esc(link)}</p>`
-        : `<p class="muted">Паркыңызга промокод коюлган эмес — админге кайрылыңыз.</p>`}
+    <div class="card"><h2 class="ih"><img src="/static/c_gift.webp" alt="">Жүргүнчүлөрдү тартуу</h2>
+      <div class="qr"><div id="qr"></div><div><div class="muted">Паркыңыздын коду</div><div class="code">${esc(p.code)}</div>
+        <div class="muted" style="margin-top:4px">Жаңы жүргүнчү ушул QR менен келип, биринчи сапарын бүтүрсө — сизге <b>${fmt(p.ref_bonus)} сом</b>.${p.promo_amount ? ` Ага биринчи сапарга <b>−${p.promo_amount} сом</b>.` : ""}</div></div></div>
+      <div class="st3"><div><b>${ST.qr.scans}</b><small>сканерленди</small></div><div><b>${ST.qr.joined}</b><small>катталды</small></div><div><b>${ST.qr.rode}</b><small>сапар бүтүрдү</small></div></div>
+      <div class="muted" style="margin:12px 0 6px">Басып чыгаруу үлгүсү</div>
+      <div class="tpl">${TPL.map(([k, im, t]) => `<button data-t="${k}" class="${k === TK ? "on" : ""}"><img src="/static/${im}.webp" alt="">${t}</button>`).join("")}</div>
+      <div class="row"><button class="btn ib" id="print">${IC.print}Басып чыгаруу</button><button class="btn g ib" id="share">${IC.share}Бөлүшүү</button></div>
+      <p class="muted" style="margin-top:8px;word-break:break-all">${esc(link)}</p>
+      <p class="muted" style="font-size:12.5px">Ар бир айдоочуңуздун да өзүнүн QR'ы бар (айдоочунун кабинетинде) — ким канча жүргүнчү тартканы көрүнөт.</p>
     </div>
     <div class="note">Шарт: парктын айдоочулары төлөгөн комиссиянын <b>${p.share}%</b>ы + ар бир жаңы жүргүнчү үчүн <b>${fmt(p.ref_bonus)} сом</b>. Такси ТАП! комиссиясы азыр: ${ST.commission_pct}%. Төлөм — ар дүйшөмбүдө.</div>`;
   document.querySelectorAll("[data-p]").forEach(b => b.onclick = () => { PER = b.dataset.p; draw(); });
@@ -143,16 +177,11 @@ function draw() {
     $("#dmsg").className = x.result === "ok" ? "ok" : "err"; $("#dmsg").textContent = M[x.result] || "Ката";
     if (x.result === "ok") setTimeout(refresh, 600);
   };
-  if (p.promo) {
-    if (window.qrSvg) $("#qr").innerHTML = qrSvg(link, 132);
-    $("#copy").onclick = async () => { try { await navigator.clipboard.writeText(link); alert("Шилтеме көчүрүлдү"); } catch (e) { prompt("Шилтеме:", link); } };
-    $("#print").onclick = () => {
-      $("#sticker").innerHTML = `<div class="stk"><h3>Такси <b>ТАП!</b></h3><p>Телефон менен сканерлеп, таксини оңой чакырыңыз</p>
-        ${window.qrSvg ? qrSvg(link, 220) : ""}
-        <p>Биринчи сапарга арзандатуу:</p><div class="c">${esc(p.promo)}</div><p style="font-size:10pt">${esc(p.name)}</p></div>`;
-      window.print();
-    };
-  }
+  if (window.qrSvg) $("#qr").innerHTML = qrSvg(link, 132);
+  document.querySelectorAll("[data-t]").forEach(b => b.onclick = () => { TK = b.dataset.t; draw(); });
+  $("#share").onclick = () => QRS.share({link, title:"Такси ТАП!",
+    text:`🚕 Такси ТАП! — Базар-Коргондо бир басууда такси.${p.promo_amount ? `\nБиринчи сапарга −${p.promo_amount} сом!` : ""}\n«${p.name}» 👇`});
+  $("#print").onclick = () => { $("#sticker").innerHTML = printTpl(TK, p, link); setTimeout(() => window.print(), 150); };
 }
 async function refresh() { const id = new URLSearchParams(location.search).get("id"); ST = await api("/api/park/state" + (id ? "?id=" + id : "")); if (!ST.error) draw(); }
 boot(); setInterval(refresh, 30000);

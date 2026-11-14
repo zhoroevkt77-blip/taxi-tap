@@ -81,7 +81,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=59">
+<link rel="stylesheet" href="/static/theme.css?v=60">
 </head>
 <body>
 <nav id="bnav" class="bnav pro"><a data-k="earn"><img src="/static/n_earn.webp" alt="">Киреше</a><a data-k="hist"><img src="/static/n_trips.webp" alt="">Сапарлар</a><a data-k="line" class="big on"><img src="/static/n_go.webp" alt="">Линия</a><a data-k="help"><img src="/static/n_help.webp" alt="">Жардам</a><a data-k="cab"><img src="/static/n_cab.webp" alt="">Кабинет</a></nav>
@@ -100,6 +100,8 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="/static/area.js"></script>
+<script src="/static/qr.js"></script>
+<script src="/static/qrshare.js"></script>
 <script>
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -325,12 +327,33 @@ function workHTML() {
     ${ME_D.park ? `<a href="/park"><span>🏢</span>Таксопарк<small>${esc(ME_D.park)}</small></a>` : ""}
     ${ME_D.admin ? `<a href="/admin"><img src="/static/c_tools.webp" alt="">Админ<small>Башкаруу</small></a>` : ""}</div></div>`;
 }
+const SVG_SH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>';
+const SVG_ZM = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>';
+function myQrHTML() {
+  const q = D.qr; if (!q || !window.qrSvg) return "";
+  return `<div class="myqr"><h3><img src="/static/n_cab.webp" alt="">Менин QR кодум</h3>
+    <div class="qq">${qrSvg(q.link, 170)}</div>
+    <div class="nm">${esc(D.name || "")} · ${esc(q.park)}</div>
+    <div class="muted">Жүргүнчүгө сапардан кийин көрсөтүңүз — сканерлесе, кийинки жолу сайттан чакырат</div>
+    <div class="st3"><div><b>${q.stats.scans}</b><small>сканерледи</small></div><div><b>${q.stats.joined}</b><small>катталды</small></div><div><b>${q.stats.rode}</b><small>сапар</small></div></div>
+    <div class="row2"><button class="btn main ib" id="qrBig">${SVG_ZM}Чоң кылып</button><button class="btn ghost ib" id="qrSh">${SVG_SH}Бөлүшүү</button></div></div>`;
+}
+function bindMyQr() {
+  const q = D.qr; if (!q || !$("#qrBig")) return;
+  $("#qrBig").onclick = () => {
+    const o = document.createElement("div"); o.className = "qrfull";
+    o.innerHTML = `<div>${qrSvg(q.link, 300)}<b>ТАКСИ <span>ТАП!</span></b><small>Камера менен сканерлеңиз · ${esc(q.park)}</small><em>Басып жабуу</em></div>`;
+    o.onclick = () => o.remove(); document.body.appendChild(o);
+  };
+  $("#qrSh").onclick = () => QRS.share({link:q.link, title:"Такси ТАП!",
+    text:`🚕 Такси ТАП! — Базар-Коргондо бир басууда такси.\nАйдоочуңуз: ${D.name || ""} («${q.park}») 👇`});
+}
 function viewCabinet(part) {
   part = part === "earn" ? "earn" : "cab"; navOn(part);
   const f = D.finance || {}, row = (t, k) => { const x = f[k] || {rides:0, gross:0, fee:0, net:0};
     return `<tr><td>${t}</td><td>${x.rides}</td><td>${x.gross}</td><td>${x.fee}</td><td><b>${x.net}</b></td></tr>`; };
   const E = part === "earn", C = !E, on = c => c ? "" : ' style="display:none"';
-  render(`<h2>${E ? "💰 Киреше" : "Менин кабинетим"}</h2>${C ? workHTML() : ""}
+  render(`<h2>${E ? "💰 Киреше" : "Менин кабинетим"}</h2>${C ? workHTML() + myQrHTML() : ""}
     <div${on(C)}><div class="note">🚕 Тарифтериңиз: <b>${(D.classes || []).map(c => esc((D.class_names || {})[c] || c)).join(", ")}</b><br>💼 Комиссия: <b>${esc(D.tariff)}</b>
       <div class="muted">Комфорт же Минивэн тарифине өтүү үчүн админге кайрылыңыз.</div></div></div>
     <div class="grid"><div class="stat"><span class="muted">Баланс</span><b style="color:${D.balance < D.min_balance ? "var(--bad)" : "inherit"}">${D.balance} с</b></div>
@@ -360,7 +383,7 @@ function viewCabinet(part) {
     <button class="outb" id="cabOut">🚪 Чыгуу</button></div>`);
   bindLinks(); window.SHEET && SHEET.expand();
   $("#top") && ($("#top").onclick = viewTopup);
-  $("#addAddr").onclick = viewAddAddr; $("#cabOut").onclick = confirmOut;
+  $("#addAddr").onclick = viewAddAddr; $("#cabOut").onclick = confirmOut; bindMyQr();
   $("#goalCh").onclick = async () => { const v = prompt("Күндүк максат (сом):", D.goal); if (v === null) return;
     const r = await api("/api/d/goal", {goal:+v}); if (r.error) return toast("100 сомдон 50 000 сомго чейин жазыңыз", 2500);
     D = r; header(); viewCabinet("earn"); };

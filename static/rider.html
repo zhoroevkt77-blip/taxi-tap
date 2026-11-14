@@ -101,7 +101,7 @@ input.f:focus{border-color:var(--navy)}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
 <link rel="preload" as="image" href="/static/h_taxi.webp"><link rel="preload" as="image" href="/static/h_box.webp"><link rel="preload" as="image" href="/static/h_girl.webp"><link rel="preload" as="image" href="/static/h_map.webp">
-<link rel="stylesheet" href="/static/theme.css?v=59">
+<link rel="stylesheet" href="/static/theme.css?v=60">
 </head>
 <body>
 <div id="map"></div>
@@ -960,7 +960,8 @@ async function viewCabinet() {
 
 // Парктын QR/шилтемеси: /?ref=КОД → кирген соң бир жолу жөнөтөбүз
 try { if (new URLSearchParams(location.search).get("next") === "park") localStorage.setItem("nextPark", "1"); } catch (e) {}
-try { const rf = new URLSearchParams(location.search).get("ref"); if (rf) { localStorage.setItem("parkRef", rf); localStorage.setItem("promoPre", rf.toUpperCase()); history.replaceState(null, "", "/"); } } catch (e) {}
+try { const qs = new URLSearchParams(location.search), rf = qs.get("ref"), pm = qs.get("promo");
+  if (rf) { localStorage.setItem("parkRef", rf); if (pm) localStorage.setItem("promoPre", pm.toUpperCase()); history.replaceState(null, "", "/"); } } catch (e) {}
 let ME_ROLE = {};
 const role2 = () => ME_ROLE.park && !ME_ROLE.driver ? `<a href="/park"><span class="rpk">🏢</span>Парк</a>` : `<a href="/driver"><img src="/static/r_car.webp" alt="" class="rc">Айдоочу</a>`;
 async function boot() {
