@@ -980,3 +980,24 @@ class LicenseCheck(unittest.TestCase):
         self.assertFalse(core.get_driver(d)["online"])                   # линиядан чыгарылды
         core.set_setting("lic_day", today.isoformat())
         self.assertIsInstance(dispatch.tick(), list)
+
+
+class ParkWeekly(unittest.TestCase):
+    def test_weekly_due_and_reminder(self):
+        import parks
+        core.init_db()
+        pid = parks.save("Апта-Парк", "0700 000 991", share=100, ref_bonus=20, promo="WEEK1")
+        s = parks.stats(pid)
+        self.assertIn("due", s); self.assertIn("next_pay", s)
+        self.assertGreater(s["next_pay"], core.now())
+        self.assertRegex(parks.week_label(), r"^\d\d\.\d\d–\d\d\.\d\d$")
+        core.set_setting("park_pay_week", "")
+        per = core.period_starts()
+        rows = parks.weekly_reminder()
+        if core.now() - per["week"] <= 2 * 86400:
+            self.assertEqual(parks.weekly_reminder(), [])          # аптасына бир жолу
+        self.assertIsInstance(rows, list)
+        self.assertTrue(parks.add_payout(pid, 50, "апта " + parks.week_label()))
+        self.assertEqual(parks.stats(pid)["paid"], 50)
+        core.query("DELETE FROM park_payouts WHERE park_id=?", (pid,))
+        core.query("DELETE FROM parks WHERE id=?", (pid,))

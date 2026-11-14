@@ -15,6 +15,7 @@ tick() ар 2 секундда чакырылат; жөнөтүлө турган
 import json
 
 import core
+import parks
 from flow import money, note
 
 
@@ -72,6 +73,10 @@ def tick():
     """
     out = [note(r["passenger"], "p_scheduled_go") for r in core.activate_scheduled()]
     out += [note(uid, "d_auto_off", "/driver", area=core.area_gen()) for uid in core.auto_offline_out()]
+    pw = parks.weekly_reminder()
+    if pw:
+        rows = "\n".join("• %s — %d сом" % (n, d) for n, d in pw)
+        out += [note(a, "a_park_week", "/admin", rows=rows) for a in core.admins()]
     for uid, kind, days, date in core.lic_daily():
         out.append(note(uid, "d_lic_" + kind, "/driver", days=days, date=date))
     t = core.now()

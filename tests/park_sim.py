@@ -25,7 +25,7 @@ for i in range(9):
     rid = core.create_ride(u, q, 41.0377, 72.7470, 41.03 + i * 0.001, 72.756)
     d = D[i % 3]; core.offer(rid, d); core.accept(rid, d)
     for _ in range(3): core.advance(rid, d)
-parks.add_payout(pid, 30, "наличные")
+parks.add_payout(pid, 30, "апта 03.11–09.11")
 def route(r):
     u = r.request.url
     if u.endswith("leaflet.js"): return r.fulfill(body=STUB, content_type="application/javascript")

@@ -712,7 +712,12 @@ class H(BaseHTTPRequestHandler):
             pid = int(b.get("park_id") or 0) or None
             return self._json({"result": parks.attach_driver(_txt(b.get("phone"), 20), pid)})
         if action == "park_payout":
-            ok = parks.add_payout(int(b.get("park_id") or 0), float(b.get("amount") or 0), _txt(b.get("note"), 120))
+            pk = parks.get(int(b.get("park_id") or 0))
+            amt = float(b.get("amount") or 0)
+            wk = _txt(b.get("note"), 120) or ("апта " + parks.week_label())
+            ok = parks.add_payout(int(b.get("park_id") or 0), amt, wk)
+            if ok and pk and pk.get("owner_uid"):
+                deliver([flow.note(pk["owner_uid"], "park_paid", "/park", park=pk["name"], amount=int(round(amt)), week=wk)])
             return self._json({"ok": ok}, 200 if ok else 400)
         if action == "driver":
             target = _txt(b.get("uid"), 40)

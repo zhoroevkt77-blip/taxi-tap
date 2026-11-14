@@ -344,7 +344,8 @@ async function viewParks(edit) {
       ${P.length ? P.map(p => `<div class="item"><div class="main"><b>${esc(p.name)}</b> ${p.active ? "" : '<span class="muted">· өчүк</span>'}
         <div class="muted">☎ ${esc(p.phone)} · үлүш ${p.share}% · жүргүнчү бонусу ${money(p.ref_bonus)} · промокод <b>${esc(p.promo || "—")}</b></div>
         <div class="muted">Айдоочулар: ${p.drivers} (линияда ${p.online}) · Ушул ай: ${p.month.rides} сапар, ${money(p.month.gross)} жүгүртүү, тапканы <b>${money(p.month.earned)}</b></div>
-        <div style="margin-top:4px">Калдык: <b style="color:var(--ok)">${money(p.balance)}</b> <span class="muted">(төлөнгөн ${money(p.paid)})</span></div></div>
+        <div style="margin-top:4px;font-size:14px">📅 Бул дүйшөмбүдө төлөө (${esc(p.week)} чейин): <b style="color:${p.due > 0 ? "var(--ok)" : "inherit"}">${money(p.due)}</b>
+          <span class="muted">· ушул апта: ${money(p.this_week)} · бардыгы төлөнгөн ${money(p.paid)}</span></div></div>
         <div class="acts"><a class="btn" href="/park?id=${p.id}" target="_blank">Кабинети</a>
           <button class="btn" data-ed="${p.id}">Өзгөртүү</button><button class="btn gold" data-pay="${p.id}">💸 Төлөдүм</button></div></div>`).join("")
         : `<div class="empty">Азырынча парк жок. Төмөндөн кошуңуз.</div>`}</div>
@@ -369,8 +370,8 @@ async function viewParks(edit) {
   if ($("#pkCancel")) $("#pkCancel").onclick = () => viewParks();
   document.querySelectorAll("[data-ed]").forEach(b => b.onclick = () => viewParks(P.find(p => p.id == b.dataset.ed)));
   document.querySelectorAll("[data-pay]").forEach(b => b.onclick = async () => {
-    const p = P.find(x => x.id == b.dataset.pay), v = prompt(`${p.name}: канча сом төлөдүңүз? (калдык ${Math.round(p.balance)} с)`, Math.max(0, Math.round(p.balance)));
-    if (!v) return; await api("/api/a/park_payout", {park_id:p.id, amount:+v, note:"админ"}); viewParks();
+    const p = P.find(x => x.id == b.dataset.pay), v = prompt(`${p.name}: ${p.week} апта үчүн канча сом төлөдүңүз?`, Math.max(0, Math.round(p.due)));
+    if (!v) return; await api("/api/a/park_payout", {park_id:p.id, amount:+v, note:"апта " + p.week}); viewParks();
   });
   $("#pdGo").onclick = async () => {
     const r = await api("/api/a/park_driver", {phone:$("#pdP").value, park_id:$("#pdK").value || null});

@@ -5,6 +5,8 @@
   • парк тарткан (промокод/QR) ар бир жаңы жүргүнчүнүн биринчи бүткөн сапары үчүн ref_bonus сом.
 Админ төлөп бергенин park_payouts'ка жазат → калдык = тапкан − төлөнгөн.
 """
+import time
+
 import core
 
 REF_DAYS = 30          # жүргүнчү ушул мөөнөттө парктын коду менен биринчи сапарын бүтүрсө — бонус
@@ -138,7 +140,10 @@ def stats(pid):
         out[k] = {"rides": n, "gross": gross, "fee": round(fee), "share": share,
                   "refs": refs, "refs_active": refs_active, "bonus": bonus, "earned": share + bonus}
     paid = core.query("SELECT COALESCE(SUM(amount),0) AS s FROM park_payouts WHERE park_id=?", (pid,), "one")["s"] or 0
+    # Апталык төлөм: дүйшөмбүгө чейин (өткөн апталарда) тапканы төлөнөт, ушул аптаныкы — кийинки дүйшөмбүдө
+    due = max(0, round(out["all"]["earned"] - out["week"]["earned"] - paid))
     return {"periods": out, "paid": round(paid), "balance": round(out["all"]["earned"] - paid),
+            "due": due, "this_week": out["week"]["earned"], "next_pay": per["week"] + 7 * 86400,
             "drivers_total": len(ds), "drivers_online": sum(1 for d in ds if d.get("online"))}
 
 
@@ -162,12 +167,38 @@ def payouts(pid):
     return core.query("SELECT amount, note, at FROM park_payouts WHERE park_id=? ORDER BY at DESC LIMIT 30", (pid,), "all")
 
 
+def week_label(at=None):
+    """Өткөн аптанын аралыгы: «03.11–09.11»."""
+    ws = core.period_starts()["week"] if at is None else at
+    a, b = ws - 7 * 86400 + core.TZ, ws - 86400 + core.TZ
+    return time.strftime("%d.%m", time.gmtime(a)) + "–" + time.strftime("%d.%m", time.gmtime(b))
+
+
 def add_payout(pid, amount, note=""):
     if not get(pid) or not (0 < float(amount) <= 10_000_000):
         return False
     core.query("INSERT INTO park_payouts (park_id, amount, note, at) VALUES (?, ?, ?, ?)",
                (pid, float(amount), (note or "")[:120], core.now()))
     return True
+
+
+def weekly_reminder():
+    """Дүйшөмбү күнү бир жолу: төлөнө турган парктардын тизмеси (админге)."""
+    per = core.period_starts()
+    if core.now() - per["week"] > 2 * 86400:          # дүйшөмбү же шейшемби гана
+        return []
+    key = str(int(per["week"]))
+    if core.get_setting("park_pay_week") == key:
+        return []
+    core.set_setting("park_pay_week", key)
+    rows = []
+    for p in all_parks():
+        if not p["active"]:
+            continue
+        d = stats(p["id"])["due"]
+        if d > 0:
+            rows.append((p["name"], d))
+    return rows
 
 
 def state(pid):
@@ -186,7 +217,8 @@ def admin_list():
         out.append({"id": p["id"], "name": p["name"], "phone": p["phone"], "share": p["share"],
                     "ref_bonus": p["ref_bonus"], "promo": p["promo"], "active": bool(p["active"]),
                     "drivers": s["drivers_total"], "online": s["drivers_online"],
-                    "month": s["periods"]["month"], "balance": s["balance"], "paid": s["paid"]})
+                    "month": s["periods"]["month"], "balance": s["balance"], "paid": s["paid"],
+                    "due": s["due"], "this_week": s["this_week"], "week": week_label()})
     return out
 
 
