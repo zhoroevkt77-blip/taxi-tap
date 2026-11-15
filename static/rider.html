@@ -101,14 +101,14 @@ input.f:focus{border-color:var(--navy)}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
 <link rel="preload" as="image" href="/static/h_taxi.webp?v=9"><link rel="preload" as="image" href="/static/h_box.webp?v=9"><link rel="preload" as="image" href="/static/h_girl.webp?v=9"><link rel="preload" as="image" href="/static/h_map.webp?v=9">
-<link rel="stylesheet" href="/static/theme.css?v=76">
+<link rel="stylesheet" href="/static/theme.css?v=77">
 </head>
 <body>
 <div id="map"></div>
 
 <div class="top">
   <div class="lcol"><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b></div>
-    <div class="role"><a class="on"><img src="/static/r_bag.webp?v=9" alt="">Жүргүнчү</a><a href="/driver"><img src="/static/r_car.webp?v=9" alt="" class="rc">Айдоочу</a></div></div>
+    <span id="topPill"></span></div>
   <button class="round" id="menuBtn" aria-label="Кабинет">👤</button>
 </div>
 
@@ -305,8 +305,7 @@ function viewIdle() {
   if (P.home) rec.push({ico:"🏠", name:"Үй", sub:P.home.name || "", lat:P.home.lat, lon:P.home.lon});
   if (P.work) rec.push({ico:"💼", name:"Иш", sub:P.work.name || "", lat:P.work.lat, lon:P.work.lon});
   (P.recent || []).forEach(r => rec.push({ico:"🕘", name:r.name, sub:"Акыркы сапар", lat:r.lat, lon:r.lon}));
-  $("#home").innerHTML = `<div class="hh"><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b></div><button class="round" id="hMenu" aria-label="Кабинет">${avBtn()}</button></div>
-    <div class="role hrole"><a class="on"><img src="/static/r_bag.webp?v=9" alt="">Жүргүнчү</a>${role2()}</div>
+  $("#home").innerHTML = `<div class="hh"><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b></div><div class="hhr">${rolePill()}<button class="round" id="hMenu" aria-label="Кабинет">${avBtn()}</button></div></div>
     <button class="haddr" id="hAddr"><small><img class="pinI" src="/static/pin.webp?v=9" alt="">Сиз турган жер</small><b id="fromTxt">${esc(S.fromAddr || "Аныкталууда…")}</b><span>›</span></button>
     <div class="tiles">${tile("tTaxi", "h_taxi.webp?v=9", "Такси", `<span id="taxiEta">${homeEta()}</span>`, true, !has("delivery"))}
       ${has("delivery") ? tile("tDel", "h_box.webp?v=9", "Жеткирүү", "Буюм, документ") : ""}</div>
@@ -966,10 +965,12 @@ try { if (new URLSearchParams(location.search).get("next") === "park") localStor
 try { const qs = new URLSearchParams(location.search), rf = qs.get("ref"), pm = qs.get("promo");
   if (rf) { localStorage.setItem("parkRef", rf); if (pm) localStorage.setItem("promoPre", pm.toUpperCase()); history.replaceState(null, "", "/"); } } catch (e) {}
 let ME_ROLE = {};
-const role2 = () => ME_ROLE.park && !ME_ROLE.driver ? `<a href="/park"><span class="rpk">🏢</span>Парк</a>` : `<a href="/driver"><img src="/static/r_car.webp?v=9" alt="" class="rc">Айдоочу</a>`;
+// Айдоочу/парк ээси гана көрөт — кичине баскыч (жүргүнчүлөргө — кабинетте «Таксиде иштөө»)
+const rolePill = () => ME_ROLE.driver ? `<a class="rpill" href="/driver"><img src="/static/r_car.webp?v=9" alt="">Айдоочу</a>`
+  : ME_ROLE.park ? `<a class="rpill" href="/park"><span>🏢</span>Парк</a>` : "";
 async function boot() {
   const me = await api("/api/me"); ME_ROLE = {park:me.park, driver:me.driver, admin:me.admin};
-  if (ME_ROLE.park && !ME_ROLE.driver) document.querySelectorAll(".role a[href='/driver']").forEach(a => a.outerHTML = role2());
+  $("#topPill").innerHTML = rolePill(); if ($("#home .hh")) { const h = $("#home .hhr"); if (h && !h.querySelector(".rpill")) h.insertAdjacentHTML("afterbegin", rolePill()); }
   try { if (me.auth && localStorage.getItem("nextPark")) { localStorage.removeItem("nextPark"); if (me.park || me.admin) return location.replace("/park"); } } catch (e) {}
   try { const rf = localStorage.getItem("parkRef"); if (me.auth && rf) { api("/api/ref", {code:rf}); localStorage.removeItem("parkRef"); } } catch (e) {} ME_BOT = me.bot || ""; ME_AV = me.avatar || null; $("#menuBtn").innerHTML = avBtn();
   await areaReady;
