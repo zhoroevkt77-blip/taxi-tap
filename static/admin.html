@@ -512,7 +512,7 @@ async function viewFinance() {
     <div class="panel"><h3>Камдык көчүрмө</h3><div class="item"><div class="main"><span class="muted">Күн сайын 03:00дө автоматтык түрдө жасалат жана Telegram'ыңызга файл болуп келет. Азыр жүктөп алуу:</span></div>
       <a class="btn" href="/api/a/backup">💾 Жүктөп алуу</a></div></div>
     <div class="panel"><h3>Айдоочулар — ушул ай</h3><div class="scroll"><table>
-      <tr><th>Айдоочу</th><th>Сапар</th><th>Жүгүртүү</th><th>Комиссия</th><th>Баланс</th></tr>
+      <tr><th>Айдоочу</th><th>Сапар</th><th>Тапкан</th><th>Комиссия</th><th>Баланс</th></tr>
       ${F.drivers.map(d => `<tr><td>${esc(d.name)}<div class="muted">${esc(d.phone)}</div></td><td>${d.rides}</td><td>${money(d.gross)}</td>
         <td>${money(d.commission)}</td><td style="color:${d.balance < c.min_balance ? "var(--bad)" : "inherit"}"><b>${money(d.balance)}</b></td></tr>`).join("")}
     </table>${F.drivers.length ? "" : `<div class="empty">Азырынча активдүү айдоочу жок.</div>`}</div></div>`;

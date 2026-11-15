@@ -380,7 +380,7 @@ function viewCabinet(part) {
       <div class="muted">Комфорт же Минивэн тарифине өтүү үчүн админге кайрылыңыз.</div></div></div>
     <div class="grid"><div class="stat"><span class="muted">Баланс</span><b style="color:${D.balance < D.min_balance ? "var(--bad)" : "inherit"}">${D.balance} с</b></div>
       <div class="stat"><span class="muted">Рейтинг</span><b>★ ${D.rating ?? "5.0"}</b></div></div>
-    <div${on(E)}><table class="fin"><tr><th></th><th>Сапар</th><th>Жүгүртүү</th><th>Комиссия</th><th>Колуңузда</th></tr>
+    <div${on(E)}><table class="fin"><tr><th></th><th>Сапар</th><th>Тапкан</th><th>Комиссия</th><th>Колуңузда</th></tr>
       ${row("Бүгүн", "today")}${row("Ушул жума", "week")}${row("Ушул ай", "month")}</table>
     <p class="muted">Сумма сом менен. «Колуңузда» — жүргүнчүлөр төлөгөн акчадан комиссия кемитилгени.
     ${D.min_balance > 0 ? `Баланс ${D.min_balance} сомдон аз болсо, заказ келбейт.` : ""}</p>

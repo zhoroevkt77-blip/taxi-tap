@@ -147,7 +147,7 @@ function draw() {
         : `<p class="muted">Азырынча төлөм болгон жок. Биринчи төлөм — дүйшөмбү, ${dm(s.next_pay)}, саат ${s.pay_time.from}–${s.pay_time.to}.</p>`}</div>
     <div class="grid">
       <div class="st"><span>Сапарлар</span><b>${P.rides}</b><i>Парктын айдоочулары бүтүргөн сапарлар</i></div>
-      <div class="st"><span>Жүгүртүү</span><b>${fmt(P.gross)} с</b><i>Ошол сапарлар үчүн жүргүнчүлөр төлөгөн жалпы акча</i></div>
+      <div class="st"><span>Айдоочулар тапкан</span><b>${fmt(P.gross)} с</b><i>Ошол сапарлар үчүн жүргүнчүлөр төлөгөн жалпы акча</i></div>
       <div class="st"><span>Комиссиядан үлүш (${p.share_now}%)</span><b>${fmt(P.share)} с</b><i>Такси ТАП! айдоочулардан алган комиссиянын ${shareTerm(p)} сизге</i></div>
       <div class="st"><span>Жаңы жүргүнчүлөр</span><b>${P.refs} <small style="font-size:13px;color:#6b6b76">(${P.refs_active} сапарда)</small></b><i>QR же промокод менен келгендер · кашаада: биринчи сапарын бүтүргөндөр</i></div>
       <div class="st"><span>Жүргүнчү бонусу</span><b>${fmt(P.bonus)} с</b><i>Ар бир жаңы жүргүнчүнүн биринчи сапары үчүн ${fmt(p.ref_bonus)} сом</i></div>
@@ -155,7 +155,7 @@ function draw() {
     </div>
     <details class="how"><summary>❓ Кантип эсептелет? Мисал</summary>
       <p>Сиздин айдоочу 100 сомдук сапар бүтүрдү дейли:</p>
-      <p>• <b>Жүгүртүүгө</b> 100 сом кошулат.</p>
+      <p>• <b>«Айдоочулар тапкан»</b> сумасына 100 сом кошулат.</p>
       <p>• Такси ТАП! айдоочудан комиссия алат${ST.commission_pct > 0 ? ` (азыр ${ST.commission_pct}%) — ${f1(ST.commission_pct)} сом` : " (мисалы 10% — 10 сом)"}.
         Анын <b>${p.share_now}%</b> сизге: ${f1(100 * (ST.commission_pct > 0 ? ST.commission_pct : 10) / 100 * p.share_now / 100)} сом.${p.share_until && Date.now() / 1000 < p.share_until ? ` ${dmy(p.share_until)} баштап үлүш ${p.share_after}% болот.` : ""}</p>
       <p>• Эгер ал жүргүнчү сиздин QR же <b>${esc(p.promo || "промокод")}</b> аркылуу келип, бул анын биринчи сапары болсо — дагы <b>${fmt(p.ref_bonus)} сом</b> бонус. Бонус бир жүргүнчү үчүн бир жолу гана, ал катталгандан кийин 30 күндүн ичинде сапар бүтүрсө берилет.</p>
