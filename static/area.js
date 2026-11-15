@@ -63,7 +63,7 @@ const CAR_IMG = {"Ак":"ak", "Кара":"kara", "Күмүш":"kumush", "Боз"
   "Жашыл":"jashyl", "Сары":"sary", "Күрөң":"kuron", "Кызгылт":"kyzgylt"};
 function carImg(color) {
   const c = (color || "").trim(), k = CAR_IMG[c] || Object.entries(CAR_IMG).find(([n]) => c.toLowerCase().startsWith(n.toLowerCase().slice(0, 4)))?.[1] || "ak";
-  return `/static/car_${k}.webp?v=1`;
+  return `/static/car_${k}.webp?v=2`;
 }
 // KG номер рамкасы: «04KG338APG» → [04 | 🇰🇬KG | 338 APG]
 function kgPlate(p) {

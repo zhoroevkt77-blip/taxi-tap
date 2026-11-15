@@ -53,7 +53,9 @@ def frame(dp, title, sub, wait=1200):
     c = Image.new("RGB", (W + 40, 931 + 150), "#fafafa"); d = ImageDraw.Draw(c)
     d.rounded_rectangle([20, 18, 76, 74], 16, fill="#ffc61a")
     d.text((48, 46), str(N[0] + 1), font=F_B, fill="#16161a", anchor="mm")
-    d.text((92, 16), title, font=F_S, fill="#1b1b20"); d.text((92, 52), sub, font=F_M, fill="#5f5f6a")
+    import re as _re
+    cl = lambda x: _re.sub(r"[^\w\s«»—,.!?:/()+~·-]", "", x).strip()
+    d.text((92, 16), cl(title), font=F_S, fill="#1b1b20"); d.text((92, 52), cl(sub), font=F_M, fill="#5f5f6a")
     m = Image.new("L", im.size, 0); ImageDraw.Draw(m).rounded_rectangle([0, 0, W, 931], 28, fill=255)
     c.paste(im, (20, 120), m); N[0] += 1
     c.save(os.path.join(OUT, "%02d.png" % N[0])); print(N[0], title)
@@ -69,12 +71,29 @@ try:
         dv.goto(URL + "/driver"); dv.fill("#nm", "Бакыт"); dv.fill("#ph", "0700 555 001"); dv.check("#agree"); dv.click("#go")
         dv.wait_for_timeout(1500); core.driver_location(DRV, *DSTART, live_period=3600)
         dv.evaluate("refresh().then(loadPeers)"); dv.wait_for_timeout(1200)
-        frame(dv, "Линияда — жакын таксилер картада", "Сары — бош, ак — заказда · 3 км ичинде", 800)
+        frame(dv, "Айдоочу линияга чыкты", "Жакын 3 км ичиндеги таксилер картада көрүнөт", 800)
         dv.evaluate("SHEET.collapse && SHEET.collapse()")
-        frame(dv, "Панелди жапканда — карта толук", "🚕 6 · 4 бош — жакын жерде канча такси бар", 900)
+        frame(dv, "Сары — бош, ак — заказда", "Аты, номери көрүнбөйт · болжолдуу орун (~100 м)", 900)
+        uids = [core.phone_uid("07005550%02d" % (10 + i)) for i in range(len(PEERS))]
+        steps = [(0.0010, 0.0012), (0.0008, -0.0010), (-0.0011, 0.0009), (0.0012, 0.0004), (-0.0006, -0.0012), (0.0009, -0.0007)]
+        for k in range(1, 5):
+            for i, (la, lo, busy) in enumerate(PEERS[:6]):
+                dla, dlo = steps[i]
+                core.driver_location(uids[i], la + dla * k, lo + dlo * k, live_period=3600)
+            if k == 2:   # бир бош такси заказ алды
+                core.set_driver(uids[0], busy_ride=1500)
+            if k == 3:   # жаңы такси линияга чыкты
+                core.driver_location(uids[6], DSTART[0] - 0.003, DSTART[1] + 0.002, live_period=3600)
+            dv.evaluate("loadPeers()")
+            cap = {1: ("Таксилер кыймылдап жатат", "Орду ар 15 секундда жаңыланат"),
+                   2: ("Бир такси заказ алды — ак болуп калды", "🚕 баскычындагы сан да өзгөрөт: 6 · 3 бош"),
+                   3: ("Жаңы такси линияга чыкты", "Эми 7 такси · 4 бош"),
+                   4: ("Кайсы жерде такси аз — ошол жакка барыңыз", "Заказды тезирээк аласыз")}[k]
+            frame(dv, cap[0], cap[1], 1200)
         dv.click("#peerBtn")
-        frame(dv, "🚕 баскычы — жашыруу / көрсөтүү", "Картада орун аз болсо өчүрүп койсо болот")
+        frame(dv, "🚕 баскычы — жашыруу", "Карта таза болот · кайра басса — көрүнөт", 1000)
         dv.click("#peerBtn"); dv.wait_for_timeout(600)
+        frame(dv, "Кайра көрсөтүү", "Тандоо телефондо сакталып калат", 900)
         br.close()
 finally:
     srv.terminate()
