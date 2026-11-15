@@ -81,7 +81,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=74">
+<link rel="stylesheet" href="/static/theme.css?v=75">
 </head>
 <body>
 <nav id="bnav" class="bnav pro"><a data-k="earn"><img src="/static/n_earn.webp?v=9" alt="">Киреше</a><a data-k="hist"><img src="/static/n_trips.webp?v=9" alt="">Сапарлар</a><a data-k="line" class="big on"><img src="/static/n_go.webp?v=9" alt="">Линия</a><a data-k="help"><img src="/static/n_help.webp?v=9" alt="">Жардам</a><a data-k="cab"><img src="/static/n_cab.webp?v=9" alt="">Кабинет</a></nav>
@@ -92,7 +92,8 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
   <div class="rcol"><button class="state hide" id="stBadge" style="display:none">Офлайн</button>
     <button class="tbtn hide topav" id="cabBtn" aria-label="Менин кабинетим">👤</button>
     <div class="r2"><button class="ep hide" id="earn"></button></div>
-    <div class="tools hide" id="tools"><button class="sbtn" id="heatBtn" aria-label="Коэффициент"><i>💓</i>×1.0</button></div></div>
+    <div class="tools hide" id="tools"><button class="sbtn" id="heatBtn" aria-label="Коэффициент"><i>💓</i>×1.0</button>
+      <button class="sbtn peerb" id="peerBtn" aria-label="Жакын таксилер"><i>🚕</i><span>0</span></button></div></div>
 </div>
 <div class="sheet"><div class="grab"></div><div id="view"></div></div>
 <div class="offer hide" id="offer"><div class="ocard" id="ocard"></div></div>
@@ -695,6 +696,27 @@ $("#heatBtn").onclick = () => {
   if (heatOn) toast("💓 Талап картасы: ар бир уюлдагы коэффициент. Кочкул малина — баа эң жогору.", 3000);
 };
 setTimeout(loadHeat, 1500); heatT = setInterval(loadHeat, 45000);
+// ---------- Жакын жердеги линиядагы таксилер ----------
+const peerLayer = L.layerGroup().addTo(map);
+let peerOn = (() => { try { return localStorage.peerOff !== "1"; } catch (e) { return true; } })();
+const carSvg = busy => `<svg viewBox="0 0 24 40" width="18" height="30"><rect x="2" y="2" width="20" height="36" rx="7" fill="${busy ? "#9a9aa3" : "#FFC21A"}" stroke="#1d1d22" stroke-width="2"/><rect x="5" y="9" width="14" height="7" rx="2" fill="#1d1d22" opacity=".75"/><rect x="5" y="27" width="14" height="5" rx="2" fill="#1d1d22" opacity=".55"/></svg>`;
+async function loadPeers() {
+  peerLayer.clearLayers();
+  if (!D || D.status !== "active" || !D.online || D.ride) return;
+  const x = await api("/api/d/peers"); if (!x || x.error) return;
+  const ps = x.peers || [], free = ps.filter(p => !p.busy).length;
+  $("#peerBtn span").textContent = ps.length ? `${ps.length} · ${free} бош` : "0";
+  $("#peerBtn").classList.toggle("on", peerOn);
+  if (!peerOn) return;
+  ps.forEach((p, i) => L.marker([p.lat, p.lon], {interactive:false, zIndexOffset:-100,
+    icon:L.divIcon({className:"peer", iconSize:[18, 30], iconAnchor:[9, 15], html:`<div style="transform:rotate(${(i * 67) % 360}deg)">${carSvg(p.busy)}</div>`})}).addTo(peerLayer));
+}
+$("#peerBtn").onclick = () => {
+  peerOn = !peerOn; try { localStorage.peerOff = peerOn ? "0" : "1"; } catch (e) {}
+  loadPeers();
+  toast(peerOn ? `🚕 Жакын (${3} км) линиядагы таксилер: сары — бош, боз — заказда. Так жайгашуу көрсөтүлбөйт.` : "Таксилер картадан жашырылды", 3000);
+};
+setTimeout(loadPeers, 2000); setInterval(loadPeers, 15000);
 const actColor = a => (a ?? 100) >= 70 ? "var(--ok)" : (a ?? 100) >= 40 ? "#d18a00" : "var(--bad)";
 
 // ---------- сүрөттү кичирейтүү (браузерде) ----------

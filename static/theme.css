@@ -652,3 +652,5 @@ img[src*="/static/c_"]:not([src*="c_car."]):not([src*="c_hdr"]):not([src*="c_tax
 .sheet.cabbg::before{left:auto;opacity:1;width:34%;height:260px;background:url(/static/cb_tr.webp?v=9) right 0 top -40px/100% auto no-repeat}
 .sheet>*,.rboxc>*{position:relative;z-index:1}
 .sheet .grab{z-index:2}
+.sbtn.peerb{color:#1d1d22}.sbtn.peerb span{font-size:14px}.sbtn.peerb:not(.on){opacity:.7}
+.peer{filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}

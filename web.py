@@ -349,6 +349,10 @@ class H(BaseHTTPRequestHandler):
                 return self._json(core.driver_praise(uid))
             if u.path == "/api/d/daily":
                 return self._json({"days": core.driver_daily(uid)})
+            if u.path == "/api/d/peers":
+                if not core.get_driver(uid):
+                    return self._json({"error": "auth"}, 401)
+                return self._json({"peers": core.peers(uid), "km": core.PEER_KM})
             if u.path == "/api/d/heat":
                 if not core.get_driver(uid):
                     return self._json({"error": "auth"}, 401)

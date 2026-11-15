@@ -1142,6 +1142,20 @@ class EnclaveCity(unittest.TestCase):
             core._area.clear(); core._area.update(old); core.AREA_ON = on
 
 
+class Peers(unittest.TestCase):
+    def test_peers_nearby(self):
+        core.init_db()
+        me = make_driver("0700 000 891", "Мен", NEAR, 0)
+        near = make_driver("0700 000 892", "Жакын", (NEAR[0] + 0.005, NEAR[1]), 0)
+        far = make_driver("0700 000 893", "Алыс", (NEAR[0] + 0.2, NEAR[1]), 0)
+        ps = core.peers(me)
+        self.assertEqual(len([p for p in ps if p["lat"] == round(NEAR[0] + 0.005, 3)]), 1)
+        self.assertFalse([p for p in ps if p["lat"] == round(NEAR[0] + 0.2, 3)])
+        self.assertTrue(all(set(p) == {"lat", "lon", "busy"} for p in ps))     # аты/номери жок
+        for u in (me, near, far):
+            core.set_driver(u, online=0)
+
+
 class CarPlate(unittest.TestCase):
     def test_norm_plate(self):
         self.assertEqual(core.norm_plate("04 KG 338 APG"), "04KG338APG")

@@ -446,6 +446,25 @@ def online_drivers(city=None):
     return out
 
 
+PEER_KM = 3.0
+
+
+def peers(uid, km=PEER_KM):
+    """Айдоочунун картасы үчүн: жакын жердеги линиядагы башка таксилер.
+    Так жайгашуу берилбейт (~100 м тегеректелет), аты/номери жок."""
+    me = get_driver(uid)
+    if not me or me["lat"] is None:
+        return []
+    t, out = now(), []
+    for d in query("SELECT uid, lat, lon, busy_ride, live_until, loc_at FROM drivers "
+                   "WHERE online=1 AND status='active' AND lat IS NOT NULL AND uid<>?", (uid,), "all"):
+        if not ((d["live_until"] or 0) > t or t - (d["loc_at"] or 0) < LOC_TTL_SEC):
+            continue
+        if haversine_km(me["lat"], me["lon"], d["lat"], d["lon"]) <= km:
+            out.append({"lat": round(d["lat"], 3), "lon": round(d["lon"], 3), "busy": bool(d["busy_ride"])})
+    return out
+
+
 def add_tx(driver, amount, kind, status="done", ride_id=None, proof=None):
     tx = query("INSERT INTO balance_tx (driver, amount, kind, status, ride_id, proof, at) "
                "VALUES (?, ?, ?, ?, ?, ?, ?)",
