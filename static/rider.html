@@ -101,7 +101,7 @@ input.f:focus{border-color:var(--navy)}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
 <link rel="preload" as="image" href="/static/h_taxi.webp?v=9"><link rel="preload" as="image" href="/static/h_box.webp?v=9"><link rel="preload" as="image" href="/static/h_girl.webp?v=9"><link rel="preload" as="image" href="/static/h_map.webp?v=9">
-<link rel="stylesheet" href="/static/theme.css?v=80">
+<link rel="stylesheet" href="/static/theme.css?v=82">
 </head>
 <body>
 <div id="map"></div>
@@ -966,8 +966,8 @@ try { const qs = new URLSearchParams(location.search), rf = qs.get("ref"), pm = 
   if (rf) { localStorage.setItem("parkRef", rf); if (pm) localStorage.setItem("promoPre", pm.toUpperCase()); history.replaceState(null, "", "/"); } } catch (e) {}
 let ME_ROLE = {};
 // Айдоочу/парк ээси гана көрөт — кичине баскыч (жүргүнчүлөргө — кабинетте «Таксиде иштөө»)
-const rolePill = () => ME_ROLE.driver ? `<a class="rpill" href="/driver"><img src="/static/r_car.webp?v=9" alt="">Айдоочу</a>`
-  : ME_ROLE.park ? `<a class="rpill" href="/park"><span>🏢</span>Парк</a>` : "";
+const rolePill = () => ME_ROLE.driver ? `<a class="rpill" href="/driver" aria-label="Айдоочу режимине өтүү"><img src="/static/r_car.webp?v=9" alt=""><span class="t"><small>⇄ өтүү</small>Айдоочу</span></a>`
+  : ME_ROLE.park ? `<a class="rpill" href="/park"><span>🏢</span><span class="t"><small>⇄ өтүү</small>Парк</span></a>` : "";
 async function boot() {
   const me = await api("/api/me"); ME_ROLE = {park:me.park, driver:me.driver, admin:me.admin};
   $("#topPill").innerHTML = rolePill(); if ($("#home .hh")) { const h = $("#home .hhr"); if (h && !h.querySelector(".rpill")) h.insertAdjacentHTML("afterbegin", rolePill()); }

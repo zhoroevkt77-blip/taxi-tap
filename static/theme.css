@@ -665,3 +665,5 @@ img[src*="/static/c_"]:not([src*="c_car."]):not([src*="c_hdr"]):not([src*="c_tax
 .dtop .hhr{align-items:center;gap:8px;min-height:44px}
 .dtop .topav{width:44px!important;height:44px!important;border-width:2px!important}
 .hhr{gap:8px}.hhr .rpill,.dtop .rpill{padding:5px 11px 5px 6px;font-size:13px;margin-top:0}.hhr .rpill img,.dtop .rpill img{height:20px}
+.rpill .t{display:flex;flex-direction:column;line-height:1.05}.rpill .t small{font-size:10px;font-weight:700;color:#8a8a96}
+.hhr .rpill,.dtop .rpill{font-size:13px;padding:4px 11px 4px 6px;gap:5px}.hhr .rpill img,.dtop .rpill img{height:22px}
