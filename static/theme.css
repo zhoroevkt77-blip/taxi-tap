@@ -668,3 +668,4 @@ img[src*="/static/c_"]:not([src*="c_car."]):not([src*="c_hdr"]):not([src*="c_tax
 .rpill .t{display:block;line-height:1.08;font-size:12px}.rpill .t small{font-size:10px;font-weight:700;color:#8a8a96}
 .hhr .rpill,.dtop .rpill{font-size:13px;padding:4px 11px 4px 6px;gap:5px}.hhr .rpill img,.dtop .rpill img{height:22px}
 .cls .clsimg{height:44px;width:auto;display:block;margin:-6px 0 2px -4px;filter:drop-shadow(0 3px 4px rgba(0,0,0,.18))}
+.cls .clsimg.side{height:34px;margin:2px 0 6px -2px}

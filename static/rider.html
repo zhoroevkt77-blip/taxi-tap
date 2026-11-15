@@ -101,7 +101,7 @@ input.f:focus{border-color:var(--navy)}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
 <link rel="preload" as="image" href="/static/h_taxi.webp?v=9"><link rel="preload" as="image" href="/static/h_box.webp?v=9"><link rel="preload" as="image" href="/static/h_girl.webp?v=9"><link rel="preload" as="image" href="/static/h_map.webp?v=9">
-<link rel="stylesheet" href="/static/theme.css?v=85">
+<link rel="stylesheet" href="/static/theme.css?v=86">
 </head>
 <body>
 <div id="map"></div>
@@ -538,7 +538,7 @@ async function viewQuote() {
       : "Бул жерде Такси ТАП! азырынча иштебейт."}</p><button class="btn ghost" id="back">Артка</button>`); $("#back").onclick = viewIdle; return; }
   S.quote = q;
   if (!q.classes.some(c => c.id === S.cls)) S.cls = q.classes[0].id;
-  const ICON = {econom:'<img class="clsimg" src="/static/peer_free.webp?v=1" alt="">', comfort:"🚘", minivan:"🚐",
+  const ICON = {econom:'<img class="clsimg side" src="/static/car_sary.webp?v=4" alt="">', comfort:"🚘", minivan:"🚐",
     delivery:'<img class="clsimg" src="/static/h_box.webp?v=9" alt="">'};
   const sub = q.price ? `${q.dist_km} км · ~${q.minutes} мүн` : `отуруу ${Math.round(q.tariff.base)} с + ${Math.round(q.tariff.per_km)} с/км`;
   const cur = () => q.classes.find(c => c.id === S.cls);
