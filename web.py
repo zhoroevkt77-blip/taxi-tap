@@ -13,6 +13,7 @@ bot.py ичинде агым катары иштейт. Жергиликтүү �
 """
 
 import json
+import re
 import mimetypes
 import os
 import threading
@@ -41,6 +42,54 @@ SITE_URL = (os.environ.get("SITE_URL") or "").rstrip("/")
 
 # Out'торду жеткирүүчү: bot.py өзүнүкүн коёт (Telegram). Сайт өзү абалды окуйт.
 deliver = lambda outs: None   # noqa: E731
+
+
+def _e(s):
+    return str(s if s is not None else "").replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+
+
+def act_html(a):
+    """Акт салыштыруу — басып чыгаруу / PDF катары сактоо үчүн бет."""
+    d = a["data"]
+    fm = lambda v: "{:,}".format(int(round(v or 0))).replace(",", " ")    # noqa: E731
+    dt = lambda t: time.strftime("%d.%m.%Y", time.gmtime((t or 0) + core.TZ))    # noqa: E731
+    st = {"sent": "Жооп күтүлүүдө", "ok": "✅ Парк ырастады " + (dt(a.get("answered_at")) if a.get("answered_at") else ""),
+          "dispute": "❗ Парктын пикири: " + _e(a.get("comment") or "")}[a["status"]]
+    parts = "".join("<tr><td>Парктын үлүшү: %s сом комиссиядан %g%%</td><td>%s</td></tr>" % (fm(x["fee"]), x["rate"], fm(x["fee"] * x["rate"] / 100))
+                    for x in d.get("parts") or [])
+    pays = "".join("<tr><td>%s · %s</td><td>−%s</td></tr>" % (dt(x["at"]), _e(x["note"]), fm(x["amount"])) for x in d["payouts"]) \
+        or "<tr><td>Төлөм болгон жок</td><td>0</td></tr>"
+    drv = "".join("<tr><td>%s</td><td>%s</td><td>%d</td><td>%s</td><td>%s</td></tr>" % (_e(x["name"]), _e(x["plate"]), x["rides"], fm(x["gross"]), fm(x["fee"]))
+                  for x in d["drivers"]) or "<tr><td colspan=5>Сапар болгон жок</td></tr>"
+    a_, b_ = parks.month_bounds(d["period"])
+    owe = ("Такси ТАП! паркка карыз" if d["closing"] > 0 else "Парк Такси ТАП!'ка карыз" if d["closing"] < 0 else "Карыз жок")
+    return f"""<!DOCTYPE html><html lang="ky"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Акт № {a['id']} · {_e(d['park'])} · {parks.period_label(d['period'])}</title>
+<style>body{{font:14px/1.45 system-ui,Arial,sans-serif;color:#16161a;max-width:760px;margin:0 auto;padding:18px}}
+h1{{font-size:20px;margin:0 0 4px}}h2{{font-size:15px;margin:22px 0 6px}}.mu{{color:#666}}
+table{{width:100%;border-collapse:collapse}}td,th{{border-bottom:1px solid #ddd;padding:6px 4px;text-align:left}}td:last-child,th:last-child{{text-align:right}}
+.tot td{{font-weight:800;background:#fff4d6}}.st{{display:inline-block;padding:4px 10px;border-radius:8px;background:#f2f2f4;margin-top:6px}}
+.sig{{display:flex;gap:30px;margin-top:34px}}.sig div{{flex:1}}.sig p{{border-top:1px solid #333;padding-top:4px;margin-top:46px}}
+.pr{{position:fixed;right:14px;bottom:14px;padding:12px 18px;border:0;border-radius:12px;background:#ffc21a;font-weight:800;font-size:15px}}
+@media print{{.pr{{display:none}}body{{padding:0}}}}</style></head><body>
+<h1>Акт салыштыруу № {a['id']}</h1>
+<div class="mu">{parks.period_label(d['period'])} · {dt(a_)} – {dt(b_ - 1)} · түзүлгөн {dt(d.get('made_at'))}</div>
+<p><b>1-тарап:</b> Такси ТАП! · taxi-tap<br><b>2-тарап:</b> «{_e(d['park'])}» таксопаркы · {_e(d['park_phone'])}</p>
+<div class="st">{st}</div>
+<h2>Эсеп</h2><table>
+<tr><td>Ай башындагы калдык</td><td>{fm(d['opening'])}</td></tr>
+<tr><td>Парктын айдоочулары бүтүргөн сапарлар</td><td>{d['rides']}</td></tr>
+<tr><td>Айдоочулар тапкан</td><td>{fm(d['gross'])}</td></tr>
+<tr><td>Такси ТАП! алган комиссия</td><td>{fm(d['fee'])}</td></tr>
+{parts}
+<tr><td>Жаңы жүргүнчү бонусу: {d['bonus_n']} × {fm(d['bonus_rate'])}</td><td>{fm(d['bonus'])}</td></tr>
+<tr><td><b>Паркка тиешелүү (ай ичинде)</b></td><td><b>{fm(d['due'])}</b></td></tr>
+{pays}
+<tr class="tot"><td>Ай аягындагы калдык — {owe}</td><td>{fm(abs(d['closing']))}</td></tr></table>
+<p class="mu">Бардык суммалар сом менен.</p>
+<h2>Тиркеме: айдоочулар боюнча</h2><table><tr><th>Айдоочу</th><th>Номер</th><th>Сапар</th><th>Тапкан</th><th>Комиссия</th></tr>{drv}</table>
+<div class="sig"><div><b>Такси ТАП!</b><p>Кол / мөөр</p></div><div><b>«{_e(d['park'])}»</b><p>Кол / мөөр</p></div></div>
+<button class="pr" onclick="print()">🖨 Басып чыгаруу / PDF</button></body></html>"""
 
 
 def _num(v):
@@ -214,6 +263,15 @@ class H(BaseHTTPRequestHandler):
     def log_message(self, *a):
         pass
 
+    def _html(self, html, code=200):
+        body = html.encode()
+        self.send_response(code)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
     def _json(self, obj, code=200, cookie=None):
         body = json.dumps(obj, ensure_ascii=False).encode()
         self.send_response(code)
@@ -330,6 +388,20 @@ class H(BaseHTTPRequestHandler):
                 st = parks.state(p["id"])
                 st["site"] = SITE_URL
                 return self._json(st)
+            if u.path == "/api/park/acts":
+                p = parks.by_owner(uid) or (parks.get(int((q.get("id") or ["0"])[0] or 0)) if core.is_admin(uid) else None)
+                if not p:
+                    return self._json({"error": "not_park"}, 403)
+                return self._json({"acts": parks.acts(p["id"])})
+            if u.path.startswith("/act/"):                  # басып чыгаруучу акт (PDF катары сактаса болот)
+                try:
+                    a = parks.act_get(int(u.path[5:]))
+                except ValueError:
+                    a = None
+                pk = parks.get(a["park_id"]) if a else None
+                if not a or not (core.is_admin(uid) or (pk and pk.get("owner_uid") == uid)):
+                    return self._json({"error": "not_found"}, 404)
+                return self._html(act_html(a))
             if u.path == "/api/places":
                 pl = core.get_places(uid)
                 pl["popular"] = addrbook.popular()
@@ -524,6 +596,15 @@ class H(BaseHTTPRequestHandler):
                 return self._json({"result": parks.attach_driver(_txt(b.get("phone"), 20), p["id"], by_park=p["id"])})
             if act == "remove_driver":
                 return self._json({"result": parks.attach_driver(_txt(b.get("uid"), 40), None, by_park=p["id"])})
+            if act == "act":
+                ok_ = parks.act_answer(p["id"], int(b.get("id") or 0), b.get("ok") is True, _txt(b.get("comment"), 500))
+                if ok_:
+                    a = parks.act_get(int(b.get("id")))
+                    ans = "✅ Макул" if b.get("ok") is True else "❗ Пикир: " + (a.get("comment") or "")
+                    deliver([flow.note(x, "a_park_act", "/admin", park=p["name"], month=parks.period_label(a["period"]),
+                                       answer=ans) for x in core.admins()])
+                return self._json({"ok": ok_, "acts": [dict(x, label=parks.period_label(x["period"])) for x in parks.acts(p["id"])]},
+                                  200 if ok_ else 400)
             return self._json({"error": "not_found"}, 404)
         if path == "/api/avatar":
             img = b.get("img")
@@ -697,6 +778,10 @@ class H(BaseHTTPRequestHandler):
             return self._json(core.admin_overview())
         if action == "parks":
             return self._json({"parks": parks.admin_list(), "pay_time": parks.pay_time()})
+        if action == "park_acts":
+            return self._json({"acts": parks.acts(limit=60)})
+        if action == "area_units":
+            return self._json({"units": core.area_units_gj()})
         if action == "fixed_routes":
             return self._json({"items": core.fixed_routes(), "r": core.FIXED_R_KM})
         if action == "client":
@@ -757,6 +842,17 @@ class H(BaseHTTPRequestHandler):
         if action == "park_pay_time":
             ok = parks.set_pay_time(_txt(b.get("from"), 5), _txt(b.get("to"), 5))
             return self._json({"ok": ok, "pay_time": parks.pay_time()}, 200 if ok else 400)
+        if action == "park_act":                         # акт түзүү / кайра эсептөө
+            pk = parks.get(int(b.get("park_id") or 0))
+            per = _txt(b.get("period"), 7) or parks.prev_period()
+            if not pk or not re.fullmatch(r"20\d\d-(0[1-9]|1[0-2])", per):
+                return self._json({"error": "bad"}, 400)
+            aid, new = parks.act_make(pk["id"], per, force=True)
+            if new and pk.get("owner_uid") and b.get("notify", True):
+                a = parks.act_get(aid)["data"]
+                deliver([flow.note(pk["owner_uid"], "park_act", "/park", park=pk["name"], month=parks.period_label(per),
+                                   due=a["due"], paid=a["paid"], closing=a["closing"], days=parks.ACT_ANSWER_DAYS)])
+            return self._json({"ok": True, "id": aid, "acts": parks.acts()})
         if action == "park_payout":
             pk = parks.get(int(b.get("park_id") or 0))
             amt = float(b.get("amount") or 0)

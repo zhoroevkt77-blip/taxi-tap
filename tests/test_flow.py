@@ -1023,6 +1023,48 @@ class ParkWeekly(unittest.TestCase):
         core.query("DELETE FROM parks WHERE id=?", (pid,))
 
 
+class ParkActs(unittest.TestCase):
+    def test_monthly_act(self):
+        import parks
+        core.init_db()
+        pid = parks.save("Акт-Парк", "0700 000 771", share=80, share_months=6, share_after=50, ref_bonus=10)
+        core.query("UPDATE parks SET created_at=? WHERE id=?", (core.now() - 400 * 86400, pid))
+        d = "tg:9900772"
+        core.ensure_user(d, "Акт-Айдоочу")
+        core.query("INSERT INTO drivers (uid, status, car_plate) VALUES (?, 'active', '01KG111AAA')", (d,))
+        core.set_driver(d, park_id=pid)
+        a, b = parks.month_bounds("2026-10")
+        self.assertEqual(b - a, 31 * 86400)
+        self.assertEqual(parks.month_bounds("2026-12")[1] - parks.month_bounds("2026-12")[0], 31 * 86400)
+        for amt, at in ((-100, a - 100), (-200, a + 100)):            # сентябрь, октябрь
+            core.query("INSERT INTO balance_tx (driver, amount, kind, status, at) VALUES (?, ?, 'commission', 'done', ?)", (d, amt, at))
+        core.query("INSERT INTO park_payouts (park_id, amount, note, at) VALUES (?, 30, 'x', ?)", (pid, a - 50))
+        core.query("INSERT INTO park_payouts (park_id, amount, note, at) VALUES (?, 120, 'y', ?)", (pid, a + 500))
+        aid, new = parks.act_make(pid, "2026-10")
+        self.assertTrue(new)
+        x = parks.act_get(aid)["data"]
+        # мөөнөт (6 ай) өтүп кеткен — 50%
+        self.assertEqual(x["opening"], 50 - 30)
+        self.assertEqual(x["fee"], 200); self.assertEqual(x["share"], 100)
+        self.assertEqual(x["paid"], 120); self.assertEqual(x["closing"], 20 + 100 - 120)
+        self.assertEqual(parks.act_make(pid, "2026-10"), (aid, False))     # кайталанбайт
+        self.assertTrue(parks.act_answer(pid, aid, False, "2 сапар жок"))
+        self.assertEqual(parks.act_get(aid)["status"], "dispute")
+        self.assertEqual(parks.act_make(pid, "2026-10", force=True), (aid, True))
+        self.assertEqual(parks.act_get(aid)["status"], "sent")
+        self.assertTrue(parks.act_answer(pid, aid, True))
+        self.assertFalse(parks.act_answer(pid, aid, False, "кеч"))          # ырасталган — жабык
+        self.assertEqual(parks.act_make(pid, "2026-10", force=True), (aid, False))
+        self.assertEqual(parks.period_label("2026-10"), "Октябрь 2026")
+        self.assertRegex(parks.prev_period(), r"^20\d\d-\d\d$")
+        import web
+        self.assertIn("Акт салыштыруу", web.act_html(parks.act_get(aid)))
+        for q in ("DELETE FROM balance_tx WHERE driver=?", "DELETE FROM drivers WHERE uid=?"):
+            core.query(q, (d,))
+        for q in ("DELETE FROM park_acts WHERE park_id=?", "DELETE FROM park_payouts WHERE park_id=?", "DELETE FROM parks WHERE id=?"):
+            core.query(q, (pid,))
+
+
 class ParkQR(unittest.TestCase):
     def test_auto_code_scan_and_driver_ref(self):
         import parks

@@ -5,6 +5,8 @@
   • парк тарткан (промокод/QR) ар бир жаңы жүргүнчүнүн биринчи бүткөн сапары үчүн ref_bonus сом.
 Админ төлөп бергенин park_payouts'ка жазат → калдык = тапкан − төлөнгөн.
 """
+import calendar
+import json
 import time
 
 import core
@@ -198,26 +200,28 @@ def _sum_commission(uids, since, until=None):
     return float(r["s"] or 0)
 
 
-def _rides(uids, since):
+def _rides(uids, since, until=None):
     if not uids:
         return 0, 0
     qs = ",".join("?" * len(uids))
     r = core.query("SELECT COUNT(*) AS n, COALESCE(SUM(price),0) AS s FROM rides WHERE status='completed' "
-                   "AND completed_at>=? AND driver IN (%s)" % qs, (since,) + tuple(uids), "one")
+                   "AND completed_at>=? AND completed_at<? AND driver IN (%s)" % qs,
+                   (since, until if until is not None else 1e12) + tuple(uids), "one")
     return int(r["n"]), int(r["s"] or 0)
 
 
-def _refs(pid, since=0):
+def _refs(pid, since=0, until=None):
     """Парк тарткан жүргүнчүлөр: баары жана биринчи сапарын бүтүргөндөрү (бонус)."""
     rows = core.query("SELECT uid, park_ref_at FROM users WHERE park_ref=?", (pid,), "all")
+    end = until if until is not None else 1e12
     total, active = 0, 0
     for u in rows:
-        if (u["park_ref_at"] or 0) < since:
-            continue
-        total += 1
+        ra = u["park_ref_at"] or 0
+        if since <= ra < end:
+            total += 1
         first = core.query("SELECT MIN(completed_at) AS t FROM rides WHERE passenger=? AND status='completed'",
                            (u["uid"],), "one")["t"]
-        if first and first <= (u["park_ref_at"] or 0) + REF_DAYS * 86400 and first >= since:
+        if first and first <= ra + REF_DAYS * 86400 and since <= first < end:
             active += 1
     return total, active
 
@@ -254,6 +258,143 @@ def stats(pid):
             "paid_this_week": core.query("SELECT MAX(at) AS t FROM park_payouts WHERE park_id=? AND at>=?",
                                          (pid, per["week"]), "one")["t"],
             "drivers_total": len(ds), "drivers_online": sum(1 for d in ds if d.get("online"))}
+
+
+# ==================== Айлык акт салыштыруу ====================
+ACT_ANSWER_DAYS = 10
+
+
+def month_bounds(period):
+    """«2026-10» → (башы, аягы) Бишкек убактысы менен, unix."""
+    y, m = int(period[:4]), int(period[5:7])
+    a = calendar.timegm((y, m, 1, 0, 0, 0)) - core.TZ
+    y2, m2 = (y + 1, 1) if m == 12 else (y, m + 1)
+    return a, calendar.timegm((y2, m2, 1, 0, 0, 0)) - core.TZ
+
+
+def prev_period(at=None):
+    lt = time.gmtime((at if at is not None else core.now()) + core.TZ)
+    y, m = (lt.tm_year - 1, 12) if lt.tm_mon == 1 else (lt.tm_year, lt.tm_mon - 1)
+    return "%04d-%02d" % (y, m)
+
+
+def _earned(p, uids, a, b):
+    """[a, b) аралыгында паркка тиешелүү: үлүш (мөөнөткө бөлүнүп) + бонус."""
+    n, gross = _rides(uids, a, b)
+    until = share_until(p)
+    s1, s2 = float(p["share"] or 0), float(p.get("share_after") if p.get("share_after") is not None else p["share"] or 0)
+    if until is None:
+        f1, f2 = _sum_commission(uids, a, b), 0.0
+    else:
+        f1 = _sum_commission(uids, a, min(b, until)) if a < until else 0.0
+        f2 = _sum_commission(uids, max(a, until), b) if b > until else 0.0
+    share = round(f1 * s1 / 100.0 + f2 * s2 / 100.0)
+    _, active = _refs(p["id"], a, b)
+    bonus = round(active * float(p["ref_bonus"] or 0))
+    parts = [x for x in (({"rate": s1, "fee": round(f1)} if f1 or until is None or a < until else None),
+                         ({"rate": s2, "fee": round(f2)} if f2 or (until is not None and b > until) else None)) if x]
+    return {"rides": n, "gross": gross, "fee": round(f1 + f2), "share": share, "parts": parts,
+            "bonus_n": active, "bonus_rate": float(p["ref_bonus"] or 0), "bonus": bonus, "due": share + bonus}
+
+
+def _paid(pid, a, b):
+    return core.query("SELECT amount, note, at FROM park_payouts WHERE park_id=? AND at>=? AND at<? ORDER BY at",
+                      (pid, a, b), "all")
+
+
+def act_compute(pid, period):
+    p = get(pid)
+    a, b = month_bounds(period)
+    uids = [d["uid"] for d in _drivers(pid)]
+    before = _earned(p, uids, 0, a)["due"] - sum(x["amount"] for x in _paid(pid, 0, a))
+    m = _earned(p, uids, a, b)
+    pays = _paid(pid, a, b)
+    paid = round(sum(x["amount"] for x in pays))
+    drivers = []
+    for d in _drivers(pid):
+        n, g = _rides([d["uid"]], a, b)
+        if n:
+            u = core.get_user(d["uid"]) or {}
+            drivers.append({"name": u.get("name") or "", "plate": d.get("car_plate") or "", "rides": n, "gross": g,
+                            "fee": round(_sum_commission([d["uid"]], a, b))})
+    drivers.sort(key=lambda x: -x["gross"])
+    return dict(m, period=period, park=p["name"], park_phone=p.get("phone") or "", opening=round(before),
+                payouts=[{"amount": round(x["amount"]), "note": x["note"] or "", "at": x["at"]} for x in pays],
+                paid=paid, closing=round(before) + m["due"] - paid, drivers=drivers, made_at=core.now())
+
+
+def act_get(aid):
+    r = core.query("SELECT * FROM park_acts WHERE id=?", (aid,), "one")
+    if r:
+        r["data"] = json.loads(r["data"] or "{}")
+    return r
+
+
+def acts(pid=None, limit=24):
+    q = "SELECT a.*, p.name AS park FROM park_acts a LEFT JOIN parks p ON p.id=a.park_id"
+    rows = core.query(q + (" WHERE a.park_id=?" if pid else "") + " ORDER BY a.period DESC, a.id DESC LIMIT ?",
+                      ((pid, limit) if pid else (limit,)), "all")
+    for r in rows:
+        r["data"] = json.loads(r["data"] or "{}")
+    return rows
+
+
+def act_make(pid, period, force=False):
+    """Акт түзөт (же ырастала элек болсо кайра эсептейт). Кайтарат: (act_id, жаңыбы)."""
+    old = core.query("SELECT id, status FROM park_acts WHERE park_id=? AND period=?", (pid, period), "one")
+    if old and (not force or old["status"] == "ok"):
+        return old["id"], False
+    data = json.dumps(act_compute(pid, period), ensure_ascii=False)
+    if old:
+        core.query("UPDATE park_acts SET data=?, status='sent', comment=NULL, answered_at=NULL, reminded=0, created_at=? "
+                   "WHERE id=?", (data, core.now(), old["id"]))
+        return old["id"], True
+    return core.query("INSERT INTO park_acts (park_id, period, data, status, created_at) VALUES (?, ?, ?, 'sent', ?)",
+                      (pid, period, data, core.now()), "id"), True
+
+
+def act_answer(pid, aid, ok, comment=""):
+    a = act_get(aid)
+    if not a or a["park_id"] != pid or a["status"] == "ok":
+        return False
+    core.query("UPDATE park_acts SET status=?, comment=?, answered_at=? WHERE id=?",
+               ("ok" if ok else "dispute", None if ok else (comment or "")[:500], core.now(), aid))
+    return True
+
+
+def monthly_acts():
+    """Айдын 1-күнү 09:00дөн тартып: мурунку ай үчүн акттар. Кайтарат: [(park, act_id)]."""
+    lt = time.gmtime(core.now() + core.TZ)
+    if lt.tm_mday != 1 or lt.tm_hour < 9:
+        return []
+    period = prev_period()
+    if core.get_setting("park_act_month") == period:
+        return []
+    core.set_setting("park_act_month", period)
+    _, end = month_bounds(period)
+    out = []
+    for p in all_parks():
+        if p["active"] and (p["created_at"] or 0) < end:
+            aid, new = act_make(p["id"], period)
+            if new:
+                out.append((p, aid))
+    return out
+
+
+def acts_late():
+    """Жооп бербеген акттар (10 күндөн ашык) — бир жолу эскертүү."""
+    rows = core.query("SELECT a.id, a.park_id, a.period FROM park_acts a WHERE a.status='sent' AND a.reminded=0 "
+                      "AND a.created_at<?", (core.now() - ACT_ANSWER_DAYS * 86400,), "all")
+    for r in rows:
+        core.query("UPDATE park_acts SET reminded=1 WHERE id=?", (r["id"],))
+    return rows
+
+
+MONTHS = ["январь", "февраль", "март", "апрель", "май", "июнь", "июль", "август", "сентябрь", "октябрь", "ноябрь", "декабрь"]
+
+
+def period_label(period):
+    return "%s %s" % (MONTHS[int(period[5:7]) - 1].capitalize(), period[:4])
 
 
 def driver_rows(pid):
@@ -342,6 +483,7 @@ def state(pid):
                          share_until=share_until(p), share_now=share_now(p)),
             "qr": qr_stats(pid), "area": core.area_label(),
             "stats": stats(pid), "drivers": driver_rows(pid), "payouts": payouts(pid),
+            "acts": [dict(a, label=period_label(a["period"])) for a in acts(pid, 12)],
             "commission_pct": core.commission_pct()}
 
 

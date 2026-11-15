@@ -8,6 +8,10 @@
 <link rel="apple-touch-icon" href="/static/icon-192.png?v=4">
 <link rel="stylesheet" href="/static/theme.css?v=86">
 <style>
+.act{border:1px solid #ececf0;border-radius:16px;padding:12px;margin-top:10px}.ah{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.ar{display:flex;justify-content:space-between;padding:3px 0;font-size:14px}.ar span{color:#6b6b76}
+.ast{font-size:12px;font-weight:800;padding:3px 9px;border-radius:9px}.ast.w{background:#FAEEDA;color:#633806}.ast.o{background:#EAF3DE;color:#27500A}.ast.d{background:#FCEBEB;color:#791F1F}
+.act .row{margin-top:10px}.adis summary{cursor:pointer;color:#8a5a00;font-weight:700;margin-top:8px}.adis textarea{width:100%;margin:8px 0;box-sizing:border-box}
 body{margin:0;font-family:Inter,system-ui,sans-serif;background:#fff;color:#16161a;position:relative}
 .wrap{max-width:560px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 14px) 16px 40px}
 .hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
@@ -131,6 +135,25 @@ function printTpl(k, p, link) {
   return Array(2).fill(`<div class="ps">${hd}<div class="pb"><p>Кийинки жолу телефондон чакырыңыз!</p>${qrSvg(link, 230)}${disc}
       <p class="pm">Камера менен сканерлеңиз · код <b>${esc(p.code)}</b></p></div><div class="pf">${esc(p.name)}</div></div>`).join("");
 }
+const ACT_ST = {sent:["Жооп күтүлүүдө", "w"], ok:["✅ Ырасталды", "o"], dispute:["❗ Пикир жөнөтүлдү", "d"]};
+function actsCard() {
+  const A = ST.acts || [];
+  return `<div class="card"><h2>📄 Акт салыштыруу</h2>
+    ${A.length ? A.map(a => { const d = a.data, s = ACT_ST[a.status];
+      return `<div class="act"><div class="ah"><b>${esc(a.label)}</b><span class="ast ${s[1]}">${s[0]}</span></div>
+        <div class="ar"><span>Тапкан</span><b>${fmt(d.due)} с</b></div><div class="ar"><span>Төлөндү</span><b>${fmt(d.paid)} с</b></div>
+        <div class="ar"><span>Ай аягындагы калдык</span><b>${fmt(Math.abs(d.closing))} с${d.closing > 0 ? " · сизге карыз" : d.closing < 0 ? " · сиз карызсыз" : ""}</b></div>
+        ${a.status === "dispute" ? `<div class="muted" style="margin-top:4px">Пикириңиз: ${esc(a.comment || "")}</div>` : ""}
+        <div class="row"><a class="btn g" href="/act/${a.id}" target="_blank" style="text-decoration:none;text-align:center">📄 Ачуу / PDF</a>
+          ${a.status !== "ok" ? `<button class="btn" data-aok="${a.id}">✅ Макулмун</button>` : ""}</div>
+        ${a.status !== "ok" ? `<details class="adis"><summary>Пикирим бар</summary><textarea class="f" id="ac${a.id}" rows="3" placeholder="Эмнеси туура эмес? Мис.: 2 сапар эсептелбей калган"></textarea>
+          <button class="btn g" data-adis="${a.id}">Жөнөтүү</button></details>` : ""}</div>`; }).join("")
+      : `<p class="muted">Ар айдын 1-күнү мурунку ай боюнча акт ушул жерге түшөт жана Telegram'га кабар келет. Текшерип, 10 күн ичинде жооп бериңиз.</p>`}</div>`;
+}
+async function actAnswer(id, ok, comment) {
+  const x = await api("/api/park/act", {id:+id, ok, comment:comment || ""});
+  if (x.acts) { ST.acts = x.acts; draw(); }
+}
 function draw() {
   const p = ST.park, s = ST.stats, P = s.periods[PER];
   const link = (ST.site || location.origin) + "/p/" + (p.code || "");
@@ -145,6 +168,7 @@ function draw() {
       ${ST.payouts.length ? ST.payouts.map(x => `<div class="pay"><span><b>${new Date(x.at * 1000).toLocaleDateString("ru-RU")}, ${new Date(x.at * 1000).toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"})}</b>${x.note ? "<br><small>" + esc(x.note) + "</small>" : ""}</span><b style="color:#16764f">+${fmt(x.amount)} с</b></div>`).join("")
         + `<div class="pay" style="border:0"><span>Бардыгы</span><b>${fmt(s.paid)} с</b></div>`
         : `<p class="muted">Азырынча төлөм болгон жок. Биринчи төлөм — дүйшөмбү, ${dm(s.next_pay)}, саат ${s.pay_time.from}–${s.pay_time.to}.</p>`}</div>
+    ${actsCard()}
     <div class="grid">
       <div class="st"><span>Сапарлар</span><b>${P.rides}</b><i>Парктын айдоочулары бүтүргөн сапарлар</i></div>
       <div class="st"><span>Айдоочулар тапкан</span><b>${fmt(P.gross)} с</b><i>Ошол сапарлар үчүн жүргүнчүлөр төлөгөн жалпы акча</i></div>
@@ -181,6 +205,8 @@ function draw() {
     </div>
     <div class="note">Шарт: парктын айдоочулары төлөгөн комиссиянын <b>${shareTerm(p)}</b> + ар бир жаңы жүргүнчү үчүн <b>${fmt(p.ref_bonus)} сом</b>. Такси ТАП! комиссиясы азыр: ${ST.commission_pct}%. Төлөм — ар дүйшөмбүдө, саат ${s.pay_time.from}–${s.pay_time.to}.</div>`;
   document.querySelectorAll("[data-p]").forEach(b => b.onclick = () => { PER = b.dataset.p; draw(); });
+  document.querySelectorAll("[data-aok]").forEach(b => b.onclick = () => { if (confirm("Актты ырастайсызбы? Ырасталгандан кийин өзгөрбөйт.")) actAnswer(b.dataset.aok, true); });
+  document.querySelectorAll("[data-adis]").forEach(b => b.onclick = () => { const t = $("#ac" + b.dataset.adis).value.trim(); if (!t) return alert("Пикириңизди жазыңыз"); actAnswer(b.dataset.adis, false, t); });
   document.querySelectorAll("[data-rm]").forEach(b => b.onclick = async () => {
     if (!confirm("Айдоочуну парктан чыгарасызбы?")) return;
     await api("/api/park/remove_driver", {uid:b.dataset.rm}); refresh(); });

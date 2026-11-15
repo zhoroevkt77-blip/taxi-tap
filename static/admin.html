@@ -129,7 +129,7 @@ function viewMap() {
     <div class="card"><span>Онлайн айдоочу</span><b>${s.online}</b><span>${s.busy} сапарда${s.online_out ? ` · ${s.online_out} аймактан сыртта` : ""}</span></div>
     <div class="card"><span>Активдүү заказ</span><b>${s.active}</b><span>${s.searching} изделүүдө</span></div>
     <div class="card"><span>Бүгүн бүттү</span><b>${s.done_today}</b><span>${s.lost_today} айдоочусуз калды</span></div>
-    <div class="card"><span>Бүгүнкү жүгүртүү</span><b>${s.gross_today.toLocaleString("ru-RU")} с</b><span>комиссия ${s.fee_today} с</span></div></div>
+    <div class="card"><span>Бүгүн айдоочулар тапкан</span><b>${s.gross_today.toLocaleString("ru-RU")} с</b><span>комиссия ${s.fee_today} с</span></div></div>
     <div class="panel"><div class="item"><div class="main"><b>📞 Телефон аркылуу заказ</b>
       <span class="muted">Кардар чалса — «☎ Диспетчер» бөлүмүнөн заказ бериңиз.</span></div>
       <button class="btn gold" id="poOpen">☎ Диспетчер</button></div></div>
@@ -415,8 +415,12 @@ async function refresh() {
 // ---------- каржы ----------
 // ---------- Таксопарктар ----------
 async function viewParks(edit) {
-  const X = await api("/api/a/parks"), P = X.parks || [];
+  const X = await api("/api/a/parks"), P = X.parks || [], AC = (await api("/api/a/park_acts")).acts || [];
   const money = v => Math.round(v || 0).toLocaleString("ru-RU") + " с";
+  const MO = ["Январь","Февраль","Март","Апрель","Май","Июнь","Июль","Август","Сентябрь","Октябрь","Ноябрь","Декабрь"];
+  const plab = s => MO[+s.slice(5, 7) - 1] + " " + s.slice(0, 4);
+  const AST = {sent:["⏳ Жооп күтүлүүдө", "inherit"], ok:["✅ Ырасталды", "var(--ok)"], dispute:["❗ Пикир бар", "var(--bad)"]};
+  const pm = (() => { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return d.toISOString().slice(0, 7); })();
   const e = edit || {};
   $("#main").innerHTML = `
     <div class="panel"><h3>🏢 Таксопарктар (${P.length})</h3>
@@ -426,12 +430,21 @@ async function viewParks(edit) {
         <p class="muted" style="margin:6px 0 0">Парктарга ушул саат көрүнөт; сизге эскертүү дүйшөмбү күнү ушул саатта келет.</p></div></div>
       ${P.length ? P.map(p => `<div class="item"><div class="main"><b>${esc(p.name)}</b> ${p.active ? "" : '<span class="muted">· өчүк</span>'}
         <div class="muted">☎ ${esc(p.phone)} · үлүш ${shareTxt(p)} · жүргүнчү бонусу ${money(p.ref_bonus)} · промокод <b>${esc(p.promo || "—")}</b></div>
-        <div class="muted">Айдоочулар: ${p.drivers} (линияда ${p.online}) · Ушул ай: ${p.month.rides} сапар, ${money(p.month.gross)} жүгүртүү, тапканы <b>${money(p.month.earned)}</b></div>
+        <div class="muted">Айдоочулар: ${p.drivers} (линияда ${p.online}) · Ушул ай: ${p.month.rides} сапар, айдоочулар тапкан ${money(p.month.gross)}, тапканы <b>${money(p.month.earned)}</b></div>
         <div style="margin-top:4px;font-size:14px">📅 Бул дүйшөмбүдө төлөө (${esc(p.week)} чейин): <b style="color:${p.due > 0 ? "var(--ok)" : "inherit"}">${money(p.due)}</b>
           <span class="muted">· ушул апта: ${money(p.this_week)} · бардыгы төлөнгөн ${money(p.paid)}</span></div></div>
         <div class="acts"><a class="btn" href="/park?id=${p.id}" target="_blank">Кабинети</a>
           <button class="btn" data-ed="${p.id}">Өзгөртүү</button><button class="btn gold" data-pay="${p.id}">💸 Төлөдүм</button></div></div>`).join("")
         : `<div class="empty">Азырынча парк жок. Төмөндөн кошуңуз.</div>`}</div>
+    <div class="panel"><h3>📄 Акт салыштыруу</h3>
+      <div class="item"><div class="main" style="width:100%"><div class="muted">Ар айдын 1-күнү саат 9:00дө бардык парктарга мурунку ай үчүн акт автоматтык түрдө түзүлүп, Telegram'га кетет. Парк 10 күн ичинде жооп бербесе, сизге эскертүү келет.</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px"><select class="f" id="acP" style="margin:0;max-width:220px">${P.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join("")}</select>
+          <input class="f" id="acM" type="month" value="${pm}" style="margin:0;max-width:170px"><button class="btn gold" id="acGo">Акт түзүү / кайра эсептөө</button></div></div></div>
+      ${AC.length ? AC.map(x => `<div class="item"><div class="main"><b>${esc(x.park || "?")}</b> · ${plab(x.period)}
+        <div style="font-size:14px;color:${AST[x.status][1]}">${AST[x.status][0]}${x.comment ? ": " + esc(x.comment) : ""}</div>
+        <div class="muted">Тапкан ${money(x.data.due)} · төлөндү ${money(x.data.paid)} · калдык <b>${money(x.data.closing)}</b></div></div>
+        <div class="acts"><a class="btn" href="/act/${x.id}" target="_blank">📄 Ачуу</a>${x.status !== "ok" ? `<button class="btn" data-acr="${x.park_id}|${x.period}">↻ Кайра эсептөө</button>` : ""}</div></div>`).join("")
+        : `<div class="empty">Азырынча акт жок.</div>`}</div>
     <div class="panel"><h3>${e.id ? "✏️ " + esc(e.name) : "➕ Жаңы парк"}</h3><div class="fset">
       <div><label>Парктын аты</label><input class="f" id="pkN" value="${esc(e.name || "")}" placeholder="Нур-Такси"></div>
       <div><label>Ээсинин номери (ушул номер менен кабинетке кирет)</label><input class="f" id="pkP" value="${esc(e.phone || "")}" placeholder="0700 123 456"></div>
@@ -454,6 +467,11 @@ async function viewParks(edit) {
     viewParks();
   };
   if ($("#pkCancel")) $("#pkCancel").onclick = () => viewParks();
+  const mkAct = async (pid, per) => { const r = await api("/api/a/park_act", {park_id:+pid, period:per});
+    toast(r.ok ? "✓ Акт даяр, паркка кабар кетти" : "Ката", 2500); if (r.ok) viewParks(); };
+  if ($("#acGo")) $("#acGo").onclick = () => $("#acP").value ? mkAct($("#acP").value, $("#acM").value) : toast("Парк жок", 2000);
+  document.querySelectorAll("[data-acr]").forEach(b => b.onclick = () => { const [pid, per] = b.dataset.acr.split("|");
+    if (confirm("Актты кайра эсептейсизби? Парктын мурунку жообу өчөт.")) mkAct(pid, per); });
   document.querySelectorAll("[data-ed]").forEach(b => b.onclick = () => viewParks(P.find(p => p.id == b.dataset.ed)));
   $("#ptS").onclick = async () => { const r = await api("/api/a/park_pay_time", {from:$("#ptA").value, to:$("#ptB").value});
     toast(r.ok ? "✓ Төлөм убактысы сакталды" : "Убакыт туура эмес", 2500); };
@@ -488,10 +506,10 @@ async function viewFinance() {
     </div>
     <div class="cards">
       ${[["Бүгүн", "today"], ["Ушул жума", "week"], ["Ушул ай", "month"]].map(([t, k]) => `<div class="card"><span>${t}: комиссия</span><b>${money(T[k].commission)}</b>
-        <span>${T[k].rides} сапар · жүгүртүү ${money(T[k].gross)}</span></div>`).join("")}
+        <span>${T[k].rides} сапар · айдоочулар тапкан ${money(T[k].gross)}</span></div>`).join("")}
       <div class="card"><span>Ушул ай: толуктоолор</span><b>${money(T.month.topups)}</b><span>айдоочулар төлөгөн чектер</span></div>
     </div>
-    <div class="panel"><h3>Акыркы 6 ай — ${key === "commission" ? "комиссия" : "жүгүртүү (комиссия азырынча жок)"}</h3>
+    <div class="panel"><h3>Акыркы 6 ай — ${key === "commission" ? "комиссия" : "айдоочулар тапкан (комиссия азырынча жок)"}</h3>
       <div class="bars">${F.months.map(m => `<div><b>${m[key] ? m[key].toLocaleString("ru-RU") : ""}</b>
         <i style="height:${Math.round(100 * (m[key] || 0) / mx)}%"></i>${MN[+m.month.slice(5)]}</div>`).join("")}</div>
       <div style="height:12px"></div></div>

@@ -78,6 +78,18 @@ def tick():
     if pw:
         rows = "\n".join("• %s — %d сом" % (n, d) for n, d in pw)
         out += [note(a, "a_park_week", "/admin", rows=rows) for a in core.admins()]
+    for p, aid in parks.monthly_acts():
+        a = parks.act_get(aid)["data"]
+        if p.get("owner_uid"):
+            out.append(note(p["owner_uid"], "park_act", "/park", park=p["name"], month=parks.period_label(a["period"]),
+                            due=a["due"], paid=a["paid"], closing=a["closing"], days=parks.ACT_ANSWER_DAYS))
+    for r in parks.acts_late():
+        p = parks.get(r["park_id"]) or {}
+        mo = parks.period_label(r["period"])
+        if p.get("owner_uid"):
+            out.append(note(p["owner_uid"], "park_act_late", "/park", month=mo))
+        out += [note(a, "a_park_act_late", "/admin", park=p.get("name") or "?", month=mo, days=parks.ACT_ANSWER_DAYS)
+                for a in core.admins()]
     for uid, r in core.away_drivers():
         pu = core.get_user(r["passenger"]) or {}
         out.append(note(uid, "d_away_" + r["status"], "/driver", name=pu.get("name") or "Жүргүнчү",

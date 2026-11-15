@@ -268,6 +268,9 @@ SCHEMA = [
         promo TEXT, active INTEGER DEFAULT 1, created_at REAL)""",
     f"""CREATE TABLE IF NOT EXISTS park_payouts (
         id {_PK}, park_id INTEGER, amount REAL, note TEXT, at REAL)""",
+    f"""CREATE TABLE IF NOT EXISTS park_acts (
+        id {_PK}, park_id INTEGER, period TEXT, data TEXT, status TEXT DEFAULT 'sent',
+        comment TEXT, created_at REAL, answered_at REAL, reminded INTEGER DEFAULT 0)""",
     "CREATE INDEX IF NOT EXISTS idx_tx_kind ON balance_tx(kind, at)",
     "CREATE INDEX IF NOT EXISTS idx_drivers_online ON drivers(online, status)",
 ]
