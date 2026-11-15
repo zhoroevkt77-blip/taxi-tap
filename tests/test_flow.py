@@ -1124,6 +1124,24 @@ class ActivityKm(unittest.TestCase):
         self.assertEqual(core.activity_km(), 0.8)
 
 
+class EnclaveCity(unittest.TestCase):
+    def test_city_inside_district_hole(self):
+        sq = lambda a, b, c, d: [[b, a], [d, a], [d, c], [b, c], [b, a]]       # lat a..c, lon b..d
+        dist = {"type": "Polygon", "coordinates": [sq(40.0, 72.0, 41.0, 73.0), sq(40.4, 72.4, 40.6, 72.6)]}
+        city = {"type": "Polygon", "coordinates": [sq(40.4, 72.4, 40.6, 72.6)]}
+        old, on = dict(core._area), core.AREA_ON
+        core.AREA_ON = True
+        try:
+            core._area["units"] = [{"name": "Сузак району", "city": "Сузак", "gj": dist},
+                                   {"name": "Манас шаары", "city": "Манас", "gj": city}]
+            self.assertEqual(core.city_of(40.5, 72.5), "Манас")
+            self.assertEqual(core.city_of(40.2, 72.2), "Сузак")
+            core._area["units"] = core._area["units"][:1]                       # шаар тандалбаса — район
+            self.assertEqual(core.city_of(40.5, 72.5), "Сузак")
+        finally:
+            core._area.clear(); core._area.update(old); core.AREA_ON = on
+
+
 class CarPlate(unittest.TestCase):
     def test_norm_plate(self):
         self.assertEqual(core.norm_plate("04 KG 338 APG"), "04KG338APG")

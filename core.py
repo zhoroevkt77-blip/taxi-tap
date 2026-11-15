@@ -531,6 +531,22 @@ def _in_ring(lat, lon, ring):
     return inside
 
 
+def _polys(gj):
+    if not gj:
+        return []
+    return [gj["coordinates"]] if gj["type"] == "Polygon" else list(gj["coordinates"]) if gj["type"] == "MultiPolygon" else []
+
+
+def _in_gj(lat, lon, gj):
+    """Чекит полигондун ичиндеби — тешиктерди (ичиндеги шаарды) эске алат."""
+    return any(_in_ring(lat, lon, p[0]) and not any(_in_ring(lat, lon, h) for h in p[1:]) for p in _polys(gj))
+
+
+def _unit_size(u):
+    pts = [p for r in _rings(u["gj"]) for p in r] or [[0, 0]]
+    return (max(p[0] for p in pts) - min(p[0] for p in pts)) * (max(p[1] for p in pts) - min(p[1] for p in pts))
+
+
 def area_geojson():
     return _area["geojson"] or _bbox_geojson(AREA_BBOX)
 
@@ -714,8 +730,13 @@ def area_info():
                                                      (min(lons) + max(lons)) / 2)),
             "bbox": [min(lats), min(lons), max(lats), max(lons)],
             "geojson": gj, "source": _area["source"], "gen": area_gen(), "title": area_title(), "label": area_label(),
-            "units": [{"name": u["name"], "approx": u.get("approx")} for u in _area["units"]],
+            "units": [{"name": u["name"], "approx": u.get("approx"), "city": u.get("city")} for u in _area["units"]],
             "selection": area_selection()}
+
+
+def area_units_gj():
+    """Админ картасы үчүн: ар бир район/шаардын өз чеги."""
+    return [{"name": u["name"], "city": u.get("city"), "gj": u["gj"], "approx": u.get("approx")} for u in _area["units"]]
 
 
 def _custom_path():
@@ -843,7 +864,11 @@ def _load_area_base(fetch=True):
 
 def city_of(lat, lon):
     if AREA_ON:
-        for u in _area["units"]:
+        units = _area["units"]
+        for u in sorted(units, key=_unit_size):          # кичине (шаар) биринчи — райондун ичиндеги шаар
+            if _in_gj(lat, lon, u["gj"]):
+                return u["city"]
+        for u in sorted(units, key=_unit_size):          # тешиктин ичи, бирок шаар тандалбаса — район
             if any(_in_ring(lat, lon, r) for r in _rings(u["gj"])):
                 return u["city"]
         return AREA_CITY if in_area(lat, lon) else None

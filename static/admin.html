@@ -7,6 +7,7 @@
 <title>Такси ТАП! — Админ</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
+.ulbl span{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;font:800 12px/1 system-ui;color:#17365C;background:#fffc;padding:3px 6px;border-radius:8px}
 :root{--navy:#17365C;--gold:#C9A03A;--gold2:#E3C368;--ink:#152741;--soft:#5A6880;--paper:#F1F4F9;--line:#E1E7F1;--ok:#1D9E75;--bad:#D8443A;--warn:#BA7517}
 *{box-sizing:border-box}
 html,body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--paper)}
@@ -565,8 +566,17 @@ async function viewArea() {
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:"© OpenStreetMap"}).addTo(amap);
   alyr = L.layerGroup().addTo(amap);
   const rings = areaRings(a.geojson).map(r => r.map(([lon, lat]) => [lat, lon]));
-  rings.forEach(r => L.polygon(r, {color:"#17365C", weight:2, fillColor:"#1D9E75", fillOpacity:.12}).addTo(alyr));
+  rings.forEach(r => L.polygon(r, {color:"#17365C", weight:1, fill:false, dashArray:"4 4"}).addTo(alyr));
   if (rings.length) amap.fitBounds(L.latLngBounds(rings.flat()), {padding:[20, 20]});
+  api("/api/a/area_units").then(x => {                  // ар бир район/шаар өз түсү жана аты менен
+    const COL = ["#1D9E75", "#378ADD", "#D85A30", "#7F77DD", "#D4537E", "#BA7517"];
+    const sz = u => { const b = L.geoJSON(u.gj).getBounds(); return (b.getNorth() - b.getSouth()) * (b.getEast() - b.getWest()); };
+    [...(x.units || [])].sort((p, q) => sz(q) - sz(p)).forEach((u, i) => {
+      const c = COL[i % COL.length], g = L.geoJSON(u.gj, {style:{color:c, weight:u.name.endsWith("шаары") ? 3 : 2, fillColor:c, fillOpacity:.15}}).addTo(alyr);
+      g.bindTooltip(`${esc(u.name)}${u.approx ? " (5 км тегерек)" : ""} · тариф: «${esc(u.city)}»`, {sticky:true});
+      L.marker(g.getBounds().getCenter(), {interactive:false, icon:L.divIcon({className:"ulbl", html:`<span>${esc(u.name)}</span>`, iconSize:[0, 0]})}).addTo(alyr);
+    });
+  }).catch(() => {});
   draw = null; areaTools(a);
   amap.on("click", e => { if (!draw) return; draw.push([e.latlng.lat, e.latlng.lng]); drawPreview(); });
 }
