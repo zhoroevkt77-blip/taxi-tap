@@ -699,7 +699,7 @@ setTimeout(loadHeat, 1500); heatT = setInterval(loadHeat, 45000);
 // ---------- Жакын жердеги линиядагы таксилер ----------
 const peerLayer = L.layerGroup().addTo(map);
 let peerOn = (() => { try { return localStorage.peerOff !== "1"; } catch (e) { return true; } })();
-const carSvg = busy => `<svg viewBox="0 0 24 40" width="18" height="30"><rect x="2" y="2" width="20" height="36" rx="7" fill="${busy ? "#9a9aa3" : "#FFC21A"}" stroke="#1d1d22" stroke-width="2"/><rect x="5" y="9" width="14" height="7" rx="2" fill="#1d1d22" opacity=".75"/><rect x="5" y="27" width="14" height="5" rx="2" fill="#1d1d22" opacity=".55"/></svg>`;
+const carImg2 = busy => `<img src="/static/peer_${busy ? "busy" : "free"}.webp?v=1" alt="" style="width:46px;height:auto;display:block">`;
 async function loadPeers() {
   peerLayer.clearLayers();
   if (!D || D.status !== "active" || !D.online || D.ride) return;
@@ -709,12 +709,12 @@ async function loadPeers() {
   $("#peerBtn").classList.toggle("on", peerOn);
   if (!peerOn) return;
   ps.forEach((p, i) => L.marker([p.lat, p.lon], {interactive:false, zIndexOffset:-100,
-    icon:L.divIcon({className:"peer", iconSize:[18, 30], iconAnchor:[9, 15], html:`<div style="transform:rotate(${(i * 67) % 360}deg)">${carSvg(p.busy)}</div>`})}).addTo(peerLayer));
+    icon:L.divIcon({className:"peer", iconSize:[46, 42], iconAnchor:[23, 21], html:`<div style="transform:scaleX(${i % 2 ? -1 : 1})">${carImg2(p.busy)}</div>`})}).addTo(peerLayer));
 }
 $("#peerBtn").onclick = () => {
   peerOn = !peerOn; try { localStorage.peerOff = peerOn ? "0" : "1"; } catch (e) {}
   loadPeers();
-  toast(peerOn ? `🚕 Жакын (${3} км) линиядагы таксилер: сары — бош, боз — заказда. Так жайгашуу көрсөтүлбөйт.` : "Таксилер картадан жашырылды", 3000);
+  toast(peerOn ? `🚕 Жакын (${3} км) линиядагы таксилер: сары — бош, ак — заказда. Так жайгашуу көрсөтүлбөйт.` : "Таксилер картадан жашырылды", 3000);
 };
 setTimeout(loadPeers, 2000); setInterval(loadPeers, 15000);
 const actColor = a => (a ?? 100) >= 70 ? "var(--ok)" : (a ?? 100) >= 40 ? "#d18a00" : "var(--bad)";

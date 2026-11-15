@@ -69,7 +69,7 @@ try:
         dv.goto(URL + "/driver"); dv.fill("#nm", "Бакыт"); dv.fill("#ph", "0700 555 001"); dv.check("#agree"); dv.click("#go")
         dv.wait_for_timeout(1500); core.driver_location(DRV, *DSTART, live_period=3600)
         dv.evaluate("refresh().then(loadPeers)"); dv.wait_for_timeout(1200)
-        frame(dv, "Линияда — жакын таксилер картада", "Сары — бош, боз — заказда · 3 км ичинде", 800)
+        frame(dv, "Линияда — жакын таксилер картада", "Сары — бош, ак — заказда · 3 км ичинде", 800)
         dv.evaluate("SHEET.collapse && SHEET.collapse()")
         frame(dv, "Панелди жапканда — карта толук", "🚕 6 · 4 бош — жакын жерде канча такси бар", 900)
         dv.click("#peerBtn")
