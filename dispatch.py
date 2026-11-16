@@ -78,6 +78,11 @@ def tick():
     if pw:
         rows = "\n".join("• %s — %d сом" % (n, d) for n, d in pw)
         out += [note(a, "a_park_week", "/admin", rows=rows) for a in core.admins()]
+    core.auto_daily()
+    tune = core.auto_tune()
+    if tune:
+        rows = "\n".join("• %s: ×%.2f → ×%.2f — %s" % (x["city"], x["old"], x["new"], x["why"]) for x in tune)
+        out += [note(a, "a_auto_report", "/admin", rows=rows) for a in core.admins()]
     for p, aid in parks.monthly_acts():
         a = parks.act_get(aid)["data"]
         if p.get("owner_uid"):

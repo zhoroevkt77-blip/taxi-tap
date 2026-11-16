@@ -1023,6 +1023,42 @@ class ParkWeekly(unittest.TestCase):
         core.query("DELETE FROM parks WHERE id=?", (pid,))
 
 
+class AutoPrice(unittest.TestCase):
+    def test_traffic_and_tune(self):
+        core.init_db()
+        for k in ("traffic_model", "auto_k", "autoprice", "auto_hist"):
+            core.set_setting(k, None)
+        C = "ТестШаар"
+        h0 = core.now() - core.now() % 86400 - core.TZ + 8 * 3600 - 86400      # кечээ 08:00 Бишкек
+        for i in range(10):
+            rid = core.query("INSERT INTO rides (passenger, city, status, est_min, started_at, completed_at, created_at) "
+                             "VALUES ('x', ?, 'completed', 10, ?, ?, ?)", (C, h0 + i * 60, h0 + i * 60 + 13 * 60, h0), "id")
+        m = core.build_traffic_model()
+        self.assertEqual(m[C]["8"], 1.3)
+        self.assertEqual(core.traffic_k(C, h0 + 300), 1.3)
+        self.assertIsNone(core.traffic_k(C, h0 + 5 * 3600))
+        # жүргүнчүлөр көп кетет, айдоочулар алат → арзандатуу
+        for i in range(40):
+            core.query("INSERT INTO quote_log (uid, city, price, at, ordered) VALUES (?, ?, 100, ?, ?)",
+                       ("u%d" % i, C, core.now() - 3600, 1 if i < 8 else 0))
+        for i in range(25):
+            core.query("INSERT INTO offer_log (ride_id, driver, city, result, at) VALUES (1, 'd', ?, ?, ?)",
+                       (C, "accept" if i < 22 else "miss", core.now() - 3600))
+        rows = [x for x in core.auto_tune(force=True) if x["city"] == C]
+        self.assertEqual(rows[0]["new"], 0.97)
+        self.assertEqual(core.auto_k(C), 0.97)
+        core.set_auto_cfg(True, 0.98, 1.1)
+        self.assertEqual(core.auto_k(C), 0.98)                 # чектен төмөн түшпөйт
+        self.assertFalse(core.set_auto_cfg(True, 1.2, 1.1))
+        core.set_auto_cfg(False, 0.85, 1.15)
+        self.assertEqual(core.auto_k(C), 1.0)
+        self.assertIsNone(core.traffic_k(C, h0 + 300))
+        for q in ("DELETE FROM rides WHERE city=?", "DELETE FROM quote_log WHERE city=?", "DELETE FROM offer_log WHERE city=?"):
+            core.query(q, (C,))
+        for k in ("traffic_model", "auto_k", "autoprice", "auto_hist"):
+            core.set_setting(k, None)
+
+
 class ParkActs(unittest.TestCase):
     def test_monthly_act(self):
         import parks

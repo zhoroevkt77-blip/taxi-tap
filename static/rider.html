@@ -540,7 +540,7 @@ async function viewQuote() {
   if (!q.classes.some(c => c.id === S.cls)) S.cls = q.classes[0].id;
   const ICON = {econom:'<img class="clsimg side" src="/static/car_sary.webp?v=4" alt="">', comfort:"🚘", minivan:"🚐",
     delivery:'<img class="clsimg" src="/static/h_box.webp?v=9" alt="">'};
-  const sub = q.price ? `${q.dist_km} км · ~${q.minutes} мүн` : `отуруу ${Math.round(q.tariff.base)} с + ${Math.round(q.tariff.per_km)} с/км`;
+  const sub = q.price ? `${q.dist_km} км · ~${q.minutes} мүн${q.peak && !q.fixed ? " · 🚦 пик саат" : ""}` : `отуруу ${Math.round(q.tariff.base)} с + ${Math.round(q.tariff.per_km)} с/км`;
   const cur = () => q.classes.find(c => c.id === S.cls);
   const priceTxt = c => c.price ? `${c.price} с` : `${c.min} с+`;
   render(`<div class="row"><span class="bul lt">А</span><div style="flex:1"><b>${esc(S.fromAddr)}</b></div><input class="hn" id="hnF" placeholder="үй №" maxlength="12" value="${esc(S.hnF || "")}"></div>

@@ -374,8 +374,9 @@ async function viewTariffs() {
       <div><label>Активдүүлүгү 0 болгон айдоочу канча км «алысыраак» эсептелет</label><input class="f" id="akm" inputmode="decimal" value="${actKm}"></div></div>
       <div style="padding:0 14px 14px"><button class="btn gold" id="akSave">Сактоо</button> <span class="muted" id="akMsg"></span>
       <p class="muted">Заказ эң жакын айдоочуга берилет. Активдүүлүгү 50 болсо — жарымы (${actKm} → +${+(actKm / 2).toFixed(2)} км). Демейки 0.8 км; 0 — таасири жок, чоңойтсоңуз активдүү айдоочуга көбүрөөк артыкчылык (жүргүнчү узагыраак күтүшү мүмкүн).</p></div></div>
+    <div class="panel" id="apP"></div>
     <div class="panel" id="fxP"></div>`;
-  fixedPanel();
+  fixedPanel(); autoPanel();
   $("#akSave").onclick = async () => {
     const x = await api("/api/a/activity_km", {km:$("#akm").value});
     $("#akMsg").textContent = x.error ? "Текшериңиз: 0–5 км." : "✓ Сакталды";
@@ -414,6 +415,34 @@ async function refresh() {
 }
 // ---------- каржы ----------
 // ---------- Таксопарктар ----------
+async function autoPanel() {
+  const X = await api("/api/a/autoprice"); if (!X || X.error) return;
+  const c = X.cfg, pct = v => v == null ? "—" : Math.round(v * 100) + "%";
+  const cities = Object.keys(X.k);
+  const tr = X.traffic || {};
+  $("#apP").innerHTML = `<h3>🤖 Автоматтык баа жана пробка</h3>
+    <div class="item"><div class="main" style="width:100%">
+      <label style="display:flex;gap:8px;align-items:center;font-weight:700"><input type="checkbox" id="apOn" ${c.on ? "checked" : ""}> Күйүк</label>
+      <p class="muted" style="margin:6px 0">Система ар дүйшөмбүдө өткөн жуманы карайт: жүргүнчүлөр бааны көрүп заказ бербей кетсе — 3% арзандатат,
+        айдоочулар заказдан көп баш тартса — 3% кымбаттатат. Пробка: бүткөн сапарлардын чыныгы убактысынан ар бир саат үчүн өзү үйрөнөт.
+        Маалымат аз болсо (${X.min_quotes} баа көрүү / ${X.min_offers} сунуш жумасына) — эч нерсе өзгөрбөйт.</p>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">Чек: <input class="f" id="apMin" value="${c.kmin}" inputmode="decimal" style="margin:0;max-width:80px"> –
+        <input class="f" id="apMax" value="${c.kmax}" inputmode="decimal" style="margin:0;max-width:80px"><button class="btn gold" id="apSave">Сактоо</button>
+        <button class="btn" id="apRun">Азыр эсептөө</button></div></div></div>
+    ${cities.length ? cities.map(ct => { const m = X.metrics[ct] || {}, k = X.k[ct], t = tr[ct] || {};
+      const hrs = Object.keys(t).sort((a, b) => a - b);
+      return `<div class="item"><div class="main"><div style="font-size:16px"><span style="font-weight:800">${esc(ct)}</span> · баа <span style="font-weight:800;color:${k < 1 ? "var(--ok)" : k > 1 ? "var(--bad)" : "inherit"}">×${k.toFixed(2)}</span>${k < 1 ? " (арзандатылган)" : k > 1 ? " (кымбаттатылган)" : ""}</div>
+        <div class="muted">7 күн: ${m.quotes} жолу баа көрүлдү, ${m.ordered} заказ (${pct(m.conv)}) · айдоочуга ${m.offers} сунуш, баш тартуу ${pct(m.miss)}</div>
+        <div class="muted">🚦 Пробка: ${hrs.length ? hrs.map(h => `${h}:00 ×${t[h]}`).join(" · ") : "азырынча маалымат аз"}</div></div></div>`; }).join("")
+      : `<div class="empty">Азырынча маалымат жок.</div>`}
+    ${(X.hist || []).length ? `<div class="item"><div class="main"><b>Акыркы өзгөрүүлөр</b>${X.hist.slice().reverse().map(h => `<div class="muted">${new Date(h.at * 1000).toLocaleDateString("ru-RU")}: ${h.rows.map(r => `${esc(r.city)} ×${r.old.toFixed(2)}→×${r.new.toFixed(2)} (${esc(r.why)})`).join("; ") || "—"}</div>`).join("")}</div></div>` : ""}`;
+  const save = () => api("/api/a/autoprice", {on:$("#apOn").checked, kmin:+$("#apMin").value, kmax:+$("#apMax").value});
+  $("#apSave").onclick = async () => { const r = await save(); toast(r.ok ? "✓ Сакталды" : "Чек туура эмес: мис. 0.85 – 1.15", 2500); if (r.ok) autoPanel(); };
+  $("#apOn").onchange = async () => { await save(); autoPanel(); };
+  $("#apRun").onclick = async () => { if (!confirm("Азыр эсептейинби? Маалымат жетиштүү болсо баа өзгөрөт.")) return;
+    const r = await api("/api/a/autoprice_run", {}); toast("✓ Эсептелди", 2000); autoPanel(); };
+}
+
 async function viewParks(edit) {
   const X = await api("/api/a/parks"), P = X.parks || [], AC = (await api("/api/a/park_acts")).acts || [];
   const money = v => Math.round(v || 0).toLocaleString("ru-RU") + " с";

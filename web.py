@@ -528,9 +528,11 @@ class H(BaseHTTPRequestHandler):
                 return self._json({"error": "dest_out"})
             t = q["tariff"]
             cfg = core.class_config()
+            if d:
+                core.log_quote(uid, q["city"], q["price"])
             return self._json({"city": q["city"], "price": q["price"], "dist_km": q["dist_km"],
                                "minutes": q.get("minutes"), "surge": q["surge"], "fixed": q.get("fixed"),
-                               "route": (q.get("route") or {}).get("coords"),
+                               "peak": q.get("peak"), "route": (q.get("route") or {}).get("coords"),
                                "classes": [{"id": c, "name": cfg[c]["name"], "price": pr,
                                             "min": int(t["min_price"] * cfg[c]["k"])}
                                            for c, pr in q["prices"].items()],
@@ -570,6 +572,7 @@ class H(BaseHTTPRequestHandler):
             at = _num(b.get("at"))
             if at is not None and not (core.now() + core.SCHEDULE_MIN - 120 <= at <= core.now() + core.SCHEDULE_MAX):
                 return self._json({"error": "bad_time"}, 400)
+            core.mark_quote_ordered(uid)
             rid = core.create_ride(uid, q, p[0], p[1], *(d or (None, None)), promo=promo, discount=disc,
                                    scheduled_at=at, note=_txt(b.get("note"), 200) or None,
                                    other_name=other_name, other_phone=other_phone,
@@ -780,6 +783,12 @@ class H(BaseHTTPRequestHandler):
             return self._json({"parks": parks.admin_list(), "pay_time": parks.pay_time()})
         if action == "park_acts":
             return self._json({"acts": parks.acts(limit=60)})
+        if action == "autoprice":
+            cities = sorted({u.get("city") for u in core._area.get("units", []) if u.get("city")} | set((core.get_setting("auto_k") or {}).keys()))
+            return self._json({"cfg": core.auto_cfg(), "k": {c: core.auto_k(c) for c in cities},
+                               "metrics": {c: core.auto_metrics(c) for c in cities},
+                               "traffic": core.get_setting("traffic_model") or {}, "hist": (core.get_setting("auto_hist") or [])[-5:],
+                               "min_quotes": core.AUTO_MIN_QUOTES, "min_offers": core.AUTO_MIN_OFFERS})
         if action == "area_units":
             return self._json({"units": core.area_units_gj()})
         if action == "fixed_routes":
@@ -809,7 +818,8 @@ class H(BaseHTTPRequestHandler):
             return self._json({"promos": core.list_promos()})
         if action == "tariffs":
             return self._json({"tariffs": core.all_tariffs(), "classes": core.class_config(),
-                               "wait": core.wait_config(), "activity_km": core.activity_km()})
+                               "wait": core.wait_config(), "activity_km": core.activity_km(),
+                               "peak": core.peak_config(), "yx": core.get_setting("yx") or {"rows": [], "pct": 11}})
         if action == "finance":
             return self._json(core.admin_finance())
         if action == "backup":
@@ -842,6 +852,12 @@ class H(BaseHTTPRequestHandler):
         if action == "park_pay_time":
             ok = parks.set_pay_time(_txt(b.get("from"), 5), _txt(b.get("to"), 5))
             return self._json({"ok": ok, "pay_time": parks.pay_time()}, 200 if ok else 400)
+        if action == "autoprice":
+            ok = core.set_auto_cfg(b.get("on") is not False, b.get("kmin"), b.get("kmax"))
+            return self._json({"ok": ok, "cfg": core.auto_cfg()}, 200 if ok else 400)
+        if action == "autoprice_run":
+            model = core.build_traffic_model()
+            return self._json({"ok": True, "rows": core.auto_tune(force=True), "traffic": model})
         if action == "park_act":                         # акт түзүү / кайра эсептөө
             pk = parks.get(int(b.get("park_id") or 0))
             per = _txt(b.get("period"), 7) or parks.prev_period()
@@ -912,6 +928,19 @@ class H(BaseHTTPRequestHandler):
             if not core.set_class_config(b.get("classes")):
                 return self._json({"error": "bad"}, 400)
             return self._json({"classes": core.class_config()})
+        if action == "peak":
+            ok = core.set_peak(b.get("ranges"), b.get("k"))
+            return self._json({"ok": ok, "peak": core.peak_config()}, 200 if ok else 400)
+        if action == "yx_rows":                       # Яндекс менен салыштыруу: сапарлар
+            rows = []
+            for x in (b.get("rows") or [])[:30]:
+                km, mi, pr = _num(x.get("km")), _num(x.get("min")), _num(x.get("price"))
+                if None in (km, mi, pr) or not (0 < km < 200 and 0 < mi < 300 and 0 < pr < 20000):
+                    return self._json({"error": "bad"}, 400)
+                rows.append({"city": _txt(x.get("city"), 60), "km": km, "min": mi, "price": pr})
+            pct = _num(b.get("pct"))
+            core.set_setting("yx", {"rows": rows, "pct": pct if pct is not None and 0 <= pct <= 50 else 11})
+            return self._json({"ok": True})
         if action == "activity_km":
             if not core.set_activity_km(_num(b.get("km"))):
                 return self._json({"error": "bad"}, 400)

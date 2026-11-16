@@ -268,6 +268,11 @@ SCHEMA = [
         promo TEXT, active INTEGER DEFAULT 1, created_at REAL)""",
     f"""CREATE TABLE IF NOT EXISTS park_payouts (
         id {_PK}, park_id INTEGER, amount REAL, note TEXT, at REAL)""",
+    f"""CREATE TABLE IF NOT EXISTS quote_log (
+        id {_PK}, uid TEXT, city TEXT, price REAL, at REAL, ordered INTEGER DEFAULT 0)""",
+    f"""CREATE TABLE IF NOT EXISTS offer_log (
+        id {_PK}, ride_id INTEGER, driver TEXT, city TEXT, result TEXT, at REAL)""",
+    "CREATE INDEX IF NOT EXISTS idx_quote_log ON quote_log(uid, at)",
     f"""CREATE TABLE IF NOT EXISTS park_acts (
         id {_PK}, park_id INTEGER, period TEXT, data TEXT, status TEXT DEFAULT 'sent',
         comment TEXT, created_at REAL, answered_at REAL, reminded INTEGER DEFAULT 0)""",
@@ -307,6 +312,7 @@ NEW_COLUMNS = {
                 "car_year": "INTEGER"},                  # күндүк максат (сом)                # күбөлүктүн мөөнөтү YYYY-MM-DD                # таксопарк (жок болсо — өз алдынча)   # активдүүлүк 0..100 (Яндекс Pro'догудай)              # аймактан сыртка чыккан убакыт
     "balance_tx": {"claimed": "REAL"},
     "rides": {"note": "TEXT", "source": "TEXT",   # source: web | phone (диспетчер)
+              "est_min": "REAL",                           # маршруттун пробкасыз убактысы (автоматтык баа үчүн)
               "promo": "TEXT", "discount": "REAL DEFAULT 0",
               "scheduled_at": "REAL",                      # алдын ала заказ
               "cls": "TEXT",                               # econom | comfort | minivan | delivery
@@ -1031,6 +1037,180 @@ def route(lat1, lon1, lat2, lon2):
     return out
 
 
+# ==================== Пик сааттары (пробка) ====================
+# Админ коёт: мис. 07:30–09:30, 17:00–19:30 → ошол сааттарда сапардын убактысы ×k эсептелет.
+def peak_config():
+    s = get_setting("peak") or {}
+    return {"ranges": s.get("ranges") or [], "k": float(s.get("k") or 1.3)}
+
+
+def _hm_ok(x):
+    return isinstance(x, str) and len(x) == 5 and x[2] == ":" and x[:2].isdigit() and x[3:].isdigit() \
+        and int(x[:2]) < 24 and int(x[3:]) < 60
+
+
+def set_peak(ranges, k):
+    try:
+        k = float(k)
+    except (TypeError, ValueError):
+        return False
+    rs = [[a, b] for a, b in (ranges or []) if _hm_ok(a) and _hm_ok(b) and a != b]
+    if len(rs) != len(ranges or []) or len(rs) > 6 or not 1.0 <= k <= 3.0:
+        return False
+    set_setting("peak", {"ranges": rs, "k": k})
+    return True
+
+
+def peak_k(at=None):
+    cfg = peak_config()
+    lt = time.gmtime((at if at is not None else now()) + TZ)
+    m = lt.tm_hour * 60 + lt.tm_min
+    for a, b in cfg["ranges"]:
+        x, y = int(a[:2]) * 60 + int(a[3:]), int(b[:2]) * 60 + int(b[3:])
+        if (x <= m < y) if x < y else (m >= x or m < y):        # түн ортосунан өтсө да
+            return cfg["k"]
+    return 1.0
+
+
+# ==================== Автоматтык баа жана пробка ====================
+# 1) Пробка: бүткөн сапарлардын чыныгы убактысы / маршруттун убактысы → ар бир саат үчүн коэффициент.
+# 2) Баа: жума сайын — жүргүнчүлөр бааны көрүп заказ бербей кетсе арзандатат,
+#    айдоочулар заказдан баш тартса кымбаттатат (±3%, админ койгон чекте).
+AUTO_DEF = {"on": True, "kmin": 0.85, "kmax": 1.15, "step": 0.03}
+TRAFFIC_MIN_N = 8          # бир саатка ушунча сапар болгондо гана ишенебиз
+AUTO_MIN_QUOTES, AUTO_MIN_OFFERS = 30, 20
+
+
+def auto_cfg():
+    return dict(AUTO_DEF, **(get_setting("autoprice") or {}))
+
+
+def set_auto_cfg(on, kmin, kmax):
+    try:
+        kmin, kmax = float(kmin), float(kmax)
+    except (TypeError, ValueError):
+        return False
+    if not (0.5 <= kmin <= 1.0 <= kmax <= 1.5):
+        return False
+    set_setting("autoprice", {"on": bool(on), "kmin": kmin, "kmax": kmax})
+    return True
+
+
+def auto_k(city):
+    cfg = auto_cfg()
+    if not cfg["on"] or not city:
+        return 1.0
+    v = float((get_setting("auto_k") or {}).get(city, 1.0))
+    return max(cfg["kmin"], min(cfg["kmax"], v))
+
+
+def traffic_k(city, at=None):
+    if not auto_cfg()["on"] or not city:
+        return None
+    h = time.gmtime((at if at is not None else now()) + TZ).tm_hour
+    return ((get_setting("traffic_model") or {}).get(city) or {}).get(str(h))
+
+
+def log_quote(uid, city, price):
+    """Бааны көргөн жүргүнчү (30 мүнөттө бир жолу эсептелет)."""
+    if not uid or not city or not price:
+        return
+    r = query("SELECT id FROM quote_log WHERE uid=? AND at>? AND ordered=0 ORDER BY id DESC LIMIT 1",
+              (uid, now() - 1800), "one")
+    if r:
+        query("UPDATE quote_log SET city=?, price=?, at=? WHERE id=?", (city, price, now(), r["id"]))
+    else:
+        query("INSERT INTO quote_log (uid, city, price, at) VALUES (?, ?, ?, ?)", (uid, city, price, now()))
+
+
+def mark_quote_ordered(uid):
+    r = query("SELECT id FROM quote_log WHERE uid=? AND at>? ORDER BY id DESC LIMIT 1", (uid, now() - 1800), "one")
+    if r:
+        query("UPDATE quote_log SET ordered=1 WHERE id=?", (r["id"],))
+
+
+def log_offer(r, driver, result):
+    if r:
+        query("INSERT INTO offer_log (ride_id, driver, city, result, at) VALUES (?, ?, ?, ?, ?)",
+              (r["id"], driver, r.get("city"), result, now()))
+
+
+def build_traffic_model(days=30):
+    rows = query("SELECT city, est_min, started_at, completed_at FROM rides WHERE status='completed' AND est_min>0 "
+                 "AND started_at IS NOT NULL AND completed_at>?", (now() - days * 86400,), "all")
+    groups = {}
+    for r in rows:
+        real = (r["completed_at"] - r["started_at"]) / 60.0
+        if real <= 0 or r["est_min"] < 2:
+            continue
+        h = time.gmtime(r["started_at"] + TZ).tm_hour
+        groups.setdefault(r["city"], {}).setdefault(str(h), []).append(real / r["est_min"])
+    model = {}
+    for city, hs in groups.items():
+        for h, xs in hs.items():
+            if len(xs) >= TRAFFIC_MIN_N:
+                xs.sort()
+                med = xs[len(xs) // 2]
+                if med > 1.05:
+                    model.setdefault(city, {})[h] = round(min(1.8, med), 2)
+    set_setting("traffic_model", model)
+    return model
+
+
+def auto_metrics(city, days=7):
+    since = now() - days * 86400
+    q = query("SELECT COUNT(*) AS n, COALESCE(SUM(ordered),0) AS o FROM quote_log WHERE city=? AND at>?",
+              (city, since), "one")
+    o = query("SELECT result, COUNT(*) AS n FROM offer_log WHERE city=? AND at>? GROUP BY result", (city, since), "all")
+    off = {x["result"]: int(x["n"]) for x in o}
+    acc, miss = off.get("accept", 0), off.get("miss", 0)
+    nq = int(q["n"] or 0)
+    return {"quotes": nq, "ordered": int(q["o"] or 0), "conv": round(int(q["o"] or 0) / nq, 2) if nq else None,
+            "offers": acc + miss, "miss": round(miss / (acc + miss), 2) if acc + miss else None}
+
+
+def auto_tune(force=False):
+    """Дүйшөмбү 04:00дөн кийин жумасына бир жолу. Кайтарат: [(шаар, эски, жаңы, себеп, метрика)]."""
+    cfg = auto_cfg()
+    lt = time.gmtime(now() + TZ)
+    week = time.strftime("%Y-%W", lt)
+    if not force:
+        if not cfg["on"] or lt.tm_wday != 0 or lt.tm_hour < 4 or get_setting("auto_week") == week:
+            return []
+        set_setting("auto_week", week)
+    ks = dict(get_setting("auto_k") or {})
+    out = []
+    for city in [r["city"] for r in query("SELECT DISTINCT city FROM quote_log WHERE at>? AND city IS NOT NULL",
+                                          (now() - 7 * 86400,), "all")]:
+        m = auto_metrics(city)
+        old = float(ks.get(city, 1.0))
+        new, why = old, "өзгөргөн жок"
+        if m["quotes"] < AUTO_MIN_QUOTES or m["offers"] < AUTO_MIN_OFFERS:
+            why = "маалымат аз"
+        elif m["conv"] < 0.35 and m["miss"] < 0.25:
+            new, why = old - cfg["step"], "жүргүнчүлөр көп кетип калды — арзандатылды"
+        elif m["miss"] > 0.40 and m["conv"] > 0.50:
+            new, why = old + cfg["step"], "айдоочулар көп баш тартты — кымбаттатылды"
+        new = round(max(cfg["kmin"], min(cfg["kmax"], new)), 2)
+        ks[city] = new
+        out.append({"city": city, "old": old, "new": new, "why": why, "m": m})
+    set_setting("auto_k", ks)
+    hist = (get_setting("auto_hist") or [])[-19:] + [{"at": now(), "rows": out}]
+    set_setting("auto_hist", hist)
+    return out
+
+
+def auto_daily():
+    """Күнүнө бир жолу 04:00дө — пробка моделин жаңылоо."""
+    lt = time.gmtime(now() + TZ)
+    day = time.strftime("%Y-%m-%d", lt)
+    if lt.tm_hour < 4 or get_setting("traffic_day") == day:
+        return False
+    set_setting("traffic_day", day)
+    build_traffic_model()
+    return True
+
+
 def price_of(t, km, minutes, k=1.0):
     """Баа = max(минимум, отуруу + км×a + мүн×b) × k, жакынкы 10 сомго тегеректелет."""
     raw = (t["base"] + t["per_km"] * km + t["per_min"] * minutes) * k
@@ -1093,15 +1273,19 @@ def quote(p_lat, p_lon, d_lat=None, d_lon=None, cls="econom"):
     if d_lat is None:
         return base
     rt = route(p_lat, p_lon, d_lat, d_lon)
-    km, minutes = rt["km"], rt["min"]
+    pk = traffic_k(city) or peak_k()                       # үйрөнгөн пробка, болбосо кол менен коюлган пик
+    km, minutes = rt["km"], rt["min"] * pk                 # пик саатта жол узагыраак
+    if pk > 1.05:
+        base["peak"] = round(pk, 2)
+    ak = auto_k(city)
     fx = fixed_match(p_lat, p_lon, d_lat, d_lon)
     if fx:
         prices = {c: int(round(fx["price"] * cfg[c]["k"] / 10.0) * 10) for c in cfg if cfg[c]["on"]}
         return dict(base, surge=1.0, dist_km=round(km, 1), minutes=round(minutes), price=prices[cls],
                     prices=prices, route=rt, fixed=fx["label"])
-    prices = {c: price_of(t, km, minutes, k * cfg[c]["k"]) for c in cfg if cfg[c]["on"]}
+    prices = {c: price_of(t, km, minutes, k * cfg[c]["k"] * ak) for c in cfg if cfg[c]["on"]}
     return dict(base, dist_km=round(km, 1), minutes=round(minutes), price=prices[cls],
-                prices=prices, route=rt)
+                prices=prices, route=rt, auto=ak)
 
 
 # ==================== Класстар ====================
@@ -1211,6 +1395,9 @@ def create_ride(passenger, q, p_lat, p_lon, d_lat=None, d_lon=None, note=None, s
                  q["price"], q["surge"], status, now(), note, source, promo,
                  discount or 0, scheduled_at, q.get("cls") or "econom", other_name, other_phone,
                  p_addr, d_addr), "id")
+    est = (q.get("route") or {}).get("min")
+    if est:
+        query("UPDATE rides SET est_min=? WHERE id=?", (est, rid))
     log_event(rid, status, passenger)
     return rid
 
@@ -1269,6 +1456,7 @@ def mark_tried(rid, driver):
               "AND offered_to=?", (json.dumps(tried), rid, driver), "count")
     if n:
         add_activity(driver, ACT_SKIP)             # сунуштан баш тартты / жооп бербеди
+        log_offer(r, driver, "miss")
 
 
 def accept(rid, driver):
@@ -1281,6 +1469,7 @@ def accept(rid, driver):
               (driver, now(), rid, driver), "count")
     if not n:
         return False
+    log_offer(get_ride(rid), driver, "accept")
     d = get_driver(driver)
     if d.get("busy_ride") and d["busy_ride"] != rid:
         set_driver(driver, next_ride=rid)        # азыркы сапарды бүтүрүп барат
