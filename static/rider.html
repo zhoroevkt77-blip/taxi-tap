@@ -973,11 +973,14 @@ async function viewCabinet() {
     const H = await api("/api/history");
     const ST = {completed:"✅", cancelled:"✕", searching:"⏳", scheduled:"🕐", accepted:"🚕", arrived:"🚕", in_trip:"🚕"};
     const box = $("#hist"); if (!box) return;
-    const rows = (H.rides || []);
-    box.innerHTML = rows.length ? rows.map(r => {
-      const d = new Date(r.created_at * 1000), pay = r.price ? Math.max(0, r.price - Math.round(r.discount || 0)) + " с" : "";
-      return `<div class="hrow"><span>${ST[r.status] || ""} ${d.toLocaleDateString("ru-RU", {day:"2-digit", month:"2-digit"})} · ${esc(r.d_addr || "сапар")}</span><b>${r.status === "cancelled" ? '<span class="muted">жокко чыкты</span>' : pay}</b></div>`;
-    }).join("") : `<p class="muted">Азырынча сапар жок.</p>`;
+    const all = (H.rides || []), nc = all.filter(r => r.status === "cancelled").length;
+    const row = r => { const d = new Date(r.created_at * 1000), pay = r.price ? Math.max(0, r.price - Math.round(r.discount || 0)) + " с" : "";
+      return `<div class="hrow"><span>${ST[r.status] || ""} ${d.toLocaleDateString("ru-RU", {day:"2-digit", month:"2-digit"})} · ${esc(r.d_addr || "сапар")}</span><b>${r.status === "cancelled" ? '<span class="muted">жокко чыкты</span>' : pay}</b></div>`; };
+    const draw = showCx => { const rows = showCx ? all : all.filter(r => r.status !== "cancelled");
+      box.innerHTML = (rows.length ? rows.map(row).join("") : `<p class="muted">Азырынча бүткөн сапар жок.</p>`)
+        + (nc ? `<button class="btn ghost" id="hCx" style="margin-top:10px">${showCx ? "Жокко чыккандарды жашыруу" : `Жокко чыккандарды көрсөтүү (${nc})`}</button>` : "");
+      const b = $("#hCx"); if (b) b.onclick = () => draw(!showCx); };
+    draw(false);
   };
 }
 
