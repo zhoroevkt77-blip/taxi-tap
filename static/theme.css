@@ -670,3 +670,5 @@ img[src*="/static/c_"]:not([src*="c_car."]):not([src*="c_hdr"]):not([src*="c_tax
 .cls .clsimg{height:44px;width:auto;display:block;margin:-6px 0 2px -4px;filter:drop-shadow(0 3px 4px rgba(0,0,0,.18))}
 .cls .clsimg.side{height:34px;margin:2px 0 6px -2px}
 .farn{margin-top:6px;padding:8px 10px;border-radius:12px;background:#fff6dd;color:#5a4300;font-size:13.5px}
+.rsn{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}.rsn button{border:1px solid #e3e3e8;background:#fff;border-radius:12px;padding:9px 12px;font:inherit;font-size:14px;font-weight:700;color:var(--navy)}
+.rsn button.on{background:#fff2c4;border-color:#ffc21a}

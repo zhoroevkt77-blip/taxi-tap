@@ -1023,6 +1023,56 @@ class ParkWeekly(unittest.TestCase):
         core.query("DELETE FROM parks WHERE id=?", (pid,))
 
 
+class CancelRules(unittest.TestCase):
+    def test_driver_requeue_noshow_block(self):
+        core.init_db(); offline_all()
+        p = rider("0555 000 451")
+        d = make_driver("0700 000 451", "Жокко", NEAR, 500)
+        rid = order(p, KARAKOL, DEST)
+        dispatch.tick(); flow.driver_accept(d, rid)
+        self.assertIsNotNone(core.get_ride(rid)["accept_km"])
+        outs = flow.driver_cancel(d, rid, "broken")
+        r = core.get_ride(rid)
+        self.assertEqual(r["status"], "searching"); self.assertIsNone(r["driver"]); self.assertEqual(r["requeued"], 1)
+        self.assertIn(d, json.loads(r["tried"]))
+        self.assertTrue(any(o["to"] == p for o in outs))
+        self.assertFalse(core.get_driver(d)["busy_ride"])
+        # жүргүнчү келбеди: 5 мүнөт күтпөй басса — болбойт
+        rid2 = order(rider("0555 000 452"), KARAKOL, DEST)
+        core.query("UPDATE rides SET status='cancelled' WHERE id=?", (rid,))
+        dispatch.tick(); flow.driver_accept(d, rid2); flow.driver_step(d, rid2)
+        self.assertIsNone(flow.driver_cancel(d, rid2, "noshow"))
+        core.query("UPDATE rides SET arrived_at=? WHERE id=?", (core.now() - 400, rid2))
+        act = core.get_driver(d)["activity"]
+        self.assertIsNotNone(flow.driver_cancel(d, rid2, "noshow"))
+        self.assertEqual(core.get_ride(rid2)["cancel_reason"], "noshow")
+        self.assertEqual(core.get_driver(d)["activity"], act)              # жаза жок
+        # күнүнө 3төн көп — блок
+        for i in range(3):
+            core.query("INSERT INTO ride_events (ride_id, status, actor, at) VALUES (0, 'drv_cancel:other', ?, ?)", (d, core.now()))
+        rid3 = order(rider("0555 000 453"), KARAKOL, DEST)
+        dispatch.tick(); flow.driver_accept(d, rid3)
+        outs = flow.driver_cancel(d, rid3, "other")
+        self.assertGreater(core.get_driver(d)["cancel_block"], core.now())
+        self.assertFalse(core.is_available(core.get_driver(d)))
+        core.query("UPDATE rides SET status='cancelled' WHERE id=?", (rid3,))
+        core.set_driver(d, cancel_block=None, online=0)
+
+    def test_passenger_cancel_count(self):
+        core.init_db(); offline_all()
+        p = rider("0555 000 461")
+        d = make_driver("0700 000 461", "Санак", NEAR, 500)
+        for i in range(3):
+            rid = order(p, KARAKOL, DEST)
+            dispatch.tick(); flow.driver_accept(d, rid)
+            flow.passenger_cancel(p, rid, "plans")
+        self.assertEqual(core.passenger_cancels(p), 3)
+        self.assertEqual(core.get_ride(rid)["cancel_reason"], "plans")
+        st = core.cancel_stats()
+        self.assertTrue(any(x["uid"] == p and x["n"] == 3 for x in st["passengers"]))
+        core.set_driver(d, online=0)
+
+
 class FarPickup(unittest.TestCase):
     def test_far_fee(self):
         core.init_db(); offline_all()

@@ -296,6 +296,7 @@ NEW_COLUMNS = {
     "parks": {"code": "TEXT", "scans": "INTEGER DEFAULT 0",
               "share_months": "INTEGER DEFAULT 6", "share_after": "REAL DEFAULT 50"},   # QR коду (автоматтык) жана сканерлөөлөр
     "drivers": {"qr_scans": "INTEGER DEFAULT 0",
+                "cancel_block": "REAL",                     # көп жокко чыгарса — ушул убакытка чейин заказ жок
                 "seen_at": "REAL", "away_note": "TEXT",   # сайт акыркы жолу ачык турган убакыт / эскертилген этап
                 "doc_license": "TEXT", "doc_techpass": "TEXT", "doc_car": "TEXT",
                 "reject_note": "TEXT",
@@ -312,7 +313,8 @@ NEW_COLUMNS = {
                 "car_year": "INTEGER"},                  # күндүк максат (сом)                # күбөлүктүн мөөнөтү YYYY-MM-DD                # таксопарк (жок болсо — өз алдынча)   # активдүүлүк 0..100 (Яндекс Pro'догудай)              # аймактан сыртка чыккан убакыт
     "balance_tx": {"claimed": "REAL"},
     "rides": {"note": "TEXT", "source": "TEXT",   # source: web | phone (диспетчер)
-              "est_min": "REAL",                           # маршруттун пробкасыз убактысы (автоматтык баа үчүн)
+              "est_min": "REAL",
+              "cancel_reason": "TEXT", "accept_km": "REAL", "requeued": "INTEGER DEFAULT 0",                           # маршруттун пробкасыз убактысы (автоматтык баа үчүн)
               "promo": "TEXT", "discount": "REAL DEFAULT 0",
               "scheduled_at": "REAL",                      # алдын ала заказ
               "cls": "TEXT",                               # econom | comfort | minivan | delivery
@@ -426,6 +428,8 @@ def is_available(d, t=None):
     if not d or d["status"] != "active" or not d["online"] or d["busy_ride"]:
         return False
     if d["lat"] is None or (d["balance"] or 0) < min_balance():
+        return False
+    if (d.get("cancel_block") or 0) > t:
         return False
     live = (d["live_until"] or 0) > t
     fresh = t - (d["loc_at"] or 0) < LOC_TTL_SEC
@@ -1513,6 +1517,11 @@ def accept(rid, driver):
         return False
     log_offer(get_ride(rid), driver, "accept")
     d = get_driver(driver)
+    try:
+        rr = get_ride(rid)
+        query("UPDATE rides SET accept_km=? WHERE id=?", (haversine_km(d["lat"], d["lon"], rr["p_lat"], rr["p_lon"]) * ROAD_K, rid))
+    except Exception:
+        pass
     if d.get("busy_ride") and d["busy_ride"] != rid:
         set_driver(driver, next_ride=rid)        # азыркы сапарды бүтүрүп барат
     else:
@@ -1578,12 +1587,12 @@ def _finish(rid, driver):
             add_tx(driver, -fee, "commission", ride_id=rid)
 
 
-def cancel(rid, by, allowed=("scheduled", "searching", "accepted", "arrived")):
+def cancel(rid, by, allowed=("scheduled", "searching", "accepted", "arrived"), reason=None):
     r = get_ride(rid)
     if not r or r["status"] not in allowed:
         return None
-    n = query("UPDATE rides SET status='cancelled', cancel_by=? WHERE id=? AND status=?",
-              (by, rid, r["status"]), "count")
+    n = query("UPDATE rides SET status='cancelled', cancel_by=?, cancel_reason=? WHERE id=? AND status=?",
+              (by, reason, rid, r["status"]), "count")
     if not n:
         return None
     if r["driver"]:
@@ -1594,6 +1603,67 @@ def cancel(rid, by, allowed=("scheduled", "searching", "accepted", "arrived")):
             set_driver(r["driver"], busy_ride=d.get("next_ride"), next_ride=None)
     log_event(rid, "cancelled", by)
     return r
+
+
+# ==================== Жокко чыгаруу ====================
+NOSHOW_SEC = 5 * 60            # жүргүнчүнү ушунча күтсө — «Келбеди» баскычы
+DRV_CANCEL_DAY, DRV_BLOCK_SEC = 3, 30 * 60
+P_CANCEL_WEEK = 3
+P_REASONS = {"plans": "Пландарым өзгөрдү", "slow": "Айдоочу көпкө келбей жатат", "mistake": "Жаңылыш заказ бердим",
+             "other": "Башка"}
+D_REASONS = {"addr": "Дарек туура эмес", "broken": "Машина бузулду", "other": "Башка", "noshow": "Жүргүнчү келбеди"}
+
+
+def driver_requeue(rid, driver, reason):
+    """Айдоочу баш тартты → заказ кайра изделет (жүргүнчү эч нерсе баспайт)."""
+    r = get_ride(rid)
+    if not r or r["driver"] != driver or r["status"] not in ("accepted", "arrived"):
+        return None
+    tried = json.loads(r["tried"] or "[]")
+    if driver not in tried:
+        tried.append(driver)
+    n = query("UPDATE rides SET status='searching', driver=NULL, offered_to=NULL, offered_at=NULL, accepted_at=NULL, "
+              "arrived_at=NULL, accept_km=NULL, tried=?, created_at=?, requeued=COALESCE(requeued,0)+1, cancel_reason=? "
+              "WHERE id=? AND driver=? AND status=?", (json.dumps(tried), now(), reason, rid, driver, r["status"]), "count")
+    if not n:
+        return None
+    d = get_driver(driver) or {}
+    if d.get("next_ride") == rid:
+        set_driver(driver, next_ride=None)
+    elif d.get("busy_ride") == rid:
+        set_driver(driver, busy_ride=d.get("next_ride"), next_ride=None)
+    log_event(rid, "requeued", driver)
+    query("INSERT INTO ride_events (ride_id, status, actor, at) VALUES (?, ?, ?, ?)", (rid, "drv_cancel:" + (reason or ""), driver, now()))
+    return r
+
+
+def driver_cancels_today(uid):
+    lt = now() + TZ
+    day = lt - lt % 86400 - TZ
+    return int(query("SELECT COUNT(*) AS n FROM ride_events WHERE actor=? AND status LIKE 'drv_cancel:%' "
+                     "AND status<>'drv_cancel:noshow' AND at>=?", (uid, day), "one")["n"])
+
+
+def passenger_cancels(uid, days=7):
+    return int(query("SELECT COUNT(*) AS n FROM rides WHERE passenger=? AND status='cancelled' AND created_at>? "
+                     "AND (cancel_by=? OR cancel_reason='noshow') AND COALESCE(accepted_at,0)>0",
+                     (uid, now() - days * 86400, uid), "one")["n"])
+
+
+def cancel_stats(days=7, limit=30):
+    rows = query("SELECT passenger, COUNT(*) AS n FROM rides WHERE status='cancelled' AND created_at>? "
+                 "AND (cancel_by=passenger OR cancel_reason='noshow') AND COALESCE(accepted_at,0)>0 "
+                 "GROUP BY passenger ORDER BY n DESC LIMIT ?", (now() - days * 86400, limit), "all")
+    out = []
+    for r in rows:
+        u = get_user(r["passenger"]) or {}
+        out.append({"uid": r["passenger"], "name": u.get("name") or "", "phone": u.get("phone") or "", "n": int(r["n"])})
+    rs = query("SELECT cancel_reason AS k, COUNT(*) AS n FROM rides WHERE status='cancelled' AND created_at>? "
+               "AND cancel_reason IS NOT NULL GROUP BY cancel_reason", (now() - days * 86400,), "all")
+    drs = query("SELECT status, COUNT(*) AS n FROM ride_events WHERE status LIKE 'drv_cancel:%' AND at>? GROUP BY status",
+                (now() - days * 86400,), "all")
+    return {"passengers": out, "reasons": {r["k"]: int(r["n"]) for r in rs},
+            "driver_reasons": {r["status"][11:]: int(r["n"]) for r in drs}}
 
 
 GOOD_TAGS = {"care": "Камкордук", "music": "Жагымдуу музыка", "polite": "Сылык мамиле",

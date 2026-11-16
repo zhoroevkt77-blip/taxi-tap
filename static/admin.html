@@ -69,7 +69,7 @@ td input.f{padding:7px 8px;max-width:90px;min-width:58px}
 .docs{flex-wrap:wrap}.chk{margin:10px 0 2px;padding:10px 12px;border-radius:12px;background:#fff8e1}.chk label{font-weight:500!important;color:#222!important;font-size:14px!important;display:flex!important;gap:8px;align-items:flex-start}.chk input{width:18px;height:18px;flex:none;margin-top:1px}
 .btn:disabled{opacity:.4;cursor:not-allowed}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=87">
+<link rel="stylesheet" href="/static/theme.css?v=88">
 </head>
 <body class="adm">
 <header><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b><span class="ver">Админ</span></div><div class="live" id="live"></div></header>
@@ -375,9 +375,10 @@ async function viewTariffs() {
       <div style="padding:0 14px 14px"><button class="btn gold" id="akSave">Сактоо</button> <span class="muted" id="akMsg"></span>
       <p class="muted">Заказ эң жакын айдоочуга берилет. Активдүүлүгү 50 болсо — жарымы (${actKm} → +${+(actKm / 2).toFixed(2)} км). Демейки 0.8 км; 0 — таасири жок, чоңойтсоңуз активдүү айдоочуга көбүрөөк артыкчылык (жүргүнчү узагыраак күтүшү мүмкүн).</p></div></div>
     <div class="panel" id="farP"></div>
+    <div class="panel" id="cxP"></div>
     <div class="panel" id="apP"></div>
     <div class="panel" id="fxP"></div>`;
-  fixedPanel(); autoPanel(); farPanel();
+  fixedPanel(); autoPanel(); farPanel(); cancelPanel();
   $("#akSave").onclick = async () => {
     const x = await api("/api/a/activity_km", {km:$("#akm").value});
     $("#akMsg").textContent = x.error ? "Текшериңиз: 0–5 км." : "✓ Сакталды";
@@ -416,6 +417,16 @@ async function refresh() {
 }
 // ---------- каржы ----------
 // ---------- Таксопарктар ----------
+async function cancelPanel() {
+  const X = await api("/api/a/cancels"); if (!X || X.error || !$("#cxP")) return;
+  const rs = (o, names) => Object.entries(o || {}).map(([k, n]) => `${esc(names[k] || k || "—")}: <b>${n}</b>`).join(" · ") || "—";
+  $("#cxP").innerHTML = `<h3>✖️ Жокко чыгаруулар (7 күн)</h3>
+    <div class="item"><div class="main"><div class="muted">Жүргүнчүлөрдүн себептери: ${rs(X.reasons, X.p_reasons)}</div>
+      <div class="muted">Айдоочулардын себептери: ${rs(X.driver_reasons, X.d_reasons)}</div></div></div>
+    ${X.passengers.length ? X.passengers.map(p => `<div class="item"><div class="main"><b>${esc(p.name || "—")}</b> · ${esc(p.phone)}</div>
+      <div class="acts"><b style="color:${p.n >= 3 ? "var(--bad)" : "inherit"}">${p.n} жолу</b></div></div>`).join("") : `<div class="empty">Жокко чыгарган жүргүнчү жок 👍</div>`}`;
+}
+
 async function farPanel() {
   const f = await api("/api/a/far_pickup"); if (!f || f.error) return;
   $("#farP").innerHTML = `<h3>🚗 Алыс подача</h3><div class="item"><div class="main" style="width:100%">

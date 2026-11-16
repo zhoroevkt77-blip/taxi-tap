@@ -101,7 +101,7 @@ input.f:focus{border-color:var(--navy)}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
 <link rel="preload" as="image" href="/static/h_taxi.webp?v=9"><link rel="preload" as="image" href="/static/h_box.webp?v=9"><link rel="preload" as="image" href="/static/h_girl.webp?v=9"><link rel="preload" as="image" href="/static/h_map.webp?v=9">
-<link rel="stylesheet" href="/static/theme.css?v=87">
+<link rel="stylesheet" href="/static/theme.css?v=88">
 </head>
 <body>
 <div id="map"></div>
@@ -541,7 +541,8 @@ async function viewQuote() {
   const ICON = {econom:'<img class="clsimg side" src="/static/car_sary.webp?v=4" alt="">', comfort:"🚘", minivan:"🚐",
     delivery:'<img class="clsimg" src="/static/h_box.webp?v=9" alt="">'};
   const sub = q.price ? `${q.dist_km} км · ~${q.minutes} мүн${q.peak && !q.fixed ? " · 🚦 пик саат" : ""}` : `отуруу ${Math.round(q.tariff.base)} с + ${Math.round(q.tariff.per_km)} с/км`;
-  const farTxt = q.far_fee ? `<div class="farn">🚗 Жакынкы айдоочу ~${q.far_km} км алыста · алыс подача <b>+${q.far_fee} с</b> (баага кирди)</div>` : "";
+  const cxWarn = q.cancels ? `<div class="farn">⚠️ Акыркы күндөрү ${q.cancels} заказды жокко чыгардыңыз. Айдоочулар сизге жол басып келишет — заказ бергенден кийин жокко чыгарбаңыз 🙏</div>` : "";
+  const farTxt = cxWarn + (q.far_fee ? `<div class="farn">🚗 Жакынкы айдоочу ~${q.far_km} км алыста · алыс подача <b>+${q.far_fee} с</b> (баага кирди)</div>` : "");
   const cur = () => q.classes.find(c => c.id === S.cls);
   const priceTxt = c => c.price ? `${c.price} с` : `${c.min} с+`;
   render(`<div class="row"><span class="bul lt">А</span><div style="flex:1"><b>${esc(S.fromAddr)}</b></div><input class="hn" id="hnF" placeholder="үй №" maxlength="12" value="${esc(S.hnF || "")}"></div>
@@ -762,6 +763,23 @@ function sheetBox(html, after) {
   o.innerHTML = `<div class="rboxc">${html}</div>`; o.classList.add("on");
   const x = $("#bxX"); if (x) x.onclick = closeBox; if (after) after();
 }
+const P_REASONS = [["plans", "Пландарым өзгөрдү"], ["slow", "Айдоочу көпкө келбей жатат"], ["mistake", "Жаңылыш заказ бердим"], ["other", "Башка"]];
+function askCancel(r) {
+  const coming = r.status === "accepted" || r.status === "arrived";
+  const warn = !coming ? "" : r.status === "arrived"
+    ? `<div class="farn">🚕 Айдоочу келип, сизди күтүп турат${r.came_km ? ` (${r.came_km} км жол басып келди)` : ""}. Жокко чыгарсаңыз, ал бекер жол жүргөн болот.</div>`
+    : `<div class="farn">🚕 Айдоочу ${r.came_km ? `${r.came_km} км жол басып, ` : ""}сизге келе жатат. Жокко чыгарсаңыз, ал бекер жол жүргөн болот.</div>`;
+  let why = "";
+  sheetBox(`<div class="lgx"><h2>${coming ? "Заказды жокко чыгарбаңыз 🙏" : "Заказды жокко чыгарасызбы?"}</h2>${warn}
+      <p class="muted" style="margin:10px 0 6px">Себеби:</p><div class="rsn">${P_REASONS.map(([k, t]) => `<button data-rs="${k}">${t}</button>`).join("")}</div>
+      <button class="btn main" id="cKeep">${coming ? "Күтөм" : "Издей берсин"}</button><button class="btn ghost" id="cYes" style="color:var(--bad)">Ооба, жокко чыгарам</button></div>`, () => {
+    document.querySelectorAll("[data-rs]").forEach(b => b.onclick = () => { why = b.dataset.rs;
+      document.querySelectorAll("[data-rs]").forEach(x => x.classList.toggle("on", x === b)); });
+    $("#cKeep").onclick = closeBox;
+    $("#cYes").onclick = async () => { $("#cYes").disabled = true; const x = await api("/api/cancel", {reason:why});
+      closeBox(); if (x.ride) { S.ride = x.ride; viewRide(); } };
+  });
+}
 function confirmOut() {
   if (S.ride) return sheetBox(`<div class="lgx"><div class="lg-ic" style="background:#fff6dd"><img src="/static/r_car.webp?v=9" alt="" style="width:56px"></div><h2>Азыр чыгууга болбойт</h2>
       <p class="muted">Сизде жүрүп жаткан сапар бар. Адегенде сапарды бүтүрүңүз же жокко чыгарыңыз.</p>
@@ -853,7 +871,7 @@ function viewRide() {
       <p class="price" style="margin:4px 0">${t.toLocaleDateString("ru-RU", {day:"numeric", month:"long"})}, ${t.toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"})}</p>
       <p class="muted">Убактысынан 10 мүнөт мурун айдоочу изделе баштайт. Айдоочу табылганда кабар келет.</p>${cancelBtn}`);
   } else if (r.status === "searching") {
-    render(`<div class="pulse"></div><h2 style="text-align:center">Айдоочу изделүүдө</h2>
+    render(`${r.requeued ? `<div class="farn" style="margin:0 0 8px">🚕 Айдоочу заказды жокко чыгарды. Башка айдоочу изделип жатат — эч нерсе басуунун кереги жок.</div>` : ""}<div class="pulse"></div><h2 style="text-align:center">Айдоочу изделүүдө</h2>
       <div class="bar"><i id="bar" style="width:0"></i></div>
       <p class="muted" style="text-align:center">Эң жакынкы айдоочуга сунуш кетти</p>${cancelBtn}`);
   } else if (r.status === "accepted") {
@@ -870,13 +888,14 @@ function viewRide() {
     viewDone(r);
   } else if (r.status === "cancelled") {
     clearInterval(S.timer);
-    const why = r.cancel_by === "system" ? "Азыр бош айдоочу табылган жок. Бир аздан кийин кайра аракет кылыңыз."
+    const why = r.cancel_reason === "noshow" ? "Айдоочу сизди 5 мүнөттөн ашык күттү, заказ жабылды. Кийинки жолу айдоочу келгенде чыгып туруңуз 🙏"
+      : r.cancel_by === "system" ? "Азыр бош айдоочу табылган жок. Бир аздан кийин кайра аракет кылыңыз."
       : r.cancel_by && r.cancel_by.startsWith("ph:") ? "Заказ жокко чыгарылды." : "Айдоочу заказды жокко чыгарды.";
     render(`<h2>Заказ жабылды</h2><p class="muted">${why}</p><button class="btn main" id="again">Кайра чакыруу</button>`);
     $("#again").onclick = () => { S.ride = null; map.setView([r.p_lat, r.p_lon], 16); viewIdle(); };
   }
   const cx = $("#cx");
-  if (cx) cx.onclick = async () => { cx.disabled = true; const x = await api("/api/cancel", {}); if (x.ride) { S.ride = x.ride; viewRide(); } };
+  if (cx) cx.onclick = () => askCancel(r);
   bindRideBtns(); if (["accepted", "arrived", "in_trip"].includes(r.status)) bindActs(r);
   if ($("#eta")) $("#eta").onclick = () => rideInfo(r);
   tickRide();

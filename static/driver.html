@@ -81,7 +81,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=87">
+<link rel="stylesheet" href="/static/theme.css?v=88">
 </head>
 <body>
 <nav id="bnav" class="bnav pro"><a data-k="earn"><img src="/static/n_earn.webp?v=9" alt="">Киреше</a><a data-k="hist"><img src="/static/n_trips.webp?v=9" alt="">Сапарлар</a><a data-k="line" class="big on"><img src="/static/n_go.webp?v=9" alt="">Линия</a><a data-k="help"><img src="/static/n_help.webp?v=9" alt="">Жардам</a><a data-k="cab"><img src="/static/n_cab.webp?v=9" alt="">Кабинет</a></nav>
@@ -481,6 +481,7 @@ function viewRide() {
     <div class="two"><a class="btn ghost" href="tel:${esc(callPh)}">📞 Чалуу</a><button class="btn ghost chatb" id="chat">💬 Чат<em id="chatN" class="hide"></em></button></div>
     ${target ? `<button class="btn main" id="navGo">🧭 ${r.status === "in_trip" ? "Б точкага" : "Жүргүнчүгө"} жол — ${esc((NAVS[navPref()] || {t:"навигатор"}).t)}</button>` : ""}
     <button class="btn ${next[1]}" id="step">${next[0]}</button>
+    ${r.status === "arrived" && r.wait && r.wait.arrived_at && r.wait.now - r.wait.arrived_at >= 300 ? `<button class="btn" id="noshow" style="background:#fff6dd">🙋 Жүргүнчү келбеди</button>` : ""}
     ${r.status !== "in_trip" ? `<button class="btn red" id="cx">Жокко чыгаруу</button>` : ""}
     <button class="btn ghost" id="rSos" style="color:var(--bad)">🆘 Шашылыш жардам</button>`);
   $("#rSos").onclick = sosOpen;
@@ -492,7 +493,22 @@ function viewRide() {
   $("#step").onclick = async () => { $("#step").disabled = true; const prev = r; D = await api("/api/d/step", {id:r.id});
     if (prev.status === "in_trip" && (!D.ride || D.ride.id !== prev.id)) done(prev); else show(); };
   const cx = $("#cx");
-  if (cx) cx.onclick = async () => { if (!confirm("Заказды жокко чыгарасызбы?")) return; D = await api("/api/d/cancel", {id:r.id}); show(); };
+  if (cx) cx.onclick = () => drvCancel(r);
+  const ns = $("#noshow");
+  if (ns) ns.onclick = async () => { if (!confirm("Жүргүнчү келбедиби? Заказ жабылат, активдүүлүгүңүз төмөндөбөйт.")) return;
+    D = await api("/api/d/cancel", {id:r.id, reason:"noshow"}); lastView = ""; show(); };
+}
+
+function drvCancel(r) {
+  const R = [["addr", "Дарек туура эмес"], ["broken", "Машина бузулду"], ["other", "Башка"]];
+  let why = "";
+  overlay(`<div class="lgx"><h2>Эмне үчүн жокко чыгарасыз?</h2><div class="rsn">${R.map(([k, t]) => `<button data-rs="${k}">${t}</button>`).join("")}</div>
+    <p class="muted" style="margin:10px 0">Активдүүлүк −10. Заказ башка айдоочуга берилет. Бир күндө 3 жолудан көп жокко чыгарсаңыз — 30 мүнөт заказ келбейт.
+    ${r.status === "arrived" ? "<br>Жүргүнчү 5 мүнөт келбесе — «🙋 Жүргүнчү келбеди» баскычын басыңыз (жаза жок)." : ""}</p>
+    <button class="btn red" id="dcY" disabled>Жокко чыгаруу</button><button class="btn ghost" id="ovlX">Артка</button></div>`);
+  document.querySelectorAll("[data-rs]").forEach(b => b.onclick = () => { why = b.dataset.rs; $("#dcY").disabled = false;
+    document.querySelectorAll("[data-rs]").forEach(x => x.classList.toggle("on", x === b)); });
+  $("#dcY").onclick = async () => { $("#dcY").disabled = true; D = await api("/api/d/cancel", {id:r.id, reason:why}); closeOverlay(); lastView = ""; show(); };
 }
 
 function done(r) {
@@ -940,7 +956,8 @@ function show() {
   showOffer();
   if (chatOpen && D.ride) return unread();
   chatOpen = false;
-  const key = D.ride ? "ride" + D.ride.id + D.ride.status + (D.next ? D.next.id : "") : (D.online ? "on" : "off") + (D.in_area === false ? "x" : "");
+  const ns = D.ride && D.ride.status === "arrived" && D.ride.wait && D.ride.wait.arrived_at && D.ride.wait.now - D.ride.wait.arrived_at >= 300 ? "n" : "";
+  const key = D.ride ? "ride" + D.ride.id + D.ride.status + (D.next ? D.next.id : "") + ns : (D.online ? "on" : "off") + (D.in_area === false ? "x" : "");
   if (key !== lastView) { if (D.ride && window.SHEET) SHEET.expand(); lastView = key; D.ride ? viewRide() : viewHome(); }
   else if (D.ride) unread();
   if (!D.ride) layer.clearLayers();

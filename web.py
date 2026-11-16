@@ -143,6 +143,13 @@ def ride_view(r):
     v["discount"] = r.get("discount") or 0
     v["pay"] = max(0, (r["price"] or 0) - v["discount"]) if r["price"] else None
     v["cancel_by_me"] = r["cancel_by"] == r["passenger"]
+    v["cancel_reason"] = r.get("cancel_reason")
+    v["requeued"] = r.get("requeued") or 0
+    if r["status"] in ("accepted", "arrived") and r.get("accept_km") and r["driver"]:
+        dd = core.get_driver(r["driver"]) or {}
+        if dd.get("lat") is not None:
+            left = core.haversine_km(dd["lat"], dd["lon"], r["p_lat"], r["p_lon"]) * core.ROAD_K
+            v["came_km"] = round(max(0.0, r["accept_km"] - left), 1) if r["status"] == "accepted" else round(r["accept_km"], 1)
     if r["status"] == "searching":
         v["search_sec"] = int(core.now() - (r["created_at"] or core.now()))
         v["search_max"] = int(core.SEARCH_MAX_SEC)
@@ -530,10 +537,12 @@ class H(BaseHTTPRequestHandler):
             cfg = core.class_config()
             if d:
                 core.log_quote(uid, q["city"], q["price"])
+            pc = core.passenger_cancels(uid)
             return self._json({"city": q["city"], "price": q["price"], "dist_km": q["dist_km"],
                                "minutes": q.get("minutes"), "surge": q["surge"], "fixed": q.get("fixed"),
                                "peak": q.get("peak"), "route": (q.get("route") or {}).get("coords"),
                                "far_fee": q.get("far_fee"), "far_km": q.get("far_km"),
+                               "cancels": pc if pc >= core.P_CANCEL_WEEK else 0,
                                "classes": [{"id": c, "name": cfg[c]["name"], "price": pr,
                                             "min": int(t["min_price"] * cfg[c]["k"])}
                                            for c, pr in q["prices"].items()],
@@ -584,7 +593,7 @@ class H(BaseHTTPRequestHandler):
             r = core.active_ride_of(uid)
             if not r or r["passenger"] != uid:
                 return self._json({"error": "no_ride"}, 404)
-            outs = flow.passenger_cancel(uid, r["id"])
+            outs = flow.passenger_cancel(uid, r["id"], _txt(b.get("reason"), 20) or None)
             if outs is None:
                 return self._json({"error": "cant_cancel"}, 409)
             deliver(outs)
@@ -768,7 +777,7 @@ class H(BaseHTTPRequestHandler):
         rid = int(b.get("id") or 0)
         if action not in handlers or not rid:
             return self._json({"error": "not_found"}, 404)
-        outs = handlers[action](uid, rid)
+        outs = handlers[action](uid, rid, _txt(b.get("reason"), 20) or None) if action == "cancel" else handlers[action](uid, rid)
         st = driver_state(uid)
         if outs is None:
             st["error"] = "too_late" if action == "accept" else "not_allowed"
@@ -786,6 +795,8 @@ class H(BaseHTTPRequestHandler):
             return self._json({"acts": parks.acts(limit=60)})
         if action == "far_pickup":
             return self._json(core.far_cfg())
+        if action == "cancels":
+            return self._json(dict(core.cancel_stats(), p_reasons=core.P_REASONS, d_reasons=core.D_REASONS))
         if action == "autoprice":
             cities = sorted({u.get("city") for u in core._area.get("units", []) if u.get("city")} | set((core.get_setting("auto_k") or {}).keys()))
             return self._json({"cfg": core.auto_cfg(), "k": {c: core.auto_k(c) for c in cities},

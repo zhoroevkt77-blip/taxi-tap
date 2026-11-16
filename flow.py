@@ -102,14 +102,32 @@ def driver_step(uid, rid):
     return []
 
 
-def driver_cancel(uid, rid):
+def driver_cancel(uid, rid, reason=None):
     r = core.get_ride(rid)
     if not r or r["driver"] != uid:
         return None
-    old = core.cancel(rid, uid, allowed=("accepted", "arrived"))
-    if old:
-        core.add_activity(uid, core.ACT_CANCEL)
-    return [note(old["passenger"], "p_driver_cancel")] if old else None
+    if reason == "noshow":                     # жүргүнчү 5 мүнөт келбеди — айдоочу күнөөсүз
+        if r["status"] != "arrived" or core.now() - (r["arrived_at"] or core.now()) < core.NOSHOW_SEC:
+            return None
+        old = core.cancel(rid, uid, allowed=("arrived",), reason="noshow")
+        return [note(old["passenger"], "p_noshow")] if old else None
+    if reason not in core.D_REASONS:
+        reason = "other"
+    if r["status"] == "accepted" and core.get_driver(uid).get("next_ride") == rid:
+        old = core.driver_requeue(rid, uid, reason)          # кийинки заказдан баш тартуу
+        return [] if old else None
+    old = core.driver_requeue(rid, uid, reason)
+    if not old:
+        return None
+    core.add_activity(uid, core.ACT_CANCEL)
+    outs = [note(old["passenger"], "p_driver_requeue")]
+    if core.driver_cancels_today(uid) > core.DRV_CANCEL_DAY:
+        core.set_driver(uid, cancel_block=core.now() + core.DRV_BLOCK_SEC)
+        du = core.get_user(uid) or {}
+        outs.append(note(uid, "d_cancel_block", "/driver"))
+        outs += [note(a, "a_drv_cancels", "/admin", name=du.get("name") or du.get("phone") or uid,
+                      n=core.driver_cancels_today(uid)) for a in core.admins()]
+    return outs
 
 
 def register_driver(uid, name, model, color, plate, docs):
@@ -127,11 +145,11 @@ def request_topup(uid, claimed, proof):
 
 # ==================== Жүргүнчү ====================
 
-def passenger_cancel(uid, rid):
+def passenger_cancel(uid, rid, reason=None):
     r = core.get_ride(rid)
     if not r or r["passenger"] != uid:
         return None
-    old = core.cancel(rid, uid)
+    old = core.cancel(rid, uid, reason=reason if reason in core.P_REASONS else None)
     if not old:
         return None
     who = old["driver"] or old["offered_to"]
