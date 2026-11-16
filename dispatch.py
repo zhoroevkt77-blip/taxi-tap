@@ -78,6 +78,7 @@ def tick():
     if pw:
         rows = "\n".join("• %s — %d сом" % (n, d) for n, d in pw)
         out += [note(a, "a_park_week", "/admin", rows=rows) for a in core.admins()]
+    core.online_tick()
     core.auto_daily()
     tune = core.auto_tune()
     if tune:

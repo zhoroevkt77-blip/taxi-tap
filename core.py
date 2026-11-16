@@ -268,6 +268,8 @@ SCHEMA = [
         promo TEXT, active INTEGER DEFAULT 1, created_at REAL)""",
     f"""CREATE TABLE IF NOT EXISTS park_payouts (
         id {_PK}, park_id INTEGER, amount REAL, note TEXT, at REAL)""",
+    f"""CREATE TABLE IF NOT EXISTS driver_online (
+        uid TEXT, day TEXT, sec REAL DEFAULT 0, PRIMARY KEY (uid, day))""",
     f"""CREATE TABLE IF NOT EXISTS quote_log (
         id {_PK}, uid TEXT, city TEXT, price REAL, at REAL, ordered INTEGER DEFAULT 0)""",
     f"""CREATE TABLE IF NOT EXISTS offer_log (
@@ -1632,6 +1634,37 @@ def cancel(rid, by, allowed=("scheduled", "searching", "accepted", "arrived"), r
             set_driver(r["driver"], busy_ride=d.get("next_ride"), next_ride=None)
     log_event(rid, "cancelled", by)
     return r
+
+
+# ==================== Линияда болгон убакыт ====================
+_online_tick = {"at": 0}
+ONLINE_STEP = 60
+
+
+def online_tick():
+    """dispatch'тан чакырылат: мүнөтүнө бир жолу линиядагы айдоочуларга +60 сек (Бишкек күнү боюнча)."""
+    t = now()
+    if t - _online_tick["at"] < ONLINE_STEP:
+        return 0
+    step = min(t - _online_tick["at"], 2 * ONLINE_STEP) if _online_tick["at"] else ONLINE_STEP
+    _online_tick["at"] = t
+    day = time.strftime("%Y-%m-%d", time.gmtime(t + TZ))
+    n = 0
+    for d in query("SELECT uid, live_until, loc_at FROM drivers WHERE online=1 AND status='active'", (), "all"):
+        if not ((d["live_until"] or 0) > t or t - (d["loc_at"] or 0) < LOC_TTL_SEC):
+            continue
+        if not query("UPDATE driver_online SET sec=sec+? WHERE uid=? AND day=?", (step, d["uid"], day), "count"):
+            try:
+                query("INSERT INTO driver_online (uid, day, sec) VALUES (?, ?, ?)", (d["uid"], day, step))
+            except Exception:
+                query("UPDATE driver_online SET sec=sec+? WHERE uid=? AND day=?", (step, d["uid"], day))
+        n += 1
+    return n
+
+
+def online_sec(uid, since):
+    d0 = time.strftime("%Y-%m-%d", time.gmtime(since + TZ))
+    return float(query("SELECT COALESCE(SUM(sec),0) AS s FROM driver_online WHERE uid=? AND day>=?", (uid, d0), "one")["s"])
 
 
 # ==================== Жокко чыгаруу ====================

@@ -1183,6 +1183,50 @@ class ParkActs(unittest.TestCase):
             core.query(q, (pid,))
 
 
+class ParkDriverStats(unittest.TestCase):
+    def test_stats_map_detail_online(self):
+        import parks
+        core.init_db()
+        pid = parks.save("Стат-Парк", "0700 000 661", share=80, ref_bonus=10)
+        a, b = "tg:9900661", "tg:9900662"
+        for u, nm in ((a, "Азамат"), (b, "Бакыт")):
+            core.ensure_user(u, nm)
+            core.query("INSERT INTO drivers (uid, status, car_plate) VALUES (?, 'active', '01KG661AAA')", (u,))
+            core.set_driver(u, park_id=pid)
+        t = core.now()
+        core.set_driver(a, online=1, lat=40.93456, lon=73.00123, loc_at=t, live_until=t + 600)
+        core.set_driver(b, online=0, lat=41.0345, lon=72.95678, loc_at=t - 5 * 86400)
+        core.query("INSERT INTO rides (passenger, driver, status, price, completed_at, p_addr, d_addr) "
+                   "VALUES ('tg:1', ?, 'completed', 150, ?, 'Манас, борбор', 'Казарман')", (a, t - 60))
+        core.query("INSERT INTO offer_log (ride_id, driver, city, result, at) VALUES (1, ?, 'x', 'accept', ?)", (a, t))
+        core.query("INSERT INTO offer_log (ride_id, driver, city, result, at) VALUES (2, ?, 'x', 'miss', ?)", (a, t))
+        core.query("INSERT INTO ride_events (ride_id, actor, status, at) VALUES (3, ?, 'drv_cancel:late', ?)", (a, t))
+        s = parks.driver_stats(pid, "today")
+        ra = next(r for r in s["rows"] if r["uid"] == a)
+        rb = next(r for r in s["rows"] if r["uid"] == b)
+        self.assertEqual((ra["rides"], ra["gross"], ra["accepted"], ra["offers"], ra["cancels"]), (1, 150, 1, 2, 1))
+        self.assertTrue(ra.get("best")); self.assertGreaterEqual(rb["idle_days"], 3)
+        core._online_tick["at"] = 0
+        self.assertGreaterEqual(core.online_tick(), 1)
+        self.assertEqual(core.online_tick(), 0)                       # мүнөткө бир жолу
+        self.assertEqual(core.online_sec(a, core.period_starts()["today"]), 60)
+        m = parks.map_state(pid)
+        ma = next(x for x in m["drivers"] if x["uid"] == a)
+        mb = next(x for x in m["drivers"] if x["uid"] == b)
+        self.assertEqual(ma["st"], "free"); self.assertEqual(mb["st"], "off")
+        self.assertEqual((mb["lat"], mb["lon"]), (41.03, 72.96))      # эс алуудагынын жери болжолдуу
+        self.assertEqual(ma["today"], 1)
+        d = parks.driver_detail(pid, a)
+        self.assertEqual(len(d["days"]), 7); self.assertEqual(d["days"][-1]["gross"], 150)
+        self.assertEqual(d["recent"][0]["to"], "Казарман")
+        self.assertIsNone(parks.driver_detail(pid + 999, a))
+        self.assertIn("Азамат", parks.stats_csv(pid, "all"))
+        for q in ("DELETE FROM rides WHERE driver=?", "DELETE FROM offer_log WHERE driver=?", "DELETE FROM ride_events WHERE actor=?",
+                  "DELETE FROM driver_online WHERE uid=?", "DELETE FROM drivers WHERE uid=?"):
+            core.query(q, (a,)); core.query(q, (b,))
+        core.query("DELETE FROM parks WHERE id=?", (pid,))
+
+
 class ParkQR(unittest.TestCase):
     def test_auto_code_scan_and_driver_ref(self):
         import parks

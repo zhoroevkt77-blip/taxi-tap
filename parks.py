@@ -413,6 +413,115 @@ def driver_rows(pid):
     return rows
 
 
+# ==================== Айдоочулардын статистикасы жана картасы ====================
+PERIODS = ("today", "week", "month", "all")
+
+
+def _since(period):
+    return 0 if period == "all" else core.period_starts()[period]
+
+
+def _offers(uid, since):
+    rows = core.query("SELECT result, COUNT(*) AS n FROM offer_log WHERE driver=? AND at>=? GROUP BY result", (uid, since), "all")
+    o = {r["result"]: int(r["n"]) for r in rows}
+    return o.get("accept", 0), o.get("accept", 0) + o.get("miss", 0)
+
+
+def _dcancels(uid, since):
+    return int(core.query("SELECT COUNT(*) AS n FROM ride_events WHERE actor=? AND status LIKE ? AND status<>'drv_cancel:noshow' "
+                          "AND at>=?", (uid, "drv_cancel:" + chr(37), since), "one")["n"])
+
+
+def driver_stats(pid, period="week"):
+    p = get(pid)
+    if period not in PERIODS:
+        period = "week"
+    since = _since(period)
+    rate = float(share_now(p) or 0) / 100.0
+    rows = []
+    t = core.now()
+    for d in _drivers(pid):
+        u = core.get_user(d["uid"]) or {}
+        n, gross = _rides([d["uid"]], since)
+        acc, tot = _offers(d["uid"], since)
+        fee = _sum_commission([d["uid"]], since)
+        last = core.query("SELECT MAX(completed_at) AS t FROM rides WHERE driver=? AND status='completed'", (d["uid"],), "one")["t"]
+        seen = max(last or 0, d.get("loc_at") or 0)
+        rows.append({"uid": d["uid"], "name": u.get("name") or "", "phone": u.get("phone") or "", "plate": d.get("car_plate") or "",
+                     "car": core.car_text(d.get("car_color"), d.get("car_model")),
+                     "online": bool(d.get("online")), "busy": bool(d.get("busy_ride")),
+                     "rides": n, "gross": round(gross), "online_sec": round(core.online_sec(d["uid"], since)),
+                     "accepted": acc, "offers": tot, "cancels": _dcancels(d["uid"], since), "share": round(fee * rate),
+                     "rating": d.get("rating"), "activity": d.get("activity") if d.get("activity") is not None else 100,
+                     "idle_days": int((t - seen) // 86400) if seen else None})
+    rows.sort(key=lambda r: (-r["gross"], -r["rides"]))
+    if rows and rows[0]["gross"] > 0:
+        rows[0]["best"] = True
+    return {"period": period, "rows": rows,
+            "total": {"rides": sum(r["rides"] for r in rows), "gross": sum(r["gross"] for r in rows),
+                      "share": sum(r["share"] for r in rows), "online_sec": sum(r["online_sec"] for r in rows)}}
+
+
+def driver_detail(pid, uid):
+    d = core.get_driver(uid)
+    if not d or d.get("park_id") != pid:
+        return None
+    t = core.period_starts()["today"]
+    days = []
+    for i in range(6, -1, -1):
+        a = t - i * 86400
+        n, g = _rides([uid], a, a + 86400)
+        days.append({"day": time.strftime("%d.%m", time.gmtime(a + core.TZ)), "wd": time.gmtime(a + core.TZ).tm_wday,
+                     "rides": n, "gross": round(g)})
+    rec = core.query("SELECT completed_at AS at, p_addr, d_addr, price FROM rides WHERE driver=? AND status='completed' "
+                     "ORDER BY completed_at DESC LIMIT 10", (uid,), "all")
+    u = core.get_user(uid) or {}
+    praise = []
+    try:
+        praise = [{"t": a, "n": b} for a, b in core.driver_praise(uid)["good"][:5]]
+    except Exception:
+        pass
+    return {"uid": uid, "name": u.get("name") or "", "phone": u.get("phone") or "", "plate": d.get("car_plate") or "",
+            "car": core.car_text(d.get("car_color"), d.get("car_model")), "rating": d.get("rating"),
+            "activity": d.get("activity") if d.get("activity") is not None else 100, "days": days,
+            "recent": [{"at": r["at"], "from": r["p_addr"] or "", "to": r["d_addr"] or "", "price": round(r["price"] or 0)} for r in rec],
+            "praise": praise}
+
+
+def map_state(pid):
+    """Парктын айдоочулары картада. Жүргүнчүнүн аты/телефону жок; эс алуудагынын жери болжолдуу (~1 км)."""
+    t = core.now()
+    today = core.period_starts()["today"]
+    out = []
+    for d in _drivers(pid):
+        if d.get("lat") is None:
+            continue
+        u = core.get_user(d["uid"]) or {}
+        live = bool(d.get("online")) and ((d.get("live_until") or 0) > t or t - (d.get("loc_at") or 0) < core.LOC_TTL_SEC)
+        st = "busy" if live and d.get("busy_ride") else "free" if live else "off"
+        lat, lon = (d["lat"], d["lon"]) if st != "off" else (round(d["lat"], 2), round(d["lon"], 2))
+        trip = None
+        if st == "busy":
+            r = core.get_ride(d["busy_ride"]) or {}
+            short = lambda s: (s or "").split(",")[0][:40]    # noqa: E731
+            trip = {"status": r.get("status"), "from": short(r.get("p_addr")), "to": short(r.get("d_addr"))}
+        n, g = _rides([d["uid"]], today)
+        out.append({"uid": d["uid"], "name": u.get("name") or "", "phone": u.get("phone") or "", "plate": d.get("car_plate") or "",
+                    "car": core.car_text(d.get("car_color"), d.get("car_model")), "lat": lat, "lon": lon, "st": st,
+                    "seen": d.get("loc_at"), "trip": trip, "today": n, "today_gross": round(g)})
+    return {"drivers": out, "now": t,
+            "count": {k: sum(1 for x in out if x["st"] == k) for k in ("free", "busy", "off")}}
+
+
+def stats_csv(pid, period):
+    s = driver_stats(pid, period)
+    lines = ["Айдоочу;Телефон;Номер;Сапар;Тапкан акча;Линияда (саат);Алган заказ;Сунуш;Жокко чыгаруу;Паркка тиешелүү"]
+    for r in s["rows"]:
+        lines.append(";".join(str(x) for x in (r["name"], r["phone"], r["plate"], r["rides"], r["gross"],
+                                                round(r["online_sec"] / 3600.0, 1), r["accepted"], r["offers"], r["cancels"], r["share"])))
+    return "\ufeff" + "\n".join(lines) + "\n"
+
+
 def payouts(pid):
     return core.query("SELECT amount, note, at FROM park_payouts WHERE park_id=? ORDER BY at DESC LIMIT 30", (pid,), "all")
 

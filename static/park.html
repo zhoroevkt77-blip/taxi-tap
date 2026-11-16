@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#fafafa">
 <title>Таксопарк кабинети — Такси ТАП!</title>
 <link rel="apple-touch-icon" href="/static/icon-192.png?v=4">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="/static/theme.css?v=89">
 <style>
 .act{border:1px solid #ececf0;border-radius:16px;padding:12px;margin-top:10px}.ah{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
@@ -71,11 +72,26 @@ input.f{flex:1;border:1.5px solid #e3e3e8;border-radius:14px;padding:12px;font-s
 #sticker .pv{display:inline-flex;align-items:center;gap:3mm;width:85mm;height:55mm;border:1px dashed #bbb;padding:4mm;box-sizing:border-box;vertical-align:top;margin:1mm}
 #sticker .pv svg{width:36mm;height:36mm}#sticker .pv .t{font-size:15pt;font-weight:900}#sticker .pv .t span{color:#e9a100}
 #sticker .pv .s{font-size:9pt;color:#555}#sticker .pv .n{font-weight:800;font-size:11pt;margin-top:2mm}
+.tabs2{display:flex;gap:6px;background:#f1f1f4;border-radius:14px;padding:4px;margin-bottom:10px}.tabs2 button{flex:1;border:0;background:none;border-radius:11px;padding:9px;font:800 14px Inter,system-ui,sans-serif;cursor:pointer}.tabs2 button.on{background:#fff;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.per.dp{margin:0 0 8px}.per.dp button{padding:7px 11px;font-size:13px}
+.tot{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px}.tot div{background:#fffaf0;border-radius:12px;padding:7px;text-align:center}.tot b{display:block;font-size:16px}.tot small{font-size:11px;color:#6b6b76}
+.srt{display:flex;gap:6px;overflow-x:auto;font-size:12px;color:#6b6b76;align-items:center;margin-bottom:4px}.srt button{border:1px solid #e3e3e8;background:#fff;border-radius:9px;padding:4px 8px;font:700 12px Inter,system-ui,sans-serif;cursor:pointer;white-space:nowrap}.srt button.on{border-color:#ffb703;background:#fffaf0}
+.ds{padding:10px 0;border-bottom:1px solid #eee;cursor:pointer}.ds:last-child{border-bottom:0}.ds .t{display:flex;align-items:center;gap:8px}.ds .t b{flex:1;font-size:15px}.ds .m{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:6px;font-size:12px;color:#6b6b76}.ds .m b{display:block;color:#16161a;font-size:14px}
+.flag{font-size:11px;font-weight:800;border-radius:8px;padding:2px 7px}.flag.b{background:#FFF1C2;color:#7a5200}.flag.i{background:#f1f1f4;color:#6b6b76}
+#pmap{position:relative;height:330px;border-radius:16px;overflow:hidden;background:#eef0f3}
+.chips{display:flex;gap:6px;margin-bottom:8px}.chips button{flex:1;border:0;border-radius:12px;padding:8px 4px;font:800 13px Inter,system-ui,sans-serif;cursor:pointer;background:#f6f6f8}.chips button.on{outline:2px solid #ffb703}
+.pm{width:16px;height:16px;border-radius:50%;border:3px solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.35)}.pm.free{background:#1D9E75}.pm.busy{background:#f5a400}.pm.off{background:#b9b9c2}
+.mlist .dr{cursor:pointer}
+.sheet2{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:3000;display:flex;align-items:flex-end;justify-content:center}.sheet2>div{background:#fff;border-radius:22px 22px 0 0;max-width:560px;width:100%;max-height:86vh;overflow:auto;padding:16px 16px calc(env(safe-area-inset-bottom,0px) + 18px);box-sizing:border-box}
+.bars{display:flex;gap:6px;align-items:flex-end;height:110px;margin:10px 0 4px}.bars div{flex:1;text-align:center;font-size:11px;color:#6b6b76;display:flex;flex-direction:column;justify-content:flex-end;height:100%}.bars i{display:block;background:linear-gradient(#ffd31a,#fcbc00);border-radius:6px 6px 2px 2px;min-height:2px;margin:2px 0}.bars em{font-style:normal;color:#16161a;font-weight:800}
+.rr{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid #f0f0f3;font-size:13px}.rr span{color:#6b6b76}
+.call{display:inline-block;text-decoration:none;margin-top:8px}
 </style>
 </head>
 <body>
 <div class="pkbg"></div><div class="wrap" id="app"><p class="muted">Жүктөлүүдө…</p></div>
 <div id="sticker"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="/static/qr.js"></script>
 <script src="/static/qrshare.js"></script>
 <script>
@@ -185,14 +201,10 @@ function draw() {
       <p>• Эгер ал жүргүнчү сиздин QR же <b>${esc(p.promo || "промокод")}</b> аркылуу келип, бул анын биринчи сапары болсо — дагы <b>${fmt(p.ref_bonus)} сом</b> бонус. Бонус бир жүргүнчү үчүн бир жолу гана, ал катталгандан кийин 30 күндүн ичинде сапар бүтүрсө берилет.</p>
       <p>• Аптада (дүйшөмбүдөн жекшембиге чейин) тапканыңыз кийинки дүйшөмбүдө төлөнөт жана «✅ Төлөнгөн акчалар» тизмесине түшөт. Төлөнгөндө Telegram'га кабар келет.</p></details>
     ${ST.commission_pct > 0 ? "" : `<div class="note">ℹ️ Азыр пилот: Такси ТАП! комиссия албайт (0%), ошондуктан комиссиядан үлүш 0. Жүргүнчү бонустары эсептеле берет.</div>`}
-    <div class="card"><h2>🚕 Айдоочулар</h2>
-      ${ST.drivers.length ? ST.drivers.map(d => `<div class="dr"><span class="dot ${d.busy ? "busy" : d.online ? "on" : ""}"></span>
-        <div class="i"><b>${esc(d.name || d.phone)}</b><small>${esc(d.car)} · ${esc(d.plate)} · ★${Number(d.rating ?? 5).toFixed(1)} · ⚡${d.activity}${d.status !== "active" ? " · " + esc(d.status) : ""}</small></div>
-        <div class="n"><b>${d.today}</b> бүгүн<br>${d.week_rides} · ${fmt(d.week_gross)} с/жума</div>
-        <button class="x" data-rm="${esc(d.uid)}" aria-label="Чыгаруу">✕</button></div>`).join("")
-        : `<p class="muted">Азырынча айдоочу жок. Айдоочу адегенде сайтта «Айдоочу болуу» аркылуу катталып, текшерүүдөн өтүшү керек, андан кийин аны бул жерге номери менен кошосуз.</p>`}
-      <div class="row"><input class="f" id="dph" placeholder="Айдоочунун номери: 0700 123 456" inputmode="tel"><button class="btn" id="dadd">Кошуу</button></div>
-      <div id="dmsg"></div></div>
+    <div id="drvSlot"></div>
+    <div class="card"><h2>➕ Айдоочу кошуу</h2>
+      <div class="row" style="margin-top:0"><input class="f" id="dph" placeholder="Айдоочунун номери: 0700 123 456" inputmode="tel"><button class="btn" id="dadd">Кошуу</button></div>
+      <div id="dmsg"></div>${ST.drivers.length ? "" : `<p class="muted">Айдоочу адегенде сайтта «Айдоочу болуу» аркылуу катталып, текшерүүдөн өтүшү керек, андан кийин аны бул жерге номери менен кошосуз.</p>`}</div>
     <div class="card"><h2 class="ih"><img src="/static/c_gift.webp?v=9" alt="">Жүргүнчүлөрдү тартуу</h2>
       <div class="qr"><div id="qr"></div><div><div class="muted">Паркыңыздын коду</div><div class="code">${esc(p.code)}</div>
         <div class="muted" style="margin-top:4px">Жаңы жүргүнчү ушул QR менен келип, биринчи сапарын бүтүрсө — сизге <b>${fmt(p.ref_bonus)} сом</b>.${p.promo_amount ? ` Ага биринчи сапарга <b>−${p.promo_amount} сом</b>.` : ""}</div></div></div>
@@ -207,9 +219,7 @@ function draw() {
   document.querySelectorAll("[data-p]").forEach(b => b.onclick = () => { PER = b.dataset.p; draw(); });
   document.querySelectorAll("[data-aok]").forEach(b => b.onclick = () => { if (confirm("Актты ырастайсызбы? Ырасталгандан кийин өзгөрбөйт.")) actAnswer(b.dataset.aok, true); });
   document.querySelectorAll("[data-adis]").forEach(b => b.onclick = () => { const t = $("#ac" + b.dataset.adis).value.trim(); if (!t) return alert("Пикириңизди жазыңыз"); actAnswer(b.dataset.adis, false, t); });
-  document.querySelectorAll("[data-rm]").forEach(b => b.onclick = async () => {
-    if (!confirm("Айдоочуну парктан чыгарасызбы?")) return;
-    await api("/api/park/remove_driver", {uid:b.dataset.rm}); refresh(); });
+  $("#drvSlot").appendChild(drvBox());
   $("#dadd").onclick = async () => {
     const x = await api("/api/park/add_driver", {phone:$("#dph").value});
     const M = {ok:"✓ Айдоочу кошулду", no_driver:"Бул номер менен катталган айдоочу жок", other_park:"Бул айдоочу башка паркта"};
@@ -221,6 +231,109 @@ function draw() {
   $("#share").onclick = () => QRS.share({link, title:"Такси ТАП!",
     text:`🚕 Такси ТАП! — ${ST.area ? ST.area + ": " : ""}бир басууда такси.${p.promo_amount ? `\nБиринчи сапарга −${p.promo_amount} сом!` : ""}\n«${p.name}» 👇`});
   $("#print").onclick = () => { $("#sticker").innerHTML = printTpl(TK, p, link); setTimeout(() => window.print(), 150); };
+}
+
+// ==================== Айдоочулар: статистика + карта ====================
+const PQ = (() => { const id = new URLSearchParams(location.search).get("id"); return id ? "&id=" + id : ""; })();
+let DTAB = "stats", DPER = "week", DSORT = "gross", DST = null, MST = null, MF = "", PMAP = null, PLAY = null, BOX = null, MTIMER = null;
+const DPN = {today:"Бүгүн", week:"Жума", month:"Ай", all:"Баары"};
+const hrs = s => { const h = Math.floor(s / 3600), m = Math.round(s % 3600 / 60); return h ? h + " с " + m + " м" : m + " мүн"; };
+const ago = t => { if (!t) return ""; const s = Date.now() / 1000 - t; return s < 120 ? "азыр" : s < 3600 ? Math.round(s / 60) + " мүн мурун" : s < 86400 ? Math.round(s / 3600) + " саат мурун" : Math.round(s / 86400) + " күн мурун"; };
+const STN = {free:"🟢 Бош", busy:"🟡 Заказда", off:"⚪ Эс алууда"};
+function drvBox() {
+  if (!BOX) { BOX = document.createElement("div"); BOX.className = "card"; BOX.innerHTML = `<h2>🚕 Айдоочулар</h2>
+    <div class="tabs2"><button data-dt="stats">📊 Статистика</button><button data-dt="map">🗺 Карта</button></div>
+    <div id="dStats"></div><div id="dMap" style="display:none"><div class="chips" id="mChips"></div><div id="pmap"></div><div class="mlist" id="mList"></div>
+    <p class="muted" style="font-size:12px;margin:8px 0 0">Ар 15 секундда жаңыланат. Эс алуудагы айдоочунун акыркы жери болжолдуу көрсөтүлөт. Жүргүнчүнүн маалыматы көрүнбөйт.</p></div>`;
+    BOX.querySelectorAll("[data-dt]").forEach(b => b.onclick = () => { DTAB = b.dataset.dt; dShow(); });
+    dShow(); }
+  return BOX;
+}
+function dShow() {
+  BOX.querySelectorAll("[data-dt]").forEach(b => b.classList.toggle("on", b.dataset.dt === DTAB));
+  BOX.querySelector("#dStats").style.display = DTAB === "stats" ? "" : "none";
+  BOX.querySelector("#dMap").style.display = DTAB === "map" ? "" : "none";
+  clearInterval(MTIMER);
+  if (DTAB === "stats") loadStats(); else { loadMap(); MTIMER = setInterval(loadMap, 15000); }
+}
+async function loadStats() {
+  const x = await api("/api/park/drivers?period=" + DPER + PQ);
+  if (!x.error) { DST = x; drawStats(); }
+}
+function drawStats() {
+  const el = BOX.querySelector("#dStats"), T = DST.total;
+  const key = {gross:r => r.gross, rides:r => r.rides, online:r => r.online_sec, acc:r => r.offers ? r.accepted / r.offers : -1, cancels:r => r.cancels};
+  const rows = DST.rows.slice().sort((a, b) => key[DSORT](b) - key[DSORT](a));
+  const SN = {gross:"тапкан", rides:"сапар", online:"линияда", acc:"алган %", cancels:"отмена"};
+  el.innerHTML = `<div class="per dp">${Object.keys(DPN).map(k => `<button data-dp="${k}" class="${k === DPER ? "on" : ""}">${DPN[k]}</button>`).join("")}</div>
+    <div class="tot"><div><b>${T.rides}</b><small>сапар</small></div><div><b>${fmt(T.gross)}</b><small>тапкан, сом</small></div><div><b>${fmt(T.share)}</b><small>паркка, сом</small></div></div>
+    <div class="srt">Иреттөө:${Object.keys(SN).map(k => `<button data-ds="${k}" class="${k === DSORT ? "on" : ""}">${SN[k]}</button>`).join("")}</div>
+    ${rows.length ? rows.map(r => `<div class="ds" data-du="${esc(r.uid)}"><div class="t"><span class="dot ${r.busy ? "busy" : r.online ? "on" : ""}"></span><b>${esc(r.name || r.phone)}</b>
+        ${r.best && DPER !== "today" ? `<span class="flag b">🏆 мыкты</span>` : ""}${r.idle_days >= 3 ? `<span class="flag i">💤 ${r.idle_days} күн</span>` : ""}
+        <button class="x" data-rm="${esc(r.uid)}" aria-label="Чыгаруу">✕</button></div>
+      <small class="muted">${esc(r.car)} · ${esc(r.plate)} · ★${Number(r.rating ?? 5).toFixed(1)} · ⚡${r.activity}</small>
+      <div class="m"><div><b>${r.rides}</b>сапар</div><div><b>${fmt(r.gross)}</b>сом</div><div><b>${r.online_sec ? hrs(r.online_sec) : "—"}</b>линияда</div>
+        <div><b>${r.offers ? Math.round(100 * r.accepted / r.offers) + "%" : "—"}</b>алган${r.cancels ? ` · <span style="color:#b42318">✕${r.cancels}</span>` : ""}</div></div></div>`).join("")
+      : `<p class="muted">Азырынча айдоочу жок.</p>`}
+    <a class="btn g" style="display:block;text-align:center;text-decoration:none;margin-top:10px" href="/park/stats.csv?period=${DPER}${PQ}">📥 Excel'ге жүктөө (${DPN[DPER]})</a>
+    <p class="muted" style="font-size:11.5px;margin:6px 0 0">«Линияда» убакыты 17-ноябрдан баштап эсептелет. «Алган %» — келген сунуштардын канчасын кабыл алганы.</p>`;
+  el.querySelectorAll("[data-dp]").forEach(b => b.onclick = () => { DPER = b.dataset.dp; loadStats(); });
+  el.querySelectorAll("[data-ds]").forEach(b => b.onclick = () => { DSORT = b.dataset.ds; drawStats(); });
+  el.querySelectorAll("[data-rm]").forEach(b => b.onclick = async e => { e.stopPropagation();
+    if (!confirm("Айдоочуну парктан чыгарасызбы?")) return;
+    await api("/api/park/remove_driver", {uid:b.dataset.rm}); loadStats(); refresh(); });
+  el.querySelectorAll("[data-du]").forEach(b => b.onclick = () => openDriver(b.dataset.du));
+}
+async function openDriver(uid) {
+  const d = await api("/api/park/driver?uid=" + encodeURIComponent(uid) + PQ);
+  if (d.error) return;
+  const WD = ["Дш", "Шй", "Шр", "Бш", "Жм", "Иш", "Жк"], mx = Math.max(1, ...d.days.map(x => x.gross));
+  const o = document.createElement("div"); o.className = "sheet2";
+  o.innerHTML = `<div><div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0;font-size:19px">${esc(d.name || d.phone)}</h2><button class="x" data-close>✕</button></div>
+    <p class="muted" style="margin:4px 0">${esc(d.car)} · ${esc(d.plate)} · ★${Number(d.rating ?? 5).toFixed(1)} · ⚡${d.activity}</p>
+    ${d.phone ? `<a class="btn call" href="tel:${esc(d.phone)}">📞 Чалуу</a>` : ""}
+    <h3 style="margin:14px 0 0;font-size:15px">Акыркы 7 күн</h3>
+    <div class="bars">${d.days.map(x => `<div><em>${x.gross ? fmt(x.gross) : ""}</em><i style="height:${Math.round(80 * x.gross / mx)}%"></i>${WD[x.wd]}<br>${x.rides}</div>`).join("")}</div>
+    <p class="muted" style="font-size:11.5px;margin:0">Мамычанын үстүндө — тапкан сом, астында — сапар саны.</p>
+    ${d.praise.length ? `<h3 style="margin:14px 0 4px;font-size:15px">Жүргүнчүлөр мактаган</h3><p style="margin:0;font-size:13.5px">${d.praise.map(x => esc(x.t) + " ×" + x.n).join(" · ")}</p>` : ""}
+    <h3 style="margin:14px 0 4px;font-size:15px">Акыркы сапарлар</h3>
+    ${d.recent.length ? d.recent.map(r => `<div class="rr"><span>${dm(r.at)} ${new Date(r.at * 1000).toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"})}</span><div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.to || r.from)}</div><b>${fmt(r.price)} с</b></div>`).join("") : `<p class="muted">Сапар жок.</p>`}</div>`;
+  o.onclick = e => { if (e.target === o || e.target.dataset.close !== undefined) o.remove(); };
+  document.body.appendChild(o);
+}
+async function loadMap() {
+  const x = await api("/api/park/map?_=1" + PQ);
+  if (x.error) return;
+  MST = x; drawMap();
+}
+function drawMap() {
+  if (!window.L) { BOX.querySelector("#pmap").innerHTML = `<p class="muted" style="padding:20px">Карта жүктөлгөн жок.</p>`; return; }
+  if (!PMAP) {
+    PMAP = L.map(BOX.querySelector("#pmap"), {zoomControl:false, attributionControl:false}).setView([41.43, 72.6], 9);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19}).addTo(PMAP);
+    PLAY = L.layerGroup().addTo(PMAP); PMAP._fit = false;
+  }
+  setTimeout(() => PMAP.invalidateSize(), 50);
+  const C = MST.count, list = MST.drivers.filter(d => !MF || d.st === MF);
+  BOX.querySelector("#mChips").innerHTML = [["free", "🟢 Бош"], ["busy", "🟡 Заказда"], ["off", "⚪ Эс алууда"]]
+    .map(([k, t]) => `<button data-mf="${k}" class="${MF === k ? "on" : ""}">${t} ${C[k]}</button>`).join("");
+  BOX.querySelectorAll("[data-mf]").forEach(b => b.onclick = () => { MF = MF === b.dataset.mf ? "" : b.dataset.mf; drawMap(); });
+  PLAY.clearLayers();
+  const pts = [];
+  list.forEach(d => {
+    const m = L.marker([d.lat, d.lon], {icon:L.divIcon({className:"", html:`<div class="pm ${d.st}"></div>`, iconSize:[16, 16], iconAnchor:[8, 8]})}).addTo(PLAY);
+    m.bindPopup(popHtml(d)); m._uid = d.uid; pts.push([d.lat, d.lon]);
+  });
+  if (pts.length && !PMAP._fit) { PMAP.fitBounds(pts, {padding:[30, 30], maxZoom:14}); PMAP._fit = true; }
+  BOX.querySelector("#mList").innerHTML = MF ? (list.length ? list.map(d => `<div class="dr" data-mu="${esc(d.uid)}"><span class="pm ${d.st}" style="width:12px;height:12px;border-width:2px"></span>
+      <div class="i"><b>${esc(d.name || d.phone)}</b><small>${esc(d.plate)} · ${d.st === "busy" && d.trip ? esc(d.trip.from + " → " + d.trip.to) : d.st === "off" ? ago(d.seen) : "бош"}</small></div>
+      <div class="n"><b>${d.today}</b> бүгүн</div></div>`).join("") : `<p class="muted">Бул тизме бош.</p>`) : "";
+  BOX.querySelectorAll("[data-mu]").forEach(b => b.onclick = () => { const d = list.find(z => z.uid === b.dataset.mu);
+    if (d) { PMAP.setView([d.lat, d.lon], 15); PLAY.eachLayer(m => { if (m._uid === d.uid) m.openPopup(); }); BOX.querySelector("#pmap").scrollIntoView({behavior:"smooth", block:"center"}); } });
+}
+function popHtml(d) {
+  return `<b>${esc(d.name || d.phone)}</b><br>${esc(d.car)} · ${esc(d.plate)}<br>${STN[d.st]}${d.st === "busy" && d.trip ? " · " + esc(d.trip.from + " → " + d.trip.to) : ""}${d.st === "off" ? " · " + ago(d.seen) : ""}
+    <br>Бүгүн: ${d.today} сапар · ${fmt(d.today_gross)} с${d.phone ? `<br><a href="tel:${esc(d.phone)}" style="font-weight:800">📞 Чалуу</a>` : ""}`;
 }
 async function refresh() { const id = new URLSearchParams(location.search).get("id"); ST = await api("/api/park/state" + (id ? "?id=" + id : "")); if (!ST.error) draw(); }
 boot(); setInterval(refresh, 30000);

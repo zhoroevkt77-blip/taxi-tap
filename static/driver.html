@@ -312,7 +312,7 @@ function viewHome() {
   } else {
     render(`<h2>Салам, ${esc(D.name || "айдоочу")}!</h2><p class="muted">${esc(carText(D.car_color, D.car_model))}, ${esc(D.car_plate)}</p>
       ${low ? `<p class="err">Баланс жетишсиз — заказдар келбейт.</p>` : ""}${outHTML()}
-      <button class="btn go" id="on">Линияга чыгуу</button>
+      <button class="btn go" id="on">Линияга чыгуу</button>${D.park ? `<p class="muted" style="font-size:12px;text-align:center;margin:4px 0 0">🏢 Парк сиздин линиядагы жайгашууңузду көрөт</p>` : ""}
       <div class="err" id="er"></div>${stats}${topup}
       ${homeHTML()}${sw}
       ${installHTML()}<button class="outb" id="out">🚪 Чыгуу</button>`);

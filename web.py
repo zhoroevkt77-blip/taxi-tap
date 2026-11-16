@@ -400,6 +400,27 @@ class H(BaseHTTPRequestHandler):
                 if not p:
                     return self._json({"error": "not_park"}, 403)
                 return self._json({"acts": parks.acts(p["id"])})
+            if u.path in ("/api/park/drivers", "/api/park/driver", "/api/park/map", "/park/stats.csv"):
+                p = parks.by_owner(uid) or (parks.get(int((q.get("id") or ["0"])[0] or 0)) if core.is_admin(uid) else None)
+                if not p:
+                    return self._json({"error": "not_park"}, 403)
+                per = (q.get("period") or ["week"])[0]
+                if u.path == "/api/park/drivers":
+                    return self._json(parks.driver_stats(p["id"], per))
+                if u.path == "/api/park/map":
+                    return self._json(parks.map_state(p["id"]))
+                if u.path == "/api/park/driver":
+                    d = parks.driver_detail(p["id"], (q.get("uid") or [""])[0])
+                    return self._json(d if d else {"error": "not_found"}, 200 if d else 404)
+                body = parks.stats_csv(p["id"], per).encode("utf-8")
+                self.send_response(200)
+                self.send_header("Content-Type", "text/csv; charset=utf-8")
+                self.send_header("Content-Disposition", 'attachment; filename="taxitap-%s-%s.csv"' % (p["id"], per))
+                self.send_header("Cache-Control", "no-store")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+                return
             if u.path.startswith("/act/"):                  # басып чыгаруучу акт (PDF катары сактаса болот)
                 try:
                     a = parks.act_get(int(u.path[5:]))
