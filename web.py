@@ -533,6 +533,7 @@ class H(BaseHTTPRequestHandler):
             return self._json({"city": q["city"], "price": q["price"], "dist_km": q["dist_km"],
                                "minutes": q.get("minutes"), "surge": q["surge"], "fixed": q.get("fixed"),
                                "peak": q.get("peak"), "route": (q.get("route") or {}).get("coords"),
+                               "far_fee": q.get("far_fee"), "far_km": q.get("far_km"),
                                "classes": [{"id": c, "name": cfg[c]["name"], "price": pr,
                                             "min": int(t["min_price"] * cfg[c]["k"])}
                                            for c, pr in q["prices"].items()],
@@ -783,6 +784,8 @@ class H(BaseHTTPRequestHandler):
             return self._json({"parks": parks.admin_list(), "pay_time": parks.pay_time()})
         if action == "park_acts":
             return self._json({"acts": parks.acts(limit=60)})
+        if action == "far_pickup":
+            return self._json(core.far_cfg())
         if action == "autoprice":
             cities = sorted({u.get("city") for u in core._area.get("units", []) if u.get("city")} | set((core.get_setting("auto_k") or {}).keys()))
             return self._json({"cfg": core.auto_cfg(), "k": {c: core.auto_k(c) for c in cities},
@@ -855,6 +858,9 @@ class H(BaseHTTPRequestHandler):
         if action == "autoprice":
             ok = core.set_auto_cfg(b.get("on") is not False, b.get("kmin"), b.get("kmax"))
             return self._json({"ok": ok, "cfg": core.auto_cfg()}, 200 if ok else 400)
+        if action == "far_pickup":
+            ok = core.set_far_cfg(b.get("on") is not False, b.get("free_km"), b.get("per_km"), b.get("max"))
+            return self._json(dict(core.far_cfg(), ok=ok), 200 if ok else 400)
         if action == "autoprice_run":
             model = core.build_traffic_model()
             return self._json({"ok": True, "rows": core.auto_tune(force=True), "traffic": model})

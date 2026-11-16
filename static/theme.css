@@ -669,3 +669,4 @@ img[src*="/static/c_"]:not([src*="c_car."]):not([src*="c_hdr"]):not([src*="c_tax
 .hhr .rpill,.dtop .rpill{font-size:13px;padding:4px 11px 4px 6px;gap:5px}.hhr .rpill img,.dtop .rpill img{height:22px}
 .cls .clsimg{height:44px;width:auto;display:block;margin:-6px 0 2px -4px;filter:drop-shadow(0 3px 4px rgba(0,0,0,.18))}
 .cls .clsimg.side{height:34px;margin:2px 0 6px -2px}
+.farn{margin-top:6px;padding:8px 10px;border-radius:12px;background:#fff6dd;color:#5a4300;font-size:13.5px}

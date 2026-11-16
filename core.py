@@ -1211,6 +1211,45 @@ def auto_daily():
     return True
 
 
+# ==================== Алыс подача ====================
+# Жакынкы бош айдоочу free_km'ден алыс болсо, ашкан ар бир км үчүн per_km сом кошулат (max чейин).
+# Баа заказ берилгенде белгиленет — кийин башка айдоочу барса да өзгөрбөйт.
+FAR_DEF = {"on": True, "free_km": 3.0, "per_km": 10, "max": 80}
+ROAD_K = 1.3               # түз сызык → жол аралыгы
+
+
+def far_cfg():
+    return dict(FAR_DEF, **(get_setting("far_pickup") or {}))
+
+
+def set_far_cfg(on, free_km, per_km, mx):
+    try:
+        free_km, per_km, mx = float(free_km), float(per_km), float(mx)
+    except (TypeError, ValueError):
+        return False
+    if not (0.5 <= free_km <= 20 and 0 <= per_km <= 100 and 0 <= mx <= 500):
+        return False
+    set_setting("far_pickup", {"on": bool(on), "free_km": free_km, "per_km": per_km, "max": mx})
+    return True
+
+
+def nearest_km(lat, lon):
+    ds = online_drivers()
+    if not ds:
+        return None
+    return min(haversine_km(lat, lon, d["lat"], d["lon"]) for d in ds) * ROAD_K
+
+
+def far_fee(lat, lon):
+    """(акы, жакынкы айдоочуга чейинки км). Айдоочу жок болсо — (0, None)."""
+    cfg = far_cfg()
+    km = nearest_km(lat, lon)
+    if not cfg["on"] or km is None or km <= cfg["free_km"]:
+        return 0, km
+    fee = min(cfg["max"], (km - cfg["free_km"]) * cfg["per_km"])
+    return int(math.floor(fee / 10.0 + 0.5) * 10), km
+
+
 def price_of(t, km, minutes, k=1.0):
     """Баа = max(минимум, отуруу + км×a + мүн×b) × k, жакынкы 10 сомго тегеректелет."""
     raw = (t["base"] + t["per_km"] * km + t["per_min"] * minutes) * k
@@ -1283,7 +1322,10 @@ def quote(p_lat, p_lon, d_lat=None, d_lon=None, cls="econom"):
         prices = {c: int(round(fx["price"] * cfg[c]["k"] / 10.0) * 10) for c in cfg if cfg[c]["on"]}
         return dict(base, surge=1.0, dist_km=round(km, 1), minutes=round(minutes), price=prices[cls],
                     prices=prices, route=rt, fixed=fx["label"])
-    prices = {c: price_of(t, km, minutes, k * cfg[c]["k"] * ak) for c in cfg if cfg[c]["on"]}
+    ff, fkm = far_fee(p_lat, p_lon)
+    prices = {c: price_of(t, km, minutes, k * cfg[c]["k"] * ak) + ff for c in cfg if cfg[c]["on"]}
+    if ff:
+        base["far_fee"], base["far_km"] = ff, round(fkm, 1)
     return dict(base, dist_km=round(km, 1), minutes=round(minutes), price=prices[cls],
                 prices=prices, route=rt, auto=ak)
 

@@ -1023,6 +1023,26 @@ class ParkWeekly(unittest.TestCase):
         core.query("DELETE FROM parks WHERE id=?", (pid,))
 
 
+class FarPickup(unittest.TestCase):
+    def test_far_fee(self):
+        core.init_db(); offline_all()
+        core.set_setting("far_pickup", None)
+        self.assertEqual(core.far_fee(*KARAKOL)[0], 0)                       # айдоочу жок
+        d = make_driver("0700 000 661", "Алыс", (KARAKOL[0] + 0.045, KARAKOL[1]), 500)   # ~5 км түз → ~6.5 км жол
+        fee, km = core.far_fee(*KARAKOL)
+        self.assertGreater(km, 6); self.assertEqual(fee, 40)                # (6.5−3)×10 ≈ 35 → 40
+        q = core.quote(KARAKOL[0], KARAKOL[1], *DEST)
+        if q.get("price"):
+            self.assertEqual(q.get("far_fee"), 40)
+        self.assertTrue(core.set_far_cfg(True, 3, 10, 20))
+        self.assertEqual(core.far_fee(*KARAKOL)[0], 20)                     # эң көп
+        self.assertTrue(core.set_far_cfg(False, 3, 10, 80))
+        self.assertEqual(core.far_fee(*KARAKOL)[0], 0)
+        self.assertFalse(core.set_far_cfg(True, 0, 10, 80))
+        core.set_setting("far_pickup", None)
+        core.set_driver(d, online=0)
+
+
 class AutoPrice(unittest.TestCase):
     def test_traffic_and_tune(self):
         core.init_db()
