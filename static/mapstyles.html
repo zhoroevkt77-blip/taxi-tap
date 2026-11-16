@@ -11,20 +11,22 @@ h1{font-size:18px;margin:14px 14px 4px}p{margin:0 14px 10px;color:#666}
 .pin{width:18px;height:18px;border-radius:50%;background:#16161a;border:3px solid #ffc21a;box-shadow:0 1px 4px rgba(0,0,0,.4)}
 </style></head><body>
 <h1>Карта стилдери — салыштыруу</h1>
-<p>Үчөө тең акысыз. Бир картаны жылдырсаңыз, калгандары да ошол жерге жылат.</p>
+<p> Бир картаны жылдырсаңыз, калгандары да ошол жерге жылат.</p>
 <div class="card"><b>1. Азыркы (OpenStreetMap) <span>— кадимки</span></b><div class="m" id="m1"></div></div>
-<div class="card"><b>2. CARTO Voyager <span>— Google'га окшош, жумшак түстөр</span></b><div class="m" id="m2"></div></div>
-<div class="card"><b>3. CARTO Light <span>— ак, минималдуу</span></b><div class="m" id="m3"></div></div>
+<div class="card"><b>2. OSM Гуманитардык (HOT) <span>— ачык түстөр, ачкычсыз</span></b><div class="m" id="m2"></div></div>
+<div class="card"><b>3. Esri Street <span>— Google'га окшош (акысыз аккаунт керек)</span></b><div class="m" id="m3"></div></div>
+<div class="card"><b>4. Esri спутник <span>— спутник сүрөтү (акысыз аккаунт керек)</span></b><div class="m" id="m4"></div></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 const C = [40.9330, 73.0110], Z = 15;
 const T = [
   ["https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", "© OpenStreetMap"],
-  ["https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", "© OpenStreetMap © CARTO"],
-  ["https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", "© OpenStreetMap © CARTO"]];
+  ["https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", "© OpenStreetMap, HOT"],
+  ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}", "© Esri"],
+  ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", "© Esri"]];
 const maps = T.map(([u, a], i) => {
   const m = L.map("m" + (i + 1), {zoomControl:false}).setView(C, Z);
-  L.tileLayer(u, {maxZoom:19, attribution:a, subdomains:"abcd"}).addTo(m);
+  L.tileLayer(u, {maxZoom:19, attribution:a, subdomains:"abc"}).addTo(m);
   L.marker(C, {icon:L.divIcon({className:"", html:'<div class="pin"></div>', iconSize:[24, 24], iconAnchor:[12, 12]})}).addTo(m);
   return m;
 });
