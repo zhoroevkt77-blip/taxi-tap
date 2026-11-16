@@ -284,9 +284,10 @@ function satInit(map, btn) {
   try { on = localStorage.mapSat === "1"; } catch (e) {}
   const apply = () => {
     if (on && !sat) sat = L.layerGroup([
-      L.tileLayer(ESRI + "World_Imagery/MapServer/tile/{z}/{y}/{x}", {maxZoom:19, attribution:"© Esri"}),
-      L.tileLayer(ESRI + "Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}", {maxZoom:19}),
-      L.tileLayer(ESRI + "Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", {maxZoom:19})]);
+      // Бул аймакта спутник сүрөтү 17-деңгээлге чейин гана бар — андан жакын чоңойтулуп көрсөтүлөт
+      L.tileLayer(ESRI + "World_Imagery/MapServer/tile/{z}/{y}/{x}", {maxZoom:19, maxNativeZoom:17, attribution:"© Esri"}),
+      L.tileLayer(ESRI + "Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}", {maxZoom:19, maxNativeZoom:17}),
+      L.tileLayer(ESRI + "Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", {maxZoom:19, maxNativeZoom:17})]);
     if (on) sat.addTo(map);
     else if (sat) map.removeLayer(sat);
     btn.innerHTML = on ? "🗺" : "🛰"; btn.classList.toggle("on", on);

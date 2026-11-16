@@ -32,8 +32,8 @@ const maps = []; T.map(([u, a], i) => {
   maps.push(m); return m;
 });
 { const m = L.map("m5", {zoomControl:false}).setView(C, Z);
-  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {maxZoom:19, attribution:"© Esri"}).addTo(m);
-  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}", {maxZoom:19}).addTo(m);
+  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {maxZoom:19, maxNativeZoom:17, attribution:"© Esri"}).addTo(m);
+  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}", {maxZoom:19, maxNativeZoom:17}).addTo(m);
   L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", {maxZoom:19}).addTo(m);
   L.marker(C, {icon:L.divIcon({className:"", html:'<div class="pin"></div>', iconSize:[24, 24], iconAnchor:[12, 12]})}).addTo(m);
   maps.push(m); }
