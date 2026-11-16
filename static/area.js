@@ -284,8 +284,8 @@ function satInit(map, btn) {
   try { on = localStorage.mapSat === "1"; } catch (e) {}
   const apply = () => {
     if (on && !sat) sat = L.layerGroup([
-      // Бул аймакта спутник сүрөтү 17-деңгээлге чейин гана бар — андан жакын чоңойтулуп көрсөтүлөт
-      L.tileLayer(ESRI + "World_Imagery/MapServer/tile/{z}/{y}/{x}", {maxZoom:19, maxNativeZoom:17, attribution:"© Esri"}),
+      // Спутник сүрөтү жок жерде (blankTile=false → 404) боз «Map data not available» эмес, астындагы кадимки карта көрүнөт
+      L.tileLayer(ESRI + "World_Imagery/MapServer/tile/{z}/{y}/{x}?blankTile=false", {maxZoom:19, maxNativeZoom:18, attribution:"© Esri", errorTileUrl:"data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw=="}),
       L.tileLayer(ESRI + "Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}", {maxZoom:19, maxNativeZoom:17}),
       L.tileLayer(ESRI + "Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", {maxZoom:19, maxNativeZoom:17})]);
     if (on) sat.addTo(map);
