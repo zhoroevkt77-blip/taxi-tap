@@ -15,6 +15,11 @@ h1{font-size:18px;margin:14px 14px 4px}p{margin:0 14px 10px;color:#666}
 <div class="card"><b>1. Азыркы (OpenStreetMap) <span>— кадимки</span></b><div class="m" id="m1"></div></div>
 <div class="card"><b>2. OSM Гуманитардык (HOT) <span>— ачык түстөр, ачкычсыз</span></b><div class="m" id="m2"></div></div>
 <div class="card"><b>3. Esri Street <span>— Google'га окшош (акысыз аккаунт керек)</span></b><div class="m" id="m3"></div></div>
+<div class="card"><b>6. Esri топо <span>— рельеф, көчөлөр (ачкычсыз)</span></b><div class="m" id="m6"></div></div>
+<div class="card"><b>7. Esri ак-боз <span>— минималдуу (ачкычсыз)</span></b><div class="m" id="m7"></div></div>
+<div class="card"><b>8. OpenTopoMap <span>— тоолор, рельеф (ачкычсыз)</span></b><div class="m" id="m8"></div></div>
+<div class="card"><b>9. Stadia спутник <span>— Stadia'да каттоо + домен кошкондон кийин көрүнөт</span></b><div class="m" id="m9"></div></div>
+<div class="card"><b>10. Stadia Alidade <span>— Google'га окшош (каттоодон кийин)</span></b><div class="m" id="m10"></div></div>
 <div class="card"><b>5. Спутник + көчөлөрдүн аттары <span>— гибрид</span></b><div class="m" id="m5"></div></div>
 <div class="card"><b>4. Esri спутник <span>— спутник сүрөтү (акысыз аккаунт керек)</span></b><div class="m" id="m4"></div></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -31,6 +36,15 @@ const maps = []; T.map(([u, a], i) => {
   L.marker(C, {icon:L.divIcon({className:"", html:'<div class="pin"></div>', iconSize:[24, 24], iconAnchor:[12, 12]})}).addTo(m);
   maps.push(m); return m;
 });
+[["m6", "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}", "© Esri", 19],
+ ["m7", "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}", "© Esri", 16],
+ ["m8", "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", "© OpenStreetMap, SRTM, © OpenTopoMap", 17],
+ ["m9", "https://tiles.stadiamaps.com/tiles/alidade_satellite/{z}/{x}/{y}{r}.jpg", "© Stadia Maps © OpenStreetMap", 20],
+ ["m10", "https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png", "© Stadia Maps © OpenStreetMap", 20]].forEach(([id, u, a, nz]) => {
+  const m = L.map(id, {zoomControl:false}).setView(C, Z);
+  L.tileLayer(u, {maxZoom:19, maxNativeZoom:nz, attribution:a, subdomains:"abc"}).addTo(m);
+  L.marker(C, {icon:L.divIcon({className:"", html:'<div class="pin"></div>', iconSize:[24, 24], iconAnchor:[12, 12]})}).addTo(m);
+  maps.push(m); });
 { const m = L.map("m5", {zoomControl:false}).setView(C, Z);
   L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {maxZoom:19, maxNativeZoom:17, attribution:"© Esri"}).addTo(m);
   L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}", {maxZoom:19, maxNativeZoom:17}).addTo(m);
