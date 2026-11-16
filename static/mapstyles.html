@@ -15,6 +15,7 @@ h1{font-size:18px;margin:14px 14px 4px}p{margin:0 14px 10px;color:#666}
 <div class="card"><b>1. Азыркы (OpenStreetMap) <span>— кадимки</span></b><div class="m" id="m1"></div></div>
 <div class="card"><b>2. OSM Гуманитардык (HOT) <span>— ачык түстөр, ачкычсыз</span></b><div class="m" id="m2"></div></div>
 <div class="card"><b>3. Esri Street <span>— Google'га окшош (акысыз аккаунт керек)</span></b><div class="m" id="m3"></div></div>
+<div class="card"><b>5. Спутник + көчөлөрдүн аттары <span>— гибрид</span></b><div class="m" id="m5"></div></div>
 <div class="card"><b>4. Esri спутник <span>— спутник сүрөтү (акысыз аккаунт керек)</span></b><div class="m" id="m4"></div></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
@@ -24,12 +25,18 @@ const T = [
   ["https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", "© OpenStreetMap, HOT"],
   ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}", "© Esri"],
   ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", "© Esri"]];
-const maps = T.map(([u, a], i) => {
+const maps = []; T.map(([u, a], i) => {
   const m = L.map("m" + (i + 1), {zoomControl:false}).setView(C, Z);
   L.tileLayer(u, {maxZoom:19, attribution:a, subdomains:"abc"}).addTo(m);
   L.marker(C, {icon:L.divIcon({className:"", html:'<div class="pin"></div>', iconSize:[24, 24], iconAnchor:[12, 12]})}).addTo(m);
-  return m;
+  maps.push(m); return m;
 });
+{ const m = L.map("m5", {zoomControl:false}).setView(C, Z);
+  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {maxZoom:19, attribution:"© Esri"}).addTo(m);
+  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}", {maxZoom:19}).addTo(m);
+  L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", {maxZoom:19}).addTo(m);
+  L.marker(C, {icon:L.divIcon({className:"", html:'<div class="pin"></div>', iconSize:[24, 24], iconAnchor:[12, 12]})}).addTo(m);
+  maps.push(m); }
 let busy = false;
 maps.forEach(m => m.on("move", () => { if (busy) return; busy = true;
   maps.forEach(o => o !== m && o.setView(m.getCenter(), m.getZoom(), {animate:false})); busy = false; }));
