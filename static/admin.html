@@ -632,7 +632,7 @@ async function viewArea() {
       </div></div></div>
     <div id="amap"></div>
     <div class="tools" id="tools"></div>
-    <p class="muted" id="hint"></p>`;
+    <p class="muted" id="hint"></p><div id="zList"></div>`;
   areaPicker(a);
   $("#atT").oninput = () => $("#atP").textContent = $("#atT").value.trim() || a.name;
   $("#atS").onclick = async () => { const r = await api("/api/a/area_title", {title:$("#atT").value}); toast(r.error ? "Ката" : "✓ Аймактын аты сакталды", 2500); };
@@ -650,6 +650,11 @@ async function viewArea() {
       g.bindTooltip(`${esc(u.name)}${u.approx ? " (5 км тегерек)" : ""} · тариф: «${esc(u.city)}»`, {sticky:true});
       L.marker(g.getBounds().getCenter(), {interactive:false, icon:L.divIcon({className:"ulbl", html:`<span>${esc(u.name)}</span>`, iconSize:[0, 0]})}).addTo(alyr);
     });
+    ZONES = x.zones || []; CITIES_T = [...new Set((x.units || []).map(u => u.city))];
+    ZONES.forEach(z => { const g = L.geoJSON(z.gj, {style:{color:"#E8A100", weight:3, dashArray:"6 4", fillColor:"#FFC21A", fillOpacity:.3}}).addTo(alyr);
+      g.bindTooltip(`🎯 Тариф зонасы: «${esc(z.city)}»`, {sticky:true});
+      L.marker(g.getBounds().getCenter(), {interactive:false, icon:L.divIcon({className:"ulbl", html:`<span>🎯 ${esc(z.city)}</span>`, iconSize:[0, 0]})}).addTo(alyr); });
+    zoneList();
   }).catch(() => {});
   draw = null; areaTools(a);
   amap.on("click", e => { if (!draw) return; draw.push([e.latlng.lat, e.latlng.lng]); drawPreview(); });
@@ -705,28 +710,42 @@ async function areaPicker(a) {
     viewArea();
   };
 }
+let ZONES = [], CITIES_T = [], zdraw = false;
+function zoneList() {
+  const el = $("#zList"); if (!el) return;
+  el.innerHTML = `<p class="muted" style="margin:4px 0">🎯 <b>Тариф зонасы</b> — картада бир жерди тартып, ал жерге кайсы тариф колдонуларын тандайсыз (мис. аэропорттун тегереги — «Манас» тарифи). Зона район чегинен күчтүү.</p>
+    ${ZONES.map(z => `<div class="item"><div class="main">🎯 «${esc(z.city)}» тарифи</div><button class="btn" data-zdel="${z.id}">✕ Өчүрүү</button></div>`).join("")}`;
+  el.querySelectorAll("[data-zdel]").forEach(b => b.onclick = async () => { if (!confirm("Зонаны өчүрөсүзбү?")) return;
+    await api("/api/a/tariff_zone", {id:+b.dataset.zdel, delete:true}); viewArea(); });
+}
 function areaTools(a) {
   const t = $("#tools");
   if (!draw) {
-    t.innerHTML = `<button class="btn gold" id="aNew">✏️ Кошумча жер тартуу</button>
+    t.innerHTML = `<button class="btn gold" id="aZone">🎯 Тариф зонасын тартуу</button><button class="btn" id="aNew">✏️ Кошумча жер тартуу</button>
       ${a.source === "custom" || a.source === "list+custom" ? `<button class="btn" id="aReset">✕ Тарткан кошумчаны өчүрүү</button>` : ""}`;
     $("#hint").textContent = "Тизмеде жок айылды (мис. Сузак айылы) кошуу үчүн: «Кошумча жер тартуу» басып, картаны анын четтери боюнча кезек-кезек басыңыз. Тарткан жер тизмедеги аймакка КОШУЛАТ.";
-    $("#aNew").onclick = () => { draw = []; alyr.clearLayers(); drawPreview(); areaTools(a); };
+    $("#aNew").onclick = () => { zdraw = false; draw = []; alyr.clearLayers(); drawPreview(); areaTools(a); };
+    $("#aZone").onclick = () => { zdraw = true; draw = []; alyr.clearLayers(); drawPreview(); areaTools(a);
+      $("#hint").textContent = "🎯 Тариф зонасы: картаны ал жердин четтери боюнча кезек-кезек басыңыз, анан тарифти тандап «Сактоо»."; };
     const r = $("#aReset");
     if (r) r.onclick = async () => { if (!confirm("Өзүңүз тарткан кошумча жерди өчүрөсүзбү? Тизмедеги аймак калат.")) return;
       await api("/api/a/area", {reset:true}); setTimeout(viewArea, 1500); };
     return;
   }
-  t.innerHTML = `<button class="btn ok" id="aSave">✓ Сактоо</button><button class="btn" id="aUndo">↶ Акыркы чекит</button>
+  t.innerHTML = `${zdraw ? `<select class="f" id="zCity" style="margin:0;max-width:200px">${CITIES_T.map(c => `<option>${esc(c)}</option>`).join("")}</select>` : ""}
+    <button class="btn ok" id="aSave">✓ Сактоо</button><button class="btn" id="aUndo">↶ Акыркы чекит</button>
     <button class="btn bad" id="aCancel">Жокко чыгаруу</button>`;
   $("#aSave").onclick = async () => {
     if (draw.length < 3) return $("#hint").textContent = "Кеминде 3 чекит коюңуз.";
+    if (zdraw) { const r = await api("/api/a/tariff_zone", {city:$("#zCity").value, points:draw});
+      if (!r.ok) return $("#hint").textContent = "Сакталган жок: чекиттерди текшериңиз.";
+      draw = null; zdraw = false; toast("✓ Тариф зонасы сакталды", 2500); return viewArea(); }
     const r = await api("/api/a/area", {points:draw});
     if (r.error) return $("#hint").textContent = "Сакталган жок: чекиттер Кыргызстандын ичинде болушу керек.";
     draw = null; viewArea();
   };
   $("#aUndo").onclick = () => { draw.pop(); drawPreview(); };
-  $("#aCancel").onclick = () => { draw = null; viewArea(); };
+  $("#aCancel").onclick = () => { draw = null; zdraw = false; viewArea(); };
 }
 function drawPreview() {
   alyr.clearLayers();

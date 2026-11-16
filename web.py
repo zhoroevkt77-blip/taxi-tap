@@ -808,7 +808,7 @@ class H(BaseHTTPRequestHandler):
                                "traffic": core.get_setting("traffic_model") or {}, "hist": (core.get_setting("auto_hist") or [])[-5:],
                                "min_quotes": core.AUTO_MIN_QUOTES, "min_offers": core.AUTO_MIN_OFFERS})
         if action == "area_units":
-            return self._json({"units": core.area_units_gj()})
+            return self._json({"units": core.area_units_gj(), "zones": core.tariff_zones()})
         if action == "fixed_routes":
             return self._json({"items": core.fixed_routes(), "r": core.FIXED_R_KM})
         if action == "client":
@@ -1033,6 +1033,10 @@ class H(BaseHTTPRequestHandler):
             if r.get("error"):
                 return self._json(r, 400)
             return self._json(dict(core.area_info(), result=r))
+        if action == "tariff_zone":
+            ok = core.set_tariff_zone(_txt(b.get("city"), 60), b.get("points"), int(b.get("id") or 0) or None,
+                                      delete=b.get("delete") is True)
+            return self._json({"ok": ok, "zones": core.tariff_zones()}, 200 if ok else 400)
         if action == "area":
             if b.get("reset"):
                 core.reset_area()

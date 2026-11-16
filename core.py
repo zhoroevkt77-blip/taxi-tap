@@ -895,8 +895,33 @@ def _load_area_base(fetch=True):
         print("  Аймак: жүктөлбөдү (%s) — болжолдуу чек" % e, flush=True)
 
 
+def tariff_zones():
+    return get_setting("tariff_zones") or []
+
+
+def set_tariff_zone(city, points, zid=None, delete=False):
+    """Админ тарткан жер → ушул тариф (мис. аэропорттун тегереги «Манас» тарифи менен)."""
+    zs = [z for z in tariff_zones() if z.get("id") != zid]
+    if delete:
+        set_setting("tariff_zones", zs)
+        return True
+    try:
+        pts = [[float(p[0]), float(p[1])] for p in points or []]
+    except (TypeError, ValueError, IndexError):
+        return False
+    if len(pts) < 3 or not city or not all(39 < p[0] < 44 and 69 < p[1] < 81 for p in pts):
+        return False
+    ring = [[p[1], p[0]] for p in pts] + [[pts[0][1], pts[0][0]]]
+    zs.append({"id": zid or int(now() * 1000) % 10 ** 9, "city": city, "gj": {"type": "Polygon", "coordinates": [ring]}})
+    set_setting("tariff_zones", zs)
+    return True
+
+
 def city_of(lat, lon):
     if AREA_ON:
+        for z in tariff_zones():                         # админ кол менен тарткан тариф зоналары — биринчи
+            if _in_gj(lat, lon, z["gj"]) and in_area(lat, lon):
+                return z["city"]
         units = _area["units"]
         for u in sorted(units, key=_unit_size):          # кичине (шаар) биринчи — райондун ичиндеги шаар
             if _in_gj(lat, lon, u["gj"]):

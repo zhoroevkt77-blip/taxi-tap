@@ -1316,6 +1316,27 @@ class Peers(unittest.TestCase):
             core.set_driver(u, online=0)
 
 
+class TariffZone(unittest.TestCase):
+    def test_zone_overrides_unit(self):
+        sq = lambda a, b, c, d: [[b, a], [d, a], [d, c], [b, c], [b, a]]
+        old, on = dict(core._area), core.AREA_ON
+        core.AREA_ON = True
+        try:
+            core._area["units"] = [{"name": "Сузак району", "city": "Сузак", "gj": {"type": "Polygon", "coordinates": [sq(40.0, 72.0, 41.0, 73.0)]}}]
+            core._area["geojson"] = {"type": "Polygon", "coordinates": [sq(40.0, 72.0, 41.0, 73.0)]}
+            self.assertEqual(core.city_of(40.5, 72.5), "Сузак")
+            self.assertTrue(core.set_tariff_zone("Манас", [[40.4, 72.4], [40.4, 72.6], [40.6, 72.6], [40.6, 72.4]]))
+            self.assertEqual(core.city_of(40.5, 72.5), "Манас")
+            self.assertEqual(core.city_of(40.2, 72.2), "Сузак")
+            zid = core.tariff_zones()[0]["id"]
+            self.assertTrue(core.set_tariff_zone(None, None, zid, delete=True))
+            self.assertEqual(core.city_of(40.5, 72.5), "Сузак")
+            self.assertFalse(core.set_tariff_zone("Манас", [[1, 2], [3, 4]]))
+        finally:
+            core._area.clear(); core._area.update(old); core.AREA_ON = on
+            core.set_setting("tariff_zones", None)
+
+
 class CarPlate(unittest.TestCase):
     def test_norm_plate(self):
         self.assertEqual(core.norm_plate("04 KG 338 APG"), "04KG338APG")
