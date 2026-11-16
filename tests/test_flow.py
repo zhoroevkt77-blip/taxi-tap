@@ -1023,6 +1023,18 @@ class ParkWeekly(unittest.TestCase):
         core.query("DELETE FROM parks WHERE id=?", (pid,))
 
 
+class IncludedKm(unittest.TestCase):
+    def test_price_with_included(self):
+        t = {"base": 70, "per_km": 14, "per_min": 3, "min_price": 70, "inc_km": 2, "inc_min": 4}
+        self.assertEqual(core.price_of(t, 1.5, 3), 70)                     # толук кирди
+        self.assertEqual(core.price_of(t, 4.2, 8), 70 + 31 + 12 and 110)   # 70+2.2×14+4×3=112.8 → 110
+        self.assertEqual(core.price_of(dict(t, inc_km=0, inc_min=0), 4.2, 8), 150)   # мурункудай: 70+58.8+24=152.8
+        core.init_db()
+        core.set_tariff("ТестТ", 70, 14, 3, 70, inc_km=2, inc_min=4)
+        self.assertEqual(core.get_tariff("ТестТ")["inc_km"], 2)
+        core.query("DELETE FROM tariffs WHERE city='ТестТ'")
+
+
 class CancelRules(unittest.TestCase):
     def test_driver_requeue_noshow_block(self):
         core.init_db(); offline_all()

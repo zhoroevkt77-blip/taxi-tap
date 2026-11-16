@@ -918,10 +918,11 @@ class H(BaseHTTPRequestHandler):
         if action == "tariff":
             city = _txt(b.get("city"))
             vals = [_num(b.get(k)) for k in ("base", "per_km", "per_min", "min_price")]
+            inc = [_num(b.get(k)) if b.get(k) not in (None, "") else 0 for k in ("inc_km", "inc_min")]
             known = set(core.CITIES) | {t["city"] for t in core.all_tariffs()}
-            if city not in known or any(v is None or v < 0 for v in vals):
+            if city not in known or any(v is None or v < 0 for v in vals + inc) or inc[0] > 20 or inc[1] > 60:
                 return self._json({"error": "bad"}, 400)
-            core.set_tariff(city, *vals)
+            core.set_tariff(city, *vals, inc_km=inc[0], inc_min=inc[1])
             return self._json({"ok": True})
         if action == "addr":
             p = _point(b.get("p"))

@@ -312,6 +312,7 @@ NEW_COLUMNS = {
                 "goal": "INTEGER",
                 "car_year": "INTEGER"},                  # күндүк максат (сом)                # күбөлүктүн мөөнөтү YYYY-MM-DD                # таксопарк (жок болсо — өз алдынча)   # активдүүлүк 0..100 (Яндекс Pro'догудай)              # аймактан сыртка чыккан убакыт
     "balance_tx": {"claimed": "REAL"},
+    "tariffs": {"inc_km": "REAL DEFAULT 0", "inc_min": "REAL DEFAULT 0"},   # отуруу баасына кирген км/мүн (Яндекстей)
     "rides": {"note": "TEXT", "source": "TEXT",   # source: web | phone (диспетчер)
               "est_min": "REAL",
               "cancel_reason": "TEXT", "accept_km": "REAL", "requeued": "INTEGER DEFAULT 0",                           # маршруттун пробкасыз убактысы (автоматтык баа үчүн)
@@ -917,10 +918,10 @@ def get_tariff(city):
     return row or dict(CITY_TARIFFS.get(city) or DEFAULT_TARIFF, city=city)
 
 
-def set_tariff(city, base, per_km, per_min, min_price):
+def set_tariff(city, base, per_km, per_min, min_price, inc_km=0, inc_min=0):
     query("DELETE FROM tariffs WHERE city=?", (city,))
-    query("INSERT INTO tariffs (city, base, per_km, per_min, min_price) VALUES (?, ?, ?, ?, ?)",
-          (city, base, per_km, per_min, min_price))
+    query("INSERT INTO tariffs (city, base, per_km, per_min, min_price, inc_km, inc_min) VALUES (?, ?, ?, ?, ?, ?, ?)",
+          (city, base, per_km, per_min, min_price, inc_km or 0, inc_min or 0))
 
 
 # ==================== Жергиликтүү коэффициент (алты бурчтуктар) ====================
@@ -1255,8 +1256,11 @@ def far_fee(lat, lon):
 
 
 def price_of(t, km, minutes, k=1.0):
-    """Баа = max(минимум, отуруу + км×a + мүн×b) × k, жакынкы 10 сомго тегеректелет."""
-    raw = (t["base"] + t["per_km"] * km + t["per_min"] * minutes) * k
+    """Баа = max(минимум, отуруу + (км − кирген км)×a + (мүн − кирген мүн)×b) × k, 10 сомго тегеректелет.
+    «Кирген» км/мүн — Яндекстегидей отуруу баасына кошулуп кеткен аралык (демейки 0)."""
+    km2 = max(0.0, km - float(t.get("inc_km") or 0))
+    mn2 = max(0.0, minutes - float(t.get("inc_min") or 0))
+    raw = (t["base"] + t["per_km"] * km2 + t["per_min"] * mn2) * k
     return int(max(t["min_price"] * k, math.floor(raw / 10.0 + 0.5) * 10))
 
 
