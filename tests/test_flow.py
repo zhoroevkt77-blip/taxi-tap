@@ -1316,6 +1316,24 @@ class Peers(unittest.TestCase):
             core.set_driver(u, online=0)
 
 
+class NoPercentInSQL(unittest.TestCase):
+    def test_no_literal_percent(self):
+        """Postgres'те ?→%s алмаштырылат — SQL текстинде % болбосун (IndexError берет)."""
+        import re, glob
+        bad = []
+        for f in glob.glob(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "*.py")):
+            for i, line in enumerate(open(f, encoding="utf-8"), 1):
+                if re.search(r"LIKE\s+'[^']*%", line):
+                    bad.append("%s:%d" % (os.path.basename(f), i))
+        self.assertEqual(bad, [])
+
+    def test_set_setting_twice(self):
+        core.init_db()
+        core.set_setting("x_test", 1); core.set_setting("x_test", 2)
+        self.assertEqual(core.get_setting("x_test"), 2)
+        core.set_setting("x_test", None)
+
+
 class TariffZone(unittest.TestCase):
     def test_zone_overrides_unit(self):
         sq = lambda a, b, c, d: [[b, a], [d, a], [d, c], [b, c], [b, a]]

@@ -1669,8 +1669,8 @@ def driver_requeue(rid, driver, reason):
 def driver_cancels_today(uid):
     lt = now() + TZ
     day = lt - lt % 86400 - TZ
-    return int(query("SELECT COUNT(*) AS n FROM ride_events WHERE actor=? AND status LIKE 'drv_cancel:%' "
-                     "AND status<>'drv_cancel:noshow' AND at>=?", (uid, day), "one")["n"])
+    return int(query("SELECT COUNT(*) AS n FROM ride_events WHERE actor=? AND status LIKE ? "
+                     "AND status<>'drv_cancel:noshow' AND at>=?", (uid, "drv_cancel:" + chr(37), day), "one")["n"])
 
 
 def passenger_cancels(uid, days=7):
@@ -1689,8 +1689,8 @@ def cancel_stats(days=7, limit=30):
         out.append({"uid": r["passenger"], "name": u.get("name") or "", "phone": u.get("phone") or "", "n": int(r["n"])})
     rs = query("SELECT cancel_reason AS k, COUNT(*) AS n FROM rides WHERE status='cancelled' AND created_at>? "
                "AND cancel_reason IS NOT NULL GROUP BY cancel_reason", (now() - days * 86400,), "all")
-    drs = query("SELECT status, COUNT(*) AS n FROM ride_events WHERE status LIKE 'drv_cancel:%' AND at>? GROUP BY status",
-                (now() - days * 86400,), "all")
+    drs = query("SELECT status, COUNT(*) AS n FROM ride_events WHERE status LIKE ? AND at>? GROUP BY status",
+                ("drv_cancel:" + chr(37), now() - days * 86400), "all")
     return {"passengers": out, "reasons": {r["k"]: int(r["n"]) for r in rs},
             "driver_reasons": {r["status"][11:]: int(r["n"]) for r in drs}}
 
@@ -2337,10 +2337,20 @@ def get_setting(key, default=None):
     return val if val is not None else default
 
 
+_set_lock = threading.Lock()
+
+
 def set_setting(key, value):
+    """Бир эле учурда эки суроо жазса да ката чыкпасын (UPSERT)."""
     _settings_cache.pop(key, None)
-    query("DELETE FROM settings WHERE key=?", (key,))
-    query("INSERT INTO settings (key, value) VALUES (?, ?)", (key, json.dumps(value, ensure_ascii=False)))
+    v = json.dumps(value, ensure_ascii=False)
+    with _set_lock:
+        n = query("UPDATE settings SET value=? WHERE key=?", (v, key), "count")
+        if not n:
+            try:
+                query("INSERT INTO settings (key, value) VALUES (?, ?)", (key, v))
+            except Exception:
+                query("UPDATE settings SET value=? WHERE key=?", (v, key))
 
 
 # ==================== Каржы ====================
