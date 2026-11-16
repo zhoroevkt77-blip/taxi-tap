@@ -543,6 +543,10 @@ class H(BaseHTTPRequestHandler):
                                "peak": q.get("peak"), "route": (q.get("route") or {}).get("coords"),
                                "far_fee": q.get("far_fee"), "far_km": q.get("far_km"),
                                "cancels": pc if pc >= core.P_CANCEL_WEEK else 0,
+                               "dbg": {"city": q["city"], "base": t.get("base"), "per_km": t.get("per_km"), "per_min": t.get("per_min"),
+                                       "min": t.get("min_price"), "inc_km": t.get("inc_km"), "inc_min": t.get("inc_min"),
+                                       "saved": bool(core.query("SELECT city FROM tariffs WHERE city=?", (q["city"],), "one")),
+                                       "surge": q.get("surge"), "auto": q.get("auto"), "fixed": q.get("fixed")} if core.is_admin(uid) else None,
                                "classes": [{"id": c, "name": cfg[c]["name"], "price": pr,
                                             "min": int(t["min_price"] * cfg[c]["k"])}
                                            for c, pr in q["prices"].items()],

@@ -542,7 +542,8 @@ async function viewQuote() {
     delivery:'<img class="clsimg" src="/static/h_box.webp?v=9" alt="">'};
   const sub = q.price ? `${q.dist_km} км · ~${q.minutes} мүн${q.peak && !q.fixed ? " · 🚦 пик саат" : ""}` : `отуруу ${Math.round(q.tariff.base)} с + ${Math.round(q.tariff.per_km)} с/км`;
   const cxWarn = q.cancels ? `<div class="farn">⚠️ Акыркы күндөрү ${q.cancels} заказды жокко чыгардыңыз. Айдоочулар сизге жол басып келишет — заказ бергенден кийин жокко чыгарбаңыз 🙏</div>` : "";
-  const farTxt = cxWarn + (q.far_fee ? `<div class="farn">🚗 Жакынкы айдоочу ~${q.far_km} км алыста · алыс подача <b>+${q.far_fee} с</b> (баага кирди)</div>` : "");
+  const dbg = q.dbg ? `<div class="muted" style="font-size:12px;margin-top:4px">🛠 Админ үчүн: тариф «${esc(q.dbg.city || "?")}»${q.dbg.saved ? "" : " (сакталган эмес — демейки!)"} · ${q.dbg.base}/${q.dbg.inc_km || 0}км/${q.dbg.inc_min || 0}мүн/${q.dbg.per_km}/${q.dbg.per_min}/мин ${q.dbg.min} · коэф. ×${(+q.dbg.surge || 1).toFixed(2)} · авто ×${(+q.dbg.auto || 1).toFixed(2)}${q.dbg.fixed ? " · туруктуу баа" : ""}</div>` : "";
+  const farTxt = dbg + cxWarn + (q.far_fee ? `<div class="farn">🚗 Жакынкы айдоочу ~${q.far_km} км алыста · алыс подача <b>+${q.far_fee} с</b> (баага кирди)</div>` : "");
   const cur = () => q.classes.find(c => c.id === S.cls);
   const priceTxt = c => c.price ? `${c.price} с` : `${c.min} с+`;
   render(`<div class="row"><span class="bul lt">А</span><div style="flex:1"><b>${esc(S.fromAddr)}</b></div><input class="hn" id="hnF" placeholder="үй №" maxlength="12" value="${esc(S.hnF || "")}"></div>
