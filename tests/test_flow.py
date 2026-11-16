@@ -1030,10 +1030,10 @@ class FarPickup(unittest.TestCase):
         self.assertEqual(core.far_fee(*KARAKOL)[0], 0)                       # айдоочу жок
         d = make_driver("0700 000 661", "Алыс", (KARAKOL[0] + 0.045, KARAKOL[1]), 500)   # ~5 км түз → ~6.5 км жол
         fee, km = core.far_fee(*KARAKOL)
-        self.assertGreater(km, 6); self.assertEqual(fee, 40)                # (6.5−3)×10 ≈ 35 → 40
+        self.assertGreater(km, 6); self.assertEqual(fee, 60)                # (6.5−1)×10 ≈ 55 → 60
         q = core.quote(KARAKOL[0], KARAKOL[1], *DEST)
         if q.get("price"):
-            self.assertEqual(q.get("far_fee"), 40)
+            self.assertEqual(q.get("far_fee"), 60)
         self.assertTrue(core.set_far_cfg(True, 3, 10, 20))
         self.assertEqual(core.far_fee(*KARAKOL)[0], 20)                     # эң көп
         self.assertTrue(core.set_far_cfg(False, 3, 10, 80))
