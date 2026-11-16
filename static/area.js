@@ -263,8 +263,9 @@ window.NAV = (function () {
   function init(m, opts) {
     map = m; onLocate = (opts && opts.onLocate) || null;
     wrap = document.createElement("div"); wrap.className = "navbtns"; wrap.id = "navBtns";
-    wrap.innerHTML = `<button class="navb hide" id="navComp" aria-label="Компас (түндүк)">${COMP}</button><button class="navb" id="navLoc" aria-label="Мен турган жер">${LOC}</button>`;
+    wrap.innerHTML = `<button class="navb sat" id="navSat" aria-label="Спутник / Карта">🛰</button><button class="navb hide" id="navComp" aria-label="Компас (түндүк)">${COMP}</button><button class="navb" id="navLoc" aria-label="Мен турган жер">${LOC}</button>`;
     document.body.appendChild(wrap);
+    satInit(m, wrap.querySelector("#navSat"));
     wrap.querySelector("#navComp").firstChild.style.transition = "transform .2s linear";
     wrap.querySelector("#navLoc").onclick = () => { askOri(); watch(); if (onLocate) onLocate(); else if (pos) map.setView(pos, Math.max(map.getZoom(), 16)); };
     wrap.querySelector("#navComp").onclick = () => { askOri(); if (pos) map.setView(pos, Math.max(map.getZoom(), 17)); };
@@ -275,6 +276,26 @@ window.NAV = (function () {
   }
   return {init, set, place, pos: () => pos};
 })();
+
+// ---------- Спутник ↔ Карта ----------
+const ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services/";
+function satInit(map, btn) {
+  let sat = null, on = false;
+  try { on = localStorage.mapSat === "1"; } catch (e) {}
+  const apply = () => {
+    if (on && !sat) sat = L.layerGroup([
+      L.tileLayer(ESRI + "World_Imagery/MapServer/tile/{z}/{y}/{x}", {maxZoom:19, attribution:"© Esri"}),
+      L.tileLayer(ESRI + "Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}", {maxZoom:19}),
+      L.tileLayer(ESRI + "Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", {maxZoom:19})]);
+    if (on) sat.addTo(map);
+    else if (sat) map.removeLayer(sat);
+    btn.innerHTML = on ? "🗺" : "🛰"; btn.classList.toggle("on", on);
+    btn.setAttribute("aria-label", on ? "Картага өтүү" : "Спутникке өтүү");
+  };
+  btn.onclick = () => { on = !on; try { localStorage.mapSat = on ? "1" : "0"; } catch (e) {} apply();
+    if (typeof toast === "function") toast(on ? "🛰 Спутник · көчөлөрдүн аттары менен" : "🗺 Кадимки карта", 1800); };
+  apply();
+}
 
 // ---------- Кыска кабар (5 сек) ----------
 function toast(text, ms) {
