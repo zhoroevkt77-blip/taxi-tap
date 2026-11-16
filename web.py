@@ -79,11 +79,11 @@ table{{width:100%;border-collapse:collapse}}td,th{{border-bottom:1px solid #ddd;
 <h2>Эсеп</h2><table>
 <tr><td>Ай башындагы калдык</td><td>{fm(d['opening'])}</td></tr>
 <tr><td>Парктын айдоочулары бүтүргөн сапарлар</td><td>{d['rides']}</td></tr>
-<tr><td>Айдоочулар тапкан</td><td>{fm(d['gross'])}</td></tr>
+<tr><td>Айдоочулар тапкан акча</td><td>{fm(d['gross'])}</td></tr>
 <tr><td>Такси ТАП! алган комиссия</td><td>{fm(d['fee'])}</td></tr>
 {parts}
 <tr><td>Жаңы жүргүнчү бонусу: {d['bonus_n']} × {fm(d['bonus_rate'])}</td><td>{fm(d['bonus'])}</td></tr>
-<tr><td><b>Паркка тиешелүү (ай ичинде)</b></td><td><b>{fm(d['due'])}</b></td></tr>
+<tr><td><b>Паркка тиешелүү акча (ай ичинде)</b></td><td><b>{fm(d['due'])}</b></td></tr>
 {pays}
 <tr class="tot"><td>Ай аягындагы калдык — {owe}</td><td>{fm(abs(d['closing']))}</td></tr></table>
 <p class="mu">Бардык суммалар сом менен.</p>

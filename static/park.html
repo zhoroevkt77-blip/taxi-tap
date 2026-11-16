@@ -141,7 +141,7 @@ function actsCard() {
   return `<div class="card"><h2>📄 Акт салыштыруу</h2>
     ${A.length ? A.map(a => { const d = a.data, s = ACT_ST[a.status];
       return `<div class="act"><div class="ah"><b>${esc(a.label)}</b><span class="ast ${s[1]}">${s[0]}</span></div>
-        <div class="ar"><span>Тапкан</span><b>${fmt(d.due)} с</b></div><div class="ar"><span>Төлөндү</span><b>${fmt(d.paid)} с</b></div>
+        <div class="ar"><span>Паркка тиешелүү акча</span><b>${fmt(d.due)} с</b></div><div class="ar"><span>Төлөндү</span><b>${fmt(d.paid)} с</b></div>
         <div class="ar"><span>Ай аягындагы калдык</span><b>${fmt(Math.abs(d.closing))} с${d.closing > 0 ? " · сизге карыз" : d.closing < 0 ? " · сиз карызсыз" : ""}</b></div>
         ${a.status === "dispute" ? `<div class="muted" style="margin-top:4px">Пикириңиз: ${esc(a.comment || "")}</div>` : ""}
         <div class="row"><a class="btn g" href="/act/${a.id}" target="_blank" style="text-decoration:none;text-align:center">📄 Ачуу / PDF</a>
@@ -171,7 +171,7 @@ function draw() {
     ${actsCard()}
     <div class="grid">
       <div class="st"><span>Сапарлар</span><b>${P.rides}</b><i>Парктын айдоочулары бүтүргөн сапарлар</i></div>
-      <div class="st"><span>Айдоочулар тапкан</span><b>${fmt(P.gross)} с</b><i>Ошол сапарлар үчүн жүргүнчүлөр төлөгөн жалпы акча</i></div>
+      <div class="st"><span>Айдоочулар тапкан акча</span><b>${fmt(P.gross)} с</b><i>Ошол сапарлар үчүн жүргүнчүлөр төлөгөн жалпы акча</i></div>
       <div class="st"><span>Комиссиядан үлүш (${p.share_now}%)</span><b>${fmt(P.share)} с</b><i>Такси ТАП! айдоочулардан алган комиссиянын ${shareTerm(p)} сизге</i></div>
       <div class="st"><span>Жаңы жүргүнчүлөр</span><b>${P.refs} <small style="font-size:13px;color:#6b6b76">(${P.refs_active} сапарда)</small></b><i>QR же промокод менен келгендер · кашаада: биринчи сапарын бүтүргөндөр</i></div>
       <div class="st"><span>Жүргүнчү бонусу</span><b>${fmt(P.bonus)} с</b><i>Ар бир жаңы жүргүнчүнүн биринчи сапары үчүн ${fmt(p.ref_bonus)} сом</i></div>
@@ -179,7 +179,7 @@ function draw() {
     </div>
     <details class="how"><summary>❓ Кантип эсептелет? Мисал</summary>
       <p>Сиздин айдоочу 100 сомдук сапар бүтүрдү дейли:</p>
-      <p>• <b>«Айдоочулар тапкан»</b> сумасына 100 сом кошулат.</p>
+      <p>• <b>«Айдоочулар тапкан акча»</b> сумасына 100 сом кошулат.</p>
       <p>• Такси ТАП! айдоочудан комиссия алат${ST.commission_pct > 0 ? ` (азыр ${ST.commission_pct}%) — ${f1(ST.commission_pct)} сом` : " (мисалы 10% — 10 сом)"}.
         Анын <b>${p.share_now}%</b> сизге: ${f1(100 * (ST.commission_pct > 0 ? ST.commission_pct : 10) / 100 * p.share_now / 100)} сом.${p.share_until && Date.now() / 1000 < p.share_until ? ` ${dmy(p.share_until)} баштап үлүш ${p.share_after}% болот.` : ""}</p>
       <p>• Эгер ал жүргүнчү сиздин QR же <b>${esc(p.promo || "промокод")}</b> аркылуу келип, бул анын биринчи сапары болсо — дагы <b>${fmt(p.ref_bonus)} сом</b> бонус. Бонус бир жүргүнчү үчүн бир жолу гана, ал катталгандан кийин 30 күндүн ичинде сапар бүтүрсө берилет.</p>
