@@ -403,6 +403,35 @@ DGIS_KEY = (_os.environ.get("DGIS_KEY") or "").strip()
 DGIS_URL = "https://catalog.api.2gis.com/3.0/items"
 _dgis_cache = {}
 dgis_state = {"ok": None, "calls": 0, "errors": 0, "last_error": None}
+# Акысыз ачкыч: айына 1000 суроо. Күнүнө ушундан ашпайбыз; лимит бүтсө — ай аягына чейин сурабайбыз
+# (дарек OSM/өз тизмебизден чыгат).
+DGIS_DAY_MAX = int(_os.environ.get("DGIS_DAY_MAX") or 30)
+
+
+def _dgis_allow():
+    if not DGIS_KEY:
+        return False
+    lt = time.gmtime(core.now() + core.TZ)
+    month, day = time.strftime("%Y-%m", lt), time.strftime("%Y-%m-%d", lt)
+    st = core.get_setting("dgis_budget") or {}
+    if st.get("blocked") == month:
+        return False
+    if st.get("day") != day:
+        st = {"day": day, "n": 0, "blocked": st.get("blocked")}
+    if st["n"] >= DGIS_DAY_MAX:
+        return False
+    st["n"] += 1
+    core.set_setting("dgis_budget", st)
+    return True
+
+
+def _dgis_fail(e):
+    """403/429 = лимит бүттү → ушул ай бою токтотобуз."""
+    s = str(e)
+    if "403" in s or "429" in s or "limit" in s.lower():
+        st = core.get_setting("dgis_budget") or {}
+        st["blocked"] = time.strftime("%Y-%m", time.gmtime(core.now() + core.TZ))
+        core.set_setting("dgis_budget", st)
 
 
 def _dgis_parse(data):
@@ -431,6 +460,8 @@ def dgis_search(q, near=None, limit=6):
     hit = _dgis_cache.get(key)
     if hit and hit[0] > time.time():
         return hit[1]
+    if not _dgis_allow():
+        return []
     c = near or ((core.AREA_BBOX[0] + core.AREA_BBOX[2]) / 2, (core.AREA_BBOX[1] + core.AREA_BBOX[3]) / 2)
     params = {"q": q, "key": DGIS_KEY, "location": "%f,%f" % (c[1], c[0]), "radius": 40000,
               "fields": "items.point,items.address_name,items.full_name", "page_size": 10, "locale": "ru_KG"}
@@ -448,6 +479,7 @@ def dgis_search(q, near=None, limit=6):
     except Exception as e:
         dgis_state.update(ok=False, last_error=str(e)[:200])
         dgis_state["errors"] += 1
+        _dgis_fail(e)
         res = []
     if len(_dgis_cache) > 2000:
         _dgis_cache.clear()
@@ -466,7 +498,7 @@ def search_all(q, near=None, limit=8):
 
 
 def dgis_selftest():
-    if DGIS_KEY:
+    if DGIS_KEY and _os.environ.get("DGIS_SELFTEST") == "1":        # ар деплойдо лимит жебесин
         r = dgis_search("Базар-Коргон", (41.0417, 72.7472))
         try:
             print("  2ГИС дарек (тест): %s" % (_dgis_reverse(41.0399, 72.7466) or "табылган жок — " + str(dgis_state["last_error"])), flush=True)
@@ -494,7 +526,7 @@ def nearest_landmark(lat, lon, max_m=LANDMARK_M):
 
 
 def _dgis_reverse(lat, lon):
-    if not DGIS_KEY:
+    if not _dgis_allow():
         return None
     params = {"lat": "%.6f" % lat, "lon": "%.6f" % lon, "key": DGIS_KEY, "type": "building,street",
               "fields": "items.point,items.address_name,items.full_name,items.address", "page_size": 3, "locale": "ru_KG"}
@@ -507,6 +539,7 @@ def _dgis_reverse(lat, lon):
     except Exception as e:
         dgis_state["errors"] += 1
         dgis_state["last_error"] = "rev: " + str(e)[:150]
+        _dgis_fail(e)
         return None
     for it in ((data or {}).get("result") or {}).get("items") or []:
         if it.get("type") == "building":
@@ -525,14 +558,14 @@ def _dgis_reverse(lat, lon):
 
 def reverse(lat, lon):
     """{"addr": "Эн-Сай көчөсү 12", "near": "Стадион"} — бири же экөө тең None болушу мүмкүн."""
-    key = (round(lat, 4), round(lon, 4))
+    key = (round(lat / 0.0003), round(lon / 0.0003))          # ~30 м тор
     hit = _rev_cache.get(key)
     if hit and hit[0] > time.time():
         return hit[1]
     res = {"addr": _dgis_reverse(lat, lon), "near": nearest_landmark(lat, lon)}
-    if len(_rev_cache) > 5000:
+    if len(_rev_cache) > 20000:
         _rev_cache.clear()
-    _rev_cache[key] = (time.time() + 3600, res)
+    _rev_cache[key] = (time.time() + 86400, res)
     return res
 
 

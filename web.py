@@ -816,7 +816,8 @@ class H(BaseHTTPRequestHandler):
             return self._json({"items": addrbook.admin_list((q.get("q") or [""])[0][:60],
                                                             only=(q.get("only") or [""])[0] or None),
                                "count": addrbook.count(), "import": addrbook.import_state,
-                               "dgis": dict(addrbook.dgis_state, on=bool(addrbook.DGIS_KEY)),
+                               "dgis": dict(addrbook.dgis_state, on=bool(addrbook.DGIS_KEY), budget=core.get_setting("dgis_budget"),
+                                            day_max=addrbook.DGIS_DAY_MAX),
                                "kinds": {k: {"icon": v[0], "name": v[1]} for k, v in addrbook.KINDS.items()}})
         if action == "drivers":
             t = core.now()
