@@ -290,6 +290,7 @@ function satInit(map, btn) {
       L.tileLayer(ESRI + "Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}", {maxZoom:19, maxNativeZoom:17})]);
     if (on) sat.addTo(map);
     else if (sat) map.removeLayer(sat);
+    if (map.getContainer) map.getContainer().classList.toggle("satmode", on);
     btn.innerHTML = on ? "🗺" : "🛰"; btn.classList.toggle("on", on);
     btn.setAttribute("aria-label", on ? "Картага өтүү" : "Спутникке өтүү");
   };

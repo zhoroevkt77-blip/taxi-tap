@@ -81,7 +81,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=92">
+<link rel="stylesheet" href="/static/theme.css?v=93">
 </head>
 <body>
 <nav id="bnav" class="bnav pro"><a data-k="earn"><img src="/static/n_earn.webp?v=9" alt="">Киреше</a><a data-k="hist"><img src="/static/n_trips.webp?v=9" alt="">Сапарлар</a><a data-k="line" class="big on"><img src="/static/n_go.webp?v=9" alt="">Линия</a><a data-k="help"><img src="/static/n_help.webp?v=9" alt="">Жардам</a><a data-k="cab"><img src="/static/n_cab.webp?v=9" alt="">Кабинет</a></nav>
@@ -101,7 +101,8 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 <div class="offer hide" id="ovl"><div class="ocard" id="ovlc"></div></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="/static/area.js?v=4"></script>
+<script src="/static/night.js?v=1"></script>
+<script src="/static/area.js?v=5"></script>
 <script src="/static/qr.js"></script>
 <script src="/static/qrshare.js"></script>
 <script>
@@ -389,6 +390,7 @@ function viewCabinet(part) {
       <button class="btn ghost" id="goalCh" style="width:auto;margin:0;padding:10px 14px;font-size:14px">Өзгөртүү</button></div>
     <h3 style="margin:16px 0 6px">📊 Акыркы 7 күн</h3><div id="chart" class="chart"><p class="muted">Жүктөлүүдө…</p></div></div>
     <div${on(C)}>
+    ${window.NIGHT ? NIGHT.html() : ""}
     <div class="note"><b style="color:${actColor(D.activity)}">⚡ Активдүүлүк: ${D.activity ?? 100} / 100</b><br>
       <span class="muted">Заказ алсаңыз жана бүтүрсөңүз +1, сунушка жооп бербесеңиз же «Жок» десеңиз −3, кабыл алгандан кийин жокко чыгарсаңыз −10.
       Аралыгы окшош болсо, активдүүлүгү жогору айдоочуга заказ биринчи келет.</span></div>
@@ -407,6 +409,7 @@ function viewCabinet(part) {
   $("#top") && ($("#top").onclick = viewTopup);
   $("#addAddr").onclick = viewAddAddr; $("#cabOut").onclick = confirmOut; bindMyQr();
   $("#myCar") && ($("#myCar").onclick = viewCar);
+  window.NIGHT && NIGHT.bind();
   $("#goalCh").onclick = async () => { const v = prompt("Күндүк максат (сом):", D.goal); if (v === null) return;
     const r = await api("/api/d/goal", {goal:+v}); if (r.error) return toast("100 сомдон 50 000 сомго чейин жазыңыз", 2500);
     D = r; header(); viewCabinet("earn"); };
