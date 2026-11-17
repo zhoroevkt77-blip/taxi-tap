@@ -86,12 +86,22 @@ html.uidark .btn.red,html.uidark .btn.bad,html.uidark .outb{background:#3a1d22!i
 html.uidark #hset,html.uidark .btn.ghost#hset,html.uidark body .btn.ghost,html.uidark .work .btn,html.uidark .work button{background:#26272e!important;color:#f2f2f5!important;box-shadow:none!important}
 html.uidark .bnav a.go,html.uidark .bnav a.go span,html.uidark .bnav .go b{color:#f2f2f5!important}
 /* Парк кабинети */
-html.uidark .per button,html.uidark .tabs2,html.uidark .srt button,html.uidark .chips button,html.uidark .x,html.uidark .st,html.uidark .st3 div,html.uidark .how,html.uidark .tpl button,html.uidark .btn.g,html.uidark .tag,html.uidark .note,html.uidark .big{background:#26272e!important;color:#f2f2f5!important;border-color:#34353c!important}
-html.uidark .per button.on,html.uidark .srt button.on,html.uidark .tpl button.on{background:var(--grad)!important;color:#16161a!important}
+html.uidark #app .per button,html.uidark #app .tabs2,html.uidark #app .srt button,html.uidark #app .chips button,html.uidark #app .x,html.uidark #app .st,html.uidark #app .st3 div,html.uidark #app .how,html.uidark #app .tpl button,html.uidark #app .btn.g,html.uidark #app .tag,html.uidark #app .note,html.uidark #app .big{background:#26272e!important;color:#f2f2f5!important;border-color:#34353c!important}
+html.uidark #app .per button.on,html.uidark #app .srt button.on,html.uidark #app .tpl button.on{background:var(--grad)!important;color:#16161a!important}
 html.uidark .tabs2 button{color:#b9b9c4!important}html.uidark .tabs2 button.on{background:#3a3b43!important;color:#fff!important}
 html.uidark .tot div{background:#2c2717!important}html.uidark .tot b{color:#ffd666!important}html.uidark .tot small{color:#c9bf9c!important}
-html.uidark .ds .m b,html.uidark .bars em,html.uidark .st b,html.uidark .big b{color:#f2f2f5!important}
+html.uidark #app .ds .m b,html.uidark #app .bars em,html.uidark #app .st b,html.uidark #app .big b{color:#f2f2f5!important}
 html.uidark .ds,html.uidark .rr,html.uidark .dr{border-color:#2f3037!important}
 html.uidark .chips button.on{outline-color:#ffb703}
 html.uidark .flag.i{background:#2f3037!important;color:#c9c9d1!important}
 html.uidark .sheet2>div{background:#1e1f25!important;color:#f2f2f5}
+
+/* Башкы беттеги сунуштар, Б-кадам, иконка фондору */
+html.uidark .hrec .rt b,html.uidark #home.hbg .hrec .rt b,html.uidark .hrec .chev,html.uidark #home.hbg .hrec .chev{color:#f2f2f5!important}
+html.uidark .hrec .pi,html.uidark #home.hbg .hrec .pi,html.uidark .ic,html.uidark span.ic,html.uidark .st-big .i{background:#2e2f37!important}
+html.uidark .hnote{color:#b9b9c4!important}
+html.uidark .st-two button{background:#26272e!important;color:#f2f2f5!important;box-shadow:none!important;border:1px solid #34353c!important}
+html.uidark .st-steps i:not(.on){background:#2e2f37!important;color:#c9c9d1!important}
+html.uidark .gpshelp .gh-s{color:#c9bf9c!important}
+html.uidark .sheet details p,html.uidark .faq p{color:#c9c9d1!important}
+html.uidark .sheet,html.uidark #home,html.uidark .card,html.uidark .ccard,html.uidark .lnks{color:#f2f2f5}
