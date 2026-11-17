@@ -17,24 +17,19 @@ html,body{margin:0;height:100%;font:15px/1.35 Inter,system-ui,sans-serif;backgro
 <div class="w">
   <div class="h"><div class="m" id="a"></div><div class="lb">1. Азыркы (OSM)<small>бекер</small></div>
     <div class="go"><button data-p="40.9330,73.0110">Жалал-Абад</button><button data-p="41.0405,72.7460">Манас</button><button data-p="41.0390,72.7465,17">Базар-Коргон</button></div></div>
-  <div class="h"><div class="m" id="b"></div><div class="lb">2. 2ГИС картасы<small>Map Tiles API · айына 8 000 ₽ / 100 000 бирдик</small></div>
+  <div class="h"><div class="m" id="b"></div><div class="lb">2. 2ГИС картасы<small>Raster Tiles API · 500 000 плитка / 3 500 ₽</small></div>
     <div class="msg" id="msg"></div></div>
 </div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://mapgl.2gis.com/api/js/v1"></script>
 <script>
 const C = [40.9330, 73.0110], Z = 16;
 const a = L.map("a", {zoomControl:false}).setView(C, Z);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:"© OpenStreetMap"}).addTo(a);
-const msg = t => { const m = document.getElementById("msg"); m.innerHTML = t; m.style.display = "flex"; };
-let b = null, busy = false;
-fetch("/api/a/mapkey", {credentials:"same-origin"}).then(r => r.json()).then(k => {
-  if (!k.key) return msg("2ГИС ачкычы жок.<br>Админ катары кириңиз, же Railway'ге <b>DGIS_MAP_KEY</b> кошуңуз.");
-  if (!window.mapgl) return msg("2ГИС китепканасы жүктөлгөн жок.");
-  b = new mapgl.Map("b", {center:[C[1], C[0]], zoom:Z, key:k.key, zoomControl:false});
-  b.on("moveend", () => { if (busy) return; busy = true; const c = b.getCenter(); a.setView([c[1], c[0]], b.getZoom(), {animate:false}); busy = false; });
-  setTimeout(() => { if (!document.querySelector("#b canvas")) msg("2ГИС картасы ачылган жок — ачкыч карта үчүн жарабай калышы мүмкүн.<br>platform.2gis.ru'дан бекер демо-ачкыч алып, <b>DGIS_MAP_KEY</b> катары кошуңуз."); }, 6000);
-}).catch(() => msg("Админ катары кирип, кайра ачыңыз."));
-a.on("moveend", () => { if (busy || !b) return; busy = true; const c = a.getCenter(); b.setCenter([c.lng, c.lat], {animate:false}); b.setZoom(a.getZoom(), {animate:false}); busy = false; });
-document.querySelectorAll("[data-p]").forEach(x => x.onclick = () => { const p = x.dataset.p.split(",").map(Number); a.setView([p[0], p[1]], p[2] || 16); });
+const b = L.map("b", {zoomControl:false}).setView(C, Z);
+L.tileLayer("/tiles/2gis/{z}/{x}/{y}.png", {maxZoom:19, maxNativeZoom:18, attribution:"© 2ГИС"}).addTo(b);
+fetch("/api/mapcfg").then(r => r.json()).then(c => { if (c.p !== "2gis") { const m = document.getElementById("msg"); m.innerHTML = "2ГИС картасы азыр өчүк — Railway'ге <b>DGIS_MAP_KEY</b> кошулганда көрүнөт.<br>(Азыр бул жерде да OSM көрүнүп турат.)"; m.style.display = "flex"; } });
+let busy = false;
+const sync = (x, y) => x.on("move", () => { if (busy) return; busy = true; y.setView(x.getCenter(), x.getZoom(), {animate:false}); busy = false; });
+sync(a, b); sync(b, a);
+document.querySelectorAll("[data-p]").forEach(x => x.onclick = () => { const q = x.dataset.p.split(",").map(Number); a.setView([q[0], q[1]], q[2] || 16); });
 </script></body></html>

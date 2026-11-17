@@ -1438,3 +1438,31 @@ class Dispatcher(unittest.TestCase):
         pr = [x for x in core.phone_rides() if x["id"] == rid][0]
         self.assertEqual((pr["p_addr"], pr["status"]), ("Базар", "searching"))
         core.query("UPDATE rides SET status='cancelled' WHERE id=?", (rid,))
+
+
+class MapTiles2GIS(unittest.TestCase):
+    def test_limit_count_fallback(self):
+        import maptiles
+        core.init_db()
+        core.set_setting("dgis_tiles", {})
+        old = (maptiles.KEY, maptiles.LIMIT)
+        try:
+            maptiles.KEY = ""
+            self.assertEqual(maptiles.provider(), "osm")
+            self.assertIn("openstreetmap", maptiles.fetch(3, 1, 1)[2])
+            maptiles.KEY, maptiles.LIMIT = "test", 10
+            self.assertEqual(maptiles.provider(), "2gis")
+            self.assertEqual(maptiles.fetch(3, 99, 1), (None, None, None))      # туура эмес плитка
+            maptiles._st["pending"] = 8
+            a = maptiles.flush(force=True)
+            self.assertEqual(a["pct"], 80)
+            self.assertIsNone(maptiles.flush(force=True))
+            maptiles._st["pending"] = 2
+            self.assertEqual(maptiles.flush(force=True)["pct"], 100)
+            self.assertEqual(maptiles.used(), 10)
+            self.assertEqual(maptiles.provider(), "osm")                     # лимит бүттү → OSM
+            self.assertIn("openstreetmap", maptiles.fetch(3, 1, 1)[2])
+        finally:
+            maptiles.KEY, maptiles.LIMIT = old
+            maptiles._st["pending"] = 0
+            core.set_setting("dgis_tiles", {})

@@ -138,7 +138,13 @@ const api = async (path, body) => {
 const S = { cls:"econom", seen:0, mode:"boot", from:null, fromAddr:"", to:null, toAddr:"", ride:null, quote:null, near:null, timer:null };
 const map = L.map("map", {zoomControl:false, attributionControl:true}).setView([41.0377, 72.7470], 15);
 const areaReady = setupArea(map, {zoom:15});
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:"© OpenStreetMap"}).addTo(map);
+let baseLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:"© OpenStreetMap"}).addTo(map);
+// 2ГИС картасы (жүргүнчүлөр үчүн): сервер уруксат берсе — плиткалар биздин сервер аркылуу келет, лимит бүтсө OSM'ге өтөт
+fetch("/api/mapcfg").then(x => x.json()).then(c => {
+  if (c.p !== "2gis") return;
+  const g = L.tileLayer("/tiles/2gis/{z}/{x}/{y}.png", {maxZoom:19, maxNativeZoom:18, attribution:"© 2ГИС"});
+  g.addTo(map); g.bringToBack(); map.removeLayer(baseLayer); baseLayer = g;
+}).catch(() => {});
 
 const icon = (cls, txt) => L.divIcon({className:"", html:`<div class="carm ${cls}">${txt}</div>`, iconSize:[30,30], iconAnchor:[15,15]});
 let nearLayer = L.layerGroup().addTo(map), rideLayer = L.layerGroup().addTo(map), driverMarker = null;

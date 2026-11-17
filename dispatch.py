@@ -16,6 +16,7 @@ import json
 
 import core
 import parks
+import maptiles
 from flow import money, note
 
 
@@ -79,6 +80,9 @@ def tick():
         rows = "\n".join("• %s — %d сом" % (n, d) for n, d in pw)
         out += [note(a, "a_park_week", "/admin", rows=rows) for a in core.admins()]
     core.online_tick()
+    mt = maptiles.flush()
+    if mt:
+        out += [note(a, "a_map_limit", "/admin", **mt) for a in core.admins()]
     core.auto_daily()
     tune = core.auto_tune()
     if tune:

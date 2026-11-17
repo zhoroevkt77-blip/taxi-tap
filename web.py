@@ -24,6 +24,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, quote, unquote, urlparse
 
 import addrbook
+import maptiles
 import parks
 import core
 import flow
@@ -383,6 +384,18 @@ class H(BaseHTTPRequestHandler):
                 rt = core.route(a[0], a[1], z[0], z[1])
                 return self._json({"coords": rt["coords"], "km": rt["km"],
                                    "min": round(rt["min"]), "real": rt["real"]})
+            m2 = re.match(r"^/tiles/2gis/(\d+)/(\d+)/(\d+)\.png$", u.path)
+            if m2:
+                body, ct, red = maptiles.fetch(*map(int, m2.groups()))
+                if red:
+                    self.send_response(302); self.send_header("Location", red); self.send_header("Cache-Control", "no-store")
+                    self.end_headers(); return
+                if not body:
+                    return self._json({"error": "bad_tile"}, 404)
+                self.send_response(200); self.send_header("Content-Type", ct); self.send_header("Content-Length", str(len(body)))
+                self.send_header("Cache-Control", "public, max-age=86400"); self.end_headers(); self.wfile.write(body); return
+            if u.path == "/api/mapcfg":
+                return self._json({"p": maptiles.provider()})
             uid = self._uid()
             if not uid:
                 return self._json({"error": "auth"}, 401)
@@ -400,11 +413,6 @@ class H(BaseHTTPRequestHandler):
                 if not p:
                     return self._json({"error": "not_park"}, 403)
                 return self._json({"acts": parks.acts(p["id"])})
-            if u.path == "/api/a/mapkey":                 # 2ГИС картасын салыштыруу (админ гана)
-                if not core.is_admin(uid):
-                    return self._json({"error": "forbidden"}, 403)
-                return self._json({"key": (os.environ.get("DGIS_MAP_KEY") or "").strip() or addrbook.DGIS_KEY,
-                                   "own": bool((os.environ.get("DGIS_MAP_KEY") or "").strip())})
             if u.path in ("/api/park/drivers", "/api/park/driver", "/api/park/map", "/park/stats.csv"):
                 p = parks.by_owner(uid) or (parks.get(int((q.get("id") or ["0"])[0] or 0)) if core.is_admin(uid) else None)
                 if not p:
@@ -846,7 +854,7 @@ class H(BaseHTTPRequestHandler):
             return self._json({"items": addrbook.admin_list((q.get("q") or [""])[0][:60],
                                                             only=(q.get("only") or [""])[0] or None),
                                "count": addrbook.count(), "import": addrbook.import_state,
-                               "dgis": dict(addrbook.dgis_state, on=bool(addrbook.DGIS_KEY), budget=core.get_setting("dgis_budget"),
+                               "maptiles": maptiles.status(), "dgis": dict(addrbook.dgis_state, on=bool(addrbook.DGIS_KEY), budget=core.get_setting("dgis_budget"),
                                             day_max=addrbook.DGIS_DAY_MAX),
                                "kinds": {k: {"icon": v[0], "name": v[1]} for k, v in addrbook.KINDS.items()}})
         if action == "drivers":
