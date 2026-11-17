@@ -673,3 +673,9 @@ img[src*="/static/c_"]:not([src*="c_car."]):not([src*="c_hdr"]):not([src*="c_tax
 .rsn{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}.rsn button{border:1px solid #e3e3e8;background:#fff;border-radius:12px;padding:9px 12px;font:inherit;font-size:14px;font-weight:700;color:var(--navy)}
 .rsn button.on{background:#fff2c4;border-color:#ffc21a}
 .navb.sat{font-size:22px;line-height:1}.navb.sat.on{background:#16161a;color:#fff}
+
+/* Кабинет: сары чарчы ичинде иконка (ТАП! стили) */
+.cico{width:52px;height:52px;flex:none;border-radius:16px;display:grid;place-items:center;font-size:26px;line-height:1;
+  background:linear-gradient(145deg,#ffd31a,#fcbc00);box-shadow:0 6px 14px rgba(252,188,0,.35),inset 0 -2px 0 rgba(0,0,0,.06)}
+.cab2 .cab-q .cico{width:48px;height:48px;font-size:24px;border-radius:15px;margin:2px auto 0;background:linear-gradient(145deg,#ffd31a,#fcbc00)}
+#home.cabbg .ccard .cico{width:50px;height:50px}

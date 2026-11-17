@@ -101,7 +101,7 @@ input.f:focus{border-color:var(--navy)}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
 <link rel="preload" as="image" href="/static/h_taxi.webp?v=9"><link rel="preload" as="image" href="/static/h_box.webp?v=9"><link rel="preload" as="image" href="/static/h_girl.webp?v=9"><link rel="preload" as="image" href="/static/h_map.webp?v=9">
-<link rel="stylesheet" href="/static/theme.css?v=89">
+<link rel="stylesheet" href="/static/theme.css?v=90">
 </head>
 <body>
 <div id="map"></div>
@@ -913,22 +913,22 @@ async function viewCabinet() {
   const P = PLACES && !PLACES.error ? PLACES : await api("/api/places");
   const place = (k, ico, t) => `<div class="hrow"><span>${ico} <b>${t}</b> ${P[k] ? `<span class="muted">· ${esc(P[k].name || "белгиленген")}</span>` : `<span class="muted">· белгилене элек</span>`}</span>
     <span><button class="lnk-b" style="width:auto;height:32px;padding:0 10px;font-size:13px" data-pl="${k}">${P[k] ? "Өзгөртүү" : "Кошуу"}</button>${P[k] ? ` <button class="lnk-b" style="width:32px;height:32px;font-size:13px" data-del="${k}">✕</button>` : ""}</span></div>`;
-  const li = (id, img, t, sub, href) => `<${href ? `a href="${href}"` : "button"} class="ccard" id="${id}"><img class="cimg" src="/static/${img}.webp?v=9" alt=""><span class="ct"><b>${t}</b>${sub ? `<small>${sub}</small>` : ""}</span><em>›</em></${href ? "a" : "button"}>`;
+  const li = (id, img, t, sub, href) => `<${href ? `a href="${href}"` : "button"} class="ccard" id="${id}"><span class="cico">${img}</span><span class="ct"><b>${t}</b>${sub ? `<small>${sub}</small>` : ""}</span><em>›</em></${href ? "a" : "button"}>`;
   let promo = ""; try { promo = localStorage.getItem("promoPre") || ""; } catch (e) {}
   render(""); homeOn(true);
   $("#home").innerHTML = `<div class="cab2">
       <button class="cab-av" id="avBox">${me.avatar ? `<img src="${esc(me.avatar)}" alt="">` : esc((me.name || "?")[0].toUpperCase())}<span class="cab-cam">📷</span></button>
       <input type="file" accept="image/*" capture="user" id="avCam" hidden><input type="file" accept="image/*" id="avGal" hidden>
       <div class="cab-nm">${esc(me.name || "Жүргүнчү")}</div><div class="cab-ph">${esc(me.phone)}</div>
-      <div class="cab-q"><button id="qH"><img src="/static/c_trips.webp?v=9" alt="">Сапарлар</button><a href="${me.bot ? "https://t.me/" + me.bot : "/terms"}" target="_blank"><img src="/static/c_help.webp?v=9" alt="">Колдоо</a>
-        <button id="qA"><img src="/static/c_addr.webp?v=9" alt="">Даректер</button><button id="qS"><img src="/static/c_set.webp?v=9" alt="">Жөндөөлөр</button></div>
+      <div class="cab-q"><button id="qH"><span class="cico">🕒</span>Сапарлар</button><a href="${me.bot ? "https://t.me/" + me.bot : "/terms"}" target="_blank"><span class="cico">🎧</span>Колдоо</a>
+        <button id="qA"><span class="cico">📍</span>Даректер</button><button id="qS"><span class="cico">⚙️</span>Жөндөөлөр</button></div>
     <div id="cabMore"></div>
-    ${li("cPromo", "c_gift", "Промокод", promo ? "Кийинки заказга: " + esc(promo) : "Промокод киргизүү")}
-    ${li("cPay", "c_card", "Төлөм ыкмасы", "Накталай — айдоочуга түз")}
-    ${me.driver ? "" : li("cDrv", "c_car", "Таксиде иштөө", "Айдоочу болуп катталуу", "/driver")}
-    ${li("cMap", "c_map", "Картаны жакшыртуу", "Жер кошуу, катаны оңдоо")}
-    ${li("cSafe", "c_shield", "Коопсуздук", "112, сапарды бөлүшүү")}
-    ${li("cInfo", "c_info", "Маалымат", "Колдонуу шарттары, купуялык", "/terms")}
+    ${li("cPromo", "🎁", "Промокод", promo ? "Кийинки заказга: " + esc(promo) : "Промокод киргизүү")}
+    ${li("cPay", "💳", "Төлөм ыкмасы", "Накталай — айдоочуга түз")}
+    ${me.driver ? "" : li("cDrv", "🚕", "Таксиде иштөө", "Айдоочу болуп катталуу", "/driver")}
+    ${li("cMap", "🗺️", "Картаны жакшыртуу", "Жер кошуу, катаны оңдоо")}
+    ${li("cSafe", "🛡️", "Коопсуздук", "112, сапарды бөлүшүү")}
+    ${li("cInfo", "ℹ️", "Маалымат", "Колдонуу шарттары, купуялык", "/terms")}
     ${installHTML()}<button class="cab-out" id="out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><path d="M3 12h11M10 8l4 4-4 4"/></svg>Чыгуу</button>`;
   $("#home").scrollTop = 0;
   bindInstall();
