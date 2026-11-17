@@ -400,6 +400,11 @@ class H(BaseHTTPRequestHandler):
                 if not p:
                     return self._json({"error": "not_park"}, 403)
                 return self._json({"acts": parks.acts(p["id"])})
+            if u.path == "/api/a/mapkey":                 # 2ГИС картасын салыштыруу (админ гана)
+                if not core.is_admin(uid):
+                    return self._json({"error": "forbidden"}, 403)
+                return self._json({"key": (os.environ.get("DGIS_MAP_KEY") or "").strip() or addrbook.DGIS_KEY,
+                                   "own": bool((os.environ.get("DGIS_MAP_KEY") or "").strip())})
             if u.path in ("/api/park/drivers", "/api/park/driver", "/api/park/map", "/park/stats.csv"):
                 p = parks.by_owner(uid) or (parks.get(int((q.get("id") or ["0"])[0] or 0)) if core.is_admin(uid) else None)
                 if not p:
