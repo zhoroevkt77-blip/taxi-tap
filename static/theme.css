@@ -620,13 +620,13 @@ img[src*="/static/c_"]:not([src*="c_car."]):not([src*="c_hdr"]):not([src*="c_tax
 #home.hbg::before{height:360px;background:url(/static/cb_tr.webp?v=11) right -2px top 150px/26% auto no-repeat}
 .pkbg{background:url(/static/cb_tr.webp?v=11) right -2px top 40px/32% auto no-repeat}
 /* макет 2 — фондун жайгашуусу */
-#home.cabbg{background-color:#f7f7f9;background-image:url(/static/cb_tl.webp?v=11),url(/static/cb_tr.webp?v=11),url(/static/cb_br.webp?v=11),url(/static/cb_bl.webp?v=11);
+#home.cabbg{background-color:#f7f7f9;background-image:url(/static/cb_tl.webp?v=11),url(/static/cb_tr.webp?v=11),url(/static/cb_bt.webp?v=1),url(/static/cb_bt2.webp?v=1);
   background-size:78% auto,40% auto,36% auto,100% auto;background-position:left top,right 0 top 200px,right 0 bottom 64px,left bottom 64px}
 .cab2 .cab-av{background:#fff}
 .sheet.cabbg::before{height:200px;opacity:1;background:url(/static/cb_tr.webp?v=11) right -2px top -50px/30% auto no-repeat}
 #home.hbg::before{height:380px;opacity:1;background:url(/static/cb_tr.webp?v=11) right 0 top 140px/30% auto no-repeat}
 .pkbg{opacity:1;background:url(/static/cb_tr.webp?v=11) right 0 top 30px/34% auto no-repeat}
-#home.cabbg{background-size:100% auto,40% auto,36% auto,100% auto;background-position:left top,right 0 top 260px,right 0 bottom 64px,left bottom 64px}
+#home.cabbg{background-size:100% auto,40% auto,100% auto,40% auto;background-position:left top,right 0 top 260px,right 0 bottom 30px,left 0 bottom 330px}
 /* унаа: KG номер, сүрөт, «Менин унаам» */
 .kgpl{display:inline-flex;align-items:stretch;border:2px solid #16161a;border-radius:7px;overflow:hidden;background:#fff;font-weight:900;color:#16161a;vertical-align:middle;line-height:1}
 .kgpl b{padding:3px 6px;font-size:15px;letter-spacing:.5px;display:flex;align-items:center;white-space:nowrap}.kgpl b:first-child{border-right:1.5px solid #16161a}
@@ -642,9 +642,9 @@ img[src*="/static/c_"]:not([src*="c_car."]):not([src*="c_hdr"]):not([src*="c_tax
 .mrow{display:flex;align-items:center;gap:12px;padding:11px 2px;border-bottom:1px solid #f0f0f3;font-size:15px;color:#16161a;text-decoration:none}.mrow:last-child{border:0}
 .mrow i{font-style:normal;width:28px;text-align:center;font-size:19px}.mrow span{flex:1;font-weight:700}.mrow em{font-style:normal;color:#555;font-weight:600;text-align:right}
 .mrow small{display:block;color:#888;font-weight:500;font-size:12.5px}
-#home.cabbg{background-position:left 0 top -90px,right 0 top 260px,right 0 bottom 64px,left bottom 64px}
+#home.cabbg{background-position:left 0 top -90px,right 0 top 260px,right 0 bottom 30px,left 0 bottom 330px}
 .cab2 .cab-nm,.cab2 .cab-ph{text-shadow:0 0 6px #fff,0 0 12px #fff}
-#home.cabbg{background-position:left 0 top -95px,right 0 top 260px,right 0 bottom 64px,left bottom 64px}
+#home.cabbg{background-position:left 0 top -95px,right 0 top 260px,right 0 bottom 30px,left 0 bottom 330px}
 /* Тилкелер бардык панелдерде (жүргүнчү жана айдоочу): оң жакта, кесилбей */
 .rboxc{position:relative}
 .sheet::before,.rboxc::before{content:"";position:absolute;right:0;top:0;width:34%;max-width:170px;height:260px;pointer-events:none;z-index:0;border-radius:0 22px 0 0;
