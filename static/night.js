@@ -1,4 +1,4 @@
-// 🌙 Түнкү карта: күн батып 20 мүнөт өткөндө карта өзү караңгы болот, күн чыгардан 20 мүнөт мурун жарык болот.
+// 🌓 Жарык/караңгы режим жана 🌙 түнкү карта: күн батып 20 мүнөт өткөндө карта өзү караңгы болот, күн чыгардан 20 мүнөт мурун жарык болот.
 // Күндүн чыгышы/батышы телефондо эсептелет (интернет керек эмес). Жөндөө: localStorage.mapTheme = auto | light | dark
 (function () {
   const LAT = 41.0, LON = 72.9, PAD = 20 * 60000, R = Math.PI / 180;
@@ -20,11 +20,21 @@
     const s = sun(ms, LAT, LON);
     return ms > s.set + PAD || ms < s.rise - PAD;
   }
+  // Режим: auto | light | dark (бир жөндөө — барак да, карта да).
+  // Авто: карта дайыма күн батканда; барак — айдоочуда (<html data-ui="sun">) күн батканда, калгандарында телефондун режими.
   const mode = () => { try { return localStorage.mapTheme || "auto"; } catch (e) { return "auto"; } };
+  const H = document.documentElement, SUNUI = H.getAttribute("data-ui") === "sun";
+  const MQ = window.matchMedia ? matchMedia("(prefers-color-scheme: dark)") : null;
   function apply() {
-    const m = mode(), dark = m === "dark" || (m === "auto" && isNight());
-    document.documentElement.classList.toggle("mapnight", dark);
+    const m = mode(), night = isNight();
+    const map = m === "dark" || (m === "auto" && night);
+    const ui = m === "dark" || (m === "auto" && (SUNUI ? night : !!(MQ && MQ.matches)));
+    H.classList.toggle("mapnight", map);
+    H.classList.toggle("uidark", ui);
+    const tc = document.querySelector('meta[name="theme-color"]');
+    if (tc) { if (!tc.dataset.light) tc.dataset.light = tc.content; tc.content = ui ? "#121317" : tc.dataset.light; }
   }
+  if (MQ) { try { MQ.addEventListener("change", apply); } catch (e) { MQ.addListener && MQ.addListener(apply); } }
   const hm = ms => new Date(ms).toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"});
   window.NIGHT = {
     sun, isNight, apply, mode,
@@ -32,7 +42,8 @@
     html() {
       const s = sun(Date.now(), LAT, LON), m = mode();
       const b = (k, t) => `<button data-mt="${k}" class="${m === k ? "on" : ""}">${t}</button>`;
-      return `<div class="mtheme"><b>🌙 Түнкү карта</b><div class="muted">Авто: бүгүн ${hm(s.set + PAD)} – ${hm(s.rise - PAD + 86400000)} караңгы</div>
+      const at = `${hm(s.set + PAD)} – ${hm(s.rise - PAD + 86400000)}`;
+      return `<div class="mtheme"><b>🌓 Режим</b><div class="muted">Авто: ${SUNUI ? `бүгүн ${at} караңгы` : `телефонуңуздун режими менен; карта ${at} караңгы`}</div>
         <div class="mt-b">${b("auto", "Авто")}${b("light", "☀️ Жарык")}${b("dark", "🌙 Караңгы")}</div></div>`;
     },
     bind(root) {

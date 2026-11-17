@@ -1,0 +1,97 @@
+/* 🌙 Караңгы режим (бүт интерфейс). html.uidark классы night.js аркылуу коюлат */
+html.uidark{color-scheme:dark;--ink:#f2f2f5;--navy:#f2f2f5;--paper:#26272e;--line:#2f3037;--bg:#121317;--soft:#9d9da8;--ysoft:#2c2717;
+  --edge:1px solid #2f3037;--sh:0 5px 18px rgba(0,0,0,.45);--shl:0 12px 34px rgba(0,0,0,.6)}
+html.uidark,html.uidark body{background:#121317!important;color:#f2f2f5}
+html.uidark .role,
+html.uidark .lnks,
+html.uidark .lnk-b,
+html.uidark .navb,
+html.uidark .tbtn,
+html.uidark .home,
+html.uidark .rboxc,
+html.uidark .cab-card,
+html.uidark .ccard,
+html.uidark #cabMore .lnks,
+html.uidark .sbtn,
+html.uidark .ep,
+html.uidark .cab2 .cab-av,
+html.uidark .cab2 .cab-q>*,
+html.uidark .sheet.cabbg .sw,
+html.uidark .sheet.cabbg .faq,
+html.uidark #home.hbg .hrec .rec,
+html.uidark .work,
+html.uidark #home.hbg .st-big:not(.y),
+html.uidark .myqr,
+html.uidark .gpsarea,
+html.uidark .areachip,
+html.uidark .cpick button,
+html.uidark .fxdd,
+html.uidark #home.cabbg .ccard,
+html.uidark .carrow,
+html.uidark .mcard,
+html.uidark .rpill,
+html.uidark .sheet,
+html.uidark .round,
+html.uidark .chip,
+html.uidark .card,
+html.uidark #home,
+html.uidark .cls>div,
+html.uidark .pill,
+html.uidark .state,
+html.uidark .box,
+html.uidark .st-big:not(.y),
+html.uidark .dlg,
+html.uidark .overlay>div,
+html.uidark .sheet2>div,
+html.uidark .ov>div,
+html.uidark .modal,
+html.uidark .toastbox{background:#1e1f25!important;color:#f2f2f5!important;box-shadow:0 6px 18px rgba(0,0,0,.45),inset 0 0 0 1px rgba(255,255,255,.05)!important}
+html.uidark .muted,html.uidark small,html.uidark .ccard small,html.uidark .st-sub,html.uidark .cab-ph{color:#a3a3ae!important}
+html.uidark h1,html.uidark h2,html.uidark h3,html.uidark b,html.uidark .st-h,html.uidark .cab-nm,html.uidark .ccard em,html.uidark .st-big em{color:#f2f2f5}
+html.uidark input,html.uidark select,html.uidark textarea{background:#26272e!important;color:#f2f2f5!important;border-color:#34353c!important}
+html.uidark input::placeholder{color:#7d7d88}
+html.uidark .st-big.y,html.uidark .st-big.y b,html.uidark .st-big.y small,html.uidark .st-big.y em,html.uidark .btn.main,html.uidark .btn.gold,html.uidark .cab-out{color:#16161a!important}
+html.uidark .cab-out{background:var(--grad)!important}
+html.uidark .btn.ghost{background:#26272e!important;color:#f2f2f5!important;border-color:#34353c!important}
+html.uidark .row,html.uidark .hrow,html.uidark .urow{border-color:#2f3037!important}
+html.uidark .grab{background:#3a3b43!important}
+html.uidark .grab:after{background:#26272e!important;color:#f2f2f5!important;border-color:#34353c!important}
+html.uidark .grab.down:after{background:linear-gradient(135deg,#ffc61a,#ffb703)!important;color:#16161a!important}
+html.uidark .logo{background:#1e1f25!important;color:#f2f2f5!important}
+html.uidark .navb{background:#1e1f25!important;border-color:#3a3b43!important}
+html.uidark .navb span,html.uidark .navb b,html.uidark .navb button{color:#f2f2f5!important}
+/* кара иконкалар (сүрөт) караңгыда көрүнсүн */
+html.uidark .navb img:not([src*="n_go"]){filter:invert(1) brightness(1.1)}
+html.uidark .cab-q img,html.uidark .cimg,html.uidark .st-big .i img{filter:drop-shadow(0 0 1px rgba(255,255,255,.9)) drop-shadow(0 0 1px rgba(255,255,255,.6))}
+html.uidark .st-big .i{background:#2a2b32!important}
+html.uidark .gpsinfo.good{background:#16301f!important;color:#7fd6a0!important}
+html.uidark .gpsinfo.gpshelp{background:#2c2717!important;color:#f2f2f5!important;border-color:#5a4a14!important}
+html.uidark .gpshelp button.g{background:#26272e!important;color:#f2f2f5!important}
+html.uidark .mtheme .mt-b{background:#26272e}html.uidark .mtheme .mt-b button{color:#f2f2f5}html.uidark .mtheme .mt-b button.on{background:#3a3b43!important}
+html.uidark #toast{background:#f2f2f5;color:#16161a}
+html.uidark #home.hbg .tile:not(.big),html.uidark #home.hbg .stile,html.uidark #home.hbg .hsearch,html.uidark .hsearch,html.uidark .bnav,html.uidark .st-back,
+html.uidark .stat,html.uidark .sheet .stat,html.uidark .sheet.cabbg .stat,html.uidark .work,html.uidark #home.hbg .hrec .rec,html.uidark #home.hbg .st-big:not(.y){background:#1e1f25!important;color:#f2f2f5!important;box-shadow:0 6px 18px rgba(0,0,0,.45),inset 0 0 0 1px rgba(255,255,255,.06)!important}
+html.uidark #home.hbg .tile:not(.big) *,html.uidark #home.hbg .stile *,html.uidark .stat b,html.uidark .stat span,html.uidark .bnav span,html.uidark .bnav b,html.uidark .bnav button,html.uidark .st-back,html.uidark .hsearch{color:#f2f2f5!important}
+html.uidark .stat .muted,html.uidark #home.hbg .tile:not(.big) small{color:#a3a3ae!important}
+html.uidark .bnav img:not([src*="n_go"]):not([src*="taxi"]):not([src*="n_earn"]){filter:invert(1) brightness(1.1)}
+html.uidark .bnav img[src*="n_earn"]{filter:drop-shadow(0 0 1px rgba(255,255,255,.9)) drop-shadow(0 0 1px rgba(255,255,255,.7))}
+html.uidark .ccard em,html.uidark #home.cabbg .ccard em{color:#f2f2f5!important}
+html.uidark .cab-nm,html.uidark .cab-ph,html.uidark .cab2 .cab-nm,html.uidark .cab2 .cab-ph{text-shadow:none!important;-webkit-text-stroke:0!important;color:#f2f2f5!important}
+html.uidark .cab2 .cab-av{background:#1e1f25!important;color:#f2f2f5}
+html.uidark .bnav a{color:#b9b9c4!important}html.uidark .bnav a.on{color:#fff!important}
+html.uidark .bnav a span,html.uidark .bnav a b{color:inherit!important}
+html.uidark #home.hbg .tile.big *,html.uidark .tile.big small{color:#16161a!important}
+html.uidark button.btn.ghost,html.uidark a.btn.ghost{background:#26272e!important;color:#f2f2f5!important;border-color:#34353c!important}
+html.uidark .btn.red,html.uidark .btn.bad,html.uidark .outb{background:#3a1d22!important;color:#ff8a96!important;border-color:#5a2a31!important}
+html.uidark #hset,html.uidark .btn.ghost#hset,html.uidark body .btn.ghost,html.uidark .work .btn,html.uidark .work button{background:#26272e!important;color:#f2f2f5!important;box-shadow:none!important}
+html.uidark .bnav a.go,html.uidark .bnav a.go span,html.uidark .bnav .go b{color:#f2f2f5!important}
+/* Парк кабинети */
+html.uidark .per button,html.uidark .tabs2,html.uidark .srt button,html.uidark .chips button,html.uidark .x,html.uidark .st,html.uidark .st3 div,html.uidark .how,html.uidark .tpl button,html.uidark .btn.g,html.uidark .tag,html.uidark .note,html.uidark .big{background:#26272e!important;color:#f2f2f5!important;border-color:#34353c!important}
+html.uidark .per button.on,html.uidark .srt button.on,html.uidark .tpl button.on{background:var(--grad)!important;color:#16161a!important}
+html.uidark .tabs2 button{color:#b9b9c4!important}html.uidark .tabs2 button.on{background:#3a3b43!important;color:#fff!important}
+html.uidark .tot div{background:#2c2717!important}html.uidark .tot b{color:#ffd666!important}html.uidark .tot small{color:#c9bf9c!important}
+html.uidark .ds .m b,html.uidark .bars em,html.uidark .st b,html.uidark .big b{color:#f2f2f5!important}
+html.uidark .ds,html.uidark .rr,html.uidark .dr{border-color:#2f3037!important}
+html.uidark .chips button.on{outline-color:#ffb703}
+html.uidark .flag.i{background:#2f3037!important;color:#c9c9d1!important}
+html.uidark .sheet2>div{background:#1e1f25!important;color:#f2f2f5}
