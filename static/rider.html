@@ -101,7 +101,7 @@ input.f:focus{border-color:var(--navy)}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
 <link rel="preload" as="image" href="/static/h_taxi.webp?v=9"><link rel="preload" as="image" href="/static/h_box.webp?v=9"><link rel="preload" as="image" href="/static/h_girl.webp?v=9"><link rel="preload" as="image" href="/static/h_map.webp?v=9">
-<link rel="stylesheet" href="/static/theme.css?v=91">
+<link rel="stylesheet" href="/static/theme.css?v=92">
 </head>
 <body>
 <div id="map"></div>
@@ -226,12 +226,27 @@ function gpsApply(p, force) {
   }
   gpsPaint();
 }
+const IOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+function gpsHelp(st) {
+  const steps = st === "off"
+    ? (IOS ? ["Телефондун <b>Жөндөөлөр</b> бөлүмүн ачыңыз", "<b>Купуялык</b> → <b>Жайгашкан жерди аныктоо</b>", "Аны <b>күйгүзүңүз</b> да, бул жерге кайтыңыз"]
+           : ["Экрандын үстүнөн <b>ылдый сүрүңүз</b>", "📍 <b>Жайгашкан жер</b> (Местоположение) баскычын басып <b>күйгүзүңүз</b>", "Бул жерге кайтып, <b>Кайра аракет</b> басыңыз"])
+    : (IOS ? ["<b>Жөндөөлөр</b> → <b>Safari</b> → <b>Жайгашкан жер</b>", "<b>Суроо</b> же <b>Уруксат берүү</b> тандаңыз", "Бул баракты <b>жаңыртыңыз</b>"]
+           : ["Дарек тилкесиндеги <b>🔒</b> (же ⚙) белгисин басыңыз", "<b>Уруксаттар</b> → <b>Жайгашкан жер</b> → <b>Уруксат берүү</b>", "Бул жерге кайтып, <b>Кайра аракет</b> басыңыз"]);
+  return `<span class="gh-t">${st === "off" ? "📍 Телефонуңузда GPS өчүк" : "⛔ GPS'ке уруксат берилген эмес"}</span>
+    <span class="gh-s">Айдоочу сизди так табышы үчүн жайгашкан жериңиз керек:</span>
+    <ol>${steps.map(x => `<li>${x}</li>`).join("")}</ol>
+    <span class="gh-b"><button id="gpsRetry">🔄 Кайра аракет</button><button id="gpsMap" class="g">🗺 Картадан белгилейм</button></span>`;
+}
 function gpsPaint() {
   const el = $("#gpsInfo"); if (!el) return;
   const g = S.gps;
   el.className = "gpsinfo " + (g.state === "ok" ? (S.gpsBad ? "mid" : "good") : "bad");
   if (g.state === "out") { el.innerHTML = `Сиз иштөө аймагынын сыртындасыз <button class="gpsarea" id="gpsArea"><img src="/static/c_map.webp?v=9" alt="">Аймакты көрүү</button>`;
     $("#gpsArea").onclick = () => { homeOn(false); showAreaOnMap(map, () => viewStepA()); }; }
+  else if (g.state === "denied" || g.state === "off") { el.className = "gpsinfo gpshelp"; el.innerHTML = gpsHelp(g.state);
+    $("#gpsRetry").onclick = () => { S.gps.state = "wait"; gpsPaint(); locate(true); };
+    $("#gpsMap").onclick = () => viewPickFrom(); }
   else el.textContent = g.state === "ok" ? (S.gpsBad ? `📡 Болжолдуу (±${g.acc} м) — картадан тактаңыз` : `📡 GPS так (±${g.acc} м)`)
     : g.state === "denied" ? "⛔ GPS'ке уруксат жок — браузердин жөндөөсүнөн уруксат бериңиз"
     : g.state === "off" ? "⚠️ GPS күйгүзүлбөгөн же сигнал жок"
