@@ -1,5 +1,5 @@
 /* 🌙 Караңгы режим (бүт интерфейс). html.uidark классы night.js аркылуу коюлат */
-html.uidark{color-scheme:dark;--ink:#f2f2f5;--navy:#f2f2f5;--paper:#26272e;--line:#2f3037;--bg:#121317;--soft:#9d9da8;--ysoft:#2c2717;
+html.uidark{color-scheme:dark;--ink:#f2f2f5;--paper:#26272e;--line:#2f3037;--bg:#121317;--soft:#9d9da8;--ysoft:#2c2717;
   --edge:1px solid #2f3037;--sh:0 5px 18px rgba(0,0,0,.45);--shl:0 12px 34px rgba(0,0,0,.6)}
 html.uidark,html.uidark body{background:#121317!important;color:#f2f2f5}
 html.uidark .role,
@@ -105,3 +105,8 @@ html.uidark .st-steps i:not(.on){background:#2e2f37!important;color:#c9c9d1!impo
 html.uidark .gpshelp .gh-s{color:#c9bf9c!important}
 html.uidark .sheet details p,html.uidark .faq p{color:#c9c9d1!important}
 html.uidark .sheet,html.uidark #home,html.uidark .card,html.uidark .ccard,html.uidark .lnks{color:#f2f2f5}
+html.uidark .wait,html.uidark .car,html.uidark .rsn button:not(.on){background:#1e1f25!important;color:#f2f2f5!important;box-shadow:0 6px 18px rgba(0,0,0,.45),inset 0 0 0 1px rgba(255,255,255,.06)!important}
+html.uidark .wait b{color:#f2f2f5!important}html.uidark .wait .muted,html.uidark .wait small{color:#a3a3ae!important}
+html.uidark .btn.dark{background:#3a3b43!important;color:#fff!important;border-color:#4a4b53!important}
+html.uidark .ocard{background:#1e1f25!important;color:#f2f2f5!important}
+html.uidark .ocard .oprice,html.uidark .ocard b,html.uidark .ring span{color:#f2f2f5!important}
