@@ -702,3 +702,5 @@ html.mapnight .leaflet-control-attribution{background:rgba(27,28,33,.7)!importan
 #bnav.drv[data-l]::before{background:linear-gradient(135deg,#22b07d,#16865e);color:#fff}
 #bnav.drv[data-r]::after{box-shadow:0 3px 10px rgba(20,20,30,.15),inset 0 0 0 1.5px #1D9E75}
 html.uidark #bnav[data-r]::after{background:#1e1f25;color:#f2f2f5}
+/* Картадагы аймакты басканда браузер кара алкак тартпасын */
+.leaflet-interactive:focus,.leaflet-container path:focus{outline:none}

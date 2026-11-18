@@ -678,7 +678,13 @@ def _fetch_unit_poly(u):
     import urllib.parse
     import urllib.request
     import time as _t
-    qs = [u["ru"] + (", " + u["ob_ru"] if u.get("ob_ru") else ""), u["ru"], u["name"]]
+    import re as _re
+    ru = _re.sub(r"\s*\(.*?\)", "", u["ru"]).strip()            # «город Манас (бывш. Джалал-Абад)» → «город Манас»
+    old = _re.search(r"бывш\.\s*([^)]+)\)", u["ru"])               # мурунку аты — OSM'де көбүнчө ошол бойдон
+    ob = ", " + u["ob_ru"] if u.get("ob_ru") else ""
+    qs = ([old.group(1).strip() + ob, old.group(1).strip()] if old else []) + [ru + ob, ru, u["name"] + ob]
+    near = CITIES.get(unit_city(u["name"]))                          # белгилүү шаар болсо — андан алыс жерди албайбыз
+    ok = lambda la, lo: not near or haversine_km(near[0], near[1], la, lo) <= 25      # noqa: E731
     point = None
     for q in qs:
         url = ("https://nominatim.openstreetmap.org/search?format=json&polygon_geojson=1"
@@ -692,14 +698,28 @@ def _fetch_unit_poly(u):
             res = []
         for x in res:
             gj = x.get("geojson") or {}
+            if not x.get("lat") or not ok(float(x["lat"]), float(x["lon"])):
+                continue
             if x.get("osm_type") == "relation" and gj.get("type") in ("Polygon", "MultiPolygon"):
                 return gj, False
-            if point is None and x.get("lat"):
+            if point is None:
                 point = (float(x["lat"]), float(x["lon"]))
         _t.sleep(1.1)                                   # Nominatim: секундуна 1 суроо
-    if point:
+    if point or near:
+        point = point or near
         return _circle(point[0], point[1], TOWN_RADIUS_KM), True
     return None, False
+
+
+def _unit_ok(u, gj):
+    """Кэштеги чек туура жердеби (белгилүү шаардан 25 км ичинде)? Эски ката кэштерди кайра жүктөө үчүн."""
+    near = CITIES.get(unit_city(u["name"]))
+    if not near or not gj:
+        return True
+    pts = [p for r in _rings(gj) for p in r]
+    la = (min(p[1] for p in pts) + max(p[1] for p in pts)) / 2
+    lo = (min(p[0] for p in pts) + max(p[0] for p in pts)) / 2
+    return haversine_km(near[0], near[1], la, lo) <= 25
 
 
 def _apply_units(units):
@@ -731,6 +751,8 @@ def set_area_units(names):
             with open(_unit_cache(u), encoding="utf-8") as f:
                 c = json.load(f)
             gj, approx = c["gj"], c.get("approx")
+            if not _unit_ok(u, gj):
+                raise ValueError("bad cache")
         except (OSError, ValueError, KeyError):
             gj, approx = _fetch_unit_poly(u)
             if not gj:

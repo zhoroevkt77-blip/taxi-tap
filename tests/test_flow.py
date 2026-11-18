@@ -1466,3 +1466,20 @@ class MapTiles2GIS(unittest.TestCase):
             maptiles.KEY, maptiles.LIMIT = old
             maptiles._st["pending"] = 0
             core.set_setting("dgis_tiles", {})
+
+
+class UnitGeocodeGuard(unittest.TestCase):
+    def test_manas_not_in_bishkek(self):
+        bishkek = core._circle(42.90, 74.59, 5)
+        u = {"name": "Манас шаары"}
+        self.assertFalse(core._unit_ok(u, bishkek))                         # ката кэш → кайра жүктөлөт
+        self.assertTrue(core._unit_ok(u, core._circle(40.93, 73.00, 5)))
+        self.assertTrue(core._unit_ok({"name": "Сузак району"}, bishkek))   # белгисиз — текшерилбейт
+        import urllib.request as ur
+        old = ur.urlopen
+        try:
+            ur.urlopen = lambda *a, **k: (_ for _ in ()).throw(OSError("offline"))
+            gj, approx = core._fetch_unit_poly({"name": "Манас шаары", "ru": "город Манас (бывш. Джалал-Абад)", "ob_ru": "Джалал-Абадская область"})
+        finally:
+            ur.urlopen = old
+        self.assertTrue(approx and core._unit_ok(u, gj))                   # интернет жок болсо да туура жерде тегерек
