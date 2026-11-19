@@ -4,15 +4,15 @@
   const css = `.qrs-ov{position:fixed;inset:0;z-index:9999;background:rgba(20,20,30,.5);display:flex;align-items:flex-end;justify-content:center}
 .qrs-b{background:#fff;width:100%;max-width:520px;border-radius:26px 26px 0 0;padding:14px 18px calc(22px + env(safe-area-inset-bottom,0px));font-family:Inter,system-ui,sans-serif;color:#16161a}
 .qrs-b .g{width:46px;height:5px;border-radius:3px;background:#ddd;margin:0 auto 12px}
-.qrs-b h3{display:flex;align-items:center;gap:10px;margin:0 0 12px;font-size:21px;font-weight:900}
+.qrs-b h3{display:flex;align-items:center;gap:10px;margin:0 0 12px;font-size:21px;font-weight:600}
 .qrs-b h3 img{width:52px;height:38px;border-radius:19px;object-fit:cover;background:#f0f0f3}
-.qrs-g{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center;font-weight:800;font-size:12.5px}
+.qrs-g{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center;font-weight:600;font-size:12.5px}
 .qrs-g button{border:0;background:none;font:inherit;color:inherit;cursor:pointer;padding:0}
 .qrs-i{width:58px;height:58px;border-radius:18px;margin:0 auto 6px;display:grid;place-items:center;box-shadow:0 6px 14px rgba(0,0,0,.15)}
 .qrs-i svg{width:30px;height:30px}
 .qrs-t{background:#f6f6f8;border-radius:16px;padding:12px 14px;margin:14px 0 4px;font-size:14px;line-height:1.45;white-space:pre-line;word-break:break-word}
-.qrs-m{font-size:13px;color:#16764f;font-weight:700;min-height:18px;margin:6px 2px}
-.qrs-x{display:block;width:100%;border:0;border-radius:18px;background:#f1f1f4;padding:14px;font:800 16px Inter,system-ui,sans-serif;cursor:pointer;margin-top:6px}`;
+.qrs-m{font-size:13px;color:#16764f;font-weight:600;min-height:18px;margin:6px 2px}
+.qrs-x{display:block;width:100%;border:0;border-radius:18px;background:#f1f1f4;padding:14px;font:600 16px Inter,system-ui,sans-serif;cursor:pointer;margin-top:6px}`;
   const I = {
     wa: '<svg viewBox="0 0 24 24" fill="#fff"><path d="M12 3a9 9 0 0 0-7.8 13.5L3 21l4.6-1.2A9 9 0 1 0 12 3z"/></svg>',
     tg: '<svg viewBox="0 0 24 24" fill="#fff"><path d="M21 4L3 11l6 2 2 6 3-4 5 4z"/></svg>',

@@ -7,12 +7,12 @@
 <title>Такси ТАП! — Админ</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
-.ulbl span{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;font:800 12px/1 system-ui;color:#17365C;background:#fffc;padding:3px 6px;border-radius:8px}
+.ulbl span{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;font:600 12px/1 system-ui;color:#17365C;background:#fffc;padding:3px 6px;border-radius:8px}
 :root{--navy:#17365C;--gold:#C9A03A;--gold2:#E3C368;--ink:#152741;--soft:#5A6880;--paper:#F1F4F9;--line:#E1E7F1;--ok:#1D9E75;--bad:#D8443A;--warn:#BA7517}
 *{box-sizing:border-box}
 html,body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--paper)}
 header{background:var(--navy);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:10}
-header .logo{font-weight:800;font-size:17px}header .logo b{color:var(--gold2)}
+header .logo{font-weight:600;font-size:17px}header .logo b{color:var(--gold2)}
 header .live{margin-left:auto;font-size:12px;opacity:.8}
 nav{display:flex;gap:6px;padding:10px 12px;overflow-x:auto;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:46px;z-index:9}
 nav button{border:0;background:var(--paper);color:var(--ink);padding:9px 14px;border-radius:12px;font-size:14px;font-weight:600;white-space:nowrap;cursor:pointer;position:relative}
@@ -31,10 +31,10 @@ main{padding:12px;max-width:1100px;margin:0 auto}
 .item:last-child{border:0}
 .item .main{flex:1;min-width:170px}.item .main b{display:block}
 .muted{color:var(--soft);font-size:13px}
-.btn{border:0;border-radius:10px;padding:8px 12px;font-size:13px;font-weight:700;cursor:pointer;background:var(--paper);color:var(--ink)}
+.btn{border:0;border-radius:10px;padding:8px 12px;font-size:13px;font-weight:600;cursor:pointer;background:var(--paper);color:var(--ink)}
 .acts{display:flex;gap:6px;flex-wrap:wrap}.item .main{flex:1;min-width:220px}a.btn{text-decoration:none;display:inline-block}
 .btn.ok{background:var(--ok);color:#fff}.btn.bad{background:#FCEBEB;color:var(--bad)}.btn.gold{background:var(--gold);color:#16161a}
-.tag{font-size:12px;font-weight:700;padding:3px 8px;border-radius:8px;white-space:nowrap}
+.tag{font-size:12px;font-weight:600;padding:3px 8px;border-radius:8px;white-space:nowrap}
 .t-searching{background:#FAEEDA;color:#854F0B}.t-scheduled{background:#EEEDFE;color:#3C3489}.t-accepted,.t-arrived{background:#E6F1FB;color:#0C447C}
 .t-in_trip{background:#E1F5EE;color:#085041}.t-completed{background:#EAF3DE;color:#27500A}.t-cancelled{background:#F1EFE8;color:#5F5E5A}
 .t-active{background:#E1F5EE;color:#085041}.t-pending{background:#FAEEDA;color:#854F0B}.t-blocked,.t-rejected{background:#FCEBEB;color:#A32D2D}
@@ -58,7 +58,7 @@ td input.f{padding:7px 8px;max-width:90px;min-width:58px}
 .bars b{font-size:12px;color:var(--ink);margin-bottom:4px}
 .fset{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;padding:12px 14px}
 .fset label{font-size:12px;color:var(--soft);display:block;margin-bottom:4px}
-.mode{display:inline-block;background:#E1F5EE;color:#085041;font-weight:700;border-radius:10px;padding:6px 12px;font-size:14px}
+.mode{display:inline-block;background:#E1F5EE;color:#085041;font-weight:600;border-radius:10px;padding:6px 12px;font-size:14px}
 #amap{height:min(62vh,520px);border-radius:14px;border:1px solid var(--line);overflow:hidden;position:relative;background:#EDEAE2}
 .tools{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
 .tools .btn{padding:11px 14px;font-size:14px}
@@ -69,7 +69,7 @@ td input.f{padding:7px 8px;max-width:90px;min-width:58px}
 .docs{flex-wrap:wrap}.chk{margin:10px 0 2px;padding:10px 12px;border-radius:12px;background:#fff8e1}.chk label{font-weight:500!important;color:#222!important;font-size:14px!important;display:flex!important;gap:8px;align-items:flex-start}.chk input{width:18px;height:18px;flex:none;margin-top:1px}
 .btn:disabled{opacity:.4;cursor:not-allowed}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=96">
+<link rel="stylesheet" href="/static/theme.css?v=97">
 </head>
 <body class="adm">
 <header><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b><span class="ver">Админ</span></div><div class="live" id="live"></div></header>
@@ -431,7 +431,7 @@ async function cancelPanel() {
 async function farPanel() {
   const f = await api("/api/a/far_pickup"); if (!f || f.error) return;
   $("#farP").innerHTML = `<h3>🚗 Алыс подача</h3><div class="item"><div class="main" style="width:100%">
-    <label style="display:flex;gap:8px;align-items:center;font-weight:700"><input type="checkbox" id="frOn" ${f.on ? "checked" : ""}> Күйүк</label>
+    <label style="display:flex;gap:8px;align-items:center;font-weight:600"><input type="checkbox" id="frOn" ${f.on ? "checked" : ""}> Күйүк</label>
     <p class="muted" style="margin:6px 0">Жакынкы бош айдоочу алыс болсо, жүргүнчүнүн баасына кошулат (Яндекстегидей). Баа заказда белгиленет, жүргүнчү алдын ала көрөт.</p>
     <div class="fset" style="padding:0"><div><label>Акысыз аралык, км</label><input class="f" id="frFree" inputmode="decimal" value="${f.free_km}"></div>
       <div><label>Андан ашкан 1 км үчүн, сом</label><input class="f" id="frKm" inputmode="decimal" value="${f.per_km}"></div>
@@ -449,7 +449,7 @@ async function autoPanel() {
   const tr = X.traffic || {};
   $("#apP").innerHTML = `<h3>🤖 Автоматтык баа жана пробка</h3>
     <div class="item"><div class="main" style="width:100%">
-      <label style="display:flex;gap:8px;align-items:center;font-weight:700"><input type="checkbox" id="apOn" ${c.on ? "checked" : ""}> Күйүк</label>
+      <label style="display:flex;gap:8px;align-items:center;font-weight:600"><input type="checkbox" id="apOn" ${c.on ? "checked" : ""}> Күйүк</label>
       <p class="muted" style="margin:6px 0">Система ар дүйшөмбүдө өткөн жуманы карайт: жүргүнчүлөр бааны көрүп заказ бербей кетсе — 3% арзандатат,
         айдоочулар заказдан көп баш тартса — 3% кымбаттатат. Пробка: бүткөн сапарлардын чыныгы убактысынан ар бир саат үчүн өзү үйрөнөт.
         Маалымат аз болсо (${X.min_quotes} баа көрүү / ${X.min_offers} сунуш жумасына) — эч нерсе өзгөрбөйт.</p>
@@ -458,7 +458,7 @@ async function autoPanel() {
         <button class="btn" id="apRun">Азыр эсептөө</button></div></div></div>
     ${cities.length ? cities.map(ct => { const m = X.metrics[ct] || {}, k = X.k[ct], t = tr[ct] || {};
       const hrs = Object.keys(t).sort((a, b) => a - b);
-      return `<div class="item"><div class="main"><div style="font-size:16px"><span style="font-weight:800">${esc(ct)}</span> · баа <span style="font-weight:800;color:${k < 1 ? "var(--ok)" : k > 1 ? "var(--bad)" : "inherit"}">×${k.toFixed(2)}</span>${k < 1 ? " (арзандатылган)" : k > 1 ? " (кымбаттатылган)" : ""}</div>
+      return `<div class="item"><div class="main"><div style="font-size:16px"><span style="font-weight:600">${esc(ct)}</span> · баа <span style="font-weight:600;color:${k < 1 ? "var(--ok)" : k > 1 ? "var(--bad)" : "inherit"}">×${k.toFixed(2)}</span>${k < 1 ? " (арзандатылган)" : k > 1 ? " (кымбаттатылган)" : ""}</div>
         <div class="muted">7 күн: ${m.quotes} жолу баа көрүлдү, ${m.ordered} заказ (${pct(m.conv)}) · айдоочуга ${m.offers} сунуш, баш тартуу ${pct(m.miss)}</div>
         <div class="muted">🚦 Пробка: ${hrs.length ? hrs.map(h => `${h}:00 ×${t[h]}`).join(" · ") : "азырынча маалымат аз"}</div></div></div>`; }).join("")
       : `<div class="empty">Азырынча маалымат жок.</div>`}
@@ -551,7 +551,7 @@ async function viewFinance() {
   $("#main").innerHTML = `
     <div class="panel"><h3>Комиссия</h3>
       <div class="item"><div class="main"><span class="mode">${esc(F.mode)}</span>
-        <div class="muted" style="margin-top:6px">Азыр колдонулуп жатканы: <span style="font-weight:700;color:var(--ink)">${F.pct_now}%</span> ар бир бүткөн сапардан, айдоочунун балансынан кармалат.</div></div></div>
+        <div class="muted" style="margin-top:6px">Азыр колдонулуп жатканы: <span style="font-weight:600;color:var(--ink)">${F.pct_now}%</span> ар бир бүткөн сапардан, айдоочунун балансынан кармалат.</div></div></div>
       <div class="fset">
         <div><label>Комиссия, %</label><input class="f" id="fp" inputmode="decimal" value="${c.percent}"></div>
         <div><label>Бекер мезгил ушул күнгө чейин (бош = жок)</label><input class="f" id="ff" type="date" value="${c.free_until || ""}"></div>
