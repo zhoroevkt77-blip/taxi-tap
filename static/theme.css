@@ -738,3 +738,11 @@ b,strong,h1,h2,h3,h4,th{font-weight:600}
 .ib2{display:flex!important;align-items:center;justify-content:center;gap:9px}
 .hotc .yi,.phc .yi{width:44px;height:44px}
 .irow .yi,.phc .yi,.hotc .yi{flex:0 0 44px;width:44px;min-width:44px}
+/* Иконкалар бир аз чоңураак (сары чарчы стиль) */
+.cab2 .cab-q img{width:56px!important;height:auto!important;max-height:46px;border-radius:12px!important;object-fit:contain!important}
+#home.cabbg .ccard .cimg{width:64px!important;height:auto!important;max-height:50px;border-radius:13px!important;object-fit:contain!important;background:none!important}
+.bnav.pro a:not(.big) img{width:48px!important;height:38px!important;border-radius:10px}
+.yi{width:54px;height:54px}.yi.s{width:34px;height:34px}.yi.l{width:68px;height:68px}
+.irow .yi,.phc .yi,.hotc .yi{flex:0 0 54px;width:54px;min-width:54px}
+.work a .yi{width:68px;height:68px}
+.mr .ci{width:48px;height:48px}
