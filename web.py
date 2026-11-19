@@ -199,6 +199,7 @@ def driver_state(uid):
           "rating": d.get("rating"), "rides_done": d.get("rides_done"),
           "activity": d.get("activity") if d and d.get("activity") is not None else 100,
           "today": core.driver_today(uid) if d else {"rides": 0, "earned": 0},
+          "photo": core.photo_state(d) if d else None,
           "offer": None, "ride": None, "next": None, "pay_info": core.PAY_INFO,
           "classes": sorted(core.driver_classes(d)) if d else [],
           "class_names": {c: x["name"] for c, x in core.class_config().items()},
@@ -466,6 +467,11 @@ class H(BaseHTTPRequestHandler):
                 if not core.get_driver(uid):
                     return self._json({"error": "auth"}, 401)
                 return self._json({"peers": core.peers(uid), "km": core.PEER_KM})
+            if u.path == "/api/d/hot":
+                d = core.get_driver(uid)
+                if not d:
+                    return self._json({"error": "auth"}, 401)
+                return self._json({"hot": core.hot_spot(d.get("lat"), d.get("lon"))})
             if u.path == "/api/d/heat":
                 if not core.get_driver(uid):
                     return self._json({"error": "auth"}, 401)
@@ -724,6 +730,17 @@ class H(BaseHTTPRequestHandler):
             return self._json(driver_state(uid))
         if not d or d["status"] != "active":
             return self._json({"error": "not_active"}, 403)
+        if action == "carphoto":
+            files = {}
+            for s in core.PHOTO_SIDES:
+                f = core.save_upload(b.get(s)) if b.get(s) else None
+                if not f:
+                    return self._json({"error": "photo_" + s}, 400)
+                files[s] = f
+            core.set_car_photos(uid, files)
+            u = core.get_user(uid) or {}
+            deliver([flow.note(a, "a_car_photo", "/admin", name=u.get("name") or u.get("phone")) for a in core.admins()])
+            return self._json(driver_state(uid))
         if action == "license":
             lu = _txt(b.get("lic_until"), 10)
             left = core.lic_days_left({"lic_until": lu})
@@ -1006,6 +1023,13 @@ class H(BaseHTTPRequestHandler):
             if not core.set_wait_config(_num(b.get("free_min")), _num(b.get("per_min"))):
                 return self._json({"error": "bad"}, 400)
             return self._json({"wait": core.wait_config()})
+        if action == "car_photo_review":
+            ruid = _txt(b.get("uid"), 40)
+            ok = bool(b.get("ok"))
+            if not core.review_car_photos(ruid, ok, _txt(b.get("note"), 200)):
+                return self._json({"error": "not_pending"}, 400)
+            deliver([flow.note(ruid, "d_car_photo_ok" if ok else "d_car_photo_bad", "/driver", note=_txt(b.get("note"), 200) or "—")])
+            return self._json({"ok": True})
         if action == "driver_classes":
             target = _txt(b.get("uid"), 40)
             cl = [c for c in (b.get("classes") or []) if c in core.CLASSES]

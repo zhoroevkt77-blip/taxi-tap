@@ -1533,3 +1533,32 @@ class UnitBorderOverride(unittest.TestCase):
             else:
                 open(sel_path, "w", encoding="utf-8").write(sel_old)
             core._area.clear(); core._area.update(old_area); core.AREA_ON = on
+
+
+class DriverProScreens(unittest.TestCase):
+    def test_photo_control_hot_spot_finance(self):
+        core.init_db()
+        uid = make_driver("0700 000 951", "Фото", NEAR, 0)
+        d = core.get_driver(uid)
+        self.assertEqual(core.photo_state(d)["status"], "none"); self.assertTrue(core.photo_state(d)["need"])
+        self.assertFalse(core.set_car_photos(uid, {"front": "a.jpg"}))                  # 4 тарап керек
+        self.assertTrue(core.set_car_photos(uid, {s: s + ".jpg" for s in core.PHOTO_SIDES}))
+        self.assertEqual(core.photo_state(core.get_driver(uid))["status"], "pending")
+        self.assertTrue(core.review_car_photos(uid, False, "бүдөмүк"))
+        p = core.photo_state(core.get_driver(uid)); self.assertEqual((p["status"], p["note"], p["need"]), ("rejected", "бүдөмүк", True))
+        self.assertFalse(core.review_car_photos(uid, True))                               # pending эмес
+        core.set_car_photos(uid, {s: s + ".jpg" for s in core.PHOTO_SIDES}); core.review_car_photos(uid, True)
+        p = core.photo_state(core.get_driver(uid)); self.assertEqual(p["status"], "ok"); self.assertFalse(p["need"]); self.assertGreaterEqual(p["days_left"], 29)
+        core.set_driver(uid, photo_at=core.now() - 31 * 86400)
+        self.assertTrue(core.photo_state(core.get_driver(uid))["need"])                   # 30 күн өттү
+        f = core.driver_finance(uid)["today"]
+        self.assertTrue({"rides", "gross", "fee", "bonus", "net", "online_sec"} <= set(f))
+        t = core.now()
+        lat, lon = NEAR[0] + 0.02, NEAR[1]
+        for i in range(4):
+            core.query("INSERT INTO rides (passenger, status, p_lat, p_lon, created_at) VALUES ('tg:9', 'completed', ?, ?, ?)", (lat, lon, t - 60))
+        h = core.hot_spot(NEAR[0], NEAR[1])
+        self.assertIsNotNone(h); self.assertGreaterEqual(h["n"], 4); self.assertLess(h["km"], 4)
+        self.assertIsNone(core.hot_spot(NEAR[0] + 1.0, NEAR[1]))                         # алыс — көрсөтүлбөйт
+        core.query("DELETE FROM rides WHERE passenger='tg:9'")
+        core.set_driver(uid, online=0)

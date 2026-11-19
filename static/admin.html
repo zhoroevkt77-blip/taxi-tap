@@ -68,6 +68,7 @@ td input.f{padding:7px 8px;max-width:90px;min-width:58px}
 .docs span{display:block;font-size:11px;color:var(--soft);text-align:center;margin-top:2px}
 .docs{flex-wrap:wrap}.chk{margin:10px 0 2px;padding:10px 12px;border-radius:12px;background:#fff8e1}.chk label{font-weight:500!important;color:#222!important;font-size:14px!important;display:flex!important;gap:8px;align-items:flex-start}.chk input{width:18px;height:18px;flex:none;margin-top:1px}
 .btn:disabled{opacity:.4;cursor:not-allowed}
+.phrev{margin:8px 0;padding:10px;border-radius:12px;background:#fff8e6}
 </style>
 <link rel="stylesheet" href="/static/theme.css?v=97">
 </head>
@@ -289,10 +290,20 @@ async function viewDrivers() {
     return `<span class="muted" style="display:block;color:${left < 0 ? "var(--bad)" : left <= 30 ? "#b26a00" : ""}">🪪 Күбөлүк ${esc(d.lic_until)} чейин${left < 0 ? " — МӨӨНӨТҮ БҮТКӨН" : left <= 30 ? ` — ${left} күн калды` : ""}</span>`; };
   const checks = d => `<div class="chk" data-ck="${esc(d.uid)}"><b style="font-size:13px">Ырастоодон мурун текшериңиз:</b>${["Селфидеги жүз күбөлүктөгү сүрөткө окшош", "Аты-жөнү күбөлүктөгүдөй", "Унаанын номери техпаспорттогудай",
       "Унаанын сүрөтүндөгү номер дал келет"].map(t => `<label style="margin:6px 0"><input type="checkbox"> <span>${t}</span></label>`).join("")}</div>`;
+  const photoBox = d => {
+    if (d.status !== "active" || !d.photos) return d.status === "active" && !d.photo_status ? `<span class="muted" style="display:block">📷 Фотоконтроль: али жиберген эмес</span>` : "";
+    let P = {}; try { P = JSON.parse(d.photos) || {}; } catch (e) {}
+    const imgs = [["front", "Алды"], ["back", "Арты"], ["left", "Сол"], ["right", "Оң"]].map(([k, t]) => P[k] ? `<a href="${file(P[k])}" target="_blank"><img src="${file(P[k])}" alt="${t}" loading="lazy"><span>${t}</span></a>` : "").join("");
+    const when = d.photo_at ? new Date(d.photo_at * 1000).toLocaleDateString("ru-RU") : "";
+    if (d.photo_status === "pending") return `<div class="phrev"><b>📷 Фотоконтроль — текшериңиз</b> <span class="muted">${when}</span><div class="docs">${imgs}</div>
+      <button class="btn ok" data-ph="1" data-u="${esc(d.uid)}">✓ Кабыл алуу</button> <button class="btn bad" data-ph="0" data-u="${esc(d.uid)}">✕ Кайра тарттыруу</button></div>`;
+    return `<details><summary class="muted" style="cursor:pointer">📷 Фотоконтроль: ${d.photo_status === "ok" ? "✅ өттү" : "⚠️ кабыл алынган жок"} · ${when}</summary><div class="docs">${imgs}</div></details>`;
+  };
   const row = d => `<div class="item"><div class="main"><b>${esc(d.name)} ${tag(d.status)} ${d.is_online ? '<span class="tag t-in_trip">онлайн</span>' : ""}</b>
       <span class="muted">${esc(d.phone)} · ${esc(carText(d.car_color, d.car_model))}, ${esc(d.car_plate)}${d.status === "active" || d.status === "blocked" ? ` · ★ ${d.rating} · ${d.rides_done} сапар · баланс <b>${Math.round(d.balance)} с</b>` : ""}</span>
       ${d.status === "rejected" && d.reject_note ? `<span class="muted">Себеби: ${esc(d.reject_note)}</span>` : ""}${lic(d)}
       ${d.status === "pending" ? docs(d) + checks(d) : `<details><summary class="muted" style="cursor:pointer">📄 Документтер</summary>${docs(d)}</details>`}
+      ${photoBox(d)}
       ${d.status === "active" ? `<span class="muted" data-cl="${esc(d.uid)}">${[["econom","Эконом"],["comfort","Комфорт"],["minivan","Минивэн"],["delivery","Жеткирүү"]].map(([c, t]) =>
         `<label style="margin-right:10px;white-space:nowrap"><input type="checkbox" value="${c}" ${(d.classes || "econom,delivery").split(",").includes(c) ? "checked" : ""}> ${t}</label>`).join("")}</span>` : ""}</div>
       ${d.status === "pending" ? `<button class="btn ok" data-a="approve" data-u="${esc(d.uid)}" disabled title="Адегенде бардык белгилерди коюңуз">Ырастоо</button><button class="btn bad" data-a="reject" data-u="${esc(d.uid)}">Баш тартуу</button>`
@@ -315,6 +326,11 @@ async function viewDrivers() {
     if (!cl.length) { i.checked = true; return; }
     await api("/api/a/driver_classes", {uid:box.dataset.cl, classes:cl});
   }));
+  document.querySelectorAll("[data-ph]").forEach(b => b.onclick = async () => {
+    const ok = b.dataset.ph === "1", note = ok ? "" : prompt("Себеби (айдоочуга жөнөтүлөт):", "Сүрөттөр бүдөмүк же номер көрүнбөйт");
+    if (!ok && note === null) return;
+    const r = await api("/api/a/car_photo_review", {uid:b.dataset.u, ok, note});
+    toast(r.ok ? (ok ? "✓ Кабыл алынды" : "Айдоочуга кабар кетти") : "Ката", 2500); viewDrivers(); });
   $("#main").querySelectorAll("[data-bal]").forEach(b => b.onclick = async () => {
     const v = prompt("Канча сом кошуу (+) же кемитүү (−)? Мис: 500 же -100");
     if (!v || isNaN(+v) || +v === 0) return;

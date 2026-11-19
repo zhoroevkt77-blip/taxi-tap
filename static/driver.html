@@ -49,6 +49,18 @@ input.f{width:100%;font-size:17px;padding:14px;border-radius:14px;border:1px sol
 .bul{width:10px;height:10px;border-radius:50%;background:var(--navy);flex:none}
 .bul.to{background:var(--gold)}
 .two{display:flex;gap:10px}.two>*{flex:1}
+.seg{display:flex;gap:4px;background:#f1f1f4;border-radius:999px;padding:4px;margin:4px 0 12px}.seg button{flex:1;border:0;background:none;border-radius:999px;padding:9px;font:600 14px Inter,system-ui,sans-serif;color:#6b6b76;cursor:pointer}.seg button.on{background:var(--grad,#ffc61a);color:#16161a}
+.esum{display:flex;align-items:center;gap:14px;margin:4px 0 8px}.esum b{display:block;font-size:28px;font-weight:600;line-height:1.1}.esum .muted{font-size:13px}
+.echips,.ochips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}.echips span,.ochips span{background:#fff4d6;color:#5a3d00;border-radius:999px;padding:6px 11px;font-size:13.5px;font-weight:600}.echips .k,.ochips .k{background:#ffc61a;color:#16161a}
+.ochips span{font-size:15px}
+.rbtns{display:flex;justify-content:space-around;margin:10px 0 4px}.rbtns>*{display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:0;font:600 12.5px Inter,system-ui,sans-serif;color:#16161a;text-decoration:none;cursor:pointer;padding:0}
+.rbtns span{position:relative;width:52px;height:52px;border-radius:50%;background:#fff;box-shadow:0 4px 14px rgba(20,20,30,.1),inset 0 0 0 1px rgba(0,0,0,.05);display:flex;align-items:center;justify-content:center;font-size:22px}
+.rbtns .sos span{box-shadow:0 4px 14px rgba(220,40,50,.15),inset 0 0 0 1.5px #f3b1b5}.rbtns em{position:absolute;top:-2px;right:-2px;min-width:18px;height:18px;border-radius:9px;background:#d4252f;color:#fff;font:600 11px/18px Inter,sans-serif;font-style:normal}
+.hotc,.phc{display:flex;align-items:center;gap:12px;width:100%;background:#fff;border:0;border-radius:18px;padding:11px 14px;margin:8px 0;box-shadow:0 6px 16px rgba(20,20,30,.07),inset 0 0 0 1.5px #ffd666;font:inherit;color:#16161a;text-align:left;cursor:pointer}
+.phc{box-shadow:0 6px 16px rgba(20,20,30,.07),inset 0 0 0 1px rgba(0,0,0,.05)}.phc.need{box-shadow:0 6px 16px rgba(20,20,30,.07),inset 0 0 0 1.5px #ffd666}
+.hotc i,.phc i{font-style:normal;width:44px;height:44px;flex:none;border-radius:13px;background:#fff4d6;display:flex;align-items:center;justify-content:center;font-size:22px}
+.hotc span,.phc span{flex:1;min-width:0}.hotc b,.phc b{display:block;font-size:15.5px;font-weight:600}.hotc small,.phc small{display:block;color:#6b6b76;font-size:13px}.hotc em,.phc em{font-style:normal;font-size:24px;color:#16161a}
+
 .carm{width:30px;height:30px;border-radius:50%;background:var(--navy);border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3);display:grid;place-items:center;color:#fff;font-size:14px}
 .carm.me{background:var(--ok)}
 .carm.to{background:var(--gold);color:#16161a}
@@ -82,7 +94,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
 <link rel="stylesheet" href="/static/theme.css?v=97">
-<link rel="stylesheet" href="/static/dark.css?v=6">
+<link rel="stylesheet" href="/static/dark.css?v=7">
 <script src="/static/night.js?v=2"></script>
 </head>
 <body>
@@ -220,7 +232,9 @@ function earnPill() {
   }
   const done = got >= goal;
   // Басса — сумма жашырылат, кайра басса — көрүнөт (жанындагы адам көрбөсүн)
-  e.onclick = () => { try { localStorage.setItem("earnHide", hid ? "0" : "1"); } catch (x) {} earnPill(); };
+  e.onclick = ev => {
+    if (ev.target.closest(".eye")) { try { localStorage.setItem("earnHide", hid ? "0" : "1"); } catch (x) {} return earnPill(); }
+    window.SHEET && SHEET.expand(); viewCabinet("earn"); };
   if (hid) {
     e.className = "ep";
     e.innerHTML = `<span class="ring"><svg width="42" height="42" viewBox="0 0 42 42"><circle cx="21" cy="21" r="17" fill="none" stroke="#eeeef2" stroke-width="5"/></svg><em>•••</em></span><span><b>••• с</b><small>жашыруун</small></span><span class="eye">${EYE_OFF}</span>`;
@@ -308,23 +322,62 @@ function viewHome() {
     <input type="checkbox" id="nt" ${D.notify ? "checked" : ""} style="width:24px;height:24px"></div>` : "";
   if (D.online) {
     render(`${outHTML()}<div class="wait"><div class="blink"${D.in_area === false ? ' style="background:var(--bad)"' : ""}></div><div><b>${D.in_area === false ? "Заказ келбейт — аймактын сыртындасыз" : "Заказ күтүлүүдө"}${D.home && D.home.on ? " · 🏠 үйгө карай" : ""}</b><div class="muted">${D.in_area === false ? "1 сааттын ичинде аймакка кирбесеңиз, линиядан өзү чыгарылат" : "Экранды өчүрбөңүз — GPS иштеп турат"}</div></div></div>
-      ${stats}${homeHTML()}<button class="btn red" id="off">Линиядан чыгуу</button>`);
+      ${stats}<div id="hot"></div>${homeHTML()}<button class="btn red" id="off">Линиядан чыгуу</button>`);
     bindHome();
     $("#off").onclick = goOffline;
   } else {
     render(`<h2>Салам, ${esc(D.name || "айдоочу")}!</h2><p class="muted">${esc(carText(D.car_color, D.car_model))}, ${esc(D.car_plate)}</p>
       ${low ? `<p class="err">Баланс жетишсиз — заказдар келбейт.</p>` : ""}${outHTML()}
       <button class="btn go" id="on">Линияга чыгуу</button>${D.park ? `<p class="muted" style="font-size:12px;text-align:center;margin:4px 0 0">🏢 Парк сиздин линиядагы жайгашууңузду көрөт</p>` : ""}
-      <div class="err" id="er"></div>${stats}${topup}
-      ${homeHTML()}${sw}
+      <div class="err" id="er"></div><div id="hot"></div>${stats}${topup}
+      ${D.photo && D.photo.need ? photoCard() : ""}${homeHTML()}${sw}
       ${installHTML()}<button class="outb" id="out">🚪 Чыгуу</button>`);
     bindInstall();
     $("#top") && ($("#top").onclick = viewTopup);
     $("#nt") && ($("#nt").onchange = () => api("/api/notify", {on:$("#nt").checked}));
     $("#out").onclick = confirmOut;
     $("#on").onclick = () => goOnline($("#on"));
+    $("#phCard") && ($("#phCard").onclick = viewPhotos);
     bindHome();
   }
+  hotCard();
+}
+// «Заказ көп жер»: акыркы 30 мүнөттө заказ көп болгон жакын жер
+let HOT = {at:0, v:null};
+async function hotCard() {
+  if (Date.now() - HOT.at > 60000) { HOT.at = Date.now(); try { HOT.v = (await api("/api/d/hot")).hot; } catch (e) { HOT.v = null; } }
+  const el = $("#hot"), h = HOT.v; if (!el) return;
+  if (!h) { el.innerHTML = ""; return; }
+  el.innerHTML = `<button class="hotc"><i>🔥</i><span><b>${h.name ? esc(h.name) + " тарапта" : "Жакын жерде"} заказ көп</b>
+    <small>Сизден ${h.km} км · акыркы 30 мүнөттө ${h.n} заказ</small></span><em>›</em></button>`;
+  el.firstChild.onclick = () => openNav([h.lat, h.lon]);
+}
+// ---------- Фотоконтроль ----------
+function photoCard() {
+  const p = D.photo; if (!p) return "";
+  const t = p.status === "pending" ? ["🕓", "Фотоконтроль текшерилүүдө", "Админ сүрөттөрдү карап жатат"]
+    : p.status === "rejected" ? ["⚠️", "Фотоконтроль кабыл алынган жок", (p.note ? p.note + " · " : "") + "кайра тартып жибериңиз"]
+    : p.need ? ["📷", "Фотоконтроль", "Унааңыздын 4 тарабын тартып жибериңиз"]
+    : ["✅", "Фотоконтроль өттү", `Кийинкиси ${p.days_left} күндөн кийин`];
+  return `<button class="phc${p.need ? " need" : ""}" id="phCard"><i>${t[0]}</i><span><b>${t[1]}</b><small>${esc(t[2])}</small></span><em>›</em></button>`;
+}
+function viewPhotos() {
+  const box = {}, S = [["front", "Алды", "🚘"], ["back", "Арты", "🚗"], ["left", "Сол капталы", "⬅️"], ["right", "Оң капталы", "➡️"]];
+  render(`<h2>📷 Фотоконтроль</h2>
+    <p class="muted" style="margin-top:-4px">Унааңыздын 4 тарабын жарыкта, номери көрүнгөндөй тартыңыз. Ар 30 күндө бир жолу — жүргүнчүлөр таза, бүтүн унааны көрүшү үчүн.</p>
+    <div class="docs" style="grid-template-columns:1fr 1fr">${S.map(([k, t, i]) => `<div class="doc" id="ph_${k}" style="aspect-ratio:1.3"><i>${i}</i>${t}<input type="file" accept="image/*" capture="environment"></div>`).join("")}</div>
+    <div class="err" id="er"></div><button class="btn main" id="send">Жиберүү</button><button class="btn ghost" id="back">Артка</button>`);
+  window.SHEET && SHEET.expand();
+  S.forEach(([k]) => docInput($("#ph_" + k), box, k));
+  $("#back").onclick = () => { lastView = ""; show(); };
+  $("#send").onclick = async () => {
+    const miss = S.filter(([k]) => !box[k]).map(x => x[1]);
+    if (miss.length) return $("#er").textContent = "Тартыла элек: " + miss.join(", ");
+    $("#send").disabled = true; $("#send").textContent = "Жиберилүүдө…";
+    const r = await api("/api/d/carphoto", box);
+    if (r.error) { $("#send").disabled = false; $("#send").textContent = "Жиберүү"; return $("#er").textContent = "Жиберилген жок — кайра аракет кылыңыз."; }
+    D = r; toast("✅ Жиберилди — админ текшерет", 2500); lastView = ""; show();
+  };
 }
 
 let ME_D = {};
@@ -372,6 +425,18 @@ function viewCar() {
   $("#cYear").onclick = async () => { const v = prompt("Унаанын чыгарылган жылы:", D.car_year || ""); if (!v) return;
     const r = await api("/api/d/car_year", {year:+v}); if (r.error) return toast("Жылды туура жазыңыз (мис. 2018)", 2200); D = r; viewCar(); };
 }
+let EPER = "today";
+function hm(sec) { const h = Math.floor(sec / 3600), m = Math.round(sec % 3600 / 60); return h ? `${h} с ${m} мүн` : `${m} мүн`; }
+function earnSum() {
+  const x = (D.finance || {})[EPER] || {rides:0, gross:0, fee:0, bonus:0, net:0, online_sec:0};
+  const goal = (D.goal || 1000) * (EPER === "week" ? 7 : EPER === "month" ? 30 : 1), f = Math.max(0, Math.min(1, x.gross / goal));
+  const C = 2 * Math.PI * 32;
+  return `<div class="esum"><svg width="84" height="84" viewBox="0 0 80 80"><circle cx="40" cy="40" r="32" stroke="#eeeef2" stroke-width="8" fill="none"/>
+      <circle cx="40" cy="40" r="32" stroke="#ffb703" stroke-width="8" fill="none" stroke-linecap="round" stroke-dasharray="${(C * f).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 40 40)"/>
+      <text x="40" y="45" text-anchor="middle" font-size="16" font-weight="600" fill="currentColor">${Math.round(f * 100)}%</text></svg>
+    <div><b>${x.gross} с</b><span class="muted">максат ${goal} · ${x.rides} сапар${x.online_sec ? " · " + hm(x.online_sec) : ""}</span></div></div>
+    <div class="echips"><span>💵 Накталай ${x.gross} с</span><span>➖ Комиссия ${x.fee} с</span>${x.bonus ? `<span>🎁 Бонус +${x.bonus} с</span>` : ""}<span class="k">👛 Колуңузда ${x.net} с</span></div>`;
+}
 function viewCabinet(part) {
   part = part === "earn" ? "earn" : "cab"; navOn(part);
   const f = D.finance || {}, row = (t, k) => { const x = f[k] || {rides:0, gross:0, fee:0, net:0};
@@ -382,10 +447,9 @@ function viewCabinet(part) {
       <div class="muted">Комфорт же Минивэн тарифине өтүү үчүн админге кайрылыңыз.</div></div></div>
     <div class="grid"><div class="stat"><span class="muted">Баланс</span><b style="color:${D.balance < D.min_balance ? "var(--bad)" : "inherit"}">${D.balance} с</b></div>
       <div class="stat"><span class="muted">Рейтинг</span><b>★ ${D.rating ?? "5.0"}</b></div></div>
-    <div${on(E)}><table class="fin"><tr><th></th><th>Сапар</th><th>Тапкан</th><th>Комиссия</th><th>Колуңузда</th></tr>
-      ${row("Бүгүн", "today")}${row("Ушул жума", "week")}${row("Ушул ай", "month")}</table>
-    <p class="muted">Сумма сом менен. «Колуңузда» — жүргүнчүлөр төлөгөн акчадан комиссия кемитилгени.
-    ${D.min_balance > 0 ? `Баланс ${D.min_balance} сомдон аз болсо, заказ келбейт.` : ""}</p>
+    <div${on(E)}><div class="seg" id="ePer">${[["today", "Бүгүн"], ["week", "Жума"], ["month", "Ай"]].map(([k, t]) => `<button data-ep="${k}" class="${k === EPER ? "on" : ""}">${t}</button>`).join("")}</div>
+    <div id="eSum">${earnSum()}</div>
+    <p class="muted">«Колуңузда» — жүргүнчүлөр төлөгөн акча + бонус − комиссия. ${D.min_balance > 0 ? `Баланс ${D.min_balance} сомдон аз болсо, заказ келбейт.` : ""}</p>
     ${D.pending_topup ? `<div class="note">🕓 Чегиңиз текшерилүүдө.</div>` : `<button class="btn main" id="top">➕ Балансты толуктоо</button>`}
     <div class="sw"><div><b>🎯 Күндүк максат</b><div class="muted">Бүгүн: ${D.today.earned} / ${D.goal} с</div></div>
       <button class="btn ghost" id="goalCh" style="width:auto;margin:0;padding:10px 14px;font-size:14px">Өзгөртүү</button></div>
@@ -396,6 +460,7 @@ function viewCabinet(part) {
       <span class="muted">Заказ алсаңыз жана бүтүрсөңүз +1, сунушка жооп бербесеңиз же «Жок» десеңиз −3, кабыл алгандан кийин жокко чыгарсаңыз −10.
       Аралыгы окшош болсо, активдүүлүгү жогору айдоочуга заказ биринчи келет.</span></div>
     <div id="praise"></div>
+    ${photoCard()}
     ${licNote()}
     <div class="sw"><div><b>🔊 Заказды үн менен айтуу</b><div class="muted">«Жаңы заказ, 80 сом, 1,2 километр»</div></div>
       <input type="checkbox" id="vc" ${voiceOn() ? "checked" : ""} style="width:24px;height:24px"></div>
@@ -415,6 +480,9 @@ function viewCabinet(part) {
     const r = await api("/api/d/goal", {goal:+v}); if (r.error) return toast("100 сомдон 50 000 сомго чейин жазыңыз", 2500);
     D = r; header(); viewCabinet("earn"); };
   $("#licUp") && ($("#licUp").onclick = viewLicense);
+  document.querySelectorAll("[data-ep]").forEach(b => b.onclick = () => { EPER = b.dataset.ep;
+    document.querySelectorAll("[data-ep]").forEach(x => x.classList.toggle("on", x === b)); $("#eSum").innerHTML = earnSum(); });
+  $("#phCard") && ($("#phCard").onclick = viewPhotos);
   $("#vc").onchange = e => { try { localStorage.setItem("voice", e.target.checked ? "on" : "off"); } catch (x) {} if (e.target.checked) say("Үн күйгүзүлдү"); };
   $("#navCh").onclick = () => openNav(null, true);
   api("/api/d/praise").then(x => { const el = $("#praise"); if (!el || !x) return;
@@ -482,12 +550,11 @@ function viewRide() {
     ${r.discount ? `<div class="note">🎁 Промокод: жүргүнчү <b>${r.price - Math.round(r.discount)} с</b> төлөйт, ${Math.round(r.discount)} с сапар бүткөндө балансыңызга кошулат</div>` : ""}
     ${D.next ? `<div class="note">🔁 <b>Кийинки заказ:</b> ${esc(D.next.p_addr || "жүргүнчү")}${D.next.price ? " · " + D.next.price + " с" : ""}. Ушул сапардан кийин барасыз.
       <a href="#" id="nx" style="color:var(--bad)">Баш тартуу</a></div>` : ""}
-    <div class="two"><a class="btn ghost" href="tel:${esc(callPh)}">📞 Чалуу</a><button class="btn ghost chatb" id="chat">💬 Чат<em id="chatN" class="hide"></em></button></div>
-    ${target ? `<button class="btn main" id="navGo">🧭 ${r.status === "in_trip" ? "Б точкага" : "Жүргүнчүгө"} жол — ${esc((NAVS[navPref()] || {t:"навигатор"}).t)}</button>` : ""}
+    <div class="rbtns"><a href="tel:${esc(callPh)}"><span>📞</span>Чалуу</a><button id="chat" class="chatb"><span>💬<em id="chatN" class="hide"></em></span>Чат</button>
+      ${target ? `<button id="navGo"><span>🧭</span>Навигатор</button>` : ""}<button id="rSos" class="sos"><span>🆘</span>Жардам</button></div>
     <button class="btn ${next[1]}" id="step">${next[0]}</button>
     ${r.status === "arrived" && r.wait && r.wait.arrived_at && r.wait.now - r.wait.arrived_at >= 300 ? `<button class="btn" id="noshow" style="background:#fff6dd">🙋 Жүргүнчү келбеди</button>` : ""}
-    ${r.status !== "in_trip" ? `<button class="btn red" id="cx">Жокко чыгаруу</button>` : ""}
-    <button class="btn ghost" id="rSos" style="color:var(--bad)">🆘 Шашылыш жардам</button>`);
+    ${r.status !== "in_trip" ? `<button class="btn red" id="cx">Жокко чыгаруу</button>` : ""}`);
   $("#rSos").onclick = sosOpen;
   $("#chat").onclick = viewChat;
   if ($("#navGo")) $("#navGo").onclick = () => openNav(target);
@@ -578,8 +645,9 @@ function showOffer() {
   say(`Жаңы заказ. ${o.price ? o.price + " сом." : ""} ${o.to_pickup_km} километр.`);
   box.classList.remove("hide");
   $("#ocard").innerHTML = `<div style="display:flex;align-items:center;gap:14px">
-      <div style="flex:1"><div class="muted">${clsTag(o.cls)}${o.chained ? "🔁 Кийинки заказ" : "Жаңы заказ"}${o.p_rating ? " · ★ " + o.p_rating : ""}</div><div class="oprice">${o.price ? o.price + " с" : "Тариф"}</div>
-      <div class="muted">${o.chained ? "Азыркы сапардан кийин · " : "Сизден "}${o.to_pickup_km} км${o.has_dest ? " · сапар ~" + o.dist_km + " км" : " · багыты айтылат"}</div>
+      <div style="flex:1"><div class="muted">${clsTag(o.cls)}${o.chained ? "🔁 Кийинки заказ · азыркы сапардан кийин" : "Жаңы заказ"}</div>
+      <div class="ochips"><span>📍 ${o.to_pickup_km} км</span><span>⏱ ${Math.max(1, Math.round(o.to_pickup_km * 2.4))} мүн</span><span class="k">💵 ${o.price ? o.price + " с" : "Тариф"}</span>${o.p_rating ? `<span>⭐ ${o.p_rating}</span>` : ""}</div>
+      <div class="muted">${o.has_dest ? "Сапар ~" + o.dist_km + " км" + (o.est_min ? " · " + o.est_min + " мүн" : "") : "Багытын жүргүнчү айтат"}</div>
       ${o.p_addr || o.d_addr ? `<div class="muted">${esc(o.p_addr || "")}${o.d_addr ? " → " + esc(o.d_addr) : ""}</div>` : ""}
       ${o.discount ? `<div class="muted">🎁 Жүргүнчү ${o.price - Math.round(o.discount)} с төлөйт, +${Math.round(o.discount)} с балансыңызга</div>` : ""}
       ${o.note ? `<div class="muted">📝 ${esc(o.note)}</div>` : ""}</div>

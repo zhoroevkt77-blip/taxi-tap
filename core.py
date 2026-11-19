@@ -310,6 +310,8 @@ NEW_COLUMNS = {
                 "activity": "INTEGER DEFAULT 100",
                 "park_id": "INTEGER",
                 "doc_selfie": "TEXT",                # күбөлүктү кармап тартылган селфи
+                "photos": "TEXT", "photo_at": "REAL",  # фотоконтроль: {"front","back","left","right"} файлдар, жиберилген убакыт
+                "photo_status": "TEXT", "photo_note": "TEXT",   # pending | ok | rejected, баш тартуу себеби
                 "lic_until": "TEXT",
                 "goal": "INTEGER",
                 "car_year": "INTEGER"},                  # күндүк максат (сом)                # күбөлүктүн мөөнөтү YYYY-MM-DD                # таксопарк (жок болсо — өз алдынча)   # активдүүлүк 0..100 (Яндекс Pro'догудай)              # аймактан сыртка чыккан убакыт
@@ -2383,6 +2385,7 @@ def admin_drivers():
     return query("SELECT d.uid, d.status, d.balance, d.rating, d.rides_done, d.car_model, "
                  "d.car_color, d.car_plate, d.online, d.busy_ride, d.loc_at, d.live_until, d.lat, d.lon, "
                  "d.doc_license, d.doc_techpass, d.doc_car, d.doc_selfie, d.lic_until, d.reject_note, d.created_at, d.classes, "
+                 "d.photos, d.photo_status, d.photo_at, d.photo_note, "
                  "u.name, u.phone FROM drivers d LEFT JOIN users u ON u.uid=d.uid "
                  "ORDER BY d.status='pending' DESC, d.rides_done DESC", (), "all")
 
@@ -2527,13 +2530,69 @@ def _tx_sum(kind, since, driver=None):
 
 
 def driver_finance(uid):
-    """Айдоочунун кабинети: бүгүн / жума / ай — сапар, жүгүртүү, комиссия, колунда калганы."""
+    """Айдоочунун кабинети: бүгүн / жума / ай — сапар, жүгүртүү, комиссия, бонус, линияда болгон убакыт, колунда калганы."""
     out = {}
     for k, since in period_starts().items():
         n, gross = _ride_sum(since, uid)
         fee = -_tx_sum("commission", since, uid)
-        out[k] = {"rides": n, "gross": int(gross), "fee": round(fee), "net": int(gross - fee)}
+        bonus = max(0.0, _tx_sum("promo", since, uid))
+        out[k] = {"rides": n, "gross": int(gross), "fee": round(fee), "bonus": round(bonus),
+                  "net": int(gross - fee + bonus), "online_sec": round(online_sec(uid, since))}
     return out
+
+
+# ==================== Фотоконтроль ====================
+PHOTO_SIDES = ("front", "back", "left", "right")
+PHOTO_DAYS = 30                          # ар 30 күндө унаанын 4 тарабын кайра тартуу
+
+
+def photo_state(d):
+    """Айдоочунун фотоконтролу: status (none|pending|ok|rejected), need (кайра тартуу керекпи), days_left."""
+    st = d.get("photo_status") or "none"
+    at = d.get("photo_at") or 0
+    left = int((at + PHOTO_DAYS * 86400 - now()) // 86400) if st == "ok" and at else None
+    need = st in ("none", "rejected") or (st == "ok" and (left is None or left < 0))
+    return {"status": st, "need": need, "days_left": left, "note": d.get("photo_note") or "", "at": at or None}
+
+
+def set_car_photos(uid, files):
+    if not all(files.get(s) for s in PHOTO_SIDES):
+        return False
+    set_driver(uid, photos=json.dumps({s: files[s] for s in PHOTO_SIDES}), photo_at=now(), photo_status="pending", photo_note=None)
+    return True
+
+
+def review_car_photos(uid, ok, note=""):
+    d = get_driver(uid)
+    if not d or d.get("photo_status") != "pending":
+        return False
+    set_driver(uid, photo_status="ok" if ok else "rejected", photo_note=None if ok else (note or "")[:200])
+    return True
+
+
+def hot_spot(lat, lon, km=12.0, minutes=30, min_n=3):
+    """Айдоочуга эң жакын «заказ көп» жер: акыркы 30 мүнөттө кеминде 3 заказ болгон уюл."""
+    if lat is None:
+        return None
+    best = None
+    for key, v in surge_cells(minutes).items():
+        if v["n"] < min_n:
+            continue
+        cl, co = hex_center(*key)
+        dist = haversine_km(lat, lon, cl, co)
+        if dist > km or (AREA_ON and not in_area(cl, co)):
+            continue
+        score = v["n"] / (1 + dist / 3)
+        if not best or score > best["score"]:
+            best = {"lat": round(cl, 5), "lon": round(co, 5), "n": v["n"], "km": round(dist, 1), "score": score}
+    if best:
+        best.pop("score")
+        try:
+            import addrbook
+            best["name"] = addrbook.nearest_landmark(best["lat"], best["lon"], 800)
+        except Exception:                               # noqa: BLE001
+            best["name"] = None
+    return best
 
 
 def admin_finance():

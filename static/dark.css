@@ -111,3 +111,9 @@ html.uidark .btn.dark{background:#3a3b43!important;color:#fff!important;border-c
 html.uidark .ocard{background:#1e1f25!important;color:#f2f2f5!important}
 html.uidark .ocard .oprice,html.uidark .ocard b,html.uidark .ring span{color:#f2f2f5!important}
 html.uidark .bnav a.big,html.uidark .bnav.pro a.big{color:#f2f2f5!important}
+
+html.uidark .seg{background:#26272e}html.uidark .seg button{color:#b9b9c4}html.uidark .seg button.on{color:#16161a}
+html.uidark .echips span,html.uidark .ochips span{background:#2c2717;color:#ffd666}html.uidark .echips .k,html.uidark .ochips .k{background:#ffc61a;color:#16161a}
+html.uidark .rbtns>*{color:#f2f2f5}html.uidark .rbtns span{background:#26272e;box-shadow:inset 0 0 0 1px #34353c}
+html.uidark .hotc,html.uidark .phc{background:#1e1f25;color:#f2f2f5;box-shadow:inset 0 0 0 1.5px #5a4a14}html.uidark .hotc i,html.uidark .phc i{background:#2c2717}
+html.uidark .hotc small,html.uidark .phc small{color:#a3a3ae}html.uidark .hotc em,html.uidark .phc em{color:#f2f2f5}
