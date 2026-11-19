@@ -1483,3 +1483,53 @@ class UnitGeocodeGuard(unittest.TestCase):
         finally:
             ur.urlopen = old
         self.assertTrue(approx and core._unit_ok(u, gj))                   # интернет жок болсо да туура жерде тегерек
+
+
+class UnitBorderOverride(unittest.TestCase):
+    def test_manas_expanded_border(self):
+        core.init_db()
+        sq = lambda a, b, c, d: [[b, a], [d, a], [d, c], [b, c], [b, a]]       # lat a..c, lon b..d
+        polys = {"Сузак району": {"type": "Polygon", "coordinates": [sq(40.5, 72.5, 41.3, 73.5), sq(40.90, 72.97, 40.96, 73.03)]},
+                 "Манас шаары": {"type": "Polygon", "coordinates": [sq(40.90, 72.97, 40.96, 73.03)]}}
+        old_area, on, old_fetch = dict(core._area), core.AREA_ON, core._fetch_unit_poly
+        sel_path, sel_old = core._sel_path(), None
+        try:
+            sel_old = open(sel_path, encoding="utf-8").read()
+        except OSError:
+            pass
+        core.AREA_ON = True
+        core._fetch_unit_poly = lambda u: (polys[u["name"]], False)
+        for n in polys:
+            try:
+                os.remove(core._unit_cache(core.geo_find(n, "Жалал-Абад облусу")))
+            except OSError:
+                pass
+        core.set_setting("unit_borders", {})
+        try:
+            r = core.set_area_units([{"name": "Сузак району", "ob": "Жалал-Абад облусу"}, {"name": "Манас шаары", "ob": "Жалал-Абад облусу"}])
+            self.assertTrue(r.get("ok"))
+            self.assertEqual(core.city_of(40.93, 73.00), "Манас")
+            self.assertEqual(core.city_of(40.98, 73.06), "Сузак")                    # реформада кошулган айыл — эски чек боюнча Сузак
+            self.assertFalse(core.set_unit_border("Манас шаары", [[40.9, 73.0], [41.0, 73.0]]))   # 3 чекиттен аз
+            self.assertFalse(core.set_unit_border("Жок шаар", [[40.88, 72.95], [41.0, 72.95], [41.0, 73.1]]))
+            self.assertTrue(core.set_unit_border("Манас шаары", [[40.88, 72.95], [41.01, 72.95], [41.01, 73.10], [40.88, 73.10]]))
+            self.assertEqual(core.city_of(40.98, 73.06), "Манас")                    # жаңы чек — Манас тарифи
+            self.assertTrue([u for u in core.area_units_gj() if u["name"] == "Манас шаары"][0]["custom"])
+            self.assertTrue(core.set_unit_border("Манас шаары", reset=True))
+            self.assertEqual(core.city_of(40.98, 73.06), "Сузак")
+        finally:
+            core._fetch_unit_poly = old_fetch
+            core.set_setting("unit_borders", {})
+            for n in polys:
+                try:
+                    os.remove(core._unit_cache(core.geo_find(n, "Жалал-Абад облусу")))
+                except OSError:
+                    pass
+            if sel_old is None:
+                try:
+                    os.remove(sel_path)
+                except OSError:
+                    pass
+            else:
+                open(sel_path, "w", encoding="utf-8").write(sel_old)
+            core._area.clear(); core._area.update(old_area); core.AREA_ON = on

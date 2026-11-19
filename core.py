@@ -729,8 +729,8 @@ def _apply_units(units):
     for u in units:
         gj = u["gj"]
         polys += [gj["coordinates"]] if gj["type"] == "Polygon" else list(gj["coordinates"])
-    _area.update(units=[dict(name=u["name"], city=unit_city(u["name"]), gj=u["gj"], approx=u.get("approx"))
-                        for u in units],
+    _area.update(units=[dict(name=u["name"], city=unit_city(u["name"]), gj=u["gj"], approx=u.get("approx"),
+                             custom=u.get("custom", False)) for u in units],
                  geojson={"type": "MultiPolygon", "coordinates": polys}, source="list")
     AREA_NAME = ", ".join(u["name"] for u in units)
     AREA_CITY = unit_city(units[0]["name"])
@@ -760,7 +760,8 @@ def set_area_units(names):
             os.makedirs(DATA_DIR, exist_ok=True)
             with open(_unit_cache(u), "w", encoding="utf-8") as f:
                 json.dump({"gj": gj, "approx": approx}, f)
-        units.append(dict(u, gj=gj, approx=approx))
+        own = unit_borders().get(u["name"])           # админ оңдогон чек (мис. реформадан кийин чоңойгон шаар)
+        units.append(dict(u, gj=own or gj, approx=False if own else approx, custom=bool(own)))
     os.makedirs(DATA_DIR, exist_ok=True)
     with open(_sel_path(), "w", encoding="utf-8") as f:
         json.dump([{"name": u["name"], "ob": u["ob"]} for u in units], f, ensure_ascii=False)
@@ -793,7 +794,38 @@ def area_info():
 
 def area_units_gj():
     """Админ картасы үчүн: ар бир район/шаардын өз чеги."""
-    return [{"name": u["name"], "city": u.get("city"), "gj": u["gj"], "approx": u.get("approx")} for u in _area["units"]]
+    return [{"name": u["name"], "city": u.get("city"), "gj": u["gj"], "approx": u.get("approx"), "custom": u.get("custom", False)}
+            for u in _area["units"]]
+
+
+def unit_borders():
+    """Админ колу менен оңдогон район/шаар чектери: {"Манас шаары": geojson, ...} (OSM'дин эски чегинин ордуна)."""
+    try:
+        return get_setting("unit_borders") or {}
+    except Exception:                                   # noqa: BLE001  (база даяр эмес — мис. тесттин башы)
+        return {}
+
+
+def set_unit_border(name, points=None, reset=False):
+    """Тизмедеги аймактын чегин алмаштыруу. points: [[lat, lon], ...]; reset — OSM'ге кайтуу. Кайтарат: True/False."""
+    if not any(u["name"] == name for u in _area["units"]):
+        return False
+    b = dict(unit_borders())
+    if reset:
+        b.pop(name, None)
+    else:
+        try:
+            pts = [[float(p[0]), float(p[1])] for p in points or []]
+        except (TypeError, ValueError, IndexError):
+            return False
+        if not (3 <= len(pts) <= 500) or not all(39 < p[0] < 44 and 69 < p[1] < 81 for p in pts):
+            return False
+        ring = [[round(p[1], 6), round(p[0], 6)] for p in pts]
+        ring.append(ring[0])
+        b[name] = {"type": "Polygon", "coordinates": [ring]}
+    set_setting("unit_borders", b)
+    r = set_area_units(area_selection())
+    return bool(r.get("ok"))
 
 
 def _custom_path():
@@ -883,7 +915,8 @@ def _load_area_base(fetch=True):
                     u = geo_find(n["name"], n.get("ob"))
                     with open(_unit_cache(u), encoding="utf-8") as f:
                         c = json.load(f)
-                    units.append(dict(u, gj=c["gj"], approx=c.get("approx")))
+                    own = unit_borders().get(u["name"])
+                    units.append(dict(u, gj=own or c["gj"], approx=False if own else c.get("approx"), custom=bool(own)))
                 _apply_units(units)
                 return
     except (OSError, ValueError, KeyError, TypeError):

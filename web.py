@@ -1067,6 +1067,9 @@ class H(BaseHTTPRequestHandler):
             if r.get("error"):
                 return self._json(r, 400)
             return self._json(dict(core.area_info(), result=r))
+        if action == "unit_border":
+            ok = core.set_unit_border(_txt(b.get("name"), 80), b.get("points"), bool(b.get("reset")))
+            return self._json({"ok": ok, "units": core.area_units_gj()}, 200 if ok else 400)
         if action == "tariff_zone":
             ok = core.set_tariff_zone(_txt(b.get("city"), 60), b.get("points"), int(b.get("id") or 0) or None,
                                       delete=b.get("delete") is True)

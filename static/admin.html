@@ -632,7 +632,7 @@ async function viewArea() {
       </div></div></div>
     <div id="amap"></div>
     <div class="tools" id="tools"></div>
-    <p class="muted" id="hint"></p><div id="zList"></div>`;
+    <p class="muted" id="hint"></p><div id="bList"></div><div id="zList"></div>`;
   areaPicker(a);
   $("#atT").oninput = () => $("#atP").textContent = $("#atT").value.trim() || a.name;
   $("#atS").onclick = async () => { const r = await api("/api/a/area_title", {title:$("#atT").value}); toast(r.error ? "Ката" : "✓ Аймактын аты сакталды", 2500); };
@@ -650,6 +650,7 @@ async function viewArea() {
       g.bindTooltip(`${esc(u.name)}${u.approx ? " (5 км тегерек)" : ""} · тариф: «${esc(u.city)}»`, {sticky:true});
       L.marker(g.getBounds().getCenter(), {interactive:false, icon:L.divIcon({className:"ulbl", html:`<span>${esc(u.name)}</span>`, iconSize:[0, 0]})}).addTo(alyr);
     });
+    UNITS = x.units || []; borderList();
     ZONES = x.zones || []; CITIES_T = [...new Set((x.units || []).map(u => u.city))];
     ZONES.forEach(z => { const g = L.geoJSON(z.gj, {style:{color:"#E8A100", weight:3, dashArray:"6 4", fillColor:"#FFC21A", fillOpacity:.3}}).addTo(alyr);
       g.bindTooltip(`🎯 Тариф зонасы: «${esc(z.city)}»`, {sticky:true});
@@ -709,6 +710,64 @@ async function areaPicker(a) {
     toast(`✓ Аймак: ${r.name}${ap.length ? " · болжолдуу (5 км): " + ap.join(", ") : ""}`, 4000);
     viewArea();
   };
+}
+
+// ---------- район/шаардын чегин колдо оңдоо (мис. реформадан кийин чоңойгон Манас) ----------
+let UNITS = [], bEdit = null;
+function borderList() {
+  const el = $("#bList"); if (!el) return;
+  el.innerHTML = `<p class="muted" style="margin:10px 0 4px">✏️ <b>Чекти оңдоо</b> — OpenStreetMap'теги чек эскирген болсо (мис. шаарга айылдар кошулса), аны колуңуз менен тартып оңдойсуз. Шаардын жаңы чегинин ичиндеги заказдар ошол шаардын тарифи менен эсептелет.</p>
+    ${UNITS.map((u, i) => `<div class="item"><div class="main"><b>${esc(u.name)}</b><br><small class="muted">${u.custom ? "✏️ Сиз оңдогон чек" : u.approx ? "Болжолдуу 5 км тегерек" : "OpenStreetMap чеги"}</small></div>
+      <button class="btn" data-bed="${i}">✏️ Чегин оңдоо</button>${u.custom ? `<button class="btn" data-bres="${i}">↺ OSM'ге</button>` : ""}</div>`).join("")}`;
+  el.querySelectorAll("[data-bed]").forEach(b => b.onclick = () => borderEdit(UNITS[+b.dataset.bed]));
+  el.querySelectorAll("[data-bres]").forEach(b => b.onclick = async () => {
+    const u = UNITS[+b.dataset.bres];
+    if (!confirm(`«${u.name}» чегин OpenStreetMap'тегиге кайтарасызбы?`)) return;
+    const r = await api("/api/a/unit_border", {name:u.name, reset:true});
+    toast(r.ok ? "✓ OSM чеги кайтарылды" : "Ката", 2500); viewArea(); });
+}
+function bigRing(gj) {                                   // эң чоң шакек → [[lat, lon], ...], ашыкча чекиттер азайтылат
+  const rings = gj.type === "Polygon" ? [gj.coordinates[0]] : gj.coordinates.map(p => p[0]);
+  let r = rings.sort((x, y) => y.length - x.length)[0].map(([lon, lat]) => [lat, lon]);
+  if (r.length > 1 && r[0][0] === r[r.length - 1][0] && r[0][1] === r[r.length - 1][1]) r.pop();
+  const step = Math.ceil(r.length / 40);
+  return r.filter((_, i) => i % step === 0);
+}
+function borderEdit(u) {
+  bEdit = {u, pts:bigRing(u.gj), hist:[]};
+  draw = null; alyr.clearLayers(); amap.doubleClickZoom.disable();
+  L.geoJSON(u.gj, {interactive:false, style:{color:"#888780", weight:2, dashArray:"6 5", fill:false}}).addTo(alyr);
+  bEdit.layer = L.layerGroup().addTo(alyr);
+  amap.fitBounds(L.latLngBounds(bEdit.pts), {padding:[30, 30]});
+  bDraw();
+  $("#tools").innerHTML = `<button class="btn" id="bUndo">↩ Артка</button><button class="btn" id="bCancel">✕ Жокко чыгаруу</button><button class="btn gold" id="bSave">✓ Жаңы чекти сактоо</button>`;
+  $("#hint").innerHTML = `<b>«${esc(u.name)}»</b> чегин оңдоп жатасыз. Боз үзүк сызык — эски чек. <b>Сары чекитти</b> сүйрөп жылдырыңыз; эки чекиттин ортосундагы <b>кичине ак чекитти</b> бассаңыз — жаңы чекит кошулат; чекитти <b>эки жолу бассаңыз</b> — өчөт.`;
+  $("#bList").innerHTML = "";
+  $("#bUndo").onclick = () => { if (bEdit.hist.length) { bEdit.pts = bEdit.hist.pop(); bDraw(); } };
+  $("#bCancel").onclick = () => { bEdit = null; amap.doubleClickZoom.enable(); viewArea(); };
+  $("#bSave").onclick = async () => {
+    if (!confirm(`«${u.name}» үчүн жаңы чекти сактайсызбы? Ушул чектин ичиндеги заказдар «${u.city}» тарифи менен эсептелет.`)) return;
+    const r = await api("/api/a/unit_border", {name:u.name, points:bEdit.pts});
+    if (!r.ok) return toast("Ката — чекит 3төн аз же Кыргызстандан сырткары", 3000);
+    toast("✓ Жаңы чек сакталды", 2500); bEdit = null; amap.doubleClickZoom.enable(); viewArea();
+  };
+}
+function bDraw() {
+  const g = bEdit.layer, P = bEdit.pts, save = () => bEdit.hist.push(P.map(p => p.slice()));
+  g.clearLayers();
+  L.polygon(P, {interactive:false, color:"#BA7517", weight:3, fillColor:"#FFC21A", fillOpacity:.25}).addTo(g);
+  const vIcon = L.divIcon({className:"", html:`<div style="width:18px;height:18px;border-radius:50%;background:#FFC21A;border:3px solid #16161a;box-sizing:border-box"></div>`, iconSize:[18, 18], iconAnchor:[9, 9]});
+  const mIcon = L.divIcon({className:"", html:`<div style="width:12px;height:12px;border-radius:50%;background:#fff;border:2px solid #BA7517;box-sizing:border-box;opacity:.9"></div>`, iconSize:[12, 12], iconAnchor:[6, 6]});
+  P.forEach((p, i) => {
+    const m = L.marker(p, {icon:vIcon, draggable:true}).addTo(g);
+    m.on("dragstart", save);
+    m.on("drag", e => { P[i] = [e.latlng.lat, e.latlng.lng]; });
+    m.on("dragend", bDraw);
+    m.on("dblclick", () => { if (P.length <= 3) return toast("Кеминде 3 чекит керек", 2000); save(); P.splice(i, 1); bDraw(); });
+    const q = P[(i + 1) % P.length];
+    L.marker([(p[0] + q[0]) / 2, (p[1] + q[1]) / 2], {icon:mIcon}).addTo(g)
+      .on("click", () => { save(); P.splice(i + 1, 0, [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2]); bDraw(); });
+  });
 }
 let ZONES = [], CITIES_T = [], zdraw = false;
 function zoneList() {
