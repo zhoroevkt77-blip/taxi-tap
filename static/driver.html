@@ -93,8 +93,8 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=98">
-<link rel="stylesheet" href="/static/dark.css?v=8">
+<link rel="stylesheet" href="/static/theme.css?v=99">
+<link rel="stylesheet" href="/static/dark.css?v=9">
 <script src="/static/night.js?v=2"></script>
 </head>
 <body>
@@ -348,18 +348,18 @@ async function hotCard() {
   if (Date.now() - HOT.at > 60000) { HOT.at = Date.now(); try { HOT.v = (await api("/api/d/hot")).hot; } catch (e) { HOT.v = null; } }
   const el = $("#hot"), h = HOT.v; if (!el) return;
   if (!h) { el.innerHTML = ""; return; }
-  el.innerHTML = `<button class="hotc"><i>🔥</i><span><b>${h.name ? esc(h.name) + " тарапта" : "Жакын жерде"} заказ көп</b>
+  el.innerHTML = `<button class="hotc">${yi("flame")}<span><b>${h.name ? esc(h.name) + " тарапта" : "Жакын жерде"} заказ көп</b>
     <small>Сизден ${h.km} км · акыркы 30 мүнөттө ${h.n} заказ</small></span><em>›</em></button>`;
   el.firstChild.onclick = () => openNav([h.lat, h.lon]);
 }
 // ---------- Фотоконтроль ----------
 function photoCard() {
   const p = D.photo; if (!p) return "";
-  const t = p.status === "pending" ? ["🕓", "Фотоконтроль текшерилүүдө", "Админ сүрөттөрдү карап жатат"]
-    : p.status === "rejected" ? ["⚠️", "Фотоконтроль кабыл алынган жок", (p.note ? p.note + " · " : "") + "кайра тартып жибериңиз"]
-    : p.need ? ["📷", "Фотоконтроль", "Унааңыздын 4 тарабын тартып жибериңиз"]
-    : ["✅", "Фотоконтроль өттү", `Кийинкиси ${p.days_left} күндөн кийин`];
-  return `<button class="phc${p.need ? " need" : ""}" id="phCard"><i>${t[0]}</i><span><b>${t[1]}</b><small>${esc(t[2])}</small></span><em>›</em></button>`;
+  const t = p.status === "pending" ? ["clock", "Фотоконтроль текшерилүүдө", "Админ сүрөттөрдү карап жатат"]
+    : p.status === "rejected" ? ["alert", "Фотоконтроль кабыл алынган жок", (p.note ? p.note + " · " : "") + "кайра тартып жибериңиз"]
+    : p.need ? ["camera", "Фотоконтроль", "Унааңыздын 4 тарабын тартып жибериңиз"]
+    : ["check", "Фотоконтроль өттү", `Кийинкиси ${p.days_left} күндөн кийин`];
+  return `<button class="phc${p.need ? " need" : ""}" id="phCard">${yi(t[0])}<span><b>${t[1]}</b><small>${esc(t[2])}</small></span><em>›</em></button>`;
 }
 function viewPhotos() {
   const box = {}, S = [["front", "Алды", "🚘"], ["back", "Арты", "🚗"], ["left", "Сол капталы", "⬅️"], ["right", "Оң капталы", "➡️"]];
@@ -380,12 +380,38 @@ function viewPhotos() {
   };
 }
 
+
+// ---------- Сары иконкалар (макеттин стили): сары тегерек чарчы + кара сызык ----------
+const YI_P = {
+  briefcase:'<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18"/>',
+  building:'<path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4M9 9v.01M9 12v.01M9 15v.01M9 18v.01"/>',
+  tools:'<path d="M3 21h4L20 8a1.5 1.5 0 0 0-4-4L3 17v4M14.5 5.5l4 4M12 8 7 3 3 7l5 5M7 8 5.5 9.5M16 12l5 5-4 4-5-5M16 17l-1.5 1.5"/>',
+  car:'<circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/><path d="M5 17H3v-6l2-5h9l4 5h1a2 2 0 0 1 2 2v4h-2m-4 0H9m-6-6h15m-6 0V6"/>',
+  percent:'<circle cx="7" cy="7" r="2"/><circle cx="17" cy="17" r="2"/><path d="M19 5 5 19"/>',
+  moon:'<path d="M12 3h.4a7.5 7.5 0 0 0 7.9 12.4A9 9 0 1 1 12 3z"/>',
+  bolt:'<path d="M13 3v7h6l-8 11v-7H5l8-11"/>',
+  message:'<path d="M8 9h8M8 13h6M18 4a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3h-5l-5 3v-3H6a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3h12z"/>',
+  id:'<rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="M15 8h2M15 12h2M7 16h10"/>',
+  volume:'<path d="M15 8a5 5 0 0 1 0 8M17.7 5a9 9 0 0 1 0 14M6 15H4a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1h2l3.5-4.5A.8.8 0 0 1 11 5v14a.8.8 0 0 1-1.5.5L6 15"/>',
+  nav:'<path d="M12 18.5 19.3 21a.5.5 0 0 0 .6-.6L12.6 3.5a.7.7 0 0 0-1.3 0L4 20.4a.5.5 0 0 0 .7.6L12 18.5z"/>',
+  pin:'<circle cx="12" cy="11" r="3"/><path d="M17.7 16.7 13.4 20.9a2 2 0 0 1-2.8 0l-4.3-4.2a8 8 0 1 1 11.4 0z"/>',
+  camera:'<path d="M5 7h1a2 2 0 0 0 2-2 1 1 0 0 1 1-1h6a1 1 0 0 1 1 1 2 2 0 0 0 2 2h1a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2"/><circle cx="12" cy="13" r="3"/>',
+  flame:'<path d="M12 11c2.3-3.3.2-7.8-1-9 0 3.4-2.2 5.3-3.7 6.7C5.9 10.1 5 12 5 14.3 5 18 8.1 21 12 21s7-3 7-6.7c0-1.7-1.2-4.4-2.3-5.6-2.1 3.4-3.3 3.4-4.7 2.3z"/>',
+  wallet:'<path d="M17 8V5a1 1 0 0 0-1-1H6a2 2 0 0 0 0 4h12a1 1 0 0 1 1 1v3m0 4v3a1 1 0 0 1-1 1H6a2 2 0 0 1-2-2V6"/><path d="M20 12v4h-4a2 2 0 0 1 0-4h4"/>',
+  target:'<circle cx="12" cy="12" r="1"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="9"/>',
+  plus:'<circle cx="12" cy="12" r="9"/><path d="M9 12h6M12 9v6"/>',
+  out:'<path d="M14 8V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-2M9 12h12l-3-3m3 3-3 3"/>',
+  link:'<path d="M9 15l6-6M11 6l.5-.5a5 5 0 0 1 7 7l-.5.5M13 18l-.4.5a5 5 0 0 1-7-7l.5-.5"/>',
+  check:'<circle cx="12" cy="12" r="9"/><path d="m9 12 2 2 4-4"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>',
+  alert:'<path d="M12 9v4M12 17h.01M10.4 3.9 2.6 17.5A1.9 1.9 0 0 0 4.2 20h15.6a1.9 1.9 0 0 0 1.6-2.5L13.6 3.9a1.9 1.9 0 0 0-3.2 0z"/>'};
+function yi(n, cls) { return `<span class="yi${cls ? " " + cls : ""}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">${YI_P[n] || ""}</svg></span>`; }
 let ME_D = {};
 function workHTML() {
   if (!ME_D.park && !ME_D.admin) return "";
-  return `<div class="work"><h4>💼 Менин ишим</h4><div class="wg">
-    ${ME_D.park ? `<a href="/park"><span>🏢</span>Таксопарк<small>${esc(ME_D.park)}</small></a>` : ""}
-    ${ME_D.admin ? `<a href="/admin"><img src="/static/c_tools.webp?v=9" alt="">Админ<small>Башкаруу</small></a>` : ""}</div></div>`;
+  return `<div class="work"><h4>${yi("briefcase", "s")}Менин ишим</h4><div class="wg">
+    ${ME_D.park ? `<a href="/park">${yi("building", "l")}Таксопарк<small>${esc(ME_D.park)}</small></a>` : ""}
+    ${ME_D.admin ? `<a href="/admin">${yi("tools", "l")}Админ<small>Башкаруу</small></a>` : ""}</div></div>`;
 }
 const SVG_SH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>';
 const SVG_ZM = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>';
@@ -448,34 +474,34 @@ function viewCabinet(part) {
     return `<tr><td>${t}</td><td>${x.rides}</td><td>${x.gross}</td><td>${x.fee}</td><td><b>${x.net}</b></td></tr>`; };
   const E = part === "earn", C = !E, on = c => c ? "" : ' style="display:none"';
   render(`<h2>${E ? "💰 Киреше" : "Менин кабинетим"}</h2>${C ? `<button class="carrow" id="myCar"><img src="${carImg(D.car_color)}" alt=""><span><b>Менин унаам</b><small>${esc(carText(D.car_color, D.car_model))}</small><div style="margin-top:4px">${kgPlate(D.car_plate)}</div></span><em>›</em></button>` + workHTML() + myQrHTML() : ""}
-    <div${on(C)}><div class="note">🚕 Тарифтериңиз: <b>${(D.classes || []).map(c => esc((D.class_names || {})[c] || c)).join(", ")}</b><br>💼 Комиссия: <b>${esc(D.tariff)}</b>
-      <div class="muted">Комфорт же Минивэн тарифине өтүү үчүн админге кайрылыңыз.</div></div></div>
+    <div${on(C)}><div class="irow">${yi("car")}<span><b>Тарифтериңиз</b><small>${(D.classes || []).map(c => esc((D.class_names || {})[c] || c)).join(", ")} · Комфорт же Минивэнге өтүү үчүн админге кайрылыңыз</small></span></div>
+      <div class="irow">${yi("percent")}<span><b>Комиссия</b><small>${esc(D.tariff)}</small></span></div></div>
     <div class="grid"><div class="stat"><span class="muted">Баланс</span><b style="color:${D.balance < D.min_balance ? "var(--bad)" : "inherit"}">${D.balance} с</b></div>
       <div class="stat"><span class="muted">Рейтинг</span><b>★ ${D.rating ?? "5.0"}</b></div></div>
     <div${on(E)}><div class="seg" id="ePer">${[["today", "Бүгүн"], ["week", "Жума"], ["month", "Ай"]].map(([k, t]) => `<button data-ep="${k}" class="${k === EPER ? "on" : ""}">${t}</button>`).join("")}</div>
     <div id="eSum">${earnSum()}</div>
     <p class="muted">«Колуңузда» — жүргүнчүлөр төлөгөн акча + бонус − комиссия. ${D.min_balance > 0 ? `Баланс ${D.min_balance} сомдон аз болсо, заказ келбейт.` : ""}</p>
     ${D.pending_topup ? `<div class="note">🕓 Чегиңиз текшерилүүдө.</div>` : `<button class="btn main" id="top">➕ Балансты толуктоо</button>`}
-    <div class="sw"><div><b>🎯 Күндүк максат</b><div class="muted">Бүгүн: ${D.today.earned} / ${D.goal} с</div></div>
+    <div class="sw">${yi("target")}<div style="flex:1"><b>Күндүк максат</b><div class="muted">Бүгүн: ${D.today.earned} / ${D.goal} с</div></div>
       <button class="btn ghost" id="goalCh" style="width:auto;margin:0;padding:10px 14px;font-size:14px">Өзгөртүү</button></div>
     <h3 style="margin:16px 0 6px">📊 Акыркы 7 күн</h3><div id="chart" class="chart"><p class="muted">Жүктөлүүдө…</p></div></div>
     <div${on(C)}>
-    ${window.NIGHT ? NIGHT.html() : ""}
-    <div class="note"><b style="color:${actColor(D.activity)}">⚡ Активдүүлүк: ${D.activity ?? 100} / 100</b><br>
+    ${window.NIGHT ? NIGHT.html().replace("<b>🌓 Режим</b>", `<b class="yh">${yi("moon", "s")}Режим</b>`) : ""}
+    <div class="note"><b class="yh" style="color:${actColor(D.activity)}">${yi("bolt", "s")}Активдүүлүк: ${D.activity ?? 100} / 100</b>
       <span class="muted">Заказ алсаңыз жана бүтүрсөңүз +1, сунушка жооп бербесеңиз же «Жок» десеңиз −3, кабыл алгандан кийин жокко чыгарсаңыз −10.
       Аралыгы окшош болсо, активдүүлүгү жогору айдоочуга заказ биринчи келет.</span></div>
     <div id="praise"></div>
     ${photoCard()}
     ${licNote()}
-    <div class="sw"><div><b>🔊 Заказды үн менен айтуу</b><div class="muted">«Жаңы заказ, 80 сом, 1,2 километр»</div></div>
+    <div class="sw">${yi("volume")}<div style="flex:1"><b>Заказды үн менен айтуу</b><div class="muted">«Жаңы заказ, 80 сом, 1,2 километр»</div></div>
       <input type="checkbox" id="vc" ${voiceOn() ? "checked" : ""} style="width:24px;height:24px"></div>
-    <div class="sw"><div><b>🧭 Навигатор</b><div class="muted">${esc((NAVS[navPref()] || {t:"Тандала элек"}).t)}</div></div>
+    <div class="sw">${yi("nav")}<div style="flex:1"><b>Навигатор</b><div class="muted">${esc((NAVS[navPref()] || {t:"Тандала элек"}).t)}</div></div>
       <button class="btn ghost" id="navCh" style="width:auto;margin:0;padding:10px 14px;font-size:14px">Өзгөртүү</button></div>
-    <button class="btn ghost" id="addAddr">📍 Дарек кошуу</button>
+    <button class="btn ghost ib2" id="addAddr">${yi("pin", "s")}Дарек кошуу</button>
     <p class="muted" style="margin-top:-2px">Жергиликтүү жерлердин аттарын (той-кана, дүкөн, көчө) кошуңуз — жүргүнчүлөр дарек жазганда табылат.</p>
-    ${linksHTML(D.bot)}
+    ${linksHTML(D.bot).replace("🔗 Такси ТАП! шилтемелери", `<span class="yh" style="display:inline-flex!important;margin:0">${yi("link", "s")}Такси ТАП! шилтемелери</span>`)}
     <p class="muted">Жүргүнчүлөргө жүргүнчүнүн шилтемесин, тааныш айдоочуларга айдоочунун шилтемесин жөнөтүңүз.</p>
-    <button class="outb" id="cabOut">🚪 Чыгуу</button></div>`);
+    <button class="outb ib2" id="cabOut">${yi("out", "s")}Чыгуу</button></div>`);
   bindLinks(); window.SHEET && SHEET.expand();
   $("#top") && ($("#top").onclick = viewTopup);
   $("#addAddr").onclick = viewAddAddr; $("#cabOut").onclick = confirmOut; bindMyQr();
@@ -492,7 +518,7 @@ function viewCabinet(part) {
   $("#navCh").onclick = () => openNav(null, true);
   api("/api/d/praise").then(x => { const el = $("#praise"); if (!el || !x) return;
     if (!(x.good || []).length && !(x.bad || []).length && !x.car_ok && !x.car_bad) return;
-    el.innerHTML = `<div class="note"><b>💬 Жүргүнчүлөрдүн пикири</b> <span class="muted">(ким жазганы жашыруун)</span>
+    el.innerHTML = `<div class="note"><b class="yh">${yi("message", "s")}Жүргүнчүлөрдүн пикири</b> <span class="muted">(ким жазганы жашыруун)</span>
       ${(x.good || []).length ? `<div style="margin-top:6px">${x.good.map(([t, n]) => `<span class="ptag">👍 ${esc(t)} ×${n}</span>`).join("")}</div>` : ""}
       ${(x.bad || []).length ? `<div style="margin-top:6px">${x.bad.map(([t, n]) => `<span class="ptag bad">⚠️ ${esc(t)} ×${n}</span>`).join("")}</div>` : ""}
       ${x.car_ok || x.car_bad ? `<div class="muted" style="margin-top:6px">Унаанын абалы: 👍 ${x.car_ok} · 👎 ${x.car_bad}</div>` : ""}</div>`; });
@@ -844,10 +870,10 @@ const LIC_ERR = {doc_selfie:"Күбөлүктү колуңузга кармап 
   lic_expired:"Күбөлүктүн мөөнөтү бүтүп калган — жарактуу күбөлүк керек."};
 function licNote() {
   const l = D.lic_left;
-  if (!D.lic_until) return `<div class="note">🪪 <b>Документтер</b><br><span class="muted">Айдоочулук күбөлүгүңүздүн мөөнөтүн жазып коюңуз.</span>
+  if (!D.lic_until) return `<div class="note"><b class="yh">${yi("id", "s")}Документтер</b><span class="muted">Айдоочулук күбөлүгүңүздүн мөөнөтүн жазып коюңуз.</span>
     <button class="btn ghost" id="licUp" style="margin-top:8px">Мөөнөтүн жазуу</button></div>`;
   const bad = l < 0, soon = l <= 30;
-  return `<div class="note" ${bad ? 'style="background:#fdecec"' : ""}>🪪 <b>Айдоочулук күбөлүк</b>: ${esc(D.lic_until)} чейин<br>
+  return `<div class="note" ${bad ? 'style="background:#fdecec"' : ""}><b class="yh">${yi("id", "s")}Айдоочулук күбөлүк: ${esc(D.lic_until)} чейин</b>
     <span class="muted" style="color:${bad ? "var(--bad)" : soon ? "#b26a00" : ""}">${bad ? "Мөөнөтү бүттү — линияга чыга албайсыз." : soon ? `${l} күн калды — жаңылап коюңуз.` : `${l} күн калды.`}</span>
     ${bad || soon ? `<button class="btn main" id="licUp" style="margin-top:8px">Күбөлүктү жаңылоо</button>` : ""}</div>`;
 }
