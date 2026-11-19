@@ -684,6 +684,7 @@ async function goOnline(btn) {
   if (r.error) { if (btn) btn.disabled = false; return; }
   D = r;
   startGps(); wake(true); lastView = ""; show();
+  if (D.photo && D.photo.need && D.photo.status !== "pending") setTimeout(() => toast("📷 Фотоконтроль: убакыт тапканда унааңыздын 4 тарабын тартып жибериңиз (Кабинет)", 4500), 1200);
   if (window.SHEET && !D.ride) setTimeout(() => SHEET.collapse(), 400);   // карта толук көрүнсүн
 }
 function busyBox(title, text) {
