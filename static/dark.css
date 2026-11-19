@@ -61,8 +61,8 @@ html.uidark .logo{background:#1e1f25!important;color:#f2f2f5!important}
 html.uidark .navb{background:#1e1f25!important;border-color:#3a3b43!important}
 html.uidark .navb span,html.uidark .navb b,html.uidark .navb button{color:#f2f2f5!important}
 /* кара иконкалар (сүрөт) караңгыда көрүнсүн */
-html.uidark .navb img:not([src*="n_go"]){filter:invert(1) brightness(1.1)}
-html.uidark .cab-q img,html.uidark .cimg,html.uidark .st-big .i img{filter:drop-shadow(0 0 1px rgba(255,255,255,.9)) drop-shadow(0 0 1px rgba(255,255,255,.6))}
+html.uidark .navb img{filter:none}
+html.uidark .cab-q img,html.uidark .cimg,html.uidark .st-big .i img{filter:none}
 html.uidark .st-big .i{background:#2a2b32!important}
 html.uidark .gpsinfo.good{background:#16301f!important;color:#7fd6a0!important}
 html.uidark .gpsinfo.gpshelp{background:#2c2717!important;color:#f2f2f5!important;border-color:#5a4a14!important}
@@ -73,7 +73,7 @@ html.uidark #home.hbg .tile:not(.big),html.uidark #home.hbg .stile,html.uidark #
 html.uidark .stat,html.uidark .sheet .stat,html.uidark .sheet.cabbg .stat,html.uidark .work,html.uidark #home.hbg .hrec .rec,html.uidark #home.hbg .st-big:not(.y){background:#1e1f25!important;color:#f2f2f5!important;box-shadow:0 6px 18px rgba(0,0,0,.45),inset 0 0 0 1px rgba(255,255,255,.06)!important}
 html.uidark #home.hbg .tile:not(.big) *,html.uidark #home.hbg .stile *,html.uidark .stat b,html.uidark .stat span,html.uidark .bnav span,html.uidark .bnav b,html.uidark .bnav button,html.uidark .st-back,html.uidark .hsearch{color:#f2f2f5!important}
 html.uidark .stat .muted,html.uidark #home.hbg .tile:not(.big) small{color:#a3a3ae!important}
-html.uidark .bnav img:not([src*="n_go"]):not([src*="taxi"]):not([src*="n_earn"]){filter:invert(1) brightness(1.1)}
+html.uidark .bnav img{filter:none}
 html.uidark .bnav img[src*="n_earn"]{filter:drop-shadow(0 0 1px rgba(255,255,255,.9)) drop-shadow(0 0 1px rgba(255,255,255,.7))}
 html.uidark .ccard em,html.uidark #home.cabbg .ccard em{color:#f2f2f5!important}
 html.uidark .cab-nm,html.uidark .cab-ph,html.uidark .cab2 .cab-nm,html.uidark .cab2 .cab-ph{text-shadow:none!important;-webkit-text-stroke:0!important;color:#f2f2f5!important}

@@ -725,18 +725,16 @@ b,strong,h1,h2,h3,h4,th{font-weight:600}
 .mcc{min-width:0}
 @media (max-width:360px){.mcg{grid-template-columns:1fr}.mcc+.mcc{border-left:0;padding-left:0;border-top:1px solid #f0f0f3}}
 
-/* Сары иконкалар (yi): макеттеги сары тегерек чарчы + кара сызык */
-.yi{flex:none;display:inline-grid;place-items:center;width:44px;height:44px;border-radius:13px;color:#16161a;
-  background:linear-gradient(150deg,#ffe066 0%,#ffc61a 55%,#f5a800 100%);box-shadow:0 4px 10px rgba(245,168,0,.32),inset 0 1px 0 rgba(255,255,255,.55),inset 0 -2px 0 rgba(0,0,0,.06)}
-.yi svg{width:58%;height:58%}
-.yi.s{width:30px;height:30px;border-radius:9px;box-shadow:0 2px 6px rgba(245,168,0,.3),inset 0 1px 0 rgba(255,255,255,.5)}
-.yi.l{width:58px;height:58px;border-radius:17px}
+/* Иконкалар (yi): сайттын башка барактарындагыдай кара-сары сүрөт иконкалар (тегерек чарчысыз) */
+.yi{flex:none;display:inline-block;width:44px;height:44px;object-fit:contain;filter:drop-shadow(0 2px 3px rgba(0,0,0,.12))}
+.yi.s{width:28px;height:28px}
+.yi.l{width:56px;height:56px}
 .yh{display:flex!important;align-items:center;gap:9px;margin-bottom:6px}
 .work h4{display:flex;align-items:center;gap:9px}
-.work a .yi{width:58px;height:58px;border-radius:17px;background:linear-gradient(150deg,#ffe066 0%,#ffc61a 55%,#f5a800 100%);font-size:0}
+.work a .yi{width:56px;height:56px;border-radius:0;background:none;object-fit:contain}
 .irow{display:flex;align-items:center;gap:12px;background:#fff;border-radius:18px;padding:10px 12px;margin:8px 0;box-shadow:0 6px 16px rgba(20,20,30,.07),inset 0 0 0 1px rgba(0,0,0,.04);text-align:left}
 .irow span{flex:1;min-width:0}.irow b{display:block;font-size:15.5px;font-weight:600}.irow small{display:block;color:#6b6b76;font-size:13px;line-height:1.35}
 .sw>.yi{margin-right:12px}
 .ib2{display:flex!important;align-items:center;justify-content:center;gap:9px}
 .hotc .yi,.phc .yi{width:44px;height:44px}
-.irow span.yi,.phc span.yi,.hotc span.yi{flex:0 0 44px;width:44px;min-width:44px}
+.irow .yi,.phc .yi,.hotc .yi{flex:0 0 44px;width:44px;min-width:44px}

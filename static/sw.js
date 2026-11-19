@@ -1,8 +1,8 @@
 // Такси ТАП! — service worker: тиркеме катары орнотуу жана интернет жок болсо жөнөкөй бет.
 // API'лер жана карта кэштелбейт — абал ар дайым жаңы болушу керек.
-const SHELL = "taxitap-v148";
-const PAGES = ["/", "/driver", "/static/area.js?v=5", "/static/night.js?v=2", "/static/dark.css?v=9", "/static/manifest.json", "/static/icon-192.png", "/static/logo.png", "/static/n_home.webp?v=9", "/static/n_trips.webp?v=9", "/static/n_go.webp?v=9", "/static/n_help.webp?v=9", "/static/n_cab.webp?v=9", "/static/n_earn.webp?v=9", "/static/r_bag.webp?v=9", "/static/r_car.webp?v=9", "/static/cb_tl.webp?v=11", "/static/cb_tr.webp?v=11", "/static/qr.js", "/static/qrshare.js", "/static/c_car.webp?v=9",
-  "/static/h_taxi.webp?v=9", "/static/h_box.webp?v=9", "/static/h_girl.webp?v=9", "/static/h_map.webp?v=9"];
+const SHELL = "taxitap-v149";
+const PAGES = ["/", "/driver", "/static/area.js?v=5", "/static/night.js?v=2", "/static/dark.css?v=10", "/static/manifest.json", "/static/icon-192.png", "/static/logo.png", "/static/n_home.webp?v=10", "/static/n_trips.webp?v=10", "/static/n_go.webp?v=10", "/static/n_help.webp?v=10", "/static/n_cab.webp?v=10", "/static/n_earn.webp?v=10", "/static/r_bag.webp?v=10", "/static/r_car.webp?v=10", "/static/cb_tl.webp?v=11", "/static/cb_tr.webp?v=11", "/static/qr.js", "/static/qrshare.js", "/static/c_car.webp?v=10",
+  "/static/h_taxi.webp?v=10", "/static/h_box.webp?v=10", "/static/h_girl.webp?v=10", "/static/h_map.webp?v=10"];
 self.addEventListener("install", e => e.waitUntil(caches.open(SHELL).then(c => c.addAll(PAGES)).then(() => self.skipWaiting())));
 self.addEventListener("activate", e => e.waitUntil(
   caches.keys().then(ks => Promise.all(ks.filter(k => k !== SHELL).map(k => caches.delete(k)))).then(() => self.clients.claim())));
