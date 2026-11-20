@@ -395,7 +395,8 @@ function viewStepB() {
   const sec = (t, arr) => arr.length ? (t ? `<div class="st-sec">${t}</div>` : "") + arr.map(r => it(r, k++)).join("") : "";
   $("#home").innerHTML = `<div class="st-top"><button class="st-back" id="sBack">‹</button><div class="st-steps"><i class="ok">А</i><b class="ok"></b><i class="on">Б</i></div></div>
     <h1 class="st-h">Кайда барасыз?</h1><p class="st-sub">📍 ${esc(S.fromAddr || "А точка")} → ?</p>
-    <div class="st-two"><button id="bType">✍️ Жазып табам</button><button id="bMap">🗺 Картадан</button></div>
+    <button class="st-big" id="bMap"><span class="i">🗺</span><span class="tx">Картадан белгилейм<small>Пинди барчу жериңизге коёсуз</small></span><em>›</em></button>
+    <button class="st-big" id="bType"><span class="i">✍️</span><span class="tx">Жазып табам<small>Көчө, дүкөн, мекеме…</small></span><em>›</em></button>
     ${sec("", L1)}${sec("АКЫРКЫ САПАРЛАР", L2)}${sec("КӨП БАРЫШАТ", L3)}
     ${all.length ? "" : `<p class="st-sub" style="margin-top:14px">Даректи жазып табыңыз же картадан белгилеңиз.</p>`}`;
   $("#sBack").onclick = viewStepA;
