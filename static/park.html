@@ -60,6 +60,7 @@ input.f{flex:1;border:1.5px solid #e3e3e8;border-radius:14px;padding:12px;font-s
 @media print{body *{visibility:hidden}#sticker,#sticker *{visibility:visible}#sticker{display:block;position:absolute;left:0;top:0;width:100%}}
 .ih{display:flex;align-items:center;gap:10px}.ih img{width:56px;height:36px;object-fit:contain;flex:none}h1.ih img{width:64px;height:42px}
 .ib2{display:inline-flex;align-items:center;gap:8px;justify-content:center}.ib2 img{width:38px;height:25px;object-fit:contain;flex:none}.ib2.w{justify-content:flex-start}
+.mi{height:18px;width:28px;object-fit:contain;vertical-align:-4px;margin-right:2px}.flag .mi{height:16px;width:24px}
 .sdot{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:7px;vertical-align:-1px}.sdot.f{background:#1fa64a}.sdot.b{background:#ffb703}.sdot.o{background:#c4c4cc}
 .st3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
 .st3 div{background:#fffaf0;border-radius:14px;padding:8px;text-align:center}.st3 b{display:block;font-size:20px;font-weight:600}.st3 small{font-size:11px;color:#6b6b76}
@@ -319,9 +320,9 @@ function drawStats() {
     <div class="tot"><div><b>${T.rides}</b><small>сапар</small></div><div><b>${fmt(T.gross)}</b><small>тапкан, сом</small></div><div><b>${fmt(T.share)}</b><small>паркка, сом</small></div></div>
     <div class="srt">Иреттөө:${Object.keys(SN).map(k => `<button data-ds="${k}" class="${k === DSORT ? "on" : ""}">${SN[k]}</button>`).join("")}</div>
     ${rows.length ? rows.map(r => `<div class="ds" data-du="${esc(r.uid)}"><div class="t"><span class="dot ${r.busy ? "busy" : r.online ? "on" : ""}"></span><b>${esc(r.name || r.phone)}</b>
-        ${r.best && DPER !== "today" ? `<span class="flag b">🏆 мыкты</span>` : ""}${r.idle_days >= 3 ? `<span class="flag i">💤 ${r.idle_days} күн</span>` : ""}
+        ${r.best && DPER !== "today" ? `<span class="flag b"><img class="mi" src="/static/ic_trophy.webp?v=12" alt="">мыкты</span>` : ""}${r.idle_days >= 3 ? `<span class="flag i"><img class="mi" src="/static/ic_moon.webp?v=12" alt="">${r.idle_days} күн</span>` : ""}
         <button class="x" data-rm="${esc(r.uid)}" aria-label="Чыгаруу">✕</button></div>
-      <small class="muted">${esc(r.car)} · ${esc(r.plate)} · ★${Number(r.rating ?? 5).toFixed(1)} · ⚡${r.activity}</small>
+      <small class="muted">${esc(r.car)} · ${esc(r.plate)} · <img class="mi" src="/static/ic_star.webp?v=12" alt="">${Number(r.rating ?? 5).toFixed(1)} · <img class="mi" src="/static/ic_bolt.webp?v=12" alt="">${r.activity}</small>
       <div class="m"><div><b>${r.rides}</b>сапар</div><div><b>${fmt(r.gross)}</b>сом</div><div><b>${r.online_sec ? hrs(r.online_sec) : "—"}</b>линияда</div>
         <div><b>${r.offers ? Math.round(100 * r.accepted / r.offers) + "%" : "—"}</b>алган${r.cancels ? ` · <span style="color:#b42318">✕${r.cancels}</span>` : ""}</div></div></div>`).join("")
       : `<p class="muted">Азырынча айдоочу жок.</p>`}
@@ -340,7 +341,7 @@ async function openDriver(uid) {
   const WD = ["Дш", "Шй", "Шр", "Бш", "Жм", "Иш", "Жк"], mx = Math.max(1, ...d.days.map(x => x.gross));
   const o = document.createElement("div"); o.className = "sheet2";
   o.innerHTML = `<div><div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0;font-size:19px">${esc(d.name || d.phone)}</h2><button class="x" data-close>✕</button></div>
-    <p class="muted" style="margin:4px 0">${esc(d.car)} · ${esc(d.plate)} · ★${Number(d.rating ?? 5).toFixed(1)} · ⚡${d.activity}</p>
+    <p class="muted" style="margin:4px 0">${esc(d.car)} · ${esc(d.plate)} · <img class="mi" src="/static/ic_star.webp?v=12" alt="">${Number(d.rating ?? 5).toFixed(1)} · <img class="mi" src="/static/ic_bolt.webp?v=12" alt="">${d.activity}</p>
     ${d.phone ? `<a class="btn call" href="tel:${esc(d.phone)}">📞 Чалуу</a>` : ""}
     ${d.status === "active" ? `<button class="btn rd" id="dBlk" style="margin-top:8px;width:100%">🚫 Убактылуу бөгөттөө</button>` : ""}
     <h3 style="margin:14px 0 0;font-size:15px">Акыркы 7 күн</h3>
