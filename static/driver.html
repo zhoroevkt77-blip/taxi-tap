@@ -121,7 +121,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="/static/area.js?v=7"></script>
-<script src="/static/voice.js?v=3"></script>
+<script src="/static/voice.js?v=4"></script>
 <script src="/static/qr.js"></script>
 <script src="/static/qrshare.js"></script>
 <script>
@@ -530,7 +530,7 @@ function viewCabinet(part) {
   $("#top") && ($("#top").onclick = viewTopup);
   $("#addAddr").onclick = viewAddAddr; $("#cabOut").onclick = confirmOut; bindMyQr();
   $("#myCar") && ($("#myCar").onclick = viewCar);
-  window.NIGHT && NIGHT.bind();
+  try { window.NIGHT && NIGHT.bind(); } catch (x) { jslog("NIGHT.bind " + x); }
   $("#goalCh").onclick = async () => { const v = prompt("Күндүк максат (сом):", D.goal); if (v === null) return;
     const r = await api("/api/d/goal", {goal:+v}); if (r.error) return toast("100 сомдон 50 000 сомго чейин жазыңыз", 2500);
     D = r; header(); viewCabinet("earn"); };
@@ -785,8 +785,11 @@ function vpickHTML() {
 }
 window.VOICE_HOOK = () => { const el = $("#vPick"); if (el) { el.innerHTML = vpickHTML(); vpickBind(); } };
 function vpickBind() {
-  document.querySelectorAll("[data-vs]").forEach(b => b.onclick = async () => {
-    try { if (b.dataset.vs === "tts") localStorage.setItem("vmode", "tts"); else { localStorage.setItem("vmode", "ky"); localStorage.setItem("vset", b.dataset.vs); } } catch (x) {}
+  const bs = document.querySelectorAll("[data-vs]");
+  if (!vpickBind.logged) { vpickBind.logged = 1; jslog("vpick bind n=" + bs.length + " mode=" + vmode() + " set=" + vset()); }
+  bs.forEach(b => b.onclick = async () => {
+    try { if (b.dataset.vs === "tts") localStorage.setItem("vmode", "tts"); else { localStorage.setItem("vmode", "ky"); localStorage.setItem("vset", b.dataset.vs); } } catch (x) { jslog("vpick LS " + x); }
+    jslog("vpick click " + b.dataset.vs + " → mode=" + vmode() + " set=" + vset());
     try { navigator.vibrate && navigator.vibrate(25); } catch (x) {}
     const el = $("#vPick"); if (el) { el.innerHTML = vpickHTML(); vpickBind(); }      // тандоо ошол замат көрүнсүн
     const demo = () => speak(["new_order", ...kyNum(80), "som", ...kyKm(1.2)]);

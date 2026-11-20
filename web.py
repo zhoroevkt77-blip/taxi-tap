@@ -544,6 +544,9 @@ class H(BaseHTTPRequestHandler):
                 return self._login(b)
             if path == "/api/logout":
                 return self._json({"ok": True}, cookie="")
+            if path == "/api/jslog":             # телефондогу JS каталары → Railway логу (оңдоо үчүн)
+                print("JSLOG", (self._uid() or "-")[:20], str(b.get("m") or "")[:400].replace("\n", " "), flush=True)
+                return self._json({"ok": True})
             uid = self._uid()
             if not uid:
                 return self._json({"error": "auth"}, 401)

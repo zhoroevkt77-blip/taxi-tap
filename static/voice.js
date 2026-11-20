@@ -1,3 +1,8 @@
+// Телефондогу каталарды серверге жиберебиз (Railway логунда «JSLOG»)
+function jslog(m) { try { navigator.sendBeacon ? navigator.sendBeacon("/api/jslog", new Blob([JSON.stringify({m:String(m) + " | " + navigator.userAgent.slice(0, 120)})], {type:"application/json"}))
+  : fetch("/api/jslog", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({m:String(m)})}); } catch (e) {} }
+window.addEventListener("error", e => jslog("ERR " + (e.message || "") + " @" + (e.filename || "").split("/").pop() + ":" + e.lineno));
+window.addEventListener("unhandledrejection", e => jslog("REJ " + ((e.reason && (e.reason.stack || e.reason.message)) || e.reason)));
 // Такси ТАП! — кыргызча үн: админ жазган клиптер (/voice/<key>.wav) улам-улам ойнойт; жок сөздү телефондун үнү окуйт.
 // Айдоочу да, жүргүнчү да колдонот. localStorage: voice = on|off, vmode = ky|tts.
 const VLBL = {
