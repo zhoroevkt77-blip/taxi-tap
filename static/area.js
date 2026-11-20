@@ -188,7 +188,6 @@ function linksHTML(bot) {
   return `<div class="lnks"><h3 style="margin:4px 0 8px">🔗 Такси ТАП! шилтемелери</h3>
     ${row("p", '<img class="lki" src="/static/r_bag.webp?v=11" alt="">', "Жүргүнчүлөр үчүн", o + "/", "Таксини ушул жерден чакырышат")}
     ${row("d", '<img class="lki rc" src="/static/r_car.webp?v=11" alt="">', "Айдоочулар үчүн", o + "/driver", "Айдоочу болуп катталуу")}
-    ${bot ? row("b", "✈️", "Telegram бот", "https://t.me/" + bot, "Номерди ырастоо жана билдирүүлөр") : ""}
     <p class="muted" style="margin:6px 0 0">📋 — көчүрүү, 📤 — WhatsApp, Telegram аркылуу жөнөтүү.</p></div>`;
 }
 function bindLinks() {
