@@ -110,7 +110,7 @@ def tick():
     for r in core.searching_rides():
         rid = r["id"]
         if r["offered_to"]:
-            if t - (r["offered_at"] or 0) < core.OFFER_SEC:
+            if t < core.offer_deadline(r):
                 continue
             core.mark_tried(rid, r["offered_to"])      # жооп бербеди → кийинкиси
             r = core.get_ride(rid)
@@ -127,7 +127,9 @@ def tick():
             if _offered_elsewhere(d["uid"], rid):
                 continue
             core.offer(rid, d["uid"])
-            out.append(note(d["uid"], "d_offer", "/driver", price=money(r["price"]),
-                            km=round(dist, 1), sec=int(core.OFFER_SEC)))
+            n = note(d["uid"], "d_offer", "/driver", price=money(r["price"]),
+                     km=round(dist, 1), sec=int(core.OFFER_SEC))
+            n["accept"] = rid                          # Telegram'да «✅ Алам» баскычы
+            out.append(n)
             break
     return out

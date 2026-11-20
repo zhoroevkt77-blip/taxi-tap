@@ -99,10 +99,7 @@ try:
         frame(r, dv, 4, "Б точка тандалды — баа чыкты", "Эми гана карта: маршрут, класстар, баа · «✓ Б точка тандалды»", 1500)
         r.click("#order")
         frame(r, dv, 3, "Заказ жакынкы айдоочуга кетти", "Айдоочуга 15 секунддук сунуш келди", 3500)
-        kb = dv.locator("#knob").bounding_box(); tr = dv.locator("#acc").bounding_box()
-        dv.mouse.move(kb["x"] + 20, kb["y"] + 20); dv.mouse.down()
-        for i in range(1, 11): dv.mouse.move(kb["x"] + 20 + (tr["width"] - 60) * i / 10, kb["y"] + 20)
-        dv.mouse.up()
+        dv.click("#acc")
         frame(r, dv, 4, "Айдоочу заказды кабыл алды", "Жүргүнчүгө айдоочу, унаа жана номер көрүндү", 2500)
         for k in (0.35, 0.7):
             move(dc, DSTART, A, k)

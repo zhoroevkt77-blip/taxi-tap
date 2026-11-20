@@ -49,7 +49,8 @@ def _env_num(name, default):
 
 COMMISSION_PCT = _env_num("COMMISSION_PCT", 0)     # пилотто 0 = бекер
 MIN_BALANCE = _env_num("MIN_BALANCE", 0)           # мындан аз болсо заказ келбейт
-OFFER_SEC = _env_num("OFFER_SEC", 15)              # айдоочуга сунуштун мөөнөтү
+OFFER_SEC = _env_num("OFFER_SEC", 15)              # айдоочуга сунуштун мөөнөтү (айдоочу көргөндөн баштап)
+OFFER_GRACE = _env_num("OFFER_GRACE", 10)          # айдоочу али көрө элек болсо (экран өчүк) — кошумча күтүү
 SEARCH_MAX_SEC = _env_num("SEARCH_MAX_SEC", 180)   # андан кийин издөө токтойт
 LOC_TTL_SEC = _env_num("LOC_TTL_SEC", 600)         # координат ушунча эскирсе — офлайн
 ROAD_FACTOR = _env_num("ROAD_FACTOR", 1.3)         # түз сызык → жол аралыгы
@@ -317,7 +318,8 @@ NEW_COLUMNS = {
                 "car_year": "INTEGER"},                  # күндүк максат (сом)                # күбөлүктүн мөөнөтү YYYY-MM-DD                # таксопарк (жок болсо — өз алдынча)   # активдүүлүк 0..100 (Яндекс Pro'догудай)              # аймактан сыртка чыккан убакыт
     "balance_tx": {"claimed": "REAL"},
     "tariffs": {"inc_km": "REAL DEFAULT 0", "inc_min": "REAL DEFAULT 0"},   # отуруу баасына кирген км/мүн (Яндекстей)
-    "rides": {"note": "TEXT", "source": "TEXT",   # source: web | phone (диспетчер)
+    "rides": {"offer_seen": "REAL",       # айдоочу сунушту көргөн убакыт
+        "note": "TEXT", "source": "TEXT",   # source: web | phone (диспетчер)
               "est_min": "REAL",
               "cancel_reason": "TEXT", "accept_km": "REAL", "requeued": "INTEGER DEFAULT 0",                           # маршруттун пробкасыз убактысы (автоматтык баа үчүн)
               "promo": "TEXT", "discount": "REAL DEFAULT 0",
@@ -1577,8 +1579,22 @@ def log_event(rid, status, actor):
 
 
 def offer(rid, driver):
-    query("UPDATE rides SET offered_to=?, offered_at=? WHERE id=? AND status='searching'",
+    query("UPDATE rides SET offered_to=?, offered_at=?, offer_seen=NULL WHERE id=? AND status='searching'",
           (driver, now(), rid))
+
+
+def offer_deadline(r):
+    """Сунуштун бүтүү убактысы: айдоочу көргөн болсо — көргөндөн OFFER_SEC; көрө элек болсо — OFFER_SEC + OFFER_GRACE."""
+    seen = r.get("offer_seen")
+    if seen:
+        return seen + OFFER_SEC
+    return (r.get("offered_at") or now()) + OFFER_SEC + OFFER_GRACE
+
+
+def offer_seen(rid, driver):
+    """Айдоочунун экранына сунуш чыкты (сайт ачык) — 15 секунд ушул учурдан саналат."""
+    query("UPDATE rides SET offer_seen=? WHERE id=? AND offered_to=? AND offer_seen IS NULL AND status='searching'",
+          (now(), rid, driver))
 
 
 def mark_tried(rid, driver):
@@ -1586,7 +1602,7 @@ def mark_tried(rid, driver):
     tried = json.loads(r["tried"] or "[]")
     if driver not in tried:
         tried.append(driver)
-    n = query("UPDATE rides SET tried=?, offered_to=NULL, offered_at=NULL WHERE id=? "
+    n = query("UPDATE rides SET tried=?, offered_to=NULL, offered_at=NULL, offer_seen=NULL WHERE id=? "
               "AND offered_to=?", (json.dumps(tried), rid, driver), "count")
     if n:
         add_activity(driver, ACT_SKIP)             # сунуштан баш тартты / жооп бербеди

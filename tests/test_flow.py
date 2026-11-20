@@ -1562,3 +1562,13 @@ class DriverProScreens(unittest.TestCase):
         self.assertIsNone(core.hot_spot(NEAR[0] + 1.0, NEAR[1]))                         # алыс — көрсөтүлбөйт
         core.query("DELETE FROM rides WHERE passenger='tg:9'")
         core.set_driver(uid, online=0)
+
+
+class OfferSeenDeadline(unittest.TestCase):
+    def test_deadline_counts_from_seen(self):
+        core.init_db()
+        t = core.now()
+        r = {"offered_at": t - 20, "offer_seen": None}
+        self.assertAlmostEqual(core.offer_deadline(r), t - 20 + core.OFFER_SEC + core.OFFER_GRACE)   # көрө элек — кошумча 10 сек
+        r["offer_seen"] = t - 3
+        self.assertAlmostEqual(core.offer_deadline(r), t - 3 + core.OFFER_SEC)                       # көргөндөн 15 сек

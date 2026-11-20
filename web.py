@@ -180,7 +180,7 @@ def _driver_qr(uid, d):
             "stats": parks.qr_stats(p["id"], driver=uid)}
 
 
-def driver_state(uid):
+def driver_state(uid, seen=False):
     """Айдоочунун бети бардык абалын ушул бир суроо менен алат."""
     d = core.get_driver(uid) or {}
     u = core.get_user(uid) or {}
@@ -213,6 +213,9 @@ def driver_state(uid):
           "pending_topup": bool(d and core.query(
               "SELECT id FROM balance_tx WHERE driver=? AND status='pending'", (uid,), "one"))}
     o = core.offer_for(uid) if d else None
+    if o and seen:
+        core.offer_seen(o["id"], uid)
+        o = core.get_ride(o["id"]) or o
     if o and d.get("lat") is not None:
         pu = core.get_user(o["passenger"]) or {}
         st["offer"] = {"id": o["id"], "price": o["price"], "dist_km": o["dist_km"],
@@ -222,7 +225,7 @@ def driver_state(uid):
                        "chained": bool(d.get("busy_ride")),
                        "p_addr": o.get("p_addr"), "d_addr": o.get("d_addr"),
                        "p_rating": pu.get("p_rating") if (pu.get("p_rated") or 0) >= 3 else None,
-                       "left": max(0, int(core.OFFER_SEC - (t - (o["offered_at"] or t)))),
+                       "left": max(0, int(core.offer_deadline(o) - t)),
                        "total": int(core.OFFER_SEC)}
     if d.get("busy_ride"):
         r = core.get_ride(d["busy_ride"])
@@ -454,9 +457,10 @@ class H(BaseHTTPRequestHandler):
                 near = _point([(q.get("lat") or [""])[0], (q.get("lon") or [""])[0]])
                 return self._json({"items": addrbook.search_all((q.get("q") or [""])[0][:60], near)})
             if u.path == "/api/d/state":
-                if (q.get("vis") or ["0"])[0] == "1":
+                vis = (q.get("vis") or ["0"])[0] == "1"
+                if vis:
                     core.driver_seen(uid)
-                return self._json(driver_state(uid))
+                return self._json(driver_state(uid, seen=vis))
             if u.path == "/api/d/history":
                 return self._json({"rides": core.driver_history(uid)})
             if u.path == "/api/d/praise":

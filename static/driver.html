@@ -49,6 +49,11 @@ input.f{width:100%;font-size:17px;padding:14px;border-radius:14px;border:1px sol
 .bul{width:10px;height:10px;border-radius:50%;background:var(--navy);flex:none}
 .bul.to{background:var(--gold)}
 .two{display:flex;gap:10px}.two>*{flex:1}
+.accbig{position:relative;overflow:hidden;width:100%;height:68px;margin:12px 0 6px;border:0;border-radius:20px;background:#1D9E75;color:#fff;font:700 24px Inter,system-ui,sans-serif;letter-spacing:.5px;cursor:pointer;box-shadow:0 10px 24px rgba(29,158,117,.35)}
+.accbig i{position:absolute;left:0;top:0;bottom:0;background:#23b886;transition:width .2s linear}
+.accbig span{position:relative;display:flex;align-items:center;justify-content:center;gap:12px}
+.accbig em{font-style:normal;font-size:16px;font-weight:600;background:rgba(0,0,0,.18);border-radius:999px;padding:3px 10px;min-width:26px}
+.accbig:active{transform:scale(.98)}.accbig.ok{background:#0f6e56}
 .seg{display:flex;gap:4px;background:#f1f1f4;border-radius:999px;padding:4px;margin:4px 0 12px}.seg button{flex:1;border:0;background:none;border-radius:999px;padding:9px;font:600 14px Inter,system-ui,sans-serif;color:#6b6b76;cursor:pointer}.seg button.on{background:var(--grad,#ffc61a);color:#16161a}
 .esum{display:flex;align-items:center;gap:14px;margin:4px 0 8px}.esum b{display:block;font-size:28px;font-weight:600;line-height:1.1}.esum .muted{font-size:13px}
 .echips,.ochips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}.echips span,.ochips span{background:#fff4d6;color:#5a3d00;border-radius:999px;padding:6px 11px;font-size:13.5px;font-weight:600}.echips .k,.ochips .k{background:#ffc61a;color:#16161a}
@@ -680,14 +685,17 @@ function viewChat() {
   $("#back").onclick = () => { chatOpen = false; lastView = ""; show(); };
 }
 
+let RING = null, OFF_END = 0, OFF_TOT = 15;
 function showOffer() {
   const o = D.offer, box = $("#offer");
-  if (!o) { box.classList.add("hide"); lastOffer = null; return; }
-  const C = 2 * Math.PI * 32, frac = o.left / o.total;
-  if (lastOffer === o.id && $("#oRing")) {               // ошол эле заказ — убакытты гана жаңыртабыз (сүрүү үзүлбөсүн)
-    $("#oRing").setAttribute("stroke-dashoffset", C * (1 - frac)); $("#oLeft").textContent = o.left; return;
+  if (!o) { box.classList.add("hide"); lastOffer = null; clearInterval(RING); RING = null; return; }
+  const frac = Math.max(0, Math.min(1, o.left / o.total));
+  if (lastOffer === o.id && $("#accBar")) {               // ошол эле заказ — убакытты гана жаңыртабыз
+    OFF_END = Date.now() + o.left * 1000; return;
   }
-  lastOffer = o.id; beep();
+  lastOffer = o.id; beep(); OFF_END = Date.now() + o.left * 1000; OFF_TOT = o.total;
+  clearInterval(RING); RING = setInterval(() => {         // жооп бергенче ар 3 секундда үн + титирөө
+    if (!D || !D.offer || lastOffer !== D.offer.id || Date.now() > OFF_END) { clearInterval(RING); RING = null; return; } beep(); }, 3000);
   say(`Жаңы заказ. ${o.price ? o.price + " сом." : ""} ${o.to_pickup_km} километр.`);
   box.classList.remove("hide");
   $("#ocard").innerHTML = `<div style="display:flex;align-items:center;gap:14px">
@@ -696,15 +704,18 @@ function showOffer() {
       <div class="muted">${o.has_dest ? "Сапар ~" + o.dist_km + " км" + (o.est_min ? " · " + o.est_min + " мүн" : "") : "Багытын жүргүнчү айтат"}</div>
       ${o.p_addr || o.d_addr ? `<div class="muted">${esc(o.p_addr || "")}${o.d_addr ? " → " + esc(o.d_addr) : ""}</div>` : ""}
       ${o.discount ? `<div class="muted">🎁 Жүргүнчү ${o.price - Math.round(o.discount)} с төлөйт, +${Math.round(o.discount)} с балансыңызга</div>` : ""}
-      ${o.note ? `<div class="muted">📝 ${esc(o.note)}</div>` : ""}</div>
-      <div class="ring"><svg width="74" height="74"><circle cx="37" cy="37" r="32" stroke="#E1E7F1" stroke-width="7" fill="none"/>
-      <circle id="oRing" cx="37" cy="37" r="32" stroke="#C9A03A" stroke-width="7" fill="none" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - frac)}"/></svg><span id="oLeft">${o.left}</span></div></div>
-    <div class="slide" id="acc"><div class="knob" id="knob">➜</div><span>Оңго сүрүңүз — АЛАМ</span></div>
+      ${o.note ? `<div class="muted">📝 ${esc(o.note)}</div>` : ""}</div></div>
+    <button class="accbig" id="acc"><i id="accBar" style="width:${frac * 100}%"></i><span>АЛАМ <em id="oLeft">${o.left}</em></span></button>
     <button class="btn ghost" id="dec">Жок</button>`;
+  const tickBar = () => { const b = $("#accBar"); if (!b || lastOffer !== o.id) return;
+    const left = Math.max(0, (OFF_END - Date.now()) / 1000); b.style.width = (100 * left / OFF_TOT) + "%"; $("#oLeft").textContent = Math.ceil(left);
+    if (left > 0) requestAnimationFrame(tickBar); };
+  requestAnimationFrame(tickBar);
   const accept = async () => { D = await api("/api/d/accept", {id:o.id}); box.classList.add("hide"); say("");
     if (D.error === "too_late") alert("Кечигип калдыңыз — заказ башка айдоочуга кетти."); lastOffer = null; show(); };
-  swipe($("#acc"), $("#knob"), accept);
-  $("#dec").onclick = async () => { say(""); D = await api("/api/d/decline", {id:o.id}); box.classList.add("hide"); lastOffer = null; show(); };
+  $("#acc").onclick = () => { const b = $("#acc"); if (b.disabled) return; b.disabled = true; b.classList.add("ok");
+    clearInterval(RING); RING = null; try { navigator.vibrate && navigator.vibrate(40); } catch (e) {} accept(); };
+  $("#dec").onclick = async () => { say(""); clearInterval(RING); RING = null; D = await api("/api/d/decline", {id:o.id}); box.classList.add("hide"); lastOffer = null; show(); };
 }
 // Сүрүп кабыл алуу: кокус басылып кетпейт
 function swipe(track, knob, done) {

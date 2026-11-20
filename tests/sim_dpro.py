@@ -67,10 +67,7 @@ try:
         import dispatch; dispatch.tick() if hasattr(dispatch, "tick") else None
         dv.wait_for_timeout(3500)
         frame(dv, "Жаңы заказ — сары чиптер", "📍 км · ⏱ мүн · 💵 баа · ⭐ рейтинг, «сүрүп алуу» калды", 300)
-        kb = dv.locator("#knob").bounding_box(); tr = dv.locator("#acc").bounding_box()
-        dv.mouse.move(kb["x"] + 20, kb["y"] + 20); dv.mouse.down()
-        for i in range(1, 11): dv.mouse.move(kb["x"] + 20 + (tr["width"] - 60) * i / 10, kb["y"] + 20)
-        dv.mouse.up(); dv.wait_for_timeout(2000)
+        dv.click("#acc")
         dv.evaluate("SHEET&&SHEET.expand&&SHEET.expand()")
         frame(dv, "Сапар — тегерек баскычтар", "Чалуу · Чат · Навигатор · Жардам + «Келдим»", 600, ".rbtns")
         br.close()

@@ -109,7 +109,11 @@ def deliver(outs):
         for o in outs or []:
             to = core.tg_of(o.get("to") or "")
             if to and to.startswith("tg:"):
-                send(to[3:], o["text"], open_kb(o.get("path") or "/"))
+                kb = open_kb(o.get("path") or "/")
+                if o.get("accept"):                       # жаңы заказ: «✅ Алам» Telegram'дан эле
+                    rows = [[{"text": L("btn_tg_accept"), "callback_data": "acc:%d" % o["accept"]}]]
+                    kb = {"inline_keyboard": rows + ((kb or {}).get("inline_keyboard") or [])}
+                send(to[3:], o["text"], kb)
 
 
 # ==================== Telegram → ====================
@@ -143,7 +147,18 @@ def handle_update(up):
         cb = up["callback_query"]
         tg = "tg:%d" % cb["from"]["id"]
         u = _user_by_tg(tg)
-        if u and (cb.get("data") or "").startswith("notify:"):
+        data = cb.get("data") or ""
+        if u and data.startswith("acc:"):
+            rid = int(data[4:] or 0)
+            outs = flow.driver_accept(u["uid"], rid) if rid else None
+            api("answerCallbackQuery", callback_query_id=cb["id"], text=L("tg_accepted" if outs else "tg_too_late"),
+                show_alert=not outs)
+            if outs:
+                deliver(outs)
+            api("editMessageReplyMarkup", chat_id=cb["message"]["chat"]["id"],
+                message_id=cb["message"]["message_id"], reply_markup=open_kb("/driver"))
+            return
+        if u and data.startswith("notify:"):
             on = cb["data"].endswith("1")
             core.set_user(u["uid"], notify=1 if on else 0)
             api("answerCallbackQuery", callback_query_id=cb["id"],
