@@ -703,6 +703,7 @@ html.mapnight .leaflet-control-attribution{background:rgba(27,28,33,.7)!importan
 #bnav[data-l]::before{content:attr(data-l);right:calc(50% + 50px)}
 #bnav[data-r]::after{content:attr(data-r);left:calc(50% + 50px)}
 #bnav.drv[data-l]::before,#bnav.drv[data-r]::after{background:linear-gradient(135deg,#22b07d,#16865e);color:#fff}
+#bnav.drv[data-l]::before{padding-left:44px;background:url(/static/r_car.webp?v=11) 6px 50%/34px auto no-repeat,linear-gradient(135deg,#22b07d,#16865e)}
 /* Картадагы аймакты басканда браузер кара алкак тартпасын */
 .leaflet-interactive:focus,.leaflet-container path:focus{outline:none}
 
