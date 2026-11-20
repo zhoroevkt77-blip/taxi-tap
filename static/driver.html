@@ -667,6 +667,7 @@ function cabChips() {
 let NET_OK = 0, myAcc = null;
 async function diagChecks() {
   const L = [], add = (lvl, ic, t, why, fix, act) => L.push({lvl, ic, t, why, fix, act});   // lvl: ok | warn | bad
+  const dev = (...a) => { add(...a); L[L.length - 1].dev = 1; };          // телефондун текшерүүсү — админ/паркка да жиберилет
   // аккаунт
   if (D.status === "blocked") add("bad", "alert", "Аккаунт бөгөттөлгөн", D.blocked_by && D.blocked_by.startsWith("park:") ? "Таксопаркыңыз бөгөттөдү — алар менен байланышыңыз." : "Админ бөгөттөдү — жардамга жазыңыз.", "Жардам", () => typeof viewHelp === "function" && viewHelp());
   else add("ok", "check", "Аккаунт тастыкталган", "Заказ ала аласыз.");
@@ -686,10 +687,10 @@ async function diagChecks() {
   else add("ok", "camera", "Фотоконтроль өттү", "");
   // GPS
   let perm = "prompt"; try { perm = (await navigator.permissions.query({name:"geolocation"})).state; } catch (e) {}
-  if (perm === "denied") add("bad", "pin", "GPS'ке уруксат жок", "Жериңизди билбесек, заказ жибере албайбыз.", "Кантип ачам?", () => typeof gpsHelp === "function" ? gpsHelp() : alert("Браузердин жөндөөлөрүнөн «Жайгашкан жер» уруксатын бериңиз."));
-  else if (!myPos) add("warn", "pin", "GPS жериңизди таба элек", "Сыртка чыгып, бир аз күтүңүз.", "Кайра издөө", () => getPos().then(() => viewDiag()));
-  else if (myAcc && myAcc > 100) add("warn", "pin", `GPS тактыгы начар (±${Math.round(myAcc)} м)`, "Телефондун жөндөөсүнөн «Так жайгашкан жер»ди күйгүзүңүз.", "", null);
-  else add("ok", "pin", "GPS иштеп жатат" + (myAcc ? ` (±${Math.round(myAcc)} м)` : ""), "");
+  if (perm === "denied") dev("bad", "pin", "GPS'ке уруксат жок", "Жериңизди билбесек, заказ жибере албайбыз.", "Кантип ачам?", () => typeof gpsHelp === "function" ? gpsHelp() : alert("Браузердин жөндөөлөрүнөн «Жайгашкан жер» уруксатын бериңиз."));
+  else if (!myPos) dev("warn", "pin", "GPS жериңизди таба элек", "Сыртка чыгып, бир аз күтүңүз.", "Кайра издөө", () => getPos().then(() => viewDiag()));
+  else if (myAcc && myAcc > 100) dev("warn", "pin", `GPS тактыгы начар (±${Math.round(myAcc)} м)`, "Телефондун жөндөөсүнөн «Так жайгашкан жер»ди күйгүзүңүз.", "", null);
+  else dev("ok", "pin", "GPS иштеп жатат" + (myAcc ? ` (±${Math.round(myAcc)} м)` : ""), "");
   // аймак
   if (D.in_area === false) add("bad", "map", "Иштөө аймагынын сыртындасыз", "Заказдар аймактын ичинде гана берилет.", "Картадан көрүү", () => { window.SHEET && SHEET.collapse(); });
   else if (D.in_area) add("ok", "map", "Иштөө аймагынын ичиндесиз", D.area_name || "");
@@ -698,26 +699,28 @@ async function diagChecks() {
   else add("ok", "link", "Интернет бар", "");
   // үн
   const ac = typeof VCTX !== "undefined" && VCTX ? VCTX.state : "";
-  if (!voiceOn()) add("warn", "volume", "Заказды үн менен айтуу өчүк", "Жолдо экранды карабай эле угасыз.", "Күйгүзүү", () => { try { localStorage.setItem("voice", "on"); } catch (e) {} speak(["voice_on"]); viewDiag(); });
-  else if (ac === "suspended") add("warn", "volume", "Үн бөгөттөлгөн", "Браузер үндү экранга тийгенден кийин гана ачат.", "Үндү сынап көрүү", () => { beep(); speak(["new_order", ...kyNum(80), "som"]); setTimeout(viewDiag, 1500); });
-  else add("ok", "volume", "Үн иштейт", "");
+  if (!voiceOn()) dev("warn", "volume", "Заказды үн менен айтуу өчүк", "Жолдо экранды карабай эле угасыз.", "Күйгүзүү", () => { try { localStorage.setItem("voice", "on"); } catch (e) {} speak(["voice_on"]); viewDiag(); });
+  else if (ac === "suspended") dev("warn", "volume", "Үн бөгөттөлгөн", "Браузер үндү экранга тийгенден кийин гана ачат.", "Үндү сынап көрүү", () => { beep(); speak(["new_order", ...kyNum(80), "som"]); setTimeout(viewDiag, 1500); });
+  else dev("ok", "volume", "Үн иштейт", "");
   // Telegram
   if (!D.tg) add("warn", "message", "Telegram туташкан эмес", "Экран өчүп турса да заказ Telegram'га келет.", "Туташтыруу", () => D.bot && open("https://t.me/" + D.bot, "_blank"));
   else if (!D.notify) add("warn", "message", "Telegram билдирүүлөрү өчүк", "Жөндөөлөрдөн күйгүзүңүз.", "", null);
   else add("ok", "message", "Telegram туташкан", "");
   // экран
-  if (!("wakeLock" in navigator)) add("warn", "clock", "Экран өзү өчүп калышы мүмкүн", "Телефондун жөндөөсүнөн экрандын өчүү убактысын узартыңыз.", "", null);
-  else add("ok", "clock", "Линияда экран өчпөйт", "");
+  if (!("wakeLock" in navigator)) dev("warn", "clock", "Экран өзү өчүп калышы мүмкүн", "Телефондун жөндөөсүнөн экрандын өчүү убактысын узартыңыз.", "", null);
+  else dev("ok", "clock", "Линияда экран өчпөйт", "");
   // батарея
   try { if (navigator.getBattery) { const b = await navigator.getBattery();
-    if (!b.charging && b.level < 0.2) add("warn", "bolt", `Батарея аз: ${Math.round(b.level * 100)}%`, "Заряддагычка сайып коюңуз — GPS көп кубат алат.", "", null);
-    else add("ok", "bolt", `Батарея: ${Math.round(b.level * 100)}%${b.charging ? " · заряддалып жатат" : ""}`, ""); } } catch (e) {}
+    if (!b.charging && b.level < 0.2) dev("warn", "bolt", `Батарея аз: ${Math.round(b.level * 100)}%`, "Заряддагычка сайып коюңуз — GPS көп кубат алат.", "", null);
+    else dev("ok", "bolt", `Батарея: ${Math.round(b.level * 100)}%${b.charging ? " · заряддалып жатат" : ""}`, ""); } } catch (e) {}
   // активдүүлүк
   if ((D.activity ?? 100) < 50) add("warn", "bolt", `Активдүүлүк төмөн: ${D.activity}`, "Аралыгы окшош болсо, активдүүлүгү жогору айдоочуга заказ биринчи барат.", "", null);
   else add("ok", "bolt", `Активдүүлүк: ${D.activity ?? 100}`, "");
   // жаңы версия
   try { const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration();
-    if (reg && reg.waiting) add("warn", "tools", "Колдонмонун жаңы версиясы бар", "Жаңылаганда акыркы оңдоолор иштейт.", "Жаңылоо", () => { reg.waiting.postMessage && reg.waiting.postMessage("skip"); location.reload(); }); } catch (e) {}
+    if (reg && reg.waiting) dev("warn", "tools", "Колдонмонун жаңы версиясы бар", "Жаңылаганда акыркы оңдоолор иштейт.", "Жаңылоо", () => { reg.waiting.postMessage && reg.waiting.postMessage("skip"); location.reload(); }); } catch (e) {}
+  const devs = L.filter(x => x.dev && x.lvl !== "ok").map(x => [x.lvl, x.t]), sig = JSON.stringify(devs);
+  if (sig !== diagChecks.sent || Date.now() - (diagChecks.at || 0) > 600000) { diagChecks.sent = sig; diagChecks.at = Date.now(); api("/api/d/diag", {items:devs}); }
   return L;
 }
 async function viewDiag(fromOnline) {
@@ -1336,6 +1339,8 @@ async function boot() {
   if (D.online || D.ride) { startGps(); wake(true); }
   else getPos().then(drawMe);
   clearInterval(poll); poll = setInterval(refresh, 2000);
+  setTimeout(() => D && D.status && diagChecks().catch(() => {}), 8000);                     // телефондун абалы админ/паркка
+  setInterval(() => D && D.status && diagChecks().catch(() => {}), 10 * 60 * 1000);
 }
 boot();
 </script>

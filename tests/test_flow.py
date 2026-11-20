@@ -1662,3 +1662,20 @@ class TariffZoneRetag(unittest.TestCase):
         self.assertEqual(z2["city"], "Манас"); self.assertEqual(z2["gj"], z["gj"])
         self.assertFalse(core.set_tariff_zone("Манас", None, 123))
         core.set_setting("tariff_zones", old)
+
+
+class DriverDiag(unittest.TestCase):
+    def test_brief(self):
+        core.init_db()
+        u = "tg:9900991"; core.ensure_user(u, "Диаг")
+        core.register_driver(u, "Диаг", "Соната", "Ак", "04KG991ABC", {"license": "a", "techpass": "b", "car": "c", "selfie": "d"})
+        g = core.diag_brief(core.get_driver(u))
+        self.assertIn("Арызы текшерилүүдө", [t for _, t in g["items"]]); self.assertGreaterEqual(g["bad"], 1)
+        core.set_driver(u, status="active", lic_until="2000-01-01")
+        core.set_diag_dev(u, [["warn", "Батарея аз: 12%"], ["bad", "GPS'ке уруксат жок"], ["ok", "x"], ["zz", "y"]])
+        items = core.diag_brief(core.get_driver(u))["items"]
+        texts = [t for _, t in items]
+        self.assertIn("Күбөлүктүн мөөнөтү бүткөн", texts)
+        self.assertIn("📱 GPS'ке уруксат жок", texts); self.assertIn("📱 Батарея аз: 12%", texts)
+        self.assertFalse(any("x" == t[-1:] and "📱" in t for t in texts))
+        core.query("DELETE FROM drivers WHERE uid=?", (u,))

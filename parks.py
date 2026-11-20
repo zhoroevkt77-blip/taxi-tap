@@ -453,7 +453,7 @@ def driver_stats(pid, period="week"):
                      "rides": n, "gross": round(gross), "online_sec": round(core.online_sec(d["uid"], since)),
                      "accepted": acc, "offers": tot, "cancels": _dcancels(d["uid"], since), "share": round(fee * rate),
                      "rating": d.get("rating"), "activity": d.get("activity") if d.get("activity") is not None else 100,
-                     "idle_days": int((t - seen) // 86400) if seen else None})
+                     "idle_days": int((t - seen) // 86400) if seen else None, "diag": core.diag_brief(d, u)})
     rows.sort(key=lambda r: (-r["gross"], -r["rides"]))
     if rows and rows[0]["gross"] > 0:
         rows[0]["best"] = True
@@ -482,6 +482,7 @@ def driver_detail(pid, uid):
     except Exception:
         pass
     return {"uid": uid, "name": u.get("name") or "", "phone": u.get("phone") or "", "plate": d.get("car_plate") or "", "status": d.get("status"),
+            "diag": core.diag_brief(d, u),
             "car": core.car_text(d.get("car_color"), d.get("car_model")), "rating": d.get("rating"),
             "activity": d.get("activity") if d.get("activity") is not None else 100, "days": days,
             "recent": [{"at": r["at"], "from": r["p_addr"] or "", "to": r["d_addr"] or "", "price": round(r["price"] or 0)} for r in rec],

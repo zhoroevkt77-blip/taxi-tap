@@ -826,6 +826,9 @@ class H(BaseHTTPRequestHandler):
                 return self._json({"error": "year"}, 400)
             core.set_driver(uid, car_year=y)
             return self._json(driver_state(uid))
+        if action == "diag":                       # телефондун текшерүүлөрү (GPS, үн, батарея…) — админ/парк көрсүн
+            core.set_diag_dev(uid, b.get("items"))
+            return self._json({"ok": True})
         if action == "goal":
             g = int(_num(b.get("goal")) or 0)
             if not 100 <= g <= 50000:
@@ -912,6 +915,8 @@ class H(BaseHTTPRequestHandler):
             rows = core.admin_drivers()
             for d in rows:
                 d["is_online"] = bool(d["busy_ride"]) or core.is_available(d, t)
+                d["diag"] = core.diag_brief(d, {"tg_uid": d.get("tg_uid")})
+                d.pop("diag_dev", None); d.pop("tg_uid", None)
             return self._json({"drivers": rows})
         if action == "rides":
             return self._json({"rides": core.admin_rides()})

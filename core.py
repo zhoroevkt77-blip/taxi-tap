@@ -317,7 +317,8 @@ NEW_COLUMNS = {
                 "goal": "INTEGER",
                 "car_year": "INTEGER",
                 "approved_by": "TEXT", "approved_at": "REAL",   # admin | park:<id> — ким тастыктады
-                "blocked_by": "TEXT"},                          # admin | park:<id> — ким бөгөттөдү                  # күндүк максат (сом)                # күбөлүктүн мөөнөтү YYYY-MM-DD                # таксопарк (жок болсо — өз алдынча)   # активдүүлүк 0..100 (Яндекс Pro'догудай)              # аймактан сыртка чыккан убакыт
+                "blocked_by": "TEXT",
+                "diag_dev": "TEXT", "diag_at": "REAL"},          # телефондон келген диагностика (GPS, үн, батарея…)                          # admin | park:<id> — ким бөгөттөдү                  # күндүк максат (сом)                # күбөлүктүн мөөнөтү YYYY-MM-DD                # таксопарк (жок болсо — өз алдынча)   # активдүүлүк 0..100 (Яндекс Pro'догудай)              # аймактан сыртка чыккан убакыт
     "balance_tx": {"claimed": "REAL"},
     "tariffs": {"inc_km": "REAL DEFAULT 0", "inc_min": "REAL DEFAULT 0"},   # отуруу баасына кирген км/мүн (Яндекстей)
     "rides": {"offer_seen": "REAL",       # айдоочу сунушту көргөн убакыт
@@ -2473,6 +2474,7 @@ def admin_drivers():
                  "d.car_color, d.car_plate, d.online, d.busy_ride, d.loc_at, d.live_until, d.lat, d.lon, "
                  "d.doc_license, d.doc_techpass, d.doc_car, d.doc_selfie, d.lic_until, d.reject_note, d.created_at, d.classes, "
                  "d.photos, d.photo_status, d.photo_at, d.photo_note, d.approved_by, d.approved_at, d.blocked_by, d.park_id, "
+                 "d.activity, d.diag_dev, d.diag_at, u.tg_uid, "
                  "p.name AS park_name, p.code AS park_code, p.self_approve AS park_self, "
                  "u.name, u.phone FROM drivers d LEFT JOIN users u ON u.uid=d.uid LEFT JOIN parks p ON p.id=d.park_id "
                  "ORDER BY d.status='pending' DESC, d.rides_done DESC", (), "all")
@@ -2897,3 +2899,64 @@ def voice_delete(key, vs=1):
     set_setting(hk, have)
     set_setting("voice_ver", int(get_setting("voice_ver") or 0) + 1)
     return True
+
+
+# ==================== Айдоочунун диагностикасы (админ жана парк үчүн кыскача) ====================
+def driver_diag(d, u=None):
+    """[(lvl, text)] — lvl: bad (заказга тоскоол) | warn. Сервер билгендер + телефон акыркы жолу жибергендер."""
+    if not d:
+        return []
+    u = u if u is not None else (get_user(d["uid"]) or {})
+    out = []
+    st = d.get("status")
+    if st == "blocked":
+        out.append(("bad", "Бөгөттөлгөн"))
+    elif st == "pending":
+        out.append(("bad", "Арызы текшерилүүдө"))
+    elif st == "rejected":
+        out.append(("bad", "Арызы четке кагылган"))
+    mb = min_balance()
+    if mb > 0 and float(d.get("balance") or 0) < mb:
+        out.append(("bad", "Баланс аз: %d с" % int(d.get("balance") or 0)))
+    left = lic_days_left(d)
+    if not d.get("lic_until"):
+        out.append(("warn", "Күбөлүктүн мөөнөтү жазылган эмес"))
+    elif left is not None and left < 0:
+        out.append(("bad", "Күбөлүктүн мөөнөтү бүткөн"))
+    elif left is not None and left <= 30:
+        out.append(("warn", "Күбөлүккө %d күн калды" % left))
+    ph = photo_state(d)
+    if ph["status"] == "rejected":
+        out.append(("warn", "Фотоконтроль кабыл алынган жок"))
+    elif ph["need"] and ph["status"] != "pending":
+        out.append(("warn", "Фотоконтроль өтө элек"))
+    if AREA_ON and d.get("lat") is not None and not in_area(d["lat"], d["lon"]):
+        out.append(("bad", "Иштөө аймагынын сыртында"))
+    if not u.get("tg_uid"):
+        out.append(("warn", "Telegram туташкан эмес"))
+    act = d.get("activity")
+    if act is not None and act < 50:
+        out.append(("warn", "Активдүүлүк төмөн: %d" % act))
+    if d.get("online") and d.get("loc_at") and now() - d["loc_at"] > 300:
+        out.append(("bad", "Линияда, бирок 5 мүнөттөн бери GPS келбей жатат"))
+    try:
+        dev = json.loads(d.get("diag_dev") or "[]") if (d.get("diag_at") or 0) > now() - 3 * 86400 else []
+    except ValueError:
+        dev = []
+    for lvl, t in dev[:8]:
+        if lvl in ("bad", "warn") and t and t not in [x[1] for x in out]:
+            out.append((lvl, ("📱 " + str(t))[:90]))
+    return out
+
+
+def diag_brief(d, u=None):
+    items = driver_diag(d, u)
+    return {"bad": sum(1 for x in items if x[0] == "bad"), "warn": sum(1 for x in items if x[0] == "warn"), "items": items}
+
+
+def set_diag_dev(uid, items):
+    clean = []
+    for it in (items or [])[:10]:
+        if isinstance(it, (list, tuple)) and len(it) == 2 and it[0] in ("bad", "warn"):
+            clean.append([it[0], str(it[1])[:80]])
+    set_driver(uid, diag_dev=json.dumps(clean, ensure_ascii=False), diag_at=now())

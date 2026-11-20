@@ -78,6 +78,8 @@ td input.f{padding:7px 8px;max-width:90px;min-width:58px}
 .vrow{flex-wrap:nowrap!important;align-items:center}.vrow .main{flex:1;min-width:0}.vrow .btn{flex:0 0 auto;min-width:46px;width:auto}.vrec{background:#fff8e1;border-radius:18px;padding:18px;margin:10px 0;text-align:center}
 .vword{font-size:26px;font-weight:600;margin:6px 0 14px}.vmic{width:110px;height:110px;border-radius:50%;border:0;background:#e5383b;color:#fff;font-size:44px;cursor:pointer;box-shadow:0 0 0 12px rgba(229,56,59,.12)}
 .vmic.on{animation:vpulse 1s infinite}@keyframes vpulse{50%{box-shadow:0 0 0 22px rgba(229,56,59,.22)}}
+.dgl{display:block;margin-top:6px;font-size:13px}.dgl.ok{color:#1a7a40;font-weight:600}.dgl summary{cursor:pointer;list-style:none;font-weight:600}
+.dgl summary::-webkit-details-marker{display:none}.dgl summary b{display:inline!important;margin:0!important}.dgl summary{display:block}.dgl .r{color:#c22}.dgl .o{color:#b26a00}.dgi{padding:3px 0 0 4px;font-size:13px}.dgi.bad{color:#b42318}
 </style>
 <link rel="stylesheet" href="/static/theme.css?v=119">
 </head>
@@ -315,6 +317,7 @@ async function viewDrivers() {
       ${d.approved_by ? `<span class="muted" style="display:block">✓ ${d.approved_by.startsWith("park:") ? esc(d.park_code || "Парк") + " парк тастыктады" : "админ тастыктады"}${d.approved_at ? " · " + when(d.approved_at) : ""}</span>` : ""}
       ${d.status === "blocked" && d.blocked_by && d.blocked_by.startsWith("park:") ? `<span class="muted" style="display:block">⛔ парк бөгөттөгөн</span>` : ""}
       ${d.status === "rejected" && d.reject_note ? `<span class="muted">Себеби: ${esc(d.reject_note)}</span>` : ""}${lic(d)}
+      ${diagLine(d.diag)}
       ${d.status === "pending" ? docs(d) + checks(d) : `<details><summary class="muted" style="cursor:pointer">📄 Документтер</summary>${docs(d)}</details>`}
       ${photoBox(d)}
       ${d.status === "active" ? `<span class="muted" data-cl="${esc(d.uid)}">${[["econom","Эконом"],["comfort","Комфорт"],["minivan","Минивэн"],["delivery","Жеткирүү"]].map(([c, t]) =>
@@ -499,6 +502,13 @@ async function autoPanel() {
     const r = await api("/api/a/autoprice_run", {}); toast("✓ Эсептелди", 2000); autoPanel(); };
 }
 
+// Айдоочунун диагностикасы: «2 ❌ · 1 ⚠️» — басса тизмеси ачылат
+function diagLine(g) {
+  if (!g) return "";
+  if (!g.bad && !g.warn) return `<span class="dgl ok">✓ Диагностика жайында</span>`;
+  return `<details class="dgl"><summary>🩺 ${g.bad ? `<b class="r">${g.bad} ❌</b>` : ""}${g.bad && g.warn ? " · " : ""}${g.warn ? `<b class="o">${g.warn} ⚠️</b>` : ""}</summary>
+    ${g.items.map(([l, t]) => `<div class="dgi ${l}">${l === "bad" ? "❌" : "⚠️"} ${esc(t)}</div>`).join("")}</details>`;
+}
 function bindSelf() {
   document.querySelectorAll("[data-self]").forEach(c => c.onchange = async () => {
     if (c.checked && !confirm("Бул парк өз айдоочуларынын документтерин өзү текшерип, тастыктай алат. Макулсузбу?")) { c.checked = false; return; }
