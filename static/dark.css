@@ -124,3 +124,4 @@ html.uidark .st-del{background:#2a2410!important;color:#ffd24d!important;box-sha
 html.uidark .vpick button{background:#2b2c34!important;color:#f2f2f5!important;box-shadow:inset 0 0 0 1px #3a3b44!important}html.uidark .vpick button.on{background:#2a2410!important;box-shadow:inset 0 0 0 2px #ffb703!important}
 html.uidark .vpick button.vc{background:#f4f2ee!important;color:#16161a!important;box-shadow:none!important}html.uidark .vpick button.vc.on{background:#fff3c4!important;box-shadow:inset 0 0 0 2.5px #ffb703!important}html.uidark .vpick button.vc small{color:#6b6b76!important}
 html.uidark .zpill{background:#23242b!important}html.uidark .zpill button{color:#f2f2f5!important}html.uidark .zpill i{background:#3a3b44!important}
+html.uidark .cclist button:not(.w){background:#23242b!important;color:#f2f2f5!important;box-shadow:inset 0 0 0 1.5px #5a4a14!important}
