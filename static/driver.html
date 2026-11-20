@@ -99,8 +99,8 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=117">
-<link rel="stylesheet" href="/static/dark.css?v=18">
+<link rel="stylesheet" href="/static/theme.css?v=118">
+<link rel="stylesheet" href="/static/dark.css?v=19">
 <script src="/static/night.js?v=2"></script>
 </head>
 <body>
@@ -615,33 +615,47 @@ function viewCabinet(part) {
 }
 
 // ---------- Кабинеттин чиптери: бөлүмгө тез өтүү (жабышып турат, карап турган бөлүм сары) ----------
+let CC_OPEN = "";                                  // кайсы чип ачык турганы (кайра ачканда эсте калат)
 function cabChips() {
   const V = $("#view"), sc = V.closest(".sheet"), h2 = V.querySelector("h2"); if (!h2 || !sc) return;
-  const near = (sel, up) => { const e = V.querySelector(sel); return e ? (up ? e.closest(up) || e : e) : null; };
-  const txt = (t, sel) => [...V.querySelectorAll(sel || "b,h4")].find(e => e.textContent.trim().startsWith(t));
-  const box = t => { const e = txt(t); return e ? e.closest(".work,.irow,.sw,.note,.stat,.grid,div") : null; };
+  const q = s => V.querySelector(s), up = (e, sel) => e ? e.closest(sel) || e : null;
+  const nextP = e => e && e.nextElementSibling && e.nextElementSibling.matches("p.muted") ? e.nextElementSibling : null;
+  const byB = t => { const b = [...V.querySelectorAll("b,h4")].find(e => e.textContent.trim().startsWith(t)); return b; };
+  const tarif = up(byB("Тарифтериңиз"), ".irow"), lnk = q(".lnks");
   const list = [
-    ["car", "Менин унаам", near("#myCar")], ["briefcase", "Менин ишим", near(".work")], ["wallet", "Баланс жана рейтинг", near(".grid")],
-    ["car", "Тарифтер жана комиссия", box("Тарифтериңиз")], ["moon", "Режим (жарык / караңгы)", box("Режим")], ["bolt", "Активдүүлүк", box("Активдүүлүк")],
-    ["camera", "Фотоконтроль", near("#phCard")], ["id", "Документтер", box("Документтер") || near("#licUp", ".note")],
-    ["volume", "Үн менен айтуу", near("#vc", ".sw")], ["nav", "Навигатор", near("#navCh", ".sw")], ["pin", "Дарек кошуу", near("#addAddr")],
-    ["link", "Шилтемелер", box("Такси ТАП!") || txt("Такси ТАП!", "span")],
-  ].filter(x => x[2]);
+    ["car", "Менин унаам", "car", [q("#myCar")]],
+    ["briefcase", "Менин ишим", "work", [q(".work")]],
+    ["wallet", "Баланс жана рейтинг", "bal", [q(".grid")]],
+    ["car", "Тарифтер жана комиссия", "tar", [tarif && tarif.parentElement]],
+    ["moon", "Режим (жарык / караңгы)", "mode", [q(".mtheme")]],
+    ["bolt", "Активдүүлүк", "act", [up(byB("Активдүүлүк"), ".note")]],
+    ["camera", "Фотоконтроль", "photo", [q("#phCard")]],
+    ["id", "Документтер", "docs", [up(q("#licUp") || byB("Айдоочулук күбөлүк") || byB("Документтер"), ".note")]],
+    ["volume", "Үн менен айтуу", "voice", [up(q("#vc"), ".sw"), q("#vPick")]],
+    ["nav", "Навигатор", "nav", [up(q("#navCh"), ".sw")]],
+    ["pin", "Дарек кошуу", "addr", [q("#addAddr"), nextP(q("#addAddr"))]],
+    ["link", "Шилтемелер", "links", [lnk, nextP(lnk)]],
+  ].map(x => [x[0], x[1], x[2], x[3].filter(Boolean)]).filter(x => x[3].length);
   const warn = [];
-  if (D.min_balance > 0 && D.balance < D.min_balance) warn.push(["alert", `Баланс аз — ${D.balance} с, толуктаңыз`, near(".grid"), "r"]);
-  if (D.photo && (D.photo.need || D.photo.status === "rejected")) warn.push(["camera", "Фотоконтроль: сүрөт тартыңыз", near("#phCard"), "o"]);
-  if (D.lic_until && D.lic_left !== undefined && D.lic_left <= 30) warn.push(["id", D.lic_left < 0 ? "Күбөлүктүн мөөнөтү бүттү" : `Күбөлүктүн мөөнөтүнө ${D.lic_left} күн калды`, box("Документтер") || near("#licUp", ".note"), D.lic_left < 0 ? "r" : "o"]);
-  const all = [...warn.filter(w => w[2]), ...list];
+  if (D.min_balance > 0 && D.balance < D.min_balance) warn.push(["alert", `Баланс аз — ${D.balance} с, толуктаңыз`, "bal", "r"]);
+  if (D.photo && (D.photo.need || D.photo.status === "rejected")) warn.push(["camera", "Фотоконтроль: сүрөт тартыңыз", "photo", "o"]);
+  if (D.lic_until && D.lic_left !== undefined && D.lic_left <= 30) warn.push(["id", D.lic_left < 0 ? "Күбөлүктүн мөөнөтү бүттү" : `Күбөлүктүн мөөнөтүнө ${D.lic_left} күн калды`, "docs", D.lic_left < 0 ? "r" : "o"]);
   const ul = document.createElement("div"); ul.className = "cclist"; ul.id = "cList";
-  ul.innerHTML = all.map((x, i) => `<button data-cc="${i}" class="${x[3] ? "w " + x[3] : ""}">${yi(x[0], "s")}<span>${x[1]}</span><i>›</i></button>`).join("");
+  const has = k => list.some(x => x[2] === k);
+  ul.innerHTML = warn.filter(w => has(w[2])).map(w => `<button data-cw="${w[2]}" class="w ${w[3]}">${yi(w[0], "s")}<span>${w[1]}</span><i>›</i></button>`).join("")
+    + list.map(x => `<button data-cc="${x[2]}">${yi(x[0], "s")}<span>${x[1]}</span><i>›</i></button><div class="ccbody" data-cb="${x[2]}"></div>`).join("");
   h2.after(ul);
-  const up = document.createElement("button"); up.className = "ccup hide"; up.innerHTML = "↑ Тизме"; V.appendChild(up);
-  const go = el => sc.scrollTo({top:sc.scrollTop + el.getBoundingClientRect().top - sc.getBoundingClientRect().top - 12, behavior:"smooth"});
-  ul.querySelectorAll("[data-cc]").forEach(b => b.onclick = () => { const x = all[+b.dataset.cc]; x[2].classList.remove("ccFlash"); void x[2].offsetWidth; x[2].classList.add("ccFlash"); go(x[2]); });
-  up.onclick = () => sc.scrollTo({top:0, behavior:"smooth"});
-  const spy = () => { if (!document.body.contains(ul)) return sc.removeEventListener("scroll", spy);
-    up.classList.toggle("hide", ul.getBoundingClientRect().bottom > sc.getBoundingClientRect().top + 20); };
-  sc.addEventListener("scroll", spy, {passive:true}); spy();
+  list.forEach(x => { const b = ul.querySelector(`[data-cb="${x[2]}"]`); x[3].forEach(e => b.appendChild(e)); });   // бөлүмдөр чиптин астына көчөт
+  const toggle = (k, force) => {
+    const btn = ul.querySelector(`[data-cc="${k}"]`); if (!btn) return;
+    const y0 = btn.getBoundingClientRect().top, open = force ?? !btn.classList.contains("open");
+    ul.querySelectorAll("[data-cc]").forEach(b => { const on = open && b === btn; b.classList.toggle("open", on); ul.querySelector(`[data-cb="${b.dataset.cc}"]`).classList.toggle("open", on); });
+    CC_OPEN = open ? k : "";
+    sc.scrollTop += btn.getBoundingClientRect().top - y0;          // басылган чип ордунан жылбасын
+  };
+  ul.querySelectorAll("[data-cc]").forEach(b => b.onclick = () => toggle(b.dataset.cc));
+  ul.querySelectorAll("[data-cw]").forEach(b => b.onclick = () => toggle(b.dataset.cw, true));
+  if (CC_OPEN && has(CC_OPEN)) toggle(CC_OPEN, true);
 }
 async function viewHistory() {
   const h = await api("/api/d/history");
