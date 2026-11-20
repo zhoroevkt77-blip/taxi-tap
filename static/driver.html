@@ -121,6 +121,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="/static/area.js?v=7"></script>
+<script src="/static/voice.js?v=1"></script>
 <script src="/static/qr.js"></script>
 <script src="/static/qrshare.js"></script>
 <script>
@@ -145,7 +146,7 @@ function startGps() {
   if (!navigator.geolocation || watch !== null) return;
   watch = navigator.geolocation.watchPosition(p => {
     myPos = [p.coords.latitude, p.coords.longitude]; myHead = p.coords.heading; mySpeed = p.coords.speed;
-    drawMe();
+    drawMe(); nearCheck();
   }, () => {}, {enableHighAccuracy:true, maximumAge:3000, timeout:15000});
   clearInterval(pingT);
   pingT = setInterval(() => { if (myPos && D && D.online) api("/api/d/location", {p:myPos}); }, 5000);
@@ -188,7 +189,7 @@ document.addEventListener("visibilitychange", () => { if (document.visibilitySta
 let actx = null;
 function beep() {
   try {
-    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    actx = vctx();
     [0, 0.25, 0.5].forEach(t => {
       const o = actx.createOscillator(), g = actx.createGain();
       o.frequency.value = 880; o.connect(g); g.connect(actx.destination);
@@ -367,6 +368,8 @@ async function hotCard() {
   if (Date.now() - HOT.at > 60000) { HOT.at = Date.now(); try { HOT.v = (await api("/api/d/hot")).hot; } catch (e) { HOT.v = null; } }
   const el = $("#hot"), h = HOT.v; if (!el) return;
   if (!h) { el.innerHTML = ""; return; }
+  const hk = h.lat + "," + h.lon;
+  if (VE.hot !== hk && Date.now() - VE.hotAt > 20 * 60000 && D && D.online && !D.ride && !D.offer) { VE.hot = hk; VE.hotAt = Date.now(); speak(["d_hot"]); }
   el.innerHTML = `<button class="hotc">${yi("flame")}<span><b>${h.name ? esc(h.name) + " тарапта" : "Жакын жерде"} заказ көп</b>
     <small>Сизден ${h.km} км · акыркы 30 мүнөттө ${h.n} заказ</small></span><em>›</em></button>`;
   el.firstChild.onclick = () => openNav([h.lat, h.lon]);
@@ -640,6 +643,7 @@ function done(r) {
   layer.clearLayers(); chatOpen = false; seen = 0;
   lastView = D.ride ? "ride" + D.ride.id + D.ride.status + (D.next ? D.next.id : "") : D.online ? "on" : "off";
   const pay = r.price ? r.price - Math.round(r.discount || 0) : 0;
+  speak(["d_done", ...(pay > 0 ? [...kyNum(pay), "som"] : [])]);
   render(`<h2 style="text-align:center">Сапар бүттү</h2><p class="oprice" style="text-align:center;margin:0">${pay ? pay + " сом" : "Тариф боюнча"}</p>
     <p class="muted" style="text-align:center">Жүргүнчүдөн акчаны алыңыз${r.discount ? ` · +${Math.round(r.discount)} с промокод балансыңызга кошулду` : ""}${r.wait && r.wait.fee ? ` · күтүү +${r.wait.fee} с баада бар` : ""}</p>
     <p class="muted" style="text-align:center;margin-bottom:0">Жүргүнчүнү баалаңыз</p><div class="stars" id="stars">${[1,2,3,4,5].map(n => `<span data-n="${n}">★</span>`).join("")}</div>
@@ -664,7 +668,7 @@ function unread() {
   const n = D.ride ? (D.ride.msgs || []).filter(m => !m.me).length : 0, el = $("#chatN");
   if (chatOpen) { seen = n; return drawMsgs(); }
   if (el) { el.textContent = n - seen > 0 ? n - seen : ""; el.classList.toggle("hide", n - seen <= 0); }
-  if (n > seen && D.ride && unread.last !== n) { unread.last = n; if (n > 0 && unread.ready) beep(); }
+  if (n > seen && D.ride && unread.last !== n) { unread.last = n; if (n > 0 && unread.ready) { beep(); speak(["d_msg"], 750); } }
   unread.ready = true;
 }
 function drawMsgs() {
@@ -699,7 +703,7 @@ function showOffer() {
   lastOffer = o.id; beep(); OFF_END = Date.now() + o.left * 1000; OFF_TOT = o.total;
   clearInterval(RING); RING = setInterval(() => {         // жооп бергенче ар 3 секундда үн + титирөө
     if (!D || !D.offer || lastOffer !== D.offer.id || Date.now() > OFF_END) { clearInterval(RING); RING = null; return; } beep(); }, 3000);
-  speak([o.cls === "delivery" ? "new_delivery" : "new_order", ...(o.price ? [...kyNum(o.price), "som"] : []), ...kyKm(o.to_pickup_km)], 750);
+  speak([o.chained ? "next_order" : o.cls === "delivery" ? "new_delivery" : "new_order", ...(o.price ? [...kyNum(o.price), "som"] : []), ...kyKm(o.to_pickup_km)], 750);
   box.classList.remove("hide");
   $("#ocard").innerHTML = `<div style="display:flex;align-items:center;gap:14px">
       <div style="flex:1"><div class="muted">${clsTag(o.cls)}${o.chained ? "🔁 Кийинки заказ · азыркы сапардан кийин" : "Жаңы заказ"}</div>
@@ -742,7 +746,7 @@ async function goOnline(btn) {
   const r = await api("/api/d/online", {on:true, p});
   if (r.error === "lic_expired") { if (btn) btn.disabled = false; alert("Айдоочулук күбөлүгүңүздүн мөөнөтү бүттү. Жаңы күбөлүктү жүктөңүз."); return viewLicense(); }
   if (r.error) { if (btn) btn.disabled = false; return; }
-  D = r;
+  D = r; speak(["d_online"], 750);
   startGps(); wake(true); lastView = ""; show();
   if (D.photo && D.photo.need && D.photo.status !== "pending") setTimeout(() => toast("📷 Фотоконтроль: убакыт тапканда унааңыздын 4 тарабын тартып жибериңиз (Кабинет)", 4500), 1200);
   if (window.SHEET && !D.ride) setTimeout(() => SHEET.collapse(), 400);   // карта толук көрүнсүн
@@ -756,7 +760,7 @@ async function goOffline() {
   if (busy()) return busyBox("⚠️ Сиз заказ аткарып жатасыз", "Сапар бүткөндөн кийин линиядан чыга аласыз." + (D.next ? " <b>Кийинки заказ да бар.</b>" : ""));
   const r = await api("/api/d/online", {on:false});
   if (r.error === "busy") return refresh();
-  D = r; wake(false); lastView = ""; show(); window.SHEET && SHEET.expand();
+  D = r; speak(["d_offline"]); wake(false); lastView = ""; show(); window.SHEET && SHEET.expand();
 }
 $("#cabBtn").onclick = () => { if (!D || D.status !== "active") return; window.SHEET && SHEET.expand(); D.ride ? null : viewCabinet(); };
 $("#toRider").onclick = e => { if (busy()) { e.preventDefault(); busyBox("Азыр болбойт", "Сапар бүткөнчө жүргүнчү режимине өтүүгө болбойт."); } };
@@ -771,61 +775,7 @@ $("#stBadge").onclick = () => {
 };
 
 // ---------- Үн менен айтуу (жаңы заказ) ----------
-const voiceOn = () => { try { return localStorage.getItem("voice") !== "off"; } catch (e) { return true; } };
-const vmode = () => { try { return localStorage.getItem("vmode") || "ky"; } catch (e) { return "ky"; } };
-function tts(text, done) {
-  if (!text || !("speechSynthesis" in window)) return done && done();
-  try {
-    const u = new SpeechSynthesisUtterance(text);
-    const v = speechSynthesis.getVoices().find(x => /^ky/i.test(x.lang)) || speechSynthesis.getVoices().find(x => /^ru/i.test(x.lang));
-    if (v) u.voice = v; u.lang = v ? v.lang : "ru-RU"; u.rate = 1.0;
-    if (done) { let f = false; u.onend = u.onerror = () => { if (!f) { f = true; done(); } }; }
-    speechSynthesis.speak(u);
-  } catch (e) { done && done(); }
-}
-// Кыргызча үн: админ жазган клиптер (/voice/<key>.wav) улам-улам ойнойт; жок сөздү телефондун үнү окуйт.
-let VOICE = null, VBUF = {}, VGEN = 0, VSRC = null;
-const VLBL = {new_order:"Жаңы заказ", new_delivery:"Жеткирүү заказы", som:"сом", km:"километр", point:"бүтүн", goal:"Күндүк максат аткарылды",
-  voice_on:"Үн күйгүзүлдү", n0:"нөл", n1:"бир", n2:"эки", n3:"үч", n4:"төрт", n5:"беш", n6:"алты", n7:"жети", n8:"сегиз", n9:"тогуз",
-  n10:"он", n20:"жыйырма", n30:"отуз", n40:"кырк", n50:"элүү", n60:"алтымыш", n70:"жетимиш", n80:"сексен", n90:"токсон", n100:"жүз", n1000:"миң"};
-function kyNum(n) {                       // 0..999999 → клиптердин ачкычтары (мис. 250 → эки жүз элүү)
-  n = Math.max(0, Math.floor(+n || 0)); if (!n) return ["n0"]; const o = [];
-  if (n >= 1000) { const t = Math.floor(n / 1000); if (t > 1) o.push(...kyNum(t)); o.push("n1000"); n %= 1000; }
-  if (n >= 100) { const h = Math.floor(n / 100); if (h > 1) o.push("n" + h); o.push("n100"); n %= 100; }
-  if (n >= 10) { o.push("n" + Math.floor(n / 10) * 10); n %= 10; }
-  if (n) o.push("n" + n);
-  return o;
-}
-function kyKm(x) { const v = Math.round((+x || 0) * 10) / 10, i = Math.floor(v), d = Math.round((v - i) * 10);
-  return [...kyNum(i), ...(d ? ["point", "n" + d] : []), "km"]; }
-async function voiceLoad() {
-  try {
-    const v = await api("/api/voice"); if (!v || !v.have) return; VOICE = v;
-    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
-    for (const k of v.have) {
-      if (VBUF[k] && VBUF[k].ver === v.ver) continue;
-      const r = await fetch(`/voice/${k}.wav?v=${v.ver}`); if (!r.ok) continue;
-      const ab = await r.arrayBuffer();
-      const b = await new Promise((ok, no) => actx.decodeAudioData(ab, ok, no));
-      VBUF[k] = {ver:v.ver, b};
-    }
-    Object.keys(VBUF).forEach(k => { if (!v.have.includes(k)) delete VBUF[k]; });
-  } catch (e) {}
-}
-function speak(toks, wait) {
-  VGEN++; try { VSRC && VSRC.stop(); } catch (e) {} try { "speechSynthesis" in window && speechSynthesis.cancel(); } catch (e) {}
-  if (!toks || !toks.length || !voiceOn() || vmode() === "off") return;
-  if (vmode() !== "ky" || !toks.some(k => VBUF[k])) return tts(toks.map(k => VLBL[k] || "").join(" "));
-  const g = VGEN; let i = 0;
-  const next = () => {
-    if (g !== VGEN || i >= toks.length) return; const k = toks[i++];
-    if (!VBUF[k]) return tts(VLBL[k] || "", next);
-    try { actx.resume && actx.resume(); const src = actx.createBufferSource(); src.buffer = VBUF[k].b; src.connect(actx.destination);
-      src.onended = () => setTimeout(next, 30); VSRC = src; src.start(); } catch (e) { next(); }
-  };
-  setTimeout(next, wait || 0);
-}
-const say = () => speak([]);
+// Үн: /static/voice.js (speak, kyNum, kyKm, voiceOn, vmode)
 
 // ---------- Навигатор: Яндекс / 2ГИС / Google ----------
 const NAVS = {
@@ -1142,8 +1092,27 @@ function show() {
 async function refresh() {
   const s = await api("/api/d/state?vis=" + (document.visibilityState === "visible" ? 1 : 0));
   if (s.error === "auth") { clearInterval(poll); return viewLogin(false); }
-  D = s;
+  const prev = D; D = s; voiceEvents(prev, s);
   show();
+}
+// ---------- Үн менен эскертүүлөр (абал өзгөргөндө) ----------
+const VE = {near:0, wait:0, low:null, hot:"", hotAt:0};
+function kmTo(a, b) { const R = 6371, r = Math.PI / 180, dLa = (b[0] - a[0]) * r, dLo = (b[1] - a[1]) * r;
+  const h = Math.sin(dLa / 2) ** 2 + Math.cos(a[0] * r) * Math.cos(b[0] * r) * Math.sin(dLo / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); }
+function nearCheck() {
+  const r = D && D.ride; if (!r || r.status !== "accepted" || !myPos || !r.p || VE.near === r.id) return;
+  if (kmTo(myPos, r.p) < 0.15) { VE.near = r.id; speak(["d_near"]); }
+}
+function voiceEvents(p, s) {
+  if (!p || !s || s.error) return;
+  const pr = p.ride, sr = s.ride;
+  if (pr && ["accepted", "arrived"].includes(pr.status) && (!sr || sr.id !== pr.id)) { beep(); speak(["d_cancel"], 750); }
+  else if (p.offer && !s.offer && !(sr && sr.id === p.offer.id) && !(s.next && s.next.id === p.offer.id)) speak(["d_missed"]);
+  if (sr && sr.status === "arrived" && sr.wait && sr.wait.arrived_at && sr.wait.now - sr.wait.arrived_at >= 300 && VE.wait !== sr.id) { VE.wait = sr.id; speak(["d_wait5"]); }
+  const low = s.min_balance > 0 && s.balance < s.min_balance;
+  if (VE.low === false && low && !sr) speak(["d_lowbal"]);
+  VE.low = low;
+  nearCheck();
 }
 
 async function boot() {
@@ -1154,7 +1123,6 @@ async function boot() {
   if (D.online || D.ride) { startGps(); wake(true); }
   else getPos().then(drawMe);
   clearInterval(poll); poll = setInterval(refresh, 2000);
-  voiceLoad(); setInterval(voiceLoad, 10 * 60 * 1000);
 }
 boot();
 </script>

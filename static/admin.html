@@ -72,6 +72,7 @@ td input.f{padding:7px 8px;max-width:90px;min-width:58px}
 .blegend{position:absolute;right:8px;top:8px;z-index:500;background:#fff;border-radius:10px;padding:6px 9px;font-size:11.5px;line-height:1.75;box-shadow:0 2px 10px rgba(0,0,0,.15)}
 .blegend i{display:inline-block;width:18px;vertical-align:middle;margin-right:6px}
 .bh{display:flex;align-items:center;gap:8px;font-size:13px;padding:3px 0}.bh .btn{margin-left:auto;padding:4px 9px;font-size:12px}
+.vsec{font-size:12px;font-weight:600;color:#8a8a94;letter-spacing:.06em;margin:16px 4px 2px;text-transform:uppercase}
 .vbar{height:8px;background:#eee;border-radius:9px;margin-top:8px;width:100%}.vbar i{display:block;height:8px;border-radius:9px;background:#ffb703}
 .vrow{flex-wrap:nowrap!important;align-items:center}.vrow .main{flex:1;min-width:0}.vrow .btn{flex:0 0 auto;min-width:46px;width:auto}.vrec{background:#fff8e1;border-radius:18px;padding:18px;margin:10px 0;text-align:center}
 .vword{font-size:26px;font-weight:600;margin:6px 0 14px}.vmic{width:110px;height:110px;border-radius:50%;border:0;background:#e5383b;color:#fff;font-size:44px;cursor:pointer;box-shadow:0 0 0 12px rgba(229,56,59,.12)}
@@ -971,6 +972,7 @@ async function fixedPanel() {
 }
 // ---------- 🎙 Кыргызча үн: айдоочуга заказды айтуучу сөздөрдү админ өзү жазат ----------
 let VQ = [], VR = null, VBLOB = null, VWAV = null;
+const vGrp = k => /^r_/.test(k) ? "🧳 Жүргүнчүгө" : /^n\d/.test(k) ? "🔢 Сандар" : "🚕 Айдоочуга";
 async function viewVoice() {
   const V = await api("/api/voice"), n = V.keys.filter(k => k.have).length;
   $("#main").innerHTML = `<div class="panel"><h3>🎙 Кыргызча үн — айдоочуга жаңы заказды ушул үн айтат</h3>
@@ -980,9 +982,9 @@ async function viewVoice() {
     <div class="item" style="gap:8px">${n < V.keys.length ? `<button class="btn gold" id="vAll">🎙 Жазыла электерди катары менен жазуу</button>` : ""}
       <button class="btn" id="vTest">🔊 Сынап угуу: «Жаңы заказ, 80 сом, 1,2 километр»</button></div>
     <div id="vRec"></div>
-    ${V.keys.map(k => `<div class="item vrow"><div class="main"><b>${esc(k.t)}</b><span class="muted">${k.have ? "✓ жазылган" : "жазыла элек"}</span></div>
+    ${V.keys.map((k, i) => { const g = vGrp(k.k), h = i === 0 || vGrp(V.keys[i - 1].k) !== g ? `<div class="vsec">${g}</div>` : ""; return h + `<div class="item vrow"><div class="main"><b>${esc(k.t)}</b><span class="muted">${k.have ? "✓ жазылган" : "жазыла элек"}</span></div>
       ${k.have ? `<button class="btn" data-vp="${k.k}" title="Угуу">▶</button>` : ""}<button class="btn ${k.have ? "" : "gold"}" data-vr="${k.k}" title="Жазуу">🎙</button>
-      ${k.have ? `<button class="btn" data-vd="${k.k}" title="Өчүрүү">🗑</button>` : ""}</div>`).join("")}</div>`;
+      ${k.have ? `<button class="btn" data-vd="${k.k}" title="Өчүрүү">🗑</button>` : ""}</div>`; }).join("")}</div>`;
   const T = {}; V.keys.forEach(k => T[k.k] = k.t);
   $("#vAll") && ($("#vAll").onclick = () => { VQ = V.keys.filter(k => !k.have).map(k => k.k); vRec(VQ.shift(), T); });
   $("#vTest").onclick = () => vPlay(["new_order", "n80", "som", "n1", "point", "n2", "km"], V, T);

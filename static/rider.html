@@ -126,6 +126,7 @@ input.f:focus{border-color:var(--navy)}
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="/static/area.js?v=7"></script>
+<script src="/static/voice.js?v=1"></script>
 <script>
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -686,11 +687,22 @@ function poll() {
     const r = await api("/api/ride");
     if (!r.ride) return;
     const changed = !S.ride || r.ride.status !== S.ride.status || !!r.ride.chained !== !!S.ride.chained;
+    riderVoice(S.ride, r.ride);
     S.ride = r.ride; updateDriver();
     const live = ["accepted", "arrived", "in_trip"].includes(r.ride.status);
     if (changed && window.SHEET) SHEET.expand();
     if (changed && (S.mode !== "chat" || !live)) viewRide(); else tickRide();
   }, 2000);
+}
+// Үн: айдоочу табылды / келди / сапар башталды / айдоочудан билдирүү (/static/voice.js)
+function riderVoice(a, b) {
+  if (!a || !b || a.id !== b.id) return;
+  if (a.status !== b.status) {
+    const k = {accepted:"r_found", arrived:"r_arrived", in_trip:"r_go"}[b.status];
+    if (k && !(b.status === "accepted" && a.status !== "searching")) speak([k]);
+  }
+  const n = x => (x.msgs || []).filter(m => !m.me).length;
+  if (n(b) > n(a) && S.mode !== "chat") speak(["r_msg"]);
 }
 function updateDriver() {
   const d = S.ride && S.ride.driver;
@@ -997,9 +1009,12 @@ async function viewCabinet() {
   $("#qS").onclick = () => { more(`<div class="lnks"><h3 style="margin:4px 0 4px">⚙️ Жөндөөлөр</h3>
       <div class="row" style="justify-content:space-between"><div><b>Telegram билдирүүлөрү</b><div class="muted">${me.tg ? "Айдоочу табылганда, келгенде кабар берет" : "Telegram туташкан эмес"}</div></div>
       ${me.tg ? `<input type="checkbox" id="nt" ${me.notify ? "checked" : ""} style="width:24px;height:24px">` : ""}</div>
+      <div class="row" style="justify-content:space-between"><div><b>🔊 Үн менен айтуу</b><div class="muted">«Айдоочу табылды», «Айдоочу келди, чыгыңыз»…</div></div>
+      <input type="checkbox" id="vcR" ${voiceOn() ? "checked" : ""} style="width:24px;height:24px"></div>
       ${window.NIGHT ? NIGHT.html() : ""}
       ${linksHTML(me.bot)}</div>`);
-    bindLinks(); window.NIGHT && NIGHT.bind($("#cabMore")); const nt = $("#nt"); if (nt) nt.onchange = () => api("/api/notify", {on:nt.checked}); };
+    bindLinks(); window.NIGHT && NIGHT.bind($("#cabMore")); const nt = $("#nt"); if (nt) nt.onchange = () => api("/api/notify", {on:nt.checked});
+    $("#vcR").onchange = e => { try { localStorage.setItem("voice", e.target.checked ? "on" : "off"); } catch (x) {} if (e.target.checked) speak(["voice_on"]); }; };
   $("#qH").onclick = async () => {
     more(`<div class="lnks"><h3 style="margin:4px 0 4px">🕘 Сапарларым</h3><div id="hist"><p class="muted">Жүктөлүүдө…</p></div></div>`);
     const H = await api("/api/history");
