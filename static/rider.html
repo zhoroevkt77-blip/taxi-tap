@@ -370,7 +370,8 @@ function viewStepA() {
     <button class="st-big y" id="aHere"><span class="i">📍</span><span class="tx">Азыр турган жеримден (GPS)<small id="fromTxt">${esc(S.fromAddr || "Аныкталууда…")}</small></span><em>›</em></button>
     <button class="st-big" id="aMap"><span class="i">🗺</span><span class="tx">Картадан белгилейм<small>Пинди так жериңизге коёсуз</small></span><em>›</em></button>
     <button class="st-big" id="aType"><span class="i">✍️</span><span class="tx">Жазып табам<small>Көчө, дүкөн, мекеме…</small></span><em>›</em></button>
-    <p class="gpsinfo" id="gpsInfo"></p>`;
+    <p class="gpsinfo" id="gpsInfo"></p><button class="btn bk" id="sBk">‹ Артка</button>`;
+  $("#sBk").onclick = viewIdle;
   gpsPaint(); if (S.gps.state !== "ok") locate(false);
   $("#sBack").onclick = viewIdle;
   $("#aHere").onclick = () => {
@@ -398,8 +399,8 @@ function viewStepB() {
     <button class="st-big" id="bMap"><span class="i">🗺</span><span class="tx">Картадан белгилейм<small>Пинди барчу жериңизге коёсуз</small></span><em>›</em></button>
     <button class="st-big" id="bType"><span class="i">✍️</span><span class="tx">Жазып табам<small>Көчө, дүкөн, мекеме…</small></span><em>›</em></button>
     ${sec("", L1)}${sec("АКЫРКЫ САПАРЛАР", L2)}${sec("КӨП БАРЫШАТ", L3)}
-    ${all.length ? "" : `<p class="st-sub" style="margin-top:14px">Даректи жазып табыңыз же картадан белгилеңиз.</p>`}`;
-  $("#sBack").onclick = viewStepA;
+    ${all.length ? "" : `<p class="st-sub" style="margin-top:14px">Даректи жазып табыңыз же картадан белгилеңиз.</p>`}<button class="btn bk" id="sBk">‹ Артка</button>`;
+  $("#sBack").onclick = $("#sBk").onclick = viewStepA;
   $("#bType").onclick = () => viewSearch("to");
   $("#bMap").onclick = () => viewPickDest();
   $("#home").querySelectorAll(".st-it").forEach(b => b.onclick = () => { const r = all[+b.dataset.i];
