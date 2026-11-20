@@ -2,7 +2,7 @@
 import os, subprocess, sys, time, tempfile, json
 TMP = tempfile.mkdtemp()
 os.environ.update(SQLITE_PATH=os.path.join(TMP, "s.db"), DATA_DIR=TMP, DATABASE_URL="", SERVICE_AREA="on",
-                  WEB_DEV_LOGIN="1", PORT="8808", OSRM_URL="", ADMIN_PHONES="0700900900")
+                  WEB_DEV_LOGIN="1", PORT="8809", OSRM_URL="", ADMIN_PHONES="0700900900")
 sys.path.insert(0, "/home/claude/taxi-tap")
 import core
 from playwright.sync_api import sync_playwright
@@ -63,8 +63,8 @@ try:
         cx = b.new_context(viewport={"width": 390, "height": 844}, device_scale_factor=2, is_mobile=True, has_touch=True, permissions=["microphone"])
         k = cx.new_page()
         k.route("**/*", route); k.on("pageerror", lambda e: print("JS:", e)); k.on("dialog", lambda d: d.accept())
-        k.goto("http://127.0.0.1:8808/"); k.fill("#nm", "Кайрат"); k.fill("#ph", "0700 900 900"); k.check("#agree"); k.click("#go"); k.wait_for_timeout(1500)
-        k.goto("http://127.0.0.1:8808/admin"); k.wait_for_timeout(1500); k.click("nav [data-t=voice]"); k.wait_for_timeout(800)
+        k.goto("http://127.0.0.1:8809/"); k.fill("#nm", "Кайрат"); k.fill("#ph", "0700 900 900"); k.check("#agree"); k.click("#go"); k.wait_for_timeout(1500)
+        k.goto("http://127.0.0.1:8809/admin"); k.wait_for_timeout(1500); k.click("nav [data-t=voice]"); k.wait_for_timeout(800)
         frame(k, "Админ → 🎙 Үн", "28 сөз, 0 жазылды", None)
         k.click("#vAll"); k.wait_for_timeout(500)
         def rec():
@@ -87,10 +87,10 @@ try:
         print(k.evaluate("fetch('/api/voice').then(r=>r.json()).then(v=>v.have)"))
         # айдоочу
         d = cx.new_page(); d.route("**/*", route); d.on("pageerror", lambda e: print("DJS:", e))
-        d.goto("http://127.0.0.1:8808/driver"); d.wait_for_timeout(1500); d.evaluate("voiceLoad()"); d.wait_for_timeout(1500)
+        d.goto("http://127.0.0.1:8809/driver"); d.wait_for_timeout(1500); d.evaluate("voiceLoad()"); d.wait_for_timeout(1500)
         print("vbuf:", d.evaluate("Object.keys(VBUF)"))
         d.evaluate("render(`<h2>Кабинет → Үн</h2><div class='sw'><div style='flex:1'><b>Заказды үн менен айтуу</b><div class='muted'>Кимдин үнү менен айтылсын?</div></div></div><div class='vpick' id='vPick'>${vpickHTML()}</div>`);vpickBind();window.SHEET&&SHEET.expand&&SHEET.expand()"); d.wait_for_timeout(600)
-        frame(d, "Айдоочу: Кабинет", "4 үн + телефондун үнү, жазылбаганы күңүрт", None)
+        d.evaluate("document.documentElement.classList.remove('uidark')"); frame(d, "Айдоочу: Кабинет", "4 үн + телефондун үнү, жазылбаганы күңүрт", None)
         d.click("[data-vs='3']"); d.wait_for_timeout(1500)
         print("set:", d.evaluate("[vset(), VOICE.set, Object.keys(VBUF)]"))
         frame(d, "«Аял 1» тандалды", "Ошол замат «Жаңы заказ, 80 сом…» угулат", None)
@@ -108,7 +108,7 @@ try:
           VE.low=false;voiceEvents(base,{min_balance:50,balance:10});
           D={ride:{id:11,status:'accepted',p:[41,72.9]}};myPos=[41.0005,72.9005];nearCheck();})()""")
         print("driver events:", d.evaluate("SP"))
-        rp = cx.new_page(); rp.route("**/*", route); rp.goto("http://127.0.0.1:8808/"); rp.wait_for_timeout(1500)
+        rp = cx.new_page(); rp.route("**/*", route); rp.goto("http://127.0.0.1:8809/"); rp.wait_for_timeout(1500)
         rp.evaluate("""window.SP=[];window.speak=(t)=>SP.push(t.join('+'));S.mode='ride';
           riderVoice({id:1,status:'searching'},{id:1,status:'accepted'});riderVoice({id:1,status:'accepted'},{id:1,status:'arrived'});
           riderVoice({id:1,status:'arrived'},{id:1,status:'in_trip',msgs:[{me:false,text:'x'}]});0""")
