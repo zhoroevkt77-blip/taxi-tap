@@ -22,6 +22,31 @@ function inArea(lat, lon) {
   const a = window.AREA;
   return !a || !a.on || areaRings(a.geojson).some(r => areaPip(lat, lon, r));
 }
+// Аймактан сырткарысын күңүрттөтүү (canvas): ар бир район/шаар «тешик» болуп кесилет, кесилиштер (мис. Сузактын ичиндеги Манас) жарык калат
+function areaMask(gj) {
+  const polys = gj.type === "Polygon" ? [gj.coordinates] : gj.coordinates;
+  const Mask = L.Layer.extend({
+    onAdd(m) {
+      this._m = m; this._c = L.DomUtil.create("canvas", "leaflet-zoom-hide");
+      this._c.style.pointerEvents = "none"; m.getPane("overlayPane").appendChild(this._c);
+      m.on("move moveend zoomend resize viewreset", this._draw, this); this._draw();
+    },
+    onRemove(m) { m.off("move moveend zoomend resize viewreset", this._draw, this); this._c.remove(); },
+    _draw() {
+      const m = this._m, c = this._c, sz = m.getSize(), r = window.devicePixelRatio || 1;
+      L.DomUtil.setPosition(c, m.containerPointToLayerPoint([0, 0]));
+      c.width = sz.x * r; c.height = sz.y * r; c.style.width = sz.x + "px"; c.style.height = sz.y + "px";
+      const x = c.getContext("2d"); x.setTransform(r, 0, 0, r, 0, 0);
+      x.fillStyle = "rgba(21,39,65,.3)"; x.fillRect(0, 0, sz.x, sz.y);
+      x.globalCompositeOperation = "destination-out"; x.fillStyle = "#000";
+      polys.forEach(p => { x.beginPath();
+        p.forEach(ring => ring.forEach(([lon, lat], i) => { const q = m.latLngToContainerPoint([lat, lon]); i ? x.lineTo(q.x, q.y) : x.moveTo(q.x, q.y); }));
+        x.fill("evenodd"); });
+      x.globalCompositeOperation = "source-over";
+    }
+  });
+  return new Mask();
+}
 async function setupArea(map, opts = {}) {
   try {
     const a = await (await fetch("/api/area")).json();
@@ -32,9 +57,10 @@ async function setupArea(map, opts = {}) {
     map.options.maxBoundsViscosity = 0.9;
     map.setMinZoom(opts.minZoom || 10);
     const holes = areaRings(a.geojson).map(r => r.map(([lon, lat]) => [lat, lon]));
-    L.polygon([[[89, -179], [89, 179], [-89, 179], [-89, -179]], ...holes],
+    if (L.Layer && L.Layer.extend && map.latLngToContainerPoint) areaMask(a.geojson).addTo(map);
+    else L.polygon([[[89, -179], [89, 179], [-89, 179], [-89, -179]], ...holes],
       {stroke: false, fillColor: "#152741", fillOpacity: 0.3, interactive: false}).addTo(map);
-    holes.forEach(h => L.polyline(h.concat([h[0]]), {color: "#17365C", weight: 2, dashArray: "6 6", interactive: false}).addTo(map));
+    holes.forEach(h => L.polyline(h.concat([h[0]]), {color: "#17365C", weight: 2, dashArray: "6 6", opacity: .55, interactive: false}).addTo(map));
     if (opts.center !== false) map.setView(a.center, opts.zoom || 14);
     return a;
   } catch (err) { return null; }
