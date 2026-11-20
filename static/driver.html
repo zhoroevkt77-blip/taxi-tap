@@ -987,6 +987,10 @@ function carForm() {
   $("#rpN").addEventListener("input", () => { const e = $("#rpN"); e.value = e.value.replace(/\D/g, ""); if (e.value.length === 3) $("#rpL").focus(); });
   prev();
 }
+// Парктын «айдоочу чакыруу» шилтемеси: /driver?park=КОД — код каттоо формасына өзү түшөт
+const parkJoin = () => { try { const c = new URLSearchParams(location.search).get("park"); if (c) localStorage.setItem("parkJoin", c.toUpperCase().slice(0, 20));
+  return localStorage.getItem("parkJoin") || ""; } catch (e) { return ""; } };
+parkJoin();
 function viewRegister() {
   $("#earn").classList.add("hide");
   const again = D.status === "rejected" || D.status === "pending";
@@ -1014,14 +1018,23 @@ function viewRegister() {
     </div>
     <label class="l">Күбөлүктүн мөөнөтү (качанга чейин жарактуу)</label>
     <input class="f" id="rl" type="date" value="${esc(D.lic_until || "")}">
-    <p class="muted">Документтерди админ гана көрөт.</p>
+    <label class="l">Таксопарктын коду (милдеттүү эмес)</label>
+    <input class="f" id="rpk" placeholder="Мис. DRV2" autocapitalize="characters" maxlength="20" value="${esc(parkJoin())}">
+    <p class="muted" id="rpkN" style="margin:-4px 0 8px"></p>
+    <p class="muted">Документтерди админ${D.park || parkJoin() ? " жана таксопаркыңыз" : ""} гана көрөт.</p>
     <div class="err" id="er"></div><button class="btn main" id="send">Арызды жөнөтүү</button>
     `);
   docInput($("#dl"), docs, "license"); docInput($("#dt"), docs, "techpass"); docInput($("#dc"), docs, "car"); docInput($("#ds"), docs, "selfie");
   carForm();
+  const pkCheck = async () => { const c = $("#rpk").value.trim(), el = $("#rpkN"); if (!c) { el.innerHTML = ""; return true; }
+    const x = await api("/api/park_name?code=" + encodeURIComponent(c));
+    el.innerHTML = x.name ? `<span style="color:var(--ok)">✓ «${esc(x.name)}»</span>${x.self ? " — арызыңызды ушул парк текшерип, тастыктайт" : " — арызыңызды админ текшерет"}`
+      : `<span style="color:var(--bad)">Мындай коду бар таксопарк жок</span>`; return !!x.name; };
+  $("#rpk").onchange = pkCheck; if ($("#rpk").value) pkCheck();
   $("#send").onclick = async () => {
     const plate = plateVal();
-    const body = {name:$("#rn").value, model:$("#rm").value, color:$("#rc").value, plate, lic_until:$("#rl").value, ...docs};
+    const body = {name:$("#rn").value, model:$("#rm").value, color:$("#rc").value, plate, lic_until:$("#rl").value, park:$("#rpk").value.trim(), ...docs};
+    if (body.park && !(await pkCheck())) return $("#er").textContent = "Таксопарктын кодун текшериңиз же бош калтырыңыз.";
     if (!body.name.trim() || !body.model.trim() || !body.color.trim()) return $("#er").textContent = "Аты-жөнүңүздү, унаанын түсүн жана маркасын тандаңыз.";
     if (!plate) return $("#er").textContent = "Номерди толук жазыңыз: 3 цифра жана 2–3 латын тамгасы (мис. 338 APG).";
     if (!again && Object.keys(docs).length < 4) return $("#er").textContent = "Төрт сүрөттү тең жүктөңүз (селфи да).";
@@ -1029,7 +1042,7 @@ function viewRegister() {
     $("#send").disabled = true; $("#send").textContent = "Жөнөтүлүүдө…";
     const r = await api("/api/d/register", body);
     if (r.error) { $("#send").disabled = false; $("#send").textContent = "Арызды жөнөтүү";
-      return $("#er").textContent = r.error === "plate" ? "Номер туура эмес. Мисалы: 04 KG 338 APG." : LIC_ERR[r.error] || (r.error.startsWith("doc_") ? "Документтин сүрөтүн жүктөңүз." : "Ката. Талааларды текшериңиз."); }
+      return $("#er").textContent = r.error === "plate" ? "Номер туура эмес. Мисалы: 04 KG 338 APG." : r.error === "park_code" ? "Таксопарктын коду туура эмес." : LIC_ERR[r.error] || (r.error.startsWith("doc_") ? "Документтин сүрөтүн жүктөңүз." : "Ката. Талааларды текшериңиз."); }
     D = r; lastView = ""; show();
   };
 }
@@ -1096,10 +1109,10 @@ function show() {
     lastView = k;
     if (!D.status || D.status === "rejected") return viewRegister();
     if (D.status === "pending") return render(`<h2>Арызыңыз текшерилүүдө</h2>
-      <p class="muted">Админ документтериңизди карап чыгып, ырастайт. Адатта бир нече саат ичинде.${D.tg ? " Жыйынтыгы Telegram'га келет." : ""}</p>
+      <p class="muted">${D.park && D.park_self ? "«" + esc(D.park) + "» таксопаркы" : "Админ"} документтериңизди карап чыгып, ырастайт. Адатта бир нече саат ичинде.${D.tg ? " Жыйынтыгы Telegram'га келет." : ""}</p>
       <div class="note">🚗 ${esc(carText(D.car_color, D.car_model))}, <b>${esc(D.car_plate)}</b></div>
       <button class="btn ghost" id="edit">Арызды оңдоо</button>`) || ($("#edit").onclick = viewRegister);
-    return render(`<h2>Аккаунт бөгөттөлгөн</h2><p class="muted">Админ менен байланышыңыз.</p>`);
+    return render(`<h2>Аккаунт бөгөттөлгөн</h2><p class="muted">${D.blocked_by && D.blocked_by.startsWith("park:") ? "Таксопаркыңыз" + (D.park ? " («" + esc(D.park) + "»)" : "") + " менен" : "Админ менен"} байланышыңыз.</p>`);
   }
   showOffer();
   if (chatOpen && D.ride) return unread();

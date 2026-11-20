@@ -191,7 +191,7 @@ def driver_state(uid, seen=False):
           "goal": int(d.get("goal") or 0) or 1000, "car_year": d.get("car_year"),
           "qr": _driver_qr(uid, d),
           "car_model": d.get("car_model"), "car_color": d.get("car_color"),
-          "car_plate": d.get("car_plate"), "park": parks.park_name_of_driver(uid) if d else None,
+          "car_plate": d.get("car_plate"), "park": parks.park_name_of_driver(uid) if d else None, "park_self": bool((parks.get(d["park_id"]) or {}).get("self_approve")) if d and d.get("park_id") else False, "blocked_by": (d or {}).get("blocked_by") or "",
           "online": bool(d and (core.is_available(d) or d.get("busy_ride"))),
           "balance": int(d.get("balance") or 0), "min_balance": core.min_balance(),
           "tariff": core.finance_mode_text(), "pct_now": core.commission_pct(),
@@ -400,6 +400,10 @@ class H(BaseHTTPRequestHandler):
                 self.send_header("Cache-Control", "public, max-age=86400"); self.end_headers(); self.wfile.write(body); return
             if u.path == "/api/mapcfg":
                 return self._json({"p": maptiles.provider()})
+            if u.path == "/api/park_name":           # каттоодо парктын кодун текшерүү
+                pk = parks.by_code((q.get("code") or [""])[0])
+                return self._json({"name": pk["name"], "self": bool(pk.get("self_approve"))} if pk else {"error": "not_found"},
+                                  200 if pk else 404)
             if u.path == "/api/voice":
                 return self._json(core.voice_state((q.get("set") or ["1"])[0]))
             mv = re.match(r"^/voice/(?:(\d)/)?(\w+)\.wav$", u.path)
@@ -426,6 +430,12 @@ class H(BaseHTTPRequestHandler):
                 if not p:
                     return self._json({"error": "not_park"}, 403)
                 return self._json({"acts": parks.acts(p["id"])})
+            if u.path == "/api/park/file":
+                p = parks.by_owner(uid) or (parks.get(int((q.get("id") or ["0"])[0] or 0)) if core.is_admin(uid) else None)
+                fn = parks.driver_file(p["id"], (q.get("uid") or [""])[0], (q.get("k") or [""])[0]) if p else None
+                if not fn:
+                    return self._json({"error": "not_found"}, 404)
+                return self._file(core.upload_path(fn), private=True)
             if u.path in ("/api/park/drivers", "/api/park/driver", "/api/park/map", "/park/stats.csv"):
                 p = parks.by_owner(uid) or (parks.get(int((q.get("id") or ["0"])[0] or 0)) if core.is_admin(uid) else None)
                 if not p:
@@ -667,6 +677,10 @@ class H(BaseHTTPRequestHandler):
             act = path[10:]
             if act == "add_driver":
                 return self._json({"result": parks.attach_driver(_txt(b.get("phone"), 20), p["id"], by_park=p["id"])})
+            if act == "driver_action":
+                res, outs = parks.driver_action(p["id"], _txt(b.get("uid"), 40), _txt(b.get("action"), 20), _txt(b.get("reason"), 200))
+                deliver(outs)
+                return self._json({"result": res, "apps": parks.applications(p["id"])}, 200 if res == "ok" else 400)
             if act == "remove_driver":
                 return self._json({"result": parks.attach_driver(_txt(b.get("uid"), 40), None, by_park=p["id"])})
             if act == "act":
@@ -742,7 +756,10 @@ class H(BaseHTTPRequestHandler):
             if left < 0:
                 return self._json({"error": "lic_expired"}, 400)
             docs["lic_until"] = lu
-            deliver(flow.register_driver(uid, name, model, color, plate, docs))
+            pk = parks.by_code(_txt(b.get("park"), 20)) if b.get("park") else None
+            if b.get("park") and not pk:
+                return self._json({"error": "park_code"}, 400)
+            deliver(flow.register_driver(uid, name, model, color, plate, docs, park=pk))
             return self._json(driver_state(uid))
         if not d or d["status"] != "active":
             return self._json({"error": "not_active"}, 403)
@@ -929,6 +946,9 @@ class H(BaseHTTPRequestHandler):
                              active=b.get("active", True) is not False,
                              share_months=b.get("share_months", 6), share_after=b.get("share_after", 50))
             return self._json({"id": pid} if pid else {"error": "bad"}, 200 if pid else 400)
+        if action == "park_self_approve":
+            ok = parks.set_self_approve(int(b.get("id") or 0), b.get("on") is True)
+            return self._json({"ok": ok}, 200 if ok else 400)
         if action == "park_driver":
             pid = int(b.get("park_id") or 0) or None
             return self._json({"result": parks.attach_driver(_txt(b.get("phone"), 20), pid)})

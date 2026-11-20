@@ -481,7 +481,7 @@ def driver_detail(pid, uid):
         praise = [{"t": a, "n": b} for a, b in core.driver_praise(uid)["good"][:5]]
     except Exception:
         pass
-    return {"uid": uid, "name": u.get("name") or "", "phone": u.get("phone") or "", "plate": d.get("car_plate") or "",
+    return {"uid": uid, "name": u.get("name") or "", "phone": u.get("phone") or "", "plate": d.get("car_plate") or "", "status": d.get("status"),
             "car": core.car_text(d.get("car_color"), d.get("car_model")), "rating": d.get("rating"),
             "activity": d.get("activity") if d.get("activity") is not None else 100, "days": days,
             "recent": [{"at": r["at"], "from": r["p_addr"] or "", "to": r["d_addr"] or "", "price": round(r["price"] or 0)} for r in rec],
@@ -593,7 +593,8 @@ def state(pid):
             "qr": qr_stats(pid), "area": core.area_label(),
             "stats": stats(pid), "drivers": driver_rows(pid), "payouts": payouts(pid),
             "acts": [dict(a, label=period_label(a["period"])) for a in acts(pid, 12)],
-            "commission_pct": core.commission_pct()}
+            "commission_pct": core.commission_pct(),
+            "self_approve": bool(p.get("self_approve")), "apps": applications(pid)}
 
 
 def admin_list():
@@ -604,6 +605,7 @@ def admin_list():
                     "share_months": p.get("share_months"), "share_after": p.get("share_after"),
                     "share_until": share_until(p), "share_now": share_now(p),
                     "ref_bonus": p["ref_bonus"], "promo": p["promo"], "active": bool(p["active"]),
+                    "self_approve": bool(p.get("self_approve")), "pending": len(applications(p["id"])["pending"]),
                     "drivers": s["drivers_total"], "online": s["drivers_online"],
                     "month": s["periods"]["month"], "balance": s["balance"], "paid": s["paid"],
                     "due": s["due"], "this_week": s["this_week"], "week": week_label()})
@@ -614,3 +616,92 @@ def park_name_of_driver(uid):
     d = core.get_driver(uid) or {}
     p = get(d.get("park_id"))
     return p["name"] if p and p["active"] else None
+
+
+# ==================== Парк өз айдоочуларын тастыктайт ====================
+def set_self_approve(pid, on):
+    if not get(pid):
+        return False
+    core.query("UPDATE parks SET self_approve=? WHERE id=?", (1 if on else 0, pid))
+    return True
+
+
+DOC_KEYS = ("doc_selfie", "doc_license", "doc_techpass", "doc_car")
+
+
+def applications(pid):
+    """Парктын айдоочулары: арыз берген, бөгөттөлгөн жана фотоконтролу текшерүүнү күткөндөр."""
+    out = {"pending": [], "blocked": [], "photos": []}
+    for d in _drivers(pid):
+        u = core.get_user(d["uid"]) or {}
+        row = {"uid": d["uid"], "name": u.get("name") or "", "phone": u.get("phone") or "",
+               "car": core.car_text(d.get("car_color"), d.get("car_model")), "plate": d.get("car_plate") or "",
+               "lic_until": d.get("lic_until") or "", "at": d.get("created_at"),
+               "docs": [k for k in DOC_KEYS if d.get(k)], "blocked_by": d.get("blocked_by") or "",
+               "reject_note": d.get("reject_note") or ""}
+        if d.get("status") == "pending":
+            out["pending"].append(row)
+        elif d.get("status") == "blocked":
+            row["can_unblock"] = (d.get("blocked_by") or "") == "park:%d" % pid
+            out["blocked"].append(row)
+        if d.get("status") == "active" and d.get("photo_status") == "pending" and d.get("photos"):
+            try:
+                ph = json.loads(d["photos"]) or {}
+            except ValueError:
+                ph = {}
+            out["photos"].append(dict(row, sides=[k for k in ("front", "back", "left", "right") if ph.get(k)]))
+    out["pending"].sort(key=lambda r: -(r["at"] or 0))
+    return out
+
+
+def driver_file(pid, uid, key):
+    """Парк ээси өз айдоочусунун документин гана көрө алат."""
+    d = core.get_driver(uid)
+    if not d or d.get("park_id") != pid:
+        return None
+    if key in DOC_KEYS:
+        return d.get(key)
+    if key.startswith("photo_"):
+        try:
+            return (json.loads(d.get("photos") or "{}") or {}).get(key[6:])
+        except ValueError:
+            return None
+    return None
+
+
+def driver_action(pid, uid, action, reason=""):
+    """Парк ээсинин аракети. Тастыктоо/четке кагуу — админ уруксат берсе гана."""
+    p = get(pid)
+    d = core.get_driver(uid)
+    if not p or not d or d.get("park_id") != pid:
+        return "not_yours", []
+    me = "park:%d" % pid
+    st = d.get("status")
+    if action in ("approve", "reject"):
+        if not p.get("self_approve"):
+            return "no_right", []
+        if st != "pending":
+            return "bad_status", []
+        if action == "reject" and not (reason or "").strip():
+            return "reason", []
+        import flow
+        return "ok", flow.admin_driver(uid, action, (reason or "").strip()[:200], by=me)
+    if action == "block":
+        if st != "active":
+            return "bad_status", []
+        import flow
+        return "ok", flow.admin_driver(uid, "block", by=me)
+    if action == "unblock":
+        if st != "blocked" or (d.get("blocked_by") or "") != me:
+            return "no_right", []
+        import flow
+        return "ok", flow.admin_driver(uid, "unblock", by=me)
+    if action in ("photo_ok", "photo_no"):
+        if not p.get("self_approve"):
+            return "no_right", []
+        ok = core.review_car_photos(uid, action == "photo_ok", reason or "")
+        if not ok:
+            return "bad_status", []
+        import flow
+        return "ok", [flow.note(uid, "d_car_photo_ok" if action == "photo_ok" else "d_car_photo_bad", "/driver", note=reason or "—")]
+    return "bad", []

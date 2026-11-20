@@ -130,10 +130,17 @@ def driver_cancel(uid, rid, reason=None):
     return outs
 
 
-def register_driver(uid, name, model, color, plate, docs):
+def register_driver(uid, name, model, color, plate, docs, park=None):
+    """park: айдоочу көрсөткөн таксопарк. Парк өзү тастыктаса — арыз паркка барат, болбосо админге."""
     core.register_driver(uid, name, model, color, plate, docs)
-    return [note(a, "a_new_driver", "/admin", name=name, car="%s %s, %s" % (color, model, plate))
-            for a in core.admins()]
+    car = "%s %s, %s" % (color, model, plate)
+    if park:
+        d = core.get_driver(uid) or {}
+        if not d.get("park_id") or d["park_id"] == park["id"]:
+            core.set_driver(uid, park_id=park["id"])
+            if park.get("self_approve") and park.get("owner_uid"):
+                return [note(park["owner_uid"], "pk_new_driver", "/park", name=name, car=car)]
+    return [note(a, "a_new_driver", "/admin", name=name, car=car) for a in core.admins()]
 
 
 def request_topup(uid, claimed, proof):
@@ -158,18 +165,19 @@ def passenger_cancel(uid, rid, reason=None):
 
 # ==================== Админ ====================
 
-def admin_driver(target, action, reason=""):
+def admin_driver(target, action, reason="", by="admin"):
+    """by: admin | park:<id> — ким тастыктады/бөгөттөдү (админдин тизмесинде көрүнөт)."""
     if action == "approve":
-        core.set_driver(target, status="active", reject_note=None)
+        core.set_driver(target, status="active", reject_note=None, approved_by=by, approved_at=core.now())
         return [note(target, "d_approved", "/driver")]
     if action == "reject":
         core.set_driver(target, status="rejected", reject_note=reason or None)
         return [note(target, "d_rejected", "/driver", note=(" Себеби: " + reason) if reason else "")]
     if action == "block":
-        core.set_driver(target, status="blocked", online=0)
-        return [note(target, "d_blocked", "/driver")]
+        core.set_driver(target, status="blocked", online=0, blocked_by=by)
+        return [note(target, "d_blocked_park" if by.startswith("park:") else "d_blocked", "/driver")]
     if action == "unblock":
-        core.set_driver(target, status="active")
+        core.set_driver(target, status="active", blocked_by=None)
         return [note(target, "d_approved", "/driver")]
     return []
 

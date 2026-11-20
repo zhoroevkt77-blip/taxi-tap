@@ -1610,3 +1610,42 @@ class VoiceSets(unittest.TestCase):
         self.assertTrue(core.voice_set_name(3, "Айгүл"))
         self.assertEqual(core.voice_state(1)["sets"][2]["name"], "Айгүл")
         self.assertTrue(core.voice_delete("som", 3)); self.assertIsNone(core.voice_clip("som", 3))
+
+
+class ParkSelfApprove(unittest.TestCase):
+    def test_park_approves_own_drivers(self):
+        import parks
+        core.init_db()
+        pid = parks.save("Өз-Парк", "0700 000 881", share=80, ref_bonus=10)
+        pid2 = parks.save("Башка-Парк", "0700 000 882", share=80, ref_bonus=10)
+        p = parks.ensure_code(parks.get(pid))
+        owner = p["owner_uid"]
+        u = "tg:9900881"; core.ensure_user(u, "Дайырбек")
+        docs = {"license": "a.jpg", "techpass": "b.jpg", "car": "c.jpg", "selfie": "d.jpg"}
+        # уруксат жок — арыз админге кетет
+        outs = flow.register_driver(u, "Дайырбек", "Соната", "Ак", "04KG078BEK", docs, park=parks.get(pid))
+        self.assertEqual(core.get_driver(u)["park_id"], pid)
+        self.assertTrue(all(o["to"] != owner for o in outs))
+        self.assertEqual(parks.driver_action(pid, u, "approve")[0], "no_right")
+        # уруксат берилди — арыз паркка барат
+        parks.set_self_approve(pid, True)
+        outs = flow.register_driver(u, "Дайырбек", "Соната", "Ак", "04KG078BEK", docs, park=parks.get(pid))
+        self.assertEqual([o["to"] for o in outs], [owner])
+        self.assertEqual(len(parks.applications(pid)["pending"]), 1)
+        self.assertEqual(parks.driver_file(pid, u, "doc_license"), "a.jpg")
+        self.assertIsNone(parks.driver_file(pid2, u, "doc_license"))          # башка парк көрө албайт
+        self.assertEqual(parks.driver_action(pid2, u, "approve")[0], "not_yours")
+        self.assertEqual(parks.driver_action(pid, u, "reject")[0], "reason")   # себеби милдеттүү
+        res, outs = parks.driver_action(pid, u, "approve")
+        self.assertEqual(res, "ok"); d = core.get_driver(u)
+        self.assertEqual((d["status"], d["approved_by"]), ("active", "park:%d" % pid))
+        # парк бөгөттөйт / ачат; админ бөгөттөсө — парк ача албайт
+        self.assertEqual(parks.driver_action(pid, u, "block")[0], "ok")
+        self.assertEqual(core.get_driver(u)["blocked_by"], "park:%d" % pid)
+        self.assertEqual(parks.driver_action(pid, u, "unblock")[0], "ok")
+        flow.admin_driver(u, "block")
+        self.assertEqual(parks.driver_action(pid, u, "unblock")[0], "no_right")
+        self.assertTrue(any(r["uid"] == u and not r["can_unblock"] for r in parks.applications(pid)["blocked"]))
+        core.query("DELETE FROM drivers WHERE uid=?", (u,))
+        for x in (pid, pid2):
+            core.query("DELETE FROM parks WHERE id=?", (x,))

@@ -45,7 +45,10 @@ h1{font-size:23px;font-weight:600;margin:8px 0 2px}
 .row{display:flex;gap:8px;margin-top:10px}
 input.f{flex:1;border:1.5px solid #e3e3e8;border-radius:14px;padding:12px;font-size:16px;font-family:inherit;min-width:0}
 .btn{border:0;border-radius:14px;padding:12px 16px;font-weight:600;font-size:15px;font-family:inherit;cursor:pointer;background:linear-gradient(135deg,#ffd31a,#fcbc00);color:#16161a}
-.btn.g{background:#f1f1f4}
+.btn.g{background:#f1f1f4}.btn.gr{background:#1fa64a;color:#fff}.btn.rd{background:#fff0f0;color:#d63a3a}.btn[disabled]{opacity:.45}
+.app{border-top:1px solid #f0f0f2;padding:12px 0}.pdocs{display:flex;gap:6px;margin:8px 0;overflow-x:auto}.pdocs a{flex:0 0 78px;text-decoration:none;color:#555;font-size:11px;text-align:center}
+.pdocs img{width:78px;height:60px;object-fit:cover;border-radius:10px;display:block;background:#eee}.pchk{display:flex;gap:8px;font-size:13px;align-items:flex-start;margin:6px 0}.pchk input{width:20px;height:20px;flex:none}
+.bdg{display:inline-block;background:#e5383b;color:#fff;border-radius:999px;font-size:12px;padding:1px 8px;vertical-align:middle}
 .qr{display:flex;gap:14px;align-items:center}
 .qr #qr{width:140px;height:140px;flex:none;background:#f6f6f8;border-radius:14px;display:grid;place-items:center;overflow:hidden}
 .qr #qr img,.qr #qr svg{width:132px;height:132px}
@@ -172,6 +175,48 @@ async function actAnswer(id, ok, comment) {
   const x = await api("/api/park/act", {id:+id, ok, comment:comment || ""});
   if (x.acts) { ST.acts = x.acts; draw(); }
 }
+// ==================== Айдоочулардын арыздары (парк өзү тастыктайт) ====================
+const DOCN = {doc_selfie:"Селфи", doc_license:"Күбөлүк", doc_techpass:"Техпаспорт", doc_car:"Унаа"}, SIDEN = {front:"Алды", back:"Арты", left:"Сол", right:"Оң"};
+const pfile = (uid, k) => "/api/park/file?uid=" + encodeURIComponent(uid) + "&k=" + k + PQ;
+function appsCard() {
+  const A = ST.apps || {pending:[], blocked:[], photos:[]}, p = ST.park, link = (ST.site || location.origin) + "/driver?park=" + encodeURIComponent(p.code || "");
+  const n = A.pending.length + A.photos.length;
+  const thumbs = (d, keys, nm) => `<div class="pdocs">${keys.map(k => `<a href="${pfile(d.uid, k)}" target="_blank"><img src="${pfile(d.uid, k)}" loading="lazy" alt=""><span>${nm(k)}</span></a>`).join("")}</div>`;
+  const lic = d => { if (!d.lic_until) return ""; const left = Math.round((new Date(d.lic_until) - new Date()) / 864e5);
+    return `<div class="muted" style="color:${left < 0 ? "#b42318" : left <= 30 ? "#b26a00" : ""}">🪪 Күбөлүк ${esc(d.lic_until)} чейин${left < 0 ? " — мөөнөтү бүткөн" : ""}</div>`; };
+  const pend = d => `<div class="app"><b style="font-size:16px">${esc(d.name || d.phone)}</b>
+      <div class="muted">${esc(d.phone)} · ${esc(d.car)} · ${esc(d.plate)}</div>${lic(d)}${thumbs(d, d.docs, k => DOCN[k])}
+      ${ST.self_approve ? `<label class="pchk"><input type="checkbox" data-ck="${esc(d.uid)}"> Документтерди текшердим: селфидеги жүз күбөлүккө окшош, номер дал келет. Бул айдоочу үчүн жоопкерчиликти алам.</label>
+      <div class="row"><button class="btn gr" data-ap="approve" data-u="${esc(d.uid)}" disabled>✓ Тастыктоо</button><button class="btn rd" data-ap="reject" data-u="${esc(d.uid)}">✕ Четке кагуу</button></div>`
+      : `<div class="muted" style="margin-top:6px">⏳ Админ текшерип жатат</div>`}</div>`;
+  const phot = d => `<div class="app"><b>📷 ${esc(d.name)}</b> <span class="muted">${esc(d.plate)} · фотоконтроль</span>${thumbs(d, d.sides.map(x => "photo_" + x), k => SIDEN[k.slice(6)])}
+      <div class="row"><button class="btn gr" data-ap="photo_ok" data-u="${esc(d.uid)}">✓ Кабыл алуу</button><button class="btn rd" data-ap="photo_no" data-u="${esc(d.uid)}">✕ Кайра тарттыруу</button></div></div>`;
+  const blk = d => `<div class="app" style="display:flex;align-items:center;gap:8px"><div style="flex:1"><b>⛔ ${esc(d.name)}</b><div class="muted">${esc(d.plate)} · ${d.can_unblock ? "сиз бөгөттөгөнсүз" : "админ бөгөттөгөн"}</div></div>
+      ${d.can_unblock ? `<button class="btn g" data-ap="unblock" data-u="${esc(d.uid)}">↺ Ачуу</button>` : ""}</div>`;
+  return `<div class="card"><h2>🆕 Айдоочулардын арыздары${n ? ` <span class="bdg">${n}</span>` : ""}</h2>
+    ${ST.self_approve ? `<p class="muted" style="margin-top:0">Паркыңызга кирген айдоочулардын документтерин өзүңүз текшерип, тастыктайсыз. Жаңы арыз келгенде Telegram'га кабар келет.</p>`
+      : `<p class="muted" style="margin-top:0">Азырынча арыздарды Такси ТАП! админи текшерет. Өзүңүз тастыктоо үчүн админге кайрылыңыз.</p>`}
+    ${A.pending.map(pend).join("")}${ST.self_approve ? A.photos.map(phot).join("") : ""}${A.blocked.map(blk).join("")}
+    ${n || A.blocked.length ? "" : `<p class="muted">Жаңы арыз жок.</p>`}
+    <div class="muted" style="margin:12px 0 4px">🚕 Айдоочу чакыруу шилтемеси — ушул аркылуу катталган айдоочу автоматтык түрдө паркыңызга кирет:</div>
+    <div class="row" style="margin-top:4px"><input class="f" readonly value="${esc(link)}" id="jLink" style="flex:1;font-size:13px"><button class="btn g ib" id="jShare">${IC.share}</button></div></div>`;
+}
+function bindApps() {
+  document.querySelectorAll("[data-ck]").forEach(c => c.onchange = () => {
+    const b = document.querySelector(`[data-ap="approve"][data-u="${CSS.escape(c.dataset.ck)}"]`); if (b) b.disabled = !c.checked; });
+  document.querySelectorAll("[data-ap]").forEach(b => b.onclick = async () => {
+    const a = b.dataset.ap; let reason = "";
+    if (a === "reject" || a === "photo_no") { reason = prompt("Себеби (айдоочуга барат):", a === "reject" ? "Техпаспорттун сүрөтү бүдөмүк" : "Сүрөттөр бүдөмүк же номер көрүнбөйт"); if (!reason) return; }
+    if (a === "approve" && !confirm("Айдоочуну тастыктайсызбы? Ал линияга чыга алат.")) return;
+    b.disabled = true;
+    const x = await api("/api/park/driver_action", {uid:b.dataset.u, action:a, reason});
+    const M = {ok:{approve:"✓ Тастыкталды", reject:"Четке кагылды — айдоочуга кабар кетти", photo_ok:"✓ Фотоконтроль кабыл алынды", photo_no:"Айдоочуга кабар кетти", unblock:"✓ Ачылды"}[a],
+      no_right:"Буга уруксат жок", not_yours:"Бул айдоочу сиздин паркта эмес", bad_status:"Абалы өзгөрүп кетиптир"};
+    alert(M[x.result] || "Ката"); refresh();
+  });
+  const sh = $("#jShare"); if (sh) sh.onclick = () => QRS.share({link:$("#jLink").value, title:"Такси ТАП! — айдоочу болуу",
+    text:`🚕 «${ST.park.name}» таксопаркына айдоочу болуп кошулуңуз — Такси ТАП! 👇`});
+}
 function draw() {
   const p = ST.park, s = ST.stats, P = s.periods[PER];
   const link = (ST.site || location.origin) + "/p/" + (p.code || "");
@@ -203,6 +248,7 @@ function draw() {
       <p>• Эгер ал жүргүнчү сиздин QR же <b>${esc(p.promo || "промокод")}</b> аркылуу келип, бул анын биринчи сапары болсо — дагы <b>${fmt(p.ref_bonus)} сом</b> бонус. Бонус бир жүргүнчү үчүн бир жолу гана, ал катталгандан кийин 30 күндүн ичинде сапар бүтүрсө берилет.</p>
       <p>• Аптада (дүйшөмбүдөн жекшембиге чейин) тапканыңыз кийинки дүйшөмбүдө төлөнөт жана «✅ Төлөнгөн акчалар» тизмесине түшөт. Төлөнгөндө Telegram'га кабар келет.</p></details>
     ${ST.commission_pct > 0 ? "" : `<div class="note">ℹ️ Азыр пилот: Такси ТАП! комиссия албайт (0%), ошондуктан комиссиядан үлүш 0. Жүргүнчү бонустары эсептеле берет.</div>`}
+    <div id="appSlot">${appsCard()}</div>
     <div id="drvSlot"></div>
     <div class="card"><h2>➕ Айдоочу кошуу</h2>
       <div class="row" style="margin-top:0"><input class="f" id="dph" placeholder="Айдоочунун номери: 0700 123 456" inputmode="tel"><button class="btn" id="dadd">Кошуу</button></div>
@@ -221,7 +267,7 @@ function draw() {
   document.querySelectorAll("[data-p]").forEach(b => b.onclick = () => { PER = b.dataset.p; draw(); });
   document.querySelectorAll("[data-aok]").forEach(b => b.onclick = () => { if (confirm("Актты ырастайсызбы? Ырасталгандан кийин өзгөрбөйт.")) actAnswer(b.dataset.aok, true); });
   document.querySelectorAll("[data-adis]").forEach(b => b.onclick = () => { const t = $("#ac" + b.dataset.adis).value.trim(); if (!t) return alert("Пикириңизди жазыңыз"); actAnswer(b.dataset.adis, false, t); });
-  $("#drvSlot").appendChild(drvBox());
+  $("#drvSlot").appendChild(drvBox()); bindApps();
   $("#dadd").onclick = async () => {
     const x = await api("/api/park/add_driver", {phone:$("#dph").value});
     const M = {ok:"✓ Айдоочу кошулду", no_driver:"Бул номер менен катталган айдоочу жок", other_park:"Бул айдоочу башка паркта"};
@@ -294,6 +340,7 @@ async function openDriver(uid) {
   o.innerHTML = `<div><div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0;font-size:19px">${esc(d.name || d.phone)}</h2><button class="x" data-close>✕</button></div>
     <p class="muted" style="margin:4px 0">${esc(d.car)} · ${esc(d.plate)} · ★${Number(d.rating ?? 5).toFixed(1)} · ⚡${d.activity}</p>
     ${d.phone ? `<a class="btn call" href="tel:${esc(d.phone)}">📞 Чалуу</a>` : ""}
+    ${d.status === "active" ? `<button class="btn rd" id="dBlk" style="margin-top:8px;width:100%">🚫 Убактылуу бөгөттөө</button>` : ""}
     <h3 style="margin:14px 0 0;font-size:15px">Акыркы 7 күн</h3>
     <div class="bars">${d.days.map(x => `<div><em>${x.gross ? fmt(x.gross) : ""}</em><i style="height:${Math.round(80 * x.gross / mx)}%"></i>${WD[x.wd]}<br>${x.rides}</div>`).join("")}</div>
     <p class="muted" style="font-size:11.5px;margin:0">Мамычанын үстүндө — тапкан сом, астында — сапар саны.</p>
@@ -301,6 +348,8 @@ async function openDriver(uid) {
     <h3 style="margin:14px 0 4px;font-size:15px">Акыркы сапарлар</h3>
     ${d.recent.length ? d.recent.map(r => `<div class="rr"><span>${dm(r.at)} ${new Date(r.at * 1000).toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"})}</span><div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.to || r.from)}</div><b>${fmt(r.price)} с</b></div>`).join("") : `<p class="muted">Сапар жок.</p>`}</div>`;
   o.onclick = e => { if (e.target === o || e.target.dataset.close !== undefined) o.remove(); };
+  const bk = o.querySelector("#dBlk"); if (bk) bk.onclick = async () => { if (!confirm("Бөгөттөйсүзбү? Айдоочу линияга чыга албай калат. Кийин өзүңүз ачсаңыз болот.")) return;
+    const x = await api("/api/park/driver_action", {uid, action:"block"}); alert(x.result === "ok" ? "Бөгөттөлдү" : "Ката"); o.remove(); refresh(); };
   document.body.appendChild(o);
 }
 async function loadMap() {

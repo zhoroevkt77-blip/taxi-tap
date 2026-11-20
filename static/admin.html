@@ -311,6 +311,9 @@ async function viewDrivers() {
   };
   const row = d => `<div class="item"><div class="main"><b>${esc(d.name)} ${tag(d.status)} ${d.is_online ? '<span class="tag t-in_trip">онлайн</span>' : ""}</b>
       <span class="muted">${esc(d.phone)} · ${esc(carText(d.car_color, d.car_model))}, ${esc(d.car_plate)}${d.status === "active" || d.status === "blocked" ? ` · ★ ${d.rating} · ${d.rides_done} сапар · баланс <b>${Math.round(d.balance)} с</b>` : ""}</span>
+      ${d.park_name ? `<span class="muted" style="display:block">🏢 ${esc(d.park_name)}${d.park_code ? " · " + esc(d.park_code) : ""}${d.status === "pending" && d.park_self ? " — <b>арызды парк өзү текшерет</b>" : ""}</span>` : ""}
+      ${d.approved_by ? `<span class="muted" style="display:block">✓ ${d.approved_by.startsWith("park:") ? esc(d.park_code || "Парк") + " парк тастыктады" : "админ тастыктады"}${d.approved_at ? " · " + when(d.approved_at) : ""}</span>` : ""}
+      ${d.status === "blocked" && d.blocked_by && d.blocked_by.startsWith("park:") ? `<span class="muted" style="display:block">⛔ парк бөгөттөгөн</span>` : ""}
       ${d.status === "rejected" && d.reject_note ? `<span class="muted">Себеби: ${esc(d.reject_note)}</span>` : ""}${lic(d)}
       ${d.status === "pending" ? docs(d) + checks(d) : `<details><summary class="muted" style="cursor:pointer">📄 Документтер</summary>${docs(d)}</details>`}
       ${photoBox(d)}
@@ -496,6 +499,11 @@ async function autoPanel() {
     const r = await api("/api/a/autoprice_run", {}); toast("✓ Эсептелди", 2000); autoPanel(); };
 }
 
+function bindSelf() {
+  document.querySelectorAll("[data-self]").forEach(c => c.onchange = async () => {
+    if (c.checked && !confirm("Бул парк өз айдоочуларынын документтерин өзү текшерип, тастыктай алат. Макулсузбу?")) { c.checked = false; return; }
+    const r = await api("/api/a/park_self_approve", {id:+c.dataset.self, on:c.checked}); toast(r.ok ? (c.checked ? "✓ Парк өзү тастыктайт" : "Арыздар админге келет") : "Ката", 2000); });
+}
 async function viewParks(edit) {
   const X = await api("/api/a/parks"), P = X.parks || [], AC = (await api("/api/a/park_acts")).acts || [];
   const money = v => Math.round(v || 0).toLocaleString("ru-RU") + " с";
@@ -514,7 +522,9 @@ async function viewParks(edit) {
         <div class="muted">☎ ${esc(p.phone)} · үлүш ${shareTxt(p)} · жүргүнчү бонусу ${money(p.ref_bonus)} · промокод <b>${esc(p.promo || "—")}</b></div>
         <div class="muted">Айдоочулар: ${p.drivers} (линияда ${p.online}) · Ушул ай: ${p.month.rides} сапар, айдоочулар тапкан акча ${money(p.month.gross)}, тапканы <b>${money(p.month.earned)}</b></div>
         <div style="margin-top:4px;font-size:14px">📅 Бул дүйшөмбүдө төлөө (${esc(p.week)} чейин): <b style="color:${p.due > 0 ? "var(--ok)" : "inherit"}">${money(p.due)}</b>
-          <span class="muted">· ушул апта: ${money(p.this_week)} · бардыгы төлөнгөн ${money(p.paid)}</span></div></div>
+          <span class="muted">· ушул апта: ${money(p.this_week)} · бардыгы төлөнгөн ${money(p.paid)}</span></div>
+        <label style="display:flex;gap:8px;align-items:center;margin-top:8px;font-size:14px"><input type="checkbox" data-self="${p.id}" ${p.self_approve ? "checked" : ""} style="width:20px;height:20px">
+          <span><b>Айдоочуларын өзү тастыктайт</b> <span class="muted">— өчүк болсо, арыздар сизге келет${p.pending ? ` · ⏳ ${p.pending} арыз күтүүдө` : ""}</span></span></label></div>
         <div class="acts"><a class="btn" href="/park?id=${p.id}" target="_blank">Кабинети</a>
           <button class="btn" data-ed="${p.id}">Өзгөртүү</button><button class="btn gold" data-pay="${p.id}">💸 Төлөдүм</button></div></div>`).join("")
         : `<div class="empty">Азырынча парк жок. Төмөндөн кошуңуз.</div>`}</div>
@@ -555,6 +565,7 @@ async function viewParks(edit) {
   document.querySelectorAll("[data-acr]").forEach(b => b.onclick = () => { const [pid, per] = b.dataset.acr.split("|");
     if (confirm("Актты кайра эсептейсизби? Парктын мурунку жообу өчөт.")) mkAct(pid, per); });
   document.querySelectorAll("[data-ed]").forEach(b => b.onclick = () => viewParks(P.find(p => p.id == b.dataset.ed)));
+  bindSelf();
   $("#ptS").onclick = async () => { const r = await api("/api/a/park_pay_time", {from:$("#ptA").value, to:$("#ptB").value});
     toast(r.ok ? "✓ Төлөм убактысы сакталды" : "Убакыт туура эмес", 2500); };
   document.querySelectorAll("[data-pay]").forEach(b => b.onclick = async () => {

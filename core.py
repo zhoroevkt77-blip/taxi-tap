@@ -296,7 +296,7 @@ NEW_COLUMNS = {
               "avatar": "TEXT",
               "park_ref_drv": "TEXT"},                       # QR'ын сканерлеткен айдоочу                             # профилдин сүрөтү (uploads ичиндеги файл)   # айдоочулар берген баа
     "web_sessions": {"agreed": "INTEGER DEFAULT 0"},
-    "parks": {"code": "TEXT", "scans": "INTEGER DEFAULT 0",
+    "parks": {"code": "TEXT", "scans": "INTEGER DEFAULT 0", "self_approve": "INTEGER DEFAULT 0",   # айдоочуларын өзү тастыктайт
               "share_months": "INTEGER DEFAULT 6", "share_after": "REAL DEFAULT 50"},   # QR коду (автоматтык) жана сканерлөөлөр
     "drivers": {"qr_scans": "INTEGER DEFAULT 0",
                 "cancel_block": "REAL",                     # көп жокко чыгарса — ушул убакытка чейин заказ жок
@@ -315,7 +315,9 @@ NEW_COLUMNS = {
                 "photo_status": "TEXT", "photo_note": "TEXT",   # pending | ok | rejected, баш тартуу себеби
                 "lic_until": "TEXT",
                 "goal": "INTEGER",
-                "car_year": "INTEGER"},                  # күндүк максат (сом)                # күбөлүктүн мөөнөтү YYYY-MM-DD                # таксопарк (жок болсо — өз алдынча)   # активдүүлүк 0..100 (Яндекс Pro'догудай)              # аймактан сыртка чыккан убакыт
+                "car_year": "INTEGER",
+                "approved_by": "TEXT", "approved_at": "REAL",   # admin | park:<id> — ким тастыктады
+                "blocked_by": "TEXT"},                          # admin | park:<id> — ким бөгөттөдү                  # күндүк максат (сом)                # күбөлүктүн мөөнөтү YYYY-MM-DD                # таксопарк (жок болсо — өз алдынча)   # активдүүлүк 0..100 (Яндекс Pro'догудай)              # аймактан сыртка чыккан убакыт
     "balance_tx": {"claimed": "REAL"},
     "tariffs": {"inc_km": "REAL DEFAULT 0", "inc_min": "REAL DEFAULT 0"},   # отуруу баасына кирген км/мүн (Яндекстей)
     "rides": {"offer_seen": "REAL",       # айдоочу сунушту көргөн убакыт
@@ -2462,8 +2464,9 @@ def admin_drivers():
     return query("SELECT d.uid, d.status, d.balance, d.rating, d.rides_done, d.car_model, "
                  "d.car_color, d.car_plate, d.online, d.busy_ride, d.loc_at, d.live_until, d.lat, d.lon, "
                  "d.doc_license, d.doc_techpass, d.doc_car, d.doc_selfie, d.lic_until, d.reject_note, d.created_at, d.classes, "
-                 "d.photos, d.photo_status, d.photo_at, d.photo_note, "
-                 "u.name, u.phone FROM drivers d LEFT JOIN users u ON u.uid=d.uid "
+                 "d.photos, d.photo_status, d.photo_at, d.photo_note, d.approved_by, d.approved_at, d.blocked_by, d.park_id, "
+                 "p.name AS park_name, p.code AS park_code, p.self_approve AS park_self, "
+                 "u.name, u.phone FROM drivers d LEFT JOIN users u ON u.uid=d.uid LEFT JOIN parks p ON p.id=d.park_id "
                  "ORDER BY d.status='pending' DESC, d.rides_done DESC", (), "all")
 
 
