@@ -401,10 +401,10 @@ class H(BaseHTTPRequestHandler):
             if u.path == "/api/mapcfg":
                 return self._json({"p": maptiles.provider()})
             if u.path == "/api/voice":
-                return self._json(core.voice_state())
-            mv = re.match(r"^/voice/(\w+)\.wav$", u.path)
+                return self._json(core.voice_state((q.get("set") or ["1"])[0]))
+            mv = re.match(r"^/voice/(?:(\d)/)?(\w+)\.wav$", u.path)
             if mv:
-                body = core.voice_clip(mv.group(1))
+                body = core.voice_clip(mv.group(2), mv.group(1) or 1)
                 if not body:
                     return self._json({"error": "not_found"}, 404)
                 self.send_response(200); self.send_header("Content-Type", "audio/wav"); self.send_header("Content-Length", str(len(body)))
@@ -1105,11 +1105,14 @@ class H(BaseHTTPRequestHandler):
                 return self._json(r, 400)
             return self._json(dict(core.area_info(), result=r))
         if action == "voice_save":
-            ok = core.voice_save(_txt(b.get("key"), 20), b.get("b64"))
-            return self._json(dict(core.voice_state(), ok=ok), 200 if ok else 400)
+            ok = core.voice_save(_txt(b.get("key"), 20), b.get("b64"), b.get("set") or 1)
+            return self._json(dict(core.voice_state(b.get("set") or 1), ok=ok), 200 if ok else 400)
         if action == "voice_del":
-            ok = core.voice_delete(_txt(b.get("key"), 20))
-            return self._json(dict(core.voice_state(), ok=ok), 200 if ok else 400)
+            ok = core.voice_delete(_txt(b.get("key"), 20), b.get("set") or 1)
+            return self._json(dict(core.voice_state(b.get("set") or 1), ok=ok), 200 if ok else 400)
+        if action == "voice_name":
+            ok = core.voice_set_name(b.get("set"), _txt(b.get("name"), 30))
+            return self._json(dict(core.voice_state(b.get("set") or 1), ok=ok), 200 if ok else 400)
         if action == "unit_border_restore":
             ok = core.restore_unit_border(_txt(b.get("name"), 80), int(b.get("idx") or 0))
             return self._json({"ok": ok}, 200 if ok else 400)

@@ -72,13 +72,14 @@ td input.f{padding:7px 8px;max-width:90px;min-width:58px}
 .blegend{position:absolute;right:8px;top:8px;z-index:500;background:#fff;border-radius:10px;padding:6px 9px;font-size:11.5px;line-height:1.75;box-shadow:0 2px 10px rgba(0,0,0,.15)}
 .blegend i{display:inline-block;width:18px;vertical-align:middle;margin-right:6px}
 .bh{display:flex;align-items:center;gap:8px;font-size:13px;padding:3px 0}.bh .btn{margin-left:auto;padding:4px 9px;font-size:12px}
+.vsets{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:4px 0 10px}.vsets button{display:flex;flex-direction:column;align-items:center;gap:1px;padding:8px 4px;border-radius:14px;border:0;background:#f4f4f7;font:inherit;cursor:pointer}.vsets button span{font-size:20px}.vsets button b{font-size:13px}.vsets button small{font-size:11px;color:#8a8a94}.vsets button.on{background:#fff3c4;box-shadow:inset 0 0 0 2px #ffb703}
 .vsec{font-size:12px;font-weight:600;color:#8a8a94;letter-spacing:.06em;margin:16px 4px 2px;text-transform:uppercase}
 .vbar{height:8px;background:#eee;border-radius:9px;margin-top:8px;width:100%}.vbar i{display:block;height:8px;border-radius:9px;background:#ffb703}
 .vrow{flex-wrap:nowrap!important;align-items:center}.vrow .main{flex:1;min-width:0}.vrow .btn{flex:0 0 auto;min-width:46px;width:auto}.vrec{background:#fff8e1;border-radius:18px;padding:18px;margin:10px 0;text-align:center}
 .vword{font-size:26px;font-weight:600;margin:6px 0 14px}.vmic{width:110px;height:110px;border-radius:50%;border:0;background:#e5383b;color:#fff;font-size:44px;cursor:pointer;box-shadow:0 0 0 12px rgba(229,56,59,.12)}
 .vmic.on{animation:vpulse 1s infinite}@keyframes vpulse{50%{box-shadow:0 0 0 22px rgba(229,56,59,.22)}}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=106">
+<link rel="stylesheet" href="/static/theme.css?v=107">
 </head>
 <body class="adm">
 <header><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b><span class="ver">Админ</span></div><div class="live" id="live"></div></header>
@@ -971,27 +972,31 @@ async function fixedPanel() {
   });
 }
 // ---------- 🎙 Кыргызча үн: айдоочуга заказды айтуучу сөздөрдү админ өзү жазат ----------
-let VQ = [], VR = null, VBLOB = null, VWAV = null;
+let VQ = [], VR = null, VBLOB = null, VWAV = null, VSET = 1;
 const vGrp = k => /^r_/.test(k) ? "🧳 Жүргүнчүгө" : /^n\d/.test(k) ? "🔢 Сандар" : "🚕 Айдоочуга";
 async function viewVoice() {
-  const V = await api("/api/voice"), n = V.keys.filter(k => k.have).length;
-  $("#main").innerHTML = `<div class="panel"><h3>🎙 Кыргызча үн — айдоочуга жаңы заказды ушул үн айтат</h3>
-    <div class="item"><div class="main"><b>${n} / ${V.keys.length} жазылды</b><span class="muted">Ар бир сөздү тынч жерде, телефонго жакын, кадимки ылдамдыкта айтыңыз.
+  const V = await api("/api/voice?set=" + VSET), n = V.keys.filter(k => k.have).length, IC = {1:"👨", 2:"👨", 3:"👩", 4:"👩"};
+  $("#main").innerHTML = `<div class="panel"><h3>🎙 Кыргызча үн — 4 адамдын үнү, айдоочу Кабинеттен тандайт</h3>
+    <div class="vsets">${V.sets.map(x => `<button data-vset="${x.id}" class="${x.id === V.set ? "on" : ""}"><span>${IC[x.id]}</span><b>${esc(x.name)}</b><small>${x.have.length}/${V.total}</small></button>`).join("")}</div>
+    <div class="item"><div class="main"><b>${IC[V.set]} ${esc(V.sets[V.set - 1].name)}: ${n} / ${V.keys.length} жазылды</b><span class="muted">Ар бир сөздү тынч жерде, телефонго жакын, кадимки ылдамдыкта айтыңыз.
       Башы-аягындагы тынчтык өзү кесилет, үн катуулугу теңделет. Жазыла элек сөздү айдоочунун телефонунун үнү окуйт.</span>
       <div class="vbar"><i style="width:${Math.round(100 * n / V.keys.length)}%"></i></div></div></div>
-    <div class="item" style="gap:8px">${n < V.keys.length ? `<button class="btn gold" id="vAll">🎙 Жазыла электерди катары менен жазуу</button>` : ""}
+    <div class="item" style="gap:8px"><button class="btn" id="vRen">✏️ Атын өзгөртүү</button>${n < V.keys.length ? `<button class="btn gold" id="vAll">🎙 Жазыла электерди катары менен жазуу</button>` : ""}
       <button class="btn" id="vTest">🔊 Сынап угуу: «Жаңы заказ, 80 сом, 1,2 километр»</button></div>
     <div id="vRec"></div>
     ${V.keys.map((k, i) => { const g = vGrp(k.k), h = i === 0 || vGrp(V.keys[i - 1].k) !== g ? `<div class="vsec">${g}</div>` : ""; return h + `<div class="item vrow"><div class="main"><b>${esc(k.t)}</b><span class="muted">${k.have ? "✓ жазылган" : "жазыла элек"}</span></div>
       ${k.have ? `<button class="btn" data-vp="${k.k}" title="Угуу">▶</button>` : ""}<button class="btn ${k.have ? "" : "gold"}" data-vr="${k.k}" title="Жазуу">🎙</button>
       ${k.have ? `<button class="btn" data-vd="${k.k}" title="Өчүрүү">🗑</button>` : ""}</div>`; }).join("")}</div>`;
   const T = {}; V.keys.forEach(k => T[k.k] = k.t);
+  document.querySelectorAll("[data-vset]").forEach(b => b.onclick = () => { VSET = +b.dataset.vset; VQ = []; viewVoice(); });
+  $("#vRen").onclick = async () => { const nm = prompt("Үндүн аты (айдоочуга ушундай көрүнөт):", V.sets[V.set - 1].name); if (!nm) return;
+    await api("/api/a/voice_name", {set:V.set, name:nm}); viewVoice(); };
   $("#vAll") && ($("#vAll").onclick = () => { VQ = V.keys.filter(k => !k.have).map(k => k.k); vRec(VQ.shift(), T); });
   $("#vTest").onclick = () => vPlay(["new_order", "n80", "som", "n1", "point", "n2", "km"], V, T);
   document.querySelectorAll("[data-vr]").forEach(b => b.onclick = () => { VQ = []; vRec(b.dataset.vr, T); });
   document.querySelectorAll("[data-vp]").forEach(b => b.onclick = () => vPlay([b.dataset.vp], V, T));
   document.querySelectorAll("[data-vd]").forEach(b => b.onclick = async () => {
-    if (!confirm("«" + T[b.dataset.vd] + "» өчүрүлсүнбү?")) return; await api("/api/a/voice_del", {key:b.dataset.vd}); viewVoice(); });
+    if (!confirm("«" + T[b.dataset.vd] + "» өчүрүлсүнбү?")) return; await api("/api/a/voice_del", {key:b.dataset.vd, set:VSET}); viewVoice(); });
 }
 let VAC = null;
 const vAC = () => VAC = VAC || new (window.AudioContext || window.webkitAudioContext)();
@@ -999,7 +1004,7 @@ async function vPlay(keys, V, T) {
   const ac = vAC(); ac.resume && ac.resume();
   for (const k of keys) {
     if (V.have.includes(k)) {
-      try { const ab = await (await fetch(`/voice/${k}.wav?v=${V.ver}`)).arrayBuffer();
+      try { const ab = await (await fetch(`/voice/${V.set}/${k}.wav?v=${V.ver}`)).arrayBuffer();
         const b = await new Promise((ok, no) => ac.decodeAudioData(ab, ok, no));
         await new Promise(ok => { const s = ac.createBufferSource(); s.buffer = b; s.connect(ac.destination); s.onended = ok; s.start(); });
       } catch (e) {}
@@ -1040,7 +1045,7 @@ function vRec(key, T) {
   $("#vHear").onclick = () => { const ac = vAC(); ac.resume && ac.resume(); const s = ac.createBufferSource(); s.buffer = VWAV.buf; s.connect(ac.destination); s.start(); };
   $("#vSave").onclick = async () => {
     $("#vSave").disabled = true;
-    const r = await api("/api/a/voice_save", {key, b64:VWAV.b64});
+    const r = await api("/api/a/voice_save", {key, b64:VWAV.b64, set:VSET});
     if (!r.ok) { $("#vSave").disabled = false; return toast("Сакталбай калды", 2500); }
     toast("✓ «" + T[key] + "» сакталды", 1500);
     if (VQ.length) { await viewVoice(); vRec(VQ.shift(), T); } else viewVoice();

@@ -98,8 +98,8 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=106">
-<link rel="stylesheet" href="/static/dark.css?v=12">
+<link rel="stylesheet" href="/static/theme.css?v=107">
+<link rel="stylesheet" href="/static/dark.css?v=14">
 <script src="/static/night.js?v=2"></script>
 </head>
 <body>
@@ -121,7 +121,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="/static/area.js?v=7"></script>
-<script src="/static/voice.js?v=1"></script>
+<script src="/static/voice.js?v=2"></script>
 <script src="/static/qr.js"></script>
 <script src="/static/qrshare.js"></script>
 <script>
@@ -518,7 +518,7 @@ function viewCabinet(part) {
     ${licNote()}
     <div class="sw">${yi("volume")}<div style="flex:1"><b>Заказды үн менен айтуу</b><div class="muted">«Жаңы заказ, 80 сом, 1,2 километр»</div></div>
       <input type="checkbox" id="vc" ${voiceOn() ? "checked" : ""} style="width:24px;height:24px"></div>
-    <div class="seg vseg"><button data-vm="ky" class="${vmode() === "ky" ? "on" : ""}">🇰🇬 Кыргызча (жазылган)</button><button data-vm="tts" class="${vmode() === "tts" ? "on" : ""}">📱 Телефондун үнү</button></div>
+    <div class="vpick" id="vPick">${vpickHTML()}</div>
     <div class="sw">${yi("nav")}<div style="flex:1"><b>Навигатор</b><div class="muted">${esc((NAVS[navPref()] || {t:"Тандала элек"}).t)}</div></div>
       <button class="btn ghost" id="navCh" style="width:auto;margin:0;padding:10px 14px;font-size:14px">Өзгөртүү</button></div>
     <button class="btn ghost ib2" id="addAddr">${yi("pin", "s")}Дарек кошуу</button>
@@ -539,8 +539,7 @@ function viewCabinet(part) {
     document.querySelectorAll("[data-ep]").forEach(x => x.classList.toggle("on", x === b)); $("#eSum").innerHTML = earnSum(); });
   $("#phCard") && ($("#phCard").onclick = viewPhotos);
   $("#vc").onchange = e => { try { localStorage.setItem("voice", e.target.checked ? "on" : "off"); } catch (x) {} if (e.target.checked) speak(["voice_on"]); };
-  document.querySelectorAll("[data-vm]").forEach(b => b.onclick = () => { try { localStorage.setItem("vmode", b.dataset.vm); } catch (x) {}
-    document.querySelectorAll("[data-vm]").forEach(x => x.classList.toggle("on", x === b)); speak(["voice_on"]); });
+  vpickBind();
   $("#navCh").onclick = () => openNav(null, true);
   api("/api/d/praise").then(x => { const el = $("#praise"); if (!el || !x) return;
     if (!(x.good || []).length && !(x.bad || []).length && !x.car_ok && !x.car_bad) return;
@@ -775,7 +774,24 @@ $("#stBadge").onclick = () => {
 };
 
 // ---------- Үн менен айтуу (жаңы заказ) ----------
-// Үн: /static/voice.js (speak, kyNum, kyKm, voiceOn, vmode)
+// Үн: /static/voice.js (speak, kyNum, kyKm, voiceOn, vmode, vset)
+// Кабинетте үндү тандоо: 4 адамдын үнү (админ жазган) же телефондун үнү
+function vpickHTML() {
+  const sets = (VOICE && VOICE.sets) || [], tot = (VOICE && VOICE.total) || 43, ky = vmode() === "ky";
+  return sets.map(x => { const n = x.have.length, on = ky && vset() === x.id;
+    return `<button data-vs="${x.id}" class="${on ? "on" : ""}" ${n ? "" : "disabled"}><span>${VSET_IC[x.id] || "🗣"}</span><b>${esc(x.name)}</b>
+      <small>${n ? (n >= tot ? "толук" : n + "/" + tot) : "жазыла элек"}</small>${on ? "<i>✓</i>" : ""}</button>`; }).join("")
+    + `<button data-vs="tts" class="${ky ? "" : "on"}"><span>📱</span><b>Телефондун үнү</b><small>орусча акцент</small>${ky ? "" : "<i>✓</i>"}</button>`;
+}
+window.VOICE_HOOK = () => { const el = $("#vPick"); if (el) { el.innerHTML = vpickHTML(); vpickBind(); } };
+function vpickBind() {
+  document.querySelectorAll("[data-vs]").forEach(b => b.onclick = async () => {
+    try { if (b.dataset.vs === "tts") localStorage.setItem("vmode", "tts"); else { localStorage.setItem("vmode", "ky"); localStorage.setItem("vset", b.dataset.vs); } } catch (x) {}
+    if (b.dataset.vs !== "tts") await voiceLoad();
+    const el = $("#vPick"); if (el) { el.innerHTML = vpickHTML(); vpickBind(); }
+    speak(["new_order", ...kyNum(80), "som", ...kyKm(1.2)]);
+  });
+}
 
 // ---------- Навигатор: Яндекс / 2ГИС / Google ----------
 const NAVS = {

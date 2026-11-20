@@ -10,6 +10,8 @@ const VLBL = {
   n0:"нөл", n1:"бир", n2:"эки", n3:"үч", n4:"төрт", n5:"беш", n6:"алты", n7:"жети", n8:"сегиз", n9:"тогуз",
   n10:"он", n20:"жыйырма", n30:"отуз", n40:"кырк", n50:"элүү", n60:"алтымыш", n70:"жетимиш", n80:"сексен", n90:"токсон", n100:"жүз", n1000:"миң"};
 const voiceOn = () => { try { return localStorage.getItem("voice") !== "off"; } catch (e) { return true; } };
+const vset = () => { try { return +(localStorage.getItem("vset") || 1) || 1; } catch (e) { return 1; } };
+const VSET_IC = {1:"👨", 2:"👨", 3:"👩", 4:"👩"};
 const vmode = () => { try { return localStorage.getItem("vmode") || "ky"; } catch (e) { return "ky"; } };
 let VOICE = null, VBUF = {}, VGEN = 0, VSRC = null, VCTX = null;
 const vctx = () => VCTX = VCTX || new (window.AudioContext || window.webkitAudioContext)();
@@ -37,15 +39,21 @@ function tts(text, done) {
 }
 async function voiceLoad() {
   try {
-    const v = await (await fetch("/api/voice", {credentials:"same-origin"})).json(); if (!v || !v.have) return; VOICE = v;
+    let v = await (await fetch("/api/voice?set=" + vset(), {credentials:"same-origin"})).json(); if (!v || !v.sets) return;
+    if (!v.have.length) {                   // тандалган үн жазыла элек → эң көп жазылган үн
+      const best = v.sets.slice().sort((a, b) => b.have.length - a.have.length)[0];
+      if (best && best.have.length) v = Object.assign({}, v, {set:best.id, have:best.have});
+    }
+    VOICE = v;
     const ac = vctx();
     for (const k of v.have) {
-      if (VBUF[k] && VBUF[k].ver === v.ver) continue;
-      const r = await fetch(`/voice/${k}.wav?v=${v.ver}`); if (!r.ok) continue;
+      if (VBUF[k] && VBUF[k].ver === v.ver && VBUF[k].set === v.set) continue;
+      const r = await fetch(`/voice/${v.set}/${k}.wav?v=${v.ver}`); if (!r.ok) continue;
       const ab = await r.arrayBuffer();
-      VBUF[k] = {ver:v.ver, b:await new Promise((ok, no) => ac.decodeAudioData(ab, ok, no))};
+      VBUF[k] = {ver:v.ver, set:v.set, b:await new Promise((ok, no) => ac.decodeAudioData(ab, ok, no))};
     }
     Object.keys(VBUF).forEach(k => { if (!v.have.includes(k)) delete VBUF[k]; });
+    window.VOICE_HOOK && window.VOICE_HOOK();
   } catch (e) {}
 }
 // speak(["new_order", ...kyNum(80), "som"], 750) — wait: бип бүткөнчө күтүү (мс)

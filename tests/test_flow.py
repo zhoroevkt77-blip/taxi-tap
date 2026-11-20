@@ -1594,3 +1594,19 @@ class VoiceClips(unittest.TestCase):
         self.assertEqual(core.voice_clip("n80"), wav)
         self.assertTrue(core.voice_delete("n80"))
         self.assertNotIn("n80", core.voice_state()["have"]); self.assertIsNone(core.voice_clip("n80"))
+
+
+class VoiceSets(unittest.TestCase):
+    def test_four_sets(self):
+        import struct, base64 as B
+        wav = b"RIFF" + struct.pack("<I", 36 + 8) + b"WAVEfmt " + struct.pack("<IHHIIHH", 16, 1, 1, 16000, 32000, 2, 16) + b"data" + struct.pack("<I", 8) + b"\x01" * 8
+        b64 = B.b64encode(wav).decode()
+        self.assertTrue(core.voice_save("som", b64, 3))
+        self.assertFalse(core.voice_save("som", b64, 9))
+        st = core.voice_state(3)
+        self.assertEqual(len(st["sets"]), 4); self.assertIn("som", st["have"]); self.assertEqual(st["sets"][2]["name"], "Аял 1")
+        self.assertNotIn("som", core.voice_state(1)["have"])
+        self.assertEqual(core.voice_clip("som", 3), wav); self.assertIsNone(core.voice_clip("som", 2))
+        self.assertTrue(core.voice_set_name(3, "Айгүл"))
+        self.assertEqual(core.voice_state(1)["sets"][2]["name"], "Айгүл")
+        self.assertTrue(core.voice_delete("som", 3)); self.assertIsNone(core.voice_clip("som", 3))

@@ -2796,17 +2796,56 @@ VOICE_OK = {k for k, _ in VOICE_KEYS}
 VOICE_MAX = 200 * 1024
 
 
-def voice_state():
-    have = get_setting("voice_have") or {}
-    return {"ver": int(get_setting("voice_ver") or 0),
-            "keys": [{"k": k, "t": t, "have": k in have} for k, t in VOICE_KEYS],
-            "have": sorted(k for k in have if k in VOICE_OK)}
+VOICE_SETS = (1, 2, 3, 4)
+VOICE_NAMES = {1: "Эркек 1", 2: "Эркек 2", 3: "Аял 1", 4: "Аял 2"}
 
 
-def voice_clip(key):
-    if key not in VOICE_OK:
+def _vk(vs, key, base):
+    """1-үн мурунку ачкычтарда калат (мурда жазылгандар сакталсын)."""
+    return base + ("" if int(vs) == 1 else ":%d" % int(vs)) + (":" + key if key else "")
+
+
+def _vset(vs):
+    try:
+        vs = int(vs or 1)
+    except (TypeError, ValueError):
         return None
-    v = get_setting("voice:" + key)
+    return vs if vs in VOICE_SETS else None
+
+
+def voice_names():
+    n = get_setting("voice_names") or {}
+    return {s: (n.get(str(s)) or VOICE_NAMES[s]) for s in VOICE_SETS}
+
+
+def voice_set_name(vs, name):
+    vs = _vset(vs)
+    name = (name or "").strip()[:30]
+    if not vs or not name:
+        return False
+    n = get_setting("voice_names") or {}
+    n[str(vs)] = name
+    set_setting("voice_names", n)
+    set_setting("voice_ver", int(get_setting("voice_ver") or 0) + 1)
+    return True
+
+
+def voice_state(vs=1):
+    vs = _vset(vs) or 1
+    names, sets = voice_names(), []
+    for s in VOICE_SETS:
+        h = get_setting(_vk(s, "", "voice_have")) or {}
+        sets.append({"id": s, "name": names[s], "have": sorted(k for k in h if k in VOICE_OK)})
+    have = sets[vs - 1]["have"]
+    return {"ver": int(get_setting("voice_ver") or 0), "set": vs, "sets": sets, "total": len(VOICE_KEYS),
+            "keys": [{"k": k, "t": t, "have": k in have} for k, t in VOICE_KEYS], "have": have}
+
+
+def voice_clip(key, vs=1):
+    vs = _vset(vs)
+    if key not in VOICE_OK or not vs:
+        return None
+    v = get_setting(_vk(vs, key, "voice"))
     if not v:
         return None
     try:
@@ -2815,8 +2854,9 @@ def voice_clip(key):
         return None
 
 
-def voice_save(key, b64):
-    if key not in VOICE_OK or not isinstance(b64, str):
+def voice_save(key, b64, vs=1):
+    vs = _vset(vs)
+    if key not in VOICE_OK or not vs or not isinstance(b64, str):
         return False
     try:
         raw = base64.b64decode(b64, validate=True)
@@ -2824,21 +2864,25 @@ def voice_save(key, b64):
         return False
     if not (44 < len(raw) <= VOICE_MAX) or raw[:4] != b"RIFF" or raw[8:12] != b"WAVE":
         return False
-    set_setting("voice:" + key, b64)
-    have = get_setting("voice_have") or {}
+    set_setting(_vk(vs, key, "voice"), b64)
+    hk = _vk(vs, "", "voice_have")
+    have = get_setting(hk) or {}
     have[key] = int(now())
-    set_setting("voice_have", have)
+    set_setting(hk, have)
     set_setting("voice_ver", int(get_setting("voice_ver") or 0) + 1)
     return True
 
 
-def voice_delete(key):
-    if key not in VOICE_OK:
+def voice_delete(key, vs=1):
+    vs = _vset(vs)
+    if key not in VOICE_OK or not vs:
         return False
-    query("DELETE FROM settings WHERE key=?", ("voice:" + key,))
-    _settings_cache.pop("voice:" + key, None)
-    have = get_setting("voice_have") or {}
+    k = _vk(vs, key, "voice")
+    query("DELETE FROM settings WHERE key=?", (k,))
+    _settings_cache.pop(k, None)
+    hk = _vk(vs, "", "voice_have")
+    have = get_setting(hk) or {}
     have.pop(key, None)
-    set_setting("voice_have", have)
+    set_setting(hk, have)
     set_setting("voice_ver", int(get_setting("voice_ver") or 0) + 1)
     return True
