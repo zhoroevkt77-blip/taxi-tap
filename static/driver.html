@@ -596,7 +596,8 @@ function viewCabinet(part) {
   $("#navCh").onclick = () => openNav(null, true);
   api("/api/d/praise").then(x => { const el = $("#praise"); if (!el || !x) return;
     if (!(x.good || []).length && !(x.bad || []).length && !x.car_ok && !x.car_bad) return;
-    el.innerHTML = `<div class="note"><b class="yh">${yi("message", "s")}Жүргүнчүлөрдүн пикири</b> <span class="muted">(ким жазганы жашыруун)</span>
+    const pb = document.querySelector('[data-cc="praise"]'); if (pb) pb.style.display = "";
+    el.innerHTML = `<div class="note">${pb ? "" : `<b class="yh">${yi("message", "s")}Жүргүнчүлөрдүн пикири</b> `}<span class="muted">(ким жазганы жашыруун)</span>
       ${(x.good || []).length ? `<div style="margin-top:6px">${x.good.map(([t, n]) => `<span class="ptag">👍 ${esc(t)} ×${n}</span>`).join("")}</div>` : ""}
       ${(x.bad || []).length ? `<div style="margin-top:6px">${x.bad.map(([t, n]) => `<span class="ptag bad">⚠️ ${esc(t)} ×${n}</span>`).join("")}</div>` : ""}
       ${x.car_ok || x.car_bad ? `<div class="muted" style="margin-top:6px">Унаанын абалы: 👍 ${x.car_ok} · 👎 ${x.car_bad}</div>` : ""}</div>`; });
@@ -629,6 +630,7 @@ function cabChips() {
     ["car", "Тарифтер жана комиссия", "tar", [tarif && tarif.parentElement]],
     ["moon", "Режим (жарык / караңгы)", "mode", [q(".mtheme")]],
     ["bolt", "Активдүүлүк", "act", [up(byB("Активдүүлүк"), ".note")]],
+    ["message", "Жүргүнчүлөрдүн пикири", "praise", [q("#praise")]],
     ["camera", "Фотоконтроль", "photo", [q("#phCard")]],
     ["id", "Документтер", "docs", [up(q("#licUp") || byB("Айдоочулук күбөлүк") || byB("Документтер"), ".note")]],
     ["volume", "Үн менен айтуу", "voice", [up(q("#vc"), ".sw"), q("#vPick")]],
@@ -655,6 +657,7 @@ function cabChips() {
   };
   ul.querySelectorAll("[data-cc]").forEach(b => b.onclick = () => toggle(b.dataset.cc));
   ul.querySelectorAll("[data-cw]").forEach(b => b.onclick = () => toggle(b.dataset.cw, true));
+  const pb = ul.querySelector('[data-cc="praise"]'); if (pb && !q("#praise").innerHTML.trim()) pb.style.display = "none";   // пикир жүктөлгөнчө жашырын
   if (CC_OPEN && has(CC_OPEN)) toggle(CC_OPEN, true);
 }
 async function viewHistory() {
