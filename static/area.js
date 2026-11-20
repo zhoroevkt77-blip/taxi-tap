@@ -232,6 +232,7 @@ function bindLinks() {
 // ---------- Навигация: сары жебе (мен), компас, «мен турган жер» баскычы ----------
 // Жебе телефон кайсы жакты караса ошол жакка бурулат (жүрүп баратканда — GPS багыты).
 window.NAV = (function () {
+  let compFn = null, compAng = 0;
   let map = null, marker = null, pos = null, head = null, gpsHead = null, wrap = null, onLocate = null, watching = false, oriOn = false;
   const ARROW = `<svg viewBox="0 0 60 60" width="50" height="50"><path d="M30 6 L50 52 L30 42 L10 52 Z" fill="#FAC775" stroke="#fff" stroke-width="5" stroke-linejoin="round"/>
     <path d="M30 6 L50 52 L30 42 Z" fill="#E09A00"/><path d="M30 6 L10 52 L30 42 Z" fill="#FFC61A"/></svg>`;
@@ -242,7 +243,8 @@ window.NAV = (function () {
     const h = gpsHead !== null ? gpsHead : head;
     document.querySelectorAll(".navarr").forEach(e => e.style.transform = `rotate(${h || 0}deg)`);
     const c = document.getElementById("navComp");
-    if (c) { c.firstChild.style.transform = `rotate(${-(head || 0)}deg)`; c.classList.toggle("hide", head === null); }
+    if (c && compFn) { c.firstChild.style.transform = `rotate(${compAng}deg)`; c.classList.remove("hide"); }
+    else if (c) { c.firstChild.style.transform = `rotate(${-(head || 0)}deg)`; c.classList.toggle("hide", head === null); }
   }
   function onOri(e) {
     let h = null;
@@ -301,20 +303,21 @@ window.NAV = (function () {
   }
   function init(m, opts) {
     window.NAV_ACCEPT = accept;
-    map = m; onLocate = (opts && opts.onLocate) || null;
+    map = m; onLocate = (opts && opts.onLocate) || null; compFn = (opts && opts.onComp) || null;
     wrap = document.createElement("div"); wrap.className = "navbtns"; wrap.id = "navBtns";
     wrap.innerHTML = `<button class="navb sat" id="navSat" aria-label="Спутник / Карта">🛰</button><button class="navb hide" id="navComp" aria-label="Компас (түндүк)">${COMP}</button><button class="navb" id="navLoc" aria-label="Мен турган жер">${LOC}</button>`;
     document.body.appendChild(wrap);
     satInit(m, wrap.querySelector("#navSat"));
     wrap.querySelector("#navComp").firstChild.style.transition = "transform .2s linear";
     wrap.querySelector("#navLoc").onclick = () => { askOri(); watch(); if (onLocate) onLocate(); else if (pos) map.setView(pos, Math.max(map.getZoom(), 16)); };
-    wrap.querySelector("#navComp").onclick = () => { askOri(); if (pos) map.setView(pos, Math.max(map.getZoom(), 17)); };
+    wrap.querySelector("#navComp").onclick = () => { askOri(); if (compFn) return compFn(); if (pos) map.setView(pos, Math.max(map.getZoom(), 17)); };
     listenOri(); watch();
     window.addEventListener("sheetmove", place); window.addEventListener("resize", place);
     setInterval(place, 300); place();
     document.addEventListener("click", askOri, {once:true});
   }
-  return {init, set, place, pos: () => pos};
+  function comp(a) { compAng = a; paint(); }
+  return {init, set, place, comp, pos: () => pos};
 })();
 
 // ---------- Спутник ↔ Карта ----------

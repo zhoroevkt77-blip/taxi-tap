@@ -13,6 +13,7 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--paper);overflow:hidden}
 #map{position:fixed;inset:0;z-index:1}
+#map.hup{transition:transform .6s linear;will-change:transform}
 .top{position:fixed;top:max(12px,env(safe-area-inset-top));left:12px;right:12px;z-index:5;display:flex;gap:8px;align-items:flex-start}
 .logo{background:var(--navy);color:#fff;font-weight:600;font-size:15px;padding:10px 12px;border-radius:14px}
 .logo b{color:var(--gold2)}
@@ -121,7 +122,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 <div class="offer hide" id="ovl"><div class="ocard" id="ovlc"></div></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="/static/area.js?v=8"></script>
+<script src="/static/area.js?v=9"></script>
 <script src="/static/voice.js?v=5"></script>
 <script src="/static/qr.js"></script>
 <script src="/static/qrshare.js"></script>
@@ -141,7 +142,35 @@ const layer = L.layerGroup().addTo(map);
 let me = null, myHead = null, mySpeed = 0, myPos = null, D = null, poll = null, watch = null, lock = null, lastOffer = null, lastRide = null, pingT = null;
 
 NAV.init(map, {onLocate: () => getPos().then(p => { FOLLOW = true; const b = $("#navLoc"); b && b.classList.remove("off");
-  if (p) { NAV.set(myPos, myHead, mySpeed); if (map.getZoom() < 16) map.setZoom(16, {animate:false}); followMe(true); } })});
+  if (p) { NAV.set(myPos, myHead, mySpeed); if (map.getZoom() < 16) map.setZoom(16, {animate:false}); hupSync(); followMe(true); } }),
+  onComp: () => { HUP = !HUP; try { localStorage.setItem("hup", HUP ? "1" : "0"); } catch (e) {}
+    if (HUP) { FOLLOW = true; const b = $("#navLoc"); b && b.classList.remove("off"); }
+    hupSync(); followMe(true); toast(HUP ? "🧭 Жол өйдө — карта машинанын жүрүшүнө карай айланат" : "🧭 Түндүк өйдө — карта айланбайт", 2200); }});
+// ---------- «Жол өйдө»: стрелка дайыма өйдө, карта машина бараткан тарапка айланат ----------
+// Карта блогу экрандан чоңураак (диагоналы боюнча) жасалып, машинанын чекитинин тегерегинде CSS менен айланат.
+let HUP = (() => { try { return localStorage.getItem("hup") !== "0"; } catch (e) { return true; } })(), hupOn = false, hupAng = 0, hupHead = null;
+const mapEl = document.getElementById("map");
+function hupLayout(on) {
+  if (!on) { mapEl.removeAttribute("style"); mapEl.classList.remove("hup"); }
+  else {
+    const W = innerWidth, H = innerHeight, cx = W / 2, cy = Math.round(H * 0.6);
+    const S = Math.ceil(2 * Math.hypot(Math.max(cx, W - cx), Math.max(cy, H - cy))) + 20;
+    mapEl.style.cssText = `inset:auto;width:${S}px;height:${S}px;left:${cx - S / 2}px;top:${cy - S / 2}px;transform:rotate(${hupAng}deg)`;
+    mapEl.classList.add("hup");
+  }
+  map.invalidateSize && map.invalidateSize(false);
+}
+function hupSync() {                                         // режим күйүк жана карта машинаны ээрчиши керек болсо — айлантабыз
+  const want = HUP && FOLLOW && !!myPos;
+  if (want !== hupOn) { hupOn = want; if (!want) { hupAng = 0; } hupLayout(want); }
+  if (hupOn) {
+    if (typeof myHead === "number" && !isNaN(myHead) && (mySpeed || 0) > 1.4) hupHead = myHead;   // 5 км/с'тан ылдам — бурулушту эске алабыз
+    if (hupHead !== null) { const d = ((-hupHead - hupAng) % 360 + 540) % 360 - 180; hupAng += d; mapEl.style.transform = `rotate(${hupAng}deg)`; }
+    if (map.setView) map.setView(myPos, map.getZoom(), {animate:true, duration:.5});
+  }
+  NAV.comp && NAV.comp(hupOn ? hupAng : 0);
+}
+window.addEventListener("resize", () => { if (hupOn) hupLayout(true); });
 // ---------- GPS ----------
 let fixAt = 0, gpsRestarts = 0;
 function startGps() {
@@ -181,8 +210,9 @@ const zoomBy = d => { const z = Math.max(map.getMinZoom ? map.getMinZoom() : 3, 
   if (FOLLOW && myPos) map.setView(myPos, z, {animate:true}); else map.setZoom(z);
   try { navigator.vibrate && navigator.vibrate(10); } catch (e) {} };
 $("#zIn").onclick = () => zoomBy(1); $("#zOut").onclick = () => zoomBy(-1);
-map.on("dragstart", () => { FOLLOW = false; const b = $("#navLoc"); b && b.classList.add("off"); });
+map.on("dragstart", () => { FOLLOW = false; const b = $("#navLoc"); b && b.classList.add("off"); hupSync(); });
 function followMe(force) {
+  if (hupOn) return;                                         // «Жол өйдө» режиминде hupSync() өзү ээрчитет
   if (!myPos || (!FOLLOW && !force) || !map.latLngToContainerPoint) return;
   const sz = map.getSize(), sh = window.SHEET ? SHEET.visible() : 0;
   const top = 150, bot = Math.max(top + 80, sz.y - sh - 70);                 // үстүңкү чиптер жана ылдыйкы барак жаппаган жер
@@ -195,7 +225,7 @@ function drawMe() {
   if (!myPos) return;
   NAV.set(myPos, myHead, mySpeed);
   if (!me) { me = true; map.setView(myPos, 16); }
-  else followMe();
+  hupSync(); if (!hupOn) followMe();
 }
 async function wake(on) {
   try {
