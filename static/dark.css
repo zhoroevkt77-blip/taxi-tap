@@ -120,3 +120,4 @@ html.uidark .hotc small,html.uidark .phc small{color:#a3a3ae}html.uidark .hotc e
 html.uidark .mcard2{background:#1e1f25;box-shadow:inset 0 0 0 1px #2f3037}html.uidark .mr span,html.uidark .mr em{color:#f2f2f5}html.uidark .mr,html.uidark .mcc+.mcc{border-color:#2f3037}html.uidark .mcmodel{color:#a3a3ae}
 html.uidark .irow{background:#1e1f25;box-shadow:inset 0 0 0 1px #2f3037}html.uidark .irow small{color:#a3a3ae}
 html.uidark .btn.bk{background:#1e1f25!important;color:#f2f2f5!important;box-shadow:inset 0 0 0 1.5px #5a4a14!important}
+html.uidark .st-del{background:#2a2410!important;color:#ffd24d!important;box-shadow:inset 0 0 0 1.5px #5a4a14!important}html.uidark .st-del button{background:rgba(255,255,255,.12)!important;color:#ffd24d!important}

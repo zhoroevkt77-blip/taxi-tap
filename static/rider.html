@@ -101,8 +101,8 @@ input.f:focus{border-color:var(--navy)}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
 <link rel="preload" as="image" href="/static/h_taxi.webp?v=11"><link rel="preload" as="image" href="/static/h_box.webp?v=11"><link rel="preload" as="image" href="/static/h_girl.webp?v=11"><link rel="preload" as="image" href="/static/h_map.webp?v=11">
-<link rel="stylesheet" href="/static/theme.css?v=104">
-<link rel="stylesheet" href="/static/dark.css?v=11">
+<link rel="stylesheet" href="/static/theme.css?v=105">
+<link rel="stylesheet" href="/static/dark.css?v=12">
 <script src="/static/night.js?v=2"></script>
 </head>
 <body>
@@ -362,16 +362,19 @@ function minsTo(r) {
   return km > 60 ? "" : `${Math.max(2, Math.round(km / 25 * 60))} мүн`;
 }
 const PAGE_MODES = ["idle", "stepA", "stepB", "menu"];
+const delChip = () => S.cls === "delivery" ? `<span class="st-del">📦 Жеткирүү<button id="delX" aria-label="Такси">✕</button></span>` : "";
+function delBind(again) { const x = $("#delX"); if (x) x.onclick = () => { S.cls = "econom"; again(); toast("🚕 Такси заказына өттүңүз"); }; }
 // ---------- 1-кадам: «Сизди кайдан алып кетсин?» ----------
 function viewStepA() {
   S.mode = "stepA"; S.to = null; setPin(null); showA(false); render(""); homeOn(true);
-  $("#home").innerHTML = `<div class="st-top"><button class="st-back" id="sBack">‹</button><div class="st-steps"><i class="on">А</i><b></b><i>Б</i></div></div>
-    <h1 class="st-h">Сизди кайдан<br>алып кетсин?</h1><p class="st-sub">А точка — айдоочу ушул жерге келет</p>
-    <button class="st-big y" id="aHere"><span class="i">📍</span><span class="tx">Азыр турган жеримден (GPS)<small id="fromTxt">${esc(S.fromAddr || "Аныкталууда…")}</small></span><em>›</em></button>
+  const del = S.cls === "delivery";
+  $("#home").innerHTML = `<div class="st-top"><button class="st-back" id="sBack">‹</button>${delChip()}<div class="st-steps"><i class="on">А</i><b></b><i>Б</i></div></div>
+    <h1 class="st-h">${del ? "Буюмду кайдан<br>алып кетсин?" : "Сизди кайдан<br>алып кетсин?"}</h1><p class="st-sub">${del ? "А точка — айдоочу буюмду ушул жерден алат" : "А точка — айдоочу ушул жерге келет"}</p>
+    <button class="st-big y" id="aHere"><span class="i">📍</span><span class="tx">${del ? "Буюм менде — азыр турган жерим" : "Азыр турган жеримден (GPS)"}<small id="fromTxt">${esc(S.fromAddr || "Аныкталууда…")}</small></span><em>›</em></button>
     <button class="st-big" id="aMap"><span class="i">🗺</span><span class="tx">Картадан белгилейм<small>Пинди так жериңизге коёсуз</small></span><em>›</em></button>
     <button class="st-big" id="aType"><span class="i">✍️</span><span class="tx">Жазып табам<small>Көчө, дүкөн, мекеме…</small></span><em>›</em></button>
     <p class="gpsinfo" id="gpsInfo"></p><button class="btn bk" id="sBk">‹ Артка</button>`;
-  $("#sBk").onclick = viewIdle;
+  $("#sBk").onclick = viewIdle; delBind(viewStepA);
   gpsPaint(); if (S.gps.state !== "ok") locate(false);
   $("#sBack").onclick = viewIdle;
   $("#aHere").onclick = () => {
@@ -394,13 +397,13 @@ function viewStepB() {
   (P.popular || []).forEach(r => { if (!seen.has(r.name.toLowerCase())) L3.push(r); });
   const all = L1.concat(L2, L3); let k = 0;
   const sec = (t, arr) => arr.length ? (t ? `<div class="st-sec">${t}</div>` : "") + arr.map(r => it(r, k++)).join("") : "";
-  $("#home").innerHTML = `<div class="st-top"><button class="st-back" id="sBack">‹</button><div class="st-steps"><i class="ok">А</i><b class="ok"></b><i class="on">Б</i></div></div>
-    <h1 class="st-h">Кайда барасыз?</h1><p class="st-sub">📍 ${esc(S.fromAddr || "А точка")} → ?</p>
-    <button class="st-big" id="bMap"><span class="i">🗺</span><span class="tx">Картадан белгилейм<small>Пинди барчу жериңизге коёсуз</small></span><em>›</em></button>
+  $("#home").innerHTML = `<div class="st-top"><button class="st-back" id="sBack">‹</button>${delChip()}<div class="st-steps"><i class="ok">А</i><b class="ok"></b><i class="on">Б</i></div></div>
+    <h1 class="st-h">${S.cls === "delivery" ? "Кайда жеткирилет?" : "Кайда барасыз?"}</h1><p class="st-sub">${S.cls === "delivery" ? "📦" : "📍"} ${esc(S.fromAddr || "А точка")} → ${S.cls === "delivery" ? "алуучу" : "?"}</p>
+    <button class="st-big" id="bMap"><span class="i">🗺</span><span class="tx">Картадан белгилейм<small>${S.cls === "delivery" ? "Пинди алуучунун жерине коёсуз" : "Пинди барчу жериңизге коёсуз"}</small></span><em>›</em></button>
     <button class="st-big" id="bType"><span class="i">✍️</span><span class="tx">Жазып табам<small>Көчө, дүкөн, мекеме…</small></span><em>›</em></button>
     ${sec("", L1)}${sec("АКЫРКЫ САПАРЛАР", L2)}${sec("КӨП БАРЫШАТ", L3)}
     ${all.length ? "" : `<p class="st-sub" style="margin-top:14px">Даректи жазып табыңыз же картадан белгилеңиз.</p>`}<button class="btn bk" id="sBk">‹ Артка</button>`;
-  $("#sBack").onclick = $("#sBk").onclick = viewStepA;
+  $("#sBack").onclick = $("#sBk").onclick = viewStepA; delBind(viewStepB);
   $("#bType").onclick = () => viewSearch("to");
   $("#bMap").onclick = () => viewPickDest();
   $("#home").querySelectorAll(".st-it").forEach(b => b.onclick = () => { const r = all[+b.dataset.i];
@@ -597,8 +600,9 @@ async function viewQuote() {
     const del = S.cls === "delivery";
     $("#extra").innerHTML = del ? `<div class="wbox">📦 Айдоочу буюмду алып, алуучуга жеткирет.
       <input class="f" id="dWhat" placeholder="Эмне жеткирилет (мис. документ, пакет)" style="margin:8px 0 6px" value="${esc(S.dWhat || "")}">
-      <input class="f" id="dPh" placeholder="Алуучунун номери" inputmode="tel" style="margin:0" value="${esc(S.dPh || "")}"></div>` : "";
-    if (del) { $("#dWhat").oninput = e => S.dWhat = e.target.value; $("#dPh").oninput = e => S.dPh = e.target.value; }
+      <div class="two" style="margin:0"><input class="f" id="dNm" placeholder="Алуучунун аты" style="margin:0" value="${esc(S.dNm || "")}">
+      <input class="f" id="dPh" placeholder="Алуучунун номери *" inputmode="tel" style="margin:0" value="${esc(S.dPh || "")}"></div></div>` : "";
+    if (del) { $("#dWhat").oninput = e => S.dWhat = e.target.value; $("#dPh").oninput = e => S.dPh = e.target.value; $("#dNm").oninput = e => S.dNm = e.target.value; }
     $("#otherOpen").classList.toggle("hide", del); $("#otherBox").classList.toggle("hide", del);
     $("#order").textContent = S.at ? "Алдын ала заказ берүү" : del ? "Жеткирүүнү чакыруу" : "Чакыруу";
   };
@@ -633,7 +637,8 @@ async function viewQuote() {
   $("#order").onclick = async () => {
     const del = S.cls === "delivery";
     const nt = [del && S.dWhat ? "📦 " + S.dWhat : "", $("#nt") ? $("#nt").value.trim() : ""].filter(Boolean).join(" · ");
-    const oth = del ? {other_phone:S.dPh || "", other_name:"Алуучу"}
+    if (del && (S.dPh || "").replace(/\D/g, "").length < 9) { toast("Алуучунун номерин жазыңыз", 2500); $("#dPh") && $("#dPh").focus(); return; }
+    const oth = del ? {other_phone:S.dPh || "", other_name:(S.dNm || "").trim() || "Алуучу"}
       : $("#oPh") && $("#oPh").value.trim() ? {other_phone:$("#oPh").value, other_name:$("#oNm").value} : {};
     $("#order").disabled = true;
     const r = await api("/api/order", {p:S.from, d:S.to, promo:S.promo, at:S.at, cls:S.cls, note:nt,
