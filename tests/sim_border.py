@@ -2,7 +2,7 @@
 import os, subprocess, sys, time, tempfile, json
 TMP = tempfile.mkdtemp()
 os.environ.update(SQLITE_PATH=os.path.join(TMP, "s.db"), DATA_DIR=TMP, DATABASE_URL="", SERVICE_AREA="on",
-                  WEB_DEV_LOGIN="1", PORT="8793", OSRM_URL="", ADMIN_PHONES="0700900900")
+                  WEB_DEV_LOGIN="1", PORT="8805", OSRM_URL="", ADMIN_PHONES="0700900900")
 sys.path.insert(0, "/home/claude/taxi-tap")
 import core
 from playwright.sync_api import sync_playwright
@@ -29,7 +29,7 @@ const bb=pts=>{const la=pts.map(p=>p[0]),lo=pts.map(p=>p[1]);const b={a:[Math.ma
 L.latLngBounds=a=>bb(a);
 L.map=(id,o)=>{const m=_m(typeof id==="string"?id:(id.id=id.id||"amap",id.id));m.el.style.position="relative";m.doubleClickZoom={disable(){},enable(){}};
  m.fitBounds=(b)=>{const sp=Math.max(b.a[0]-b.b[0],(b.a[1]-b.b[1])*0.75);m.c=[(b.a[0]+b.b[0])/2,(b.a[1]+b.b[1])/2];m.z=Math.max(8,Math.min(16,Math.round(Math.log2(0.9*360/ (sp*1.6)))));m.draw();return m};
- m.invalidateSize=()=>m;return m};
+ m.invalidateSize=()=>m;m.getContainer=()=>m.el;return m};
 L.marker=(p,o)=>{const k=_k(p,o);k.hs={};k.on=function(e,f){(this.hs[e]=this.hs[e]||[]).push(f);if(this.el&&e==="click")this.el.onclick=()=>f({});return this};
  const add=k.addTo.bind(k);k.addTo=function(g){add(g);this.el.style.cursor="pointer";if(this.hs.click)this.el.onclick=()=>this.hs.click.forEach(f=>f({}));return this};
  k.bindTooltip=function(){return this};return k};
@@ -62,8 +62,8 @@ try:
         b = p.chromium.launch(executable_path="/usr/bin/google-chrome", args=["--no-sandbox"])
         k = b.new_context(viewport={"width": 390, "height": 844}, device_scale_factor=2, is_mobile=True, has_touch=True).new_page()
         k.route("**/*", route); k.on("pageerror", lambda e: print("JS:", e)); k.on("dialog", lambda d: d.accept())
-        k.goto("http://127.0.0.1:8793/"); k.fill("#nm", "Кайрат"); k.fill("#ph", "0700 900 900"); k.check("#agree"); k.click("#go"); k.wait_for_timeout(1500)
-        k.goto("http://127.0.0.1:8793/admin"); k.wait_for_timeout(1500); k.evaluate("viewArea()"); k.wait_for_timeout(2000)
+        k.goto("http://127.0.0.1:8805/"); k.fill("#nm", "Кайрат"); k.fill("#ph", "0700 900 900"); k.check("#agree"); k.click("#go"); k.wait_for_timeout(1500)
+        k.goto("http://127.0.0.1:8805/admin"); k.wait_for_timeout(1500); k.evaluate("viewArea()"); k.wait_for_timeout(2000)
         print("q:", k.evaluate("fetch('/api/quote?a=40.985,73.06&b=40.93,73.0').then(r=>r.status)"))
         frame(k, "Админ → Аймак", "Манас — эски OSM чеги", "#amap")
         frame(k, "✏️ Чекти оңдоо тизмеси", "Ар бир шаар/район үчүн баскыч", "#bList")
@@ -74,6 +74,12 @@ try:
         k.wait_for_timeout(400)
         frame(k, "Жаңы айылдар кошулду", "Чек түндүк-чыгышка чоңойтулду", "#amap")
         k.click("#bSave"); k.wait_for_timeout(1500)
+        k.click("[data-bed='1']") if k.evaluate("UNITS[1].name") == "Манас шаары" else k.click("[data-bed='0']"); k.wait_for_timeout(800)
+        k.evaluate("""(()=>{const P=bEdit.pts;bEdit.hist.push(P.map(p=>p.slice()));const c=[40.933,73.0];
+          for(let i=0;i<P.length;i++){const a=Math.atan2(P[i][0]-c[0],P[i][1]-c[1]);if(a<-1.2&&a>-2.6){P[i]=[c[0]+(P[i][0]-c[0])*1.5,c[1]+(P[i][1]-c[1])*1.5]}}bDraw()})()""")
+        frame(k, "Кайра оңдоо", "Боз — OSM, көк — мурунку, сары — жаңы", "#amap")
+        k.click("#bSave"); k.wait_for_timeout(1500)
+        k.evaluate("document.querySelectorAll('#bList details').forEach(d=>d.open=true)")
         frame(k, "Сакталды ✓", "«Сиз оңдогон чек» · ↺ OSM'ге кайтаруу", "#bList")
         b.close()
 finally:

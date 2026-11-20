@@ -734,7 +734,7 @@ def _apply_units(units):
         gj = u["gj"]
         polys += [gj["coordinates"]] if gj["type"] == "Polygon" else list(gj["coordinates"])
     _area.update(units=[dict(name=u["name"], city=unit_city(u["name"]), gj=u["gj"], approx=u.get("approx"),
-                             custom=u.get("custom", False)) for u in units],
+                             custom=u.get("custom", False), osm_gj=u.get("osm_gj")) for u in units],
                  geojson={"type": "MultiPolygon", "coordinates": polys}, source="list")
     AREA_NAME = ", ".join(u["name"] for u in units)
     AREA_CITY = unit_city(units[0]["name"])
@@ -765,7 +765,7 @@ def set_area_units(names):
             with open(_unit_cache(u), "w", encoding="utf-8") as f:
                 json.dump({"gj": gj, "approx": approx}, f)
         own = unit_borders().get(u["name"])           # админ оңдогон чек (мис. реформадан кийин чоңойгон шаар)
-        units.append(dict(u, gj=own or gj, approx=False if own else approx, custom=bool(own)))
+        units.append(dict(u, gj=own or gj, approx=False if own else approx, custom=bool(own), osm_gj=gj))
     os.makedirs(DATA_DIR, exist_ok=True)
     with open(_sel_path(), "w", encoding="utf-8") as f:
         json.dump([{"name": u["name"], "ob": u["ob"]} for u in units], f, ensure_ascii=False)
@@ -796,10 +796,58 @@ def area_info():
             "selection": area_selection()}
 
 
+def area_km2(gj):
+    """Чектин аянты (км²): тышкы шакектер − тешиктер, жергиликтүү тегиз проекция."""
+    if not gj:
+        return 0.0
+    polys = [gj["coordinates"]] if gj["type"] == "Polygon" else gj["coordinates"]
+    tot = 0.0
+    for p in polys:
+        for i, ring in enumerate(p):
+            if len(ring) < 3:
+                continue
+            la0 = math.radians(sum(q[1] for q in ring) / len(ring))
+            xy = [(q[0] * 111.32 * math.cos(la0), q[1] * 110.57) for q in ring]
+            a = abs(sum(xy[k][0] * xy[k - 1][1] - xy[k - 1][0] * xy[k][1] for k in range(len(xy)))) / 2
+            tot += -a if i else a
+    return round(tot, 1)
+
+
+def border_hist():
+    try:
+        return get_setting("unit_border_hist") or {}
+    except Exception:                                   # noqa: BLE001
+        return {}
+
+
 def area_units_gj():
-    """Админ картасы үчүн: ар бир район/шаардын өз чеги."""
-    return [{"name": u["name"], "city": u.get("city"), "gj": u["gj"], "approx": u.get("approx"), "custom": u.get("custom", False)}
+    """Админ картасы үчүн: ар бир район/шаардын өз чеги + OSM'дин баштапкы чеги + оңдоолордун тарыхы."""
+    H = border_hist()
+    return [{"name": u["name"], "city": u.get("city"), "gj": u["gj"], "approx": u.get("approx"), "custom": u.get("custom", False),
+             "osm_gj": u.get("osm_gj") if u.get("custom") else None, "km2": area_km2(u["gj"]),
+             "osm_km2": area_km2(u.get("osm_gj")), "hist": [{"at": h["at"], "km2": h["km2"]} for h in H.get(u["name"], [])]}
             for u in _area["units"]]
+
+
+def border_places(points):
+    """Тартылган чектин ичине кирген айыл/кичи райондордун аттары (addrbook'тон)."""
+    try:
+        import addrbook
+        ring = [(float(p[0]), float(p[1])) for p in points]
+        names = [r["name"] for r in addrbook._rows() if r.get("kind") == "village" and _pip(r["lat"], r["lon"], ring)]
+        return sorted(set(names))[:20]
+    except Exception:                                   # noqa: BLE001
+        return []
+
+
+def _pip(lat, lon, ring):
+    ins, j = False, len(ring) - 1
+    for i in range(len(ring)):
+        yi, xi, yj, xj = ring[i][0], ring[i][1], ring[j][0], ring[j][1]
+        if (yi > lat) != (yj > lat) and lon < (xj - xi) * (lat - yi) / ((yj - yi) or 1e-12) + xi:
+            ins = not ins
+        j = i
+    return ins
 
 
 def unit_borders():
@@ -810,11 +858,24 @@ def unit_borders():
         return {}
 
 
+def restore_unit_border(name, idx):
+    """Тарыхтагы чекке кайтуу (idx — тарыхтагы катар номери)."""
+    h = border_hist().get(name) or []
+    if not (0 <= idx < len(h)):
+        return False
+    ring = h[idx]["gj"]["coordinates"][0]
+    return set_unit_border(name, [[q[1], q[0]] for q in ring[:-1]])
+
+
 def set_unit_border(name, points=None, reset=False):
     """Тизмедеги аймактын чегин алмаштыруу. points: [[lat, lon], ...]; reset — OSM'ге кайтуу. Кайтарат: True/False."""
     if not any(u["name"] == name for u in _area["units"]):
         return False
     b = dict(unit_borders())
+    if b.get(name):                                     # мурунку оңдолгон чек тарыхка (акыркы 10)
+        H = dict(border_hist())
+        H[name] = ([{"at": now(), "gj": b[name], "km2": area_km2(b[name])}] + H.get(name, []))[:10]
+        set_setting("unit_border_hist", H)
     if reset:
         b.pop(name, None)
     else:
@@ -920,7 +981,7 @@ def _load_area_base(fetch=True):
                     with open(_unit_cache(u), encoding="utf-8") as f:
                         c = json.load(f)
                     own = unit_borders().get(u["name"])
-                    units.append(dict(u, gj=own or c["gj"], approx=False if own else c.get("approx"), custom=bool(own)))
+                    units.append(dict(u, gj=own or c["gj"], approx=False if own else c.get("approx"), custom=bool(own), osm_gj=c["gj"]))
                 _apply_units(units)
                 return
     except (OSError, ValueError, KeyError, TypeError):

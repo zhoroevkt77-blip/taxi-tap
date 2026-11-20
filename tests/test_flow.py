@@ -1572,3 +1572,10 @@ class OfferSeenDeadline(unittest.TestCase):
         self.assertAlmostEqual(core.offer_deadline(r), t - 20 + core.OFFER_SEC + core.OFFER_GRACE)   # көрө элек — кошумча 10 сек
         r["offer_seen"] = t - 3
         self.assertAlmostEqual(core.offer_deadline(r), t - 3 + core.OFFER_SEC)                       # көргөндөн 15 сек
+
+
+class BorderHistory(unittest.TestCase):
+    def test_km2_and_history(self):
+        sq = {"type": "Polygon", "coordinates": [[[73.0, 41.0], [73.1, 41.0], [73.1, 41.1], [73.0, 41.1], [73.0, 41.0]]]}
+        self.assertAlmostEqual(core.area_km2(sq), 92.5, delta=2)          # ~8.4 x 11.06 км
+        self.assertTrue(core._pip(41.05, 73.05, [(41.0, 73.0), (41.0, 73.1), (41.1, 73.1), (41.1, 73.0)]))

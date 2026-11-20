@@ -69,6 +69,9 @@ td input.f{padding:7px 8px;max-width:90px;min-width:58px}
 .docs{flex-wrap:wrap}.chk{margin:10px 0 2px;padding:10px 12px;border-radius:12px;background:#fff8e1}.chk label{font-weight:500!important;color:#222!important;font-size:14px!important;display:flex!important;gap:8px;align-items:flex-start}.chk input{width:18px;height:18px;flex:none;margin-top:1px}
 .btn:disabled{opacity:.4;cursor:not-allowed}
 .phrev{margin:8px 0;padding:10px;border-radius:12px;background:#fff8e6}
+.blegend{position:absolute;right:8px;top:8px;z-index:500;background:#fff;border-radius:10px;padding:6px 9px;font-size:11.5px;line-height:1.75;box-shadow:0 2px 10px rgba(0,0,0,.15)}
+.blegend i{display:inline-block;width:18px;vertical-align:middle;margin-right:6px}
+.bh{display:flex;align-items:center;gap:8px;font-size:13px;padding:3px 0}.bh .btn{margin-left:auto;padding:4px 9px;font-size:12px}
 </style>
 <link rel="stylesheet" href="/static/theme.css?v=104">
 </head>
@@ -733,9 +736,18 @@ let UNITS = [], bEdit = null;
 function borderList() {
   const el = $("#bList"); if (!el) return;
   el.innerHTML = `<p class="muted" style="margin:10px 0 4px">✏️ <b>Чекти оңдоо</b> — OpenStreetMap'теги чек эскирген болсо (мис. шаарга айылдар кошулса), аны колуңуз менен тартып оңдойсуз. Шаардын жаңы чегинин ичиндеги заказдар ошол шаардын тарифи менен эсептелет.</p>
-    ${UNITS.map((u, i) => `<div class="item"><div class="main"><b>${esc(u.name)}</b><br><small class="muted">${u.custom ? "✏️ Сиз оңдогон чек" : u.approx ? "Болжолдуу 5 км тегерек" : "OpenStreetMap чеги"}</small></div>
-      <button class="btn" data-bed="${i}">✏️ Чегин оңдоо</button>${u.custom ? `<button class="btn" data-bres="${i}">↺ OSM'ге</button>` : ""}</div>`).join("")}`;
+    ${UNITS.map((u, i) => `<div class="item" style="flex-wrap:wrap"><div class="main"><b>${esc(u.name)}</b> <span class="muted">· ${u.km2} км²</span><br><small class="muted">${u.custom ? "✏️ Сиз оңдогон чек" : u.approx ? "Болжолдуу 5 км тегерек" : "OpenStreetMap чеги"}</small></div>
+      <button class="btn" data-bed="${i}">✏️ Чегин оңдоо</button>${u.custom ? `<button class="btn" data-bres="${i}">↺ OSM'ге</button>` : ""}
+      ${u.custom || (u.hist || []).length ? `<details style="flex-basis:100%;margin-top:6px"><summary class="muted" style="cursor:pointer">🕘 Тарых</summary>
+        <div class="bh">● ${u.custom ? "Азыркы (сиз оңдогон)" : "Азыркы"} <span class="muted">${u.km2} км²</span></div>
+        ${(u.hist || []).map((h, k) => `<div class="bh">○ ${new Date(h.at * 1000).toLocaleString("ru-RU", {day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit"})} <span class="muted">${h.km2} км²</span><button class="btn" data-bhist="${i}:${k}">↺ Мурункуга</button></div>`).join("")}
+        ${u.custom ? `<div class="bh">○ OSM (баштапкы) <span class="muted">${u.osm_km2} км²</span></div>` : ""}</details>` : ""}</div>`).join("")}`;
   el.querySelectorAll("[data-bed]").forEach(b => b.onclick = () => borderEdit(UNITS[+b.dataset.bed]));
+  el.querySelectorAll("[data-bhist]").forEach(b => b.onclick = async () => {
+    const [i, k] = b.dataset.bhist.split(":").map(Number), u = UNITS[i];
+    if (!confirm(`«${u.name}» чегин ушул мурунку абалына кайтарасызбы?`)) return;
+    const r = await api("/api/a/unit_border_restore", {name:u.name, idx:k});
+    toast(r.ok ? "✓ Мурунку чек кайтарылды" : "Ката", 2500); viewArea(); });
   el.querySelectorAll("[data-bres]").forEach(b => b.onclick = async () => {
     const u = UNITS[+b.dataset.bres];
     if (!confirm(`«${u.name}» чегин OpenStreetMap'тегиге кайтарасызбы?`)) return;
@@ -752,7 +764,12 @@ function bigRing(gj) {                                   // эң чоң шаке
 function borderEdit(u) {
   bEdit = {u, pts:bigRing(u.gj), hist:[]};
   draw = null; alyr.clearLayers(); amap.doubleClickZoom.disable();
-  L.geoJSON(u.gj, {interactive:false, style:{color:"#888780", weight:2, dashArray:"6 5", fill:false}}).addTo(alyr);
+  UNITS.filter(x => x.name !== u.name).forEach(x => L.geoJSON(x.gj, {interactive:false, style:{color:"#B4B2A9", weight:1.2, fill:false}}).addTo(alyr));
+  L.geoJSON(u.osm_gj || u.gj, {interactive:false, style:{color:"#888780", weight:2.2, dashArray:"7 5", fill:false}}).addTo(alyr);
+  if (u.custom) L.geoJSON(u.gj, {interactive:false, style:{color:"#378ADD", weight:2, fill:false}}).addTo(alyr);
+  const lg = document.createElement("div"); lg.className = "blegend"; lg.id = "bLeg";
+  lg.innerHTML = `<div><i style="border-top:2px dashed #888780"></i>OSM (баштапкы)</div>${u.custom ? `<div><i style="border-top:2px solid #378ADD"></i>мурунку (азыркы)</div>` : ""}<div><i style="border-top:3px solid #BA7517"></i>жаңы</div><div><i style="border-top:1px solid #B4B2A9"></i>жанындагы райондор</div>`;
+  amap.getContainer().appendChild(lg);
   bEdit.layer = L.layerGroup().addTo(alyr);
   amap.fitBounds(L.latLngBounds(bEdit.pts), {padding:[30, 30]});
   bDraw();
@@ -760,13 +777,20 @@ function borderEdit(u) {
   $("#hint").innerHTML = `<b>«${esc(u.name)}»</b> чегин оңдоп жатасыз. Боз үзүк сызык — эски чек. <b>Сары чекитти</b> сүйрөп жылдырыңыз; эки чекиттин ортосундагы <b>кичине ак чекитти</b> бассаңыз — жаңы чекит кошулат; чекитти <b>эки жолу бассаңыз</b> — өчөт.`;
   $("#bList").innerHTML = "";
   $("#bUndo").onclick = () => { if (bEdit.hist.length) { bEdit.pts = bEdit.hist.pop(); bDraw(); } };
-  $("#bCancel").onclick = () => { bEdit = null; amap.doubleClickZoom.enable(); viewArea(); };
+  $("#bCancel").onclick = () => { bEdit = null; $("#bLeg") && $("#bLeg").remove(); amap.doubleClickZoom.enable(); viewArea(); };
   $("#bSave").onclick = async () => {
-    if (!confirm(`«${u.name}» үчүн жаңы чекти сактайсызбы? Ушул чектин ичиндеги заказдар «${u.city}» тарифи менен эсептелет.`)) return;
+    const km = ringKm2(bEdit.pts), pl = (await api("/api/a/border_places", {points:bEdit.pts})).places || [];
+    if (!confirm(`«${u.name}» үчүн жаңы чекти сактайсызбы?\n\nАянт: ${u.km2} км² → ${km} км²${pl.length ? "\nИчине кирет: " + pl.join(", ") : ""}\n\nУшул чектин ичиндеги заказдар «${u.city}» тарифи менен эсептелет.`)) return;
     const r = await api("/api/a/unit_border", {name:u.name, points:bEdit.pts});
     if (!r.ok) return toast("Ката — чекит 3төн аз же Кыргызстандан сырткары", 3000);
-    toast("✓ Жаңы чек сакталды", 2500); bEdit = null; amap.doubleClickZoom.enable(); viewArea();
+    toast("✓ Жаңы чек сакталды", 2500); bEdit = null; $("#bLeg") && $("#bLeg").remove(); amap.doubleClickZoom.enable(); viewArea();
   };
+}
+function ringKm2(P) {
+  const la0 = P.reduce((s, p) => s + p[0], 0) / P.length * Math.PI / 180;
+  const xy = P.map(p => [p[1] * 111.32 * Math.cos(la0), p[0] * 110.57]);
+  let s = 0; for (let k = 0; k < xy.length; k++) { const j = (k + xy.length - 1) % xy.length; s += xy[k][0] * xy[j][1] - xy[j][0] * xy[k][1]; }
+  return Math.round(Math.abs(s) / 2 * 10) / 10;
 }
 function bDraw() {
   const g = bEdit.layer, P = bEdit.pts, save = () => bEdit.hist.push(P.map(p => p.slice()));
