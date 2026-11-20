@@ -701,6 +701,7 @@ html.mapnight .leaflet-control-attribution{background:rgba(27,28,33,.7)!importan
 #bnav[data-l]::before,#bnav[data-r]::after{position:absolute;top:-13px;z-index:2;padding:3px 10px;border-radius:999px;font:600 12px/1.2 Inter,system-ui,sans-serif;white-space:nowrap;
   box-shadow:0 3px 10px rgba(20,20,30,.15);pointer-events:none;background:linear-gradient(135deg,#ffd31a,#fcbc00);color:#16161a}
 #bnav[data-l]::before{content:attr(data-l);right:calc(50% + 50px)}
+#bnav:not(.drv)[data-l]::before{padding-left:34px;background:url(/static/r_bag.webp?v=11) 8px 50%/22px auto no-repeat,linear-gradient(135deg,#ffd31a,#fcbc00)}
 #bnav[data-r]::after{content:attr(data-r);left:calc(50% + 50px)}
 #bnav.drv[data-l]::before,#bnav.drv[data-r]::after{background:linear-gradient(135deg,#22b07d,#16865e);color:#fff}
 #bnav.drv[data-l]::before{padding-left:44px;background:url(/static/r_car.webp?v=11) 6px 50%/34px auto no-repeat,linear-gradient(135deg,#22b07d,#16865e)}
