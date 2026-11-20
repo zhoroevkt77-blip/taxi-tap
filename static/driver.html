@@ -98,7 +98,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=108">
+<link rel="stylesheet" href="/static/theme.css?v=109">
 <link rel="stylesheet" href="/static/dark.css?v=15">
 <script src="/static/night.js?v=2"></script>
 </head>
@@ -121,7 +121,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="/static/area.js?v=7"></script>
-<script src="/static/voice.js?v=2"></script>
+<script src="/static/voice.js?v=3"></script>
 <script src="/static/qr.js"></script>
 <script src="/static/qrshare.js"></script>
 <script>
@@ -787,9 +787,12 @@ window.VOICE_HOOK = () => { const el = $("#vPick"); if (el) { el.innerHTML = vpi
 function vpickBind() {
   document.querySelectorAll("[data-vs]").forEach(b => b.onclick = async () => {
     try { if (b.dataset.vs === "tts") localStorage.setItem("vmode", "tts"); else { localStorage.setItem("vmode", "ky"); localStorage.setItem("vset", b.dataset.vs); } } catch (x) {}
-    if (b.dataset.vs !== "tts") await voiceLoad();
-    const el = $("#vPick"); if (el) { el.innerHTML = vpickHTML(); vpickBind(); }
-    speak(["new_order", ...kyNum(80), "som", ...kyKm(1.2)]);
+    try { navigator.vibrate && navigator.vibrate(25); } catch (x) {}
+    const el = $("#vPick"); if (el) { el.innerHTML = vpickHTML(); vpickBind(); }      // тандоо ошол замат көрүнсүн
+    const demo = () => speak(["new_order", ...kyNum(80), "som", ...kyKm(1.2)]);
+    if (b.dataset.vs === "tts") return demo();
+    toast("⏳ Үн жүктөлүүдө…", 1200);
+    await Promise.race([voiceLoad(), new Promise(r => setTimeout(r, 6000))]); demo();
   });
 }
 

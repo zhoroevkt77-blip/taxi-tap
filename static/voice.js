@@ -50,7 +50,9 @@ async function voiceLoad() {
       if (VBUF[k] && VBUF[k].ver === v.ver && VBUF[k].set === v.set) continue;
       const r = await fetch(`/voice/${v.set}/${k}.wav?v=${v.ver}`); if (!r.ok) continue;
       const ab = await r.arrayBuffer();
-      VBUF[k] = {ver:v.ver, set:v.set, b:await new Promise((ok, no) => ac.decodeAudioData(ab, ok, no))};
+      const b = await Promise.race([new Promise((ok, no) => { const pr = ac.decodeAudioData(ab, ok, no); pr && pr.catch && pr.catch(no); }),
+        new Promise((_, no) => setTimeout(() => no("timeout"), 4000))]).catch(() => null);
+      if (b) VBUF[k] = {ver:v.ver, set:v.set, b};
     }
     Object.keys(VBUF).forEach(k => { if (!v.have.includes(k)) delete VBUF[k]; });
     window.VOICE_HOOK && window.VOICE_HOOK();
