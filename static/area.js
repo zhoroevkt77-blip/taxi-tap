@@ -306,7 +306,7 @@ window.NAV = (function () {
     window.NAV_ACCEPT = accept;
     map = m; onLocate = (opts && opts.onLocate) || null; compFn = (opts && opts.onComp) || null; onFix = (opts && opts.onFix) || null;
     wrap = document.createElement("div"); wrap.className = "navbtns"; wrap.id = "navBtns";
-    wrap.innerHTML = `<button class="navb sat" id="navSat" aria-label="Спутник / Карта">🛰</button><button class="navb hide" id="navComp" aria-label="Компас (түндүк)">${COMP}</button><button class="navb" id="navLoc" aria-label="Мен турган жер">${LOC}</button>`;
+    wrap.innerHTML = `<button class="navb sat" id="navSat" aria-label="Спутник / Карта"><img src="/static/ic_sat.webp?v=12" alt="" style="width:44px;height:30px;object-fit:contain"></button><button class="navb hide" id="navComp" aria-label="Компас (түндүк)">${COMP}</button><button class="navb" id="navLoc" aria-label="Мен турган жер">${LOC}</button>`;
     document.body.appendChild(wrap);
     satInit(m, wrap.querySelector("#navSat"));
     wrap.querySelector("#navComp").firstChild.style.transition = "transform .2s linear";
@@ -335,7 +335,7 @@ function satInit(map, btn) {
     if (on) sat.addTo(map);
     else if (sat) map.removeLayer(sat);
     if (map.getContainer) map.getContainer().classList.toggle("satmode", on);
-    btn.innerHTML = on ? "🗺" : "🛰"; btn.classList.toggle("on", on);
+    btn.innerHTML = `<img src="/static/${on ? "c_map" : "ic_sat"}.webp?v=12" alt="" style="width:44px;height:30px;object-fit:contain">`; btn.classList.toggle("on", on);
     btn.setAttribute("aria-label", on ? "Картага өтүү" : "Спутникке өтүү");
   };
   btn.onclick = () => { on = !on; try { localStorage.mapSat = on ? "1" : "0"; } catch (e) {} apply();
