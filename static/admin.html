@@ -992,7 +992,7 @@ async function viewVoice() {
   $("#vRen").onclick = async () => { const nm = prompt("Үндүн аты (айдоочуга ушундай көрүнөт):", V.sets[V.set - 1].name); if (!nm) return;
     await api("/api/a/voice_name", {set:V.set, name:nm}); viewVoice(); };
   $("#vAll") && ($("#vAll").onclick = () => { VQ = V.keys.filter(k => !k.have).map(k => k.k); vRec(VQ.shift(), T); });
-  $("#vTest").onclick = () => vPlay(["new_order", "n80", "som", "n1", "point", "n2", "km"], V, T);
+  $("#vTest").onclick = () => vPlay(["new_order", "n80", "som", "n1", "point", "tenth", "n2", "km"], V, T);
   document.querySelectorAll("[data-vr]").forEach(b => b.onclick = () => { VQ = []; vRec(b.dataset.vr, T); });
   document.querySelectorAll("[data-vp]").forEach(b => b.onclick = () => vPlay([b.dataset.vp], V, T));
   document.querySelectorAll("[data-vd]").forEach(b => b.onclick = async () => {

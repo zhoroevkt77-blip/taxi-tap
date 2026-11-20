@@ -6,7 +6,7 @@ window.addEventListener("unhandledrejection", e => jslog("REJ " + ((e.reason && 
 // Такси ТАП! — кыргызча үн: админ жазган клиптер (/voice/<key>.wav) улам-улам ойнойт; жок сөздү телефондун үнү окуйт.
 // Айдоочу да, жүргүнчү да колдонот. localStorage: voice = on|off, vmode = ky|tts.
 const VLBL = {
-  new_order:"Жаңы заказ", new_delivery:"Жеткирүү заказы", next_order:"Кийинки заказ", som:"сом", km:"километр", point:"бүтүн",
+  new_order:"Жаңы заказ", new_delivery:"Жеткирүү заказы", next_order:"Кийинки заказ", som:"сом", km:"километр", point:"бүтүн", tenth:"ондон",
   goal:"Күндүк максат аткарылды", voice_on:"Үн күйгүзүлдү",
   d_cancel:"Жүргүнчү заказды жокко чыгарды", d_msg:"Жүргүнчүдөн билдирүү келди", d_near:"Жүргүнчүгө жеттиңиз",
   d_wait5:"Беш мүнөт өттү, жүргүнчү келбесе баскычты басыңыз", d_done:"Сапар бүттү", d_lowbal:"Балансыңыз аз, толуктаңыз",
@@ -31,7 +31,7 @@ function kyNum(n) {                       // 0..999999 → клиптердин 
   return o;
 }
 function kyKm(x) { const v = Math.round((+x || 0) * 10) / 10, i = Math.floor(v), d = Math.round((v - i) * 10);
-  return [...kyNum(i), ...(d ? ["point", "n" + d] : []), "km"]; }
+  return [...kyNum(i), ...(d ? ["point", "tenth", "n" + d] : []), "km"]; }
 function tts(text, done) {
   if (!text || !("speechSynthesis" in window)) return done && done();
   try {
