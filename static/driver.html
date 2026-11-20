@@ -120,7 +120,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 <div class="offer hide" id="ovl"><div class="ocard" id="ovlc"></div></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="/static/area.js?v=7"></script>
+<script src="/static/area.js?v=8"></script>
 <script src="/static/voice.js?v=5"></script>
 <script src="/static/qr.js"></script>
 <script src="/static/qrshare.js"></script>
@@ -142,15 +142,29 @@ let me = null, myHead = null, mySpeed = 0, myPos = null, D = null, poll = null, 
 NAV.init(map, {onLocate: () => getPos().then(p => { FOLLOW = true; const b = $("#navLoc"); b && b.classList.remove("off");
   if (p) { NAV.set(myPos, myHead, mySpeed); if (map.getZoom() < 16) map.setZoom(16, {animate:false}); followMe(true); } })});
 // ---------- GPS ----------
+let fixAt = 0, gpsRestarts = 0;
 function startGps() {
   if (!navigator.geolocation || watch !== null) return;
   watch = navigator.geolocation.watchPosition(p => {
+    if (window.NAV_ACCEPT && !NAV_ACCEPT(p.coords, p.timestamp)) return;   // начар/эски чекит — стрелка секирбесин
+    fixAt = Date.now();
     myPos = [p.coords.latitude, p.coords.longitude]; myHead = p.coords.heading; mySpeed = p.coords.speed;
     drawMe(); nearCheck();
-  }, () => {}, {enableHighAccuracy:true, maximumAge:3000, timeout:15000});
+  }, e => { if (e && e.code === 1) jslog("gps denied"); }, {enableHighAccuracy:true, maximumAge:0, timeout:15000});
   clearInterval(pingT);
-  pingT = setInterval(() => { if (myPos && D && D.online) api("/api/d/location", {p:myPos}); }, 5000);
+  pingT = setInterval(() => {
+    if (myPos && D && D.online) api("/api/d/location", {p:myPos});
+    // Android'дө GPS кээде үнсүз токтоп калат — 20 сек жаңы чекит келбесе, кайра иштетебиз
+    if (document.visibilityState === "visible" && fixAt && Date.now() - fixAt > 20000 && watch !== null) {
+      try { navigator.geolocation.clearWatch(watch); } catch (e) {} watch = null; fixAt = Date.now();
+      if (++gpsRestarts <= 20) jslog("gps restart #" + gpsRestarts); startGps();
+    }
+  }, 5000);
 }
+document.addEventListener("visibilitychange", () => {                     // экранга кайтканда GPS'ти дароо жаңылайбыз
+  if (document.visibilityState === "visible" && watch !== null && Date.now() - fixAt > 10000) {
+    try { navigator.geolocation.clearWatch(watch); } catch (e) {} watch = null; startGps(); }
+});
 function getPos() {
   return new Promise(res => {
     if (myPos) return res(myPos);

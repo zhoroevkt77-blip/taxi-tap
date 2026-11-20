@@ -262,6 +262,15 @@ window.NAV = (function () {
       if (await DeviceOrientationEvent.requestPermission() !== "granted") return; } } catch (e) {}
     listenOri();
   }
+  // GPS «секирип» кетпесин: жаңы так чекит бар болсо, тактыгы начар (>100 м) же эскирген чекитти этибарга албайбыз
+  let goodAt = 0, lastTs = 0;
+  function accept(c, ts) {
+    const now = Date.now(), acc = (c && c.accuracy) || 0;
+    if (ts && ts < lastTs) return false;                                   // эски чекит кийин келип калды
+    if (acc > 100 && now - goodAt < 30000) return false;                   // начар чекит, жакында так чекит болгон
+    if (ts) lastTs = ts; if (acc <= 100) goodAt = now;
+    return true;
+  }
   function set(p, gh, speed) {
     pos = p; gpsHead = (typeof gh === "number" && !isNaN(gh) && (speed || 0) > 1.5) ? gh : null;
     if (!map) return;
@@ -271,14 +280,19 @@ window.NAV = (function () {
       const d = 0.03; map.setMaxBounds(L.latLngBounds(mb.getSouthWest(), mb.getNorthEast()).extend([p[0] - d, p[1] - d]).extend([p[0] + d, p[1] + d]));
     }
     if (!marker) marker = L.marker(p, {icon:icon(), interactive:false, zIndexOffset:900, keyboard:false}).addTo(map);
-    else marker.setLatLng(p);
+    else { if (map.hasLayer && !map.hasLayer(marker)) marker.addTo(map); marker.setLatLng(p); }
     paint();
   }
+  let wid = null, wFix = 0;
   function watch() {
-    if (watching || !navigator.geolocation) return; watching = true;
-    navigator.geolocation.watchPosition(p => set([p.coords.latitude, p.coords.longitude], p.coords.heading, p.coords.speed),
-      () => {}, {enableHighAccuracy:true, maximumAge:3000, timeout:20000});
+    if (watching || !navigator.geolocation) return; watching = true; wFix = Date.now();
+    wid = navigator.geolocation.watchPosition(p => { wFix = Date.now(); if (accept(p.coords, p.timestamp)) set([p.coords.latitude, p.coords.longitude], p.coords.heading, p.coords.speed); },
+      () => {}, {enableHighAccuracy:true, maximumAge:0, timeout:20000});
   }
+  setInterval(() => {                             // GPS үнсүз токтоп калса (Android) — кайра иштетебиз
+    if (!watching || document.visibilityState !== "visible" || Date.now() - wFix < 20000) return;
+    try { navigator.geolocation.clearWatch(wid); } catch (e) {} watching = false; watch();
+  }, 5000);
   function place() {
     if (!wrap) return;
     const v = window.SHEET ? SHEET.visible() : 0;
@@ -286,6 +300,7 @@ window.NAV = (function () {
     wrap.style.visibility = (v + 14 + 54 > window.innerHeight - 190) ? "hidden" : "";   // барак бийик болсо — үстүңкү баскычтарды жаап калбасын
   }
   function init(m, opts) {
+    window.NAV_ACCEPT = accept;
     map = m; onLocate = (opts && opts.onLocate) || null;
     wrap = document.createElement("div"); wrap.className = "navbtns"; wrap.id = "navBtns";
     wrap.innerHTML = `<button class="navb sat" id="navSat" aria-label="Спутник / Карта">🛰</button><button class="navb hide" id="navComp" aria-label="Компас (түндүк)">${COMP}</button><button class="navb" id="navLoc" aria-label="Мен турган жер">${LOC}</button>`;
