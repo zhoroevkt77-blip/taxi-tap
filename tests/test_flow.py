@@ -1579,3 +1579,18 @@ class BorderHistory(unittest.TestCase):
         sq = {"type": "Polygon", "coordinates": [[[73.0, 41.0], [73.1, 41.0], [73.1, 41.1], [73.0, 41.1], [73.0, 41.0]]]}
         self.assertAlmostEqual(core.area_km2(sq), 92.5, delta=2)          # ~8.4 x 11.06 км
         self.assertTrue(core._pip(41.05, 73.05, [(41.0, 73.0), (41.0, 73.1), (41.1, 73.1), (41.1, 73.0)]))
+
+
+class VoiceClips(unittest.TestCase):
+    def test_save_serve_delete(self):
+        import struct, base64 as B
+        wav = b"RIFF" + struct.pack("<I", 36 + 8) + b"WAVEfmt " + struct.pack("<IHHIIHH", 16, 1, 1, 16000, 32000, 2, 16) + b"data" + struct.pack("<I", 8) + b"\x00" * 8
+        v0 = core.voice_state()["ver"]
+        self.assertFalse(core.voice_save("bad_key", B.b64encode(wav).decode()))
+        self.assertFalse(core.voice_save("n80", B.b64encode(b"notawav" * 20).decode()))
+        self.assertTrue(core.voice_save("n80", B.b64encode(wav).decode()))
+        st = core.voice_state()
+        self.assertIn("n80", st["have"]); self.assertGreater(st["ver"], v0)
+        self.assertEqual(core.voice_clip("n80"), wav)
+        self.assertTrue(core.voice_delete("n80"))
+        self.assertNotIn("n80", core.voice_state()["have"]); self.assertIsNone(core.voice_clip("n80"))

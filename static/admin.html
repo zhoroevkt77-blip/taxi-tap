@@ -72,8 +72,12 @@ td input.f{padding:7px 8px;max-width:90px;min-width:58px}
 .blegend{position:absolute;right:8px;top:8px;z-index:500;background:#fff;border-radius:10px;padding:6px 9px;font-size:11.5px;line-height:1.75;box-shadow:0 2px 10px rgba(0,0,0,.15)}
 .blegend i{display:inline-block;width:18px;vertical-align:middle;margin-right:6px}
 .bh{display:flex;align-items:center;gap:8px;font-size:13px;padding:3px 0}.bh .btn{margin-left:auto;padding:4px 9px;font-size:12px}
+.vbar{height:8px;background:#eee;border-radius:9px;margin-top:8px;width:100%}.vbar i{display:block;height:8px;border-radius:9px;background:#ffb703}
+.vrow{flex-wrap:nowrap!important;align-items:center}.vrow .main{flex:1;min-width:0}.vrow .btn{flex:0 0 auto;min-width:46px;width:auto}.vrec{background:#fff8e1;border-radius:18px;padding:18px;margin:10px 0;text-align:center}
+.vword{font-size:26px;font-weight:600;margin:6px 0 14px}.vmic{width:110px;height:110px;border-radius:50%;border:0;background:#e5383b;color:#fff;font-size:44px;cursor:pointer;box-shadow:0 0 0 12px rgba(229,56,59,.12)}
+.vmic.on{animation:vpulse 1s infinite}@keyframes vpulse{50%{box-shadow:0 0 0 22px rgba(229,56,59,.22)}}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=105">
+<link rel="stylesheet" href="/static/theme.css?v=106">
 </head>
 <body class="adm">
 <header><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b><span class="ver">Админ</span></div><div class="live" id="live"></div></header>
@@ -88,6 +92,7 @@ td input.f{padding:7px 8px;max-width:90px;min-width:58px}
   <button data-t="addr">Даректер</button>
   <button data-t="area">Аймак</button>
   <button data-t="parks">Парктар</button>
+  <button data-t="voice">🎙 Үн</button>
 </nav>
 <main id="main"></main>
 
@@ -964,10 +969,108 @@ async function fixedPanel() {
     await api("/api/a/fixed_routes", {items: FX.filter(x => x.id != b.dataset.fxdel)}); fixedPanel();
   });
 }
+// ---------- 🎙 Кыргызча үн: айдоочуга заказды айтуучу сөздөрдү админ өзү жазат ----------
+let VQ = [], VR = null, VBLOB = null, VWAV = null;
+async function viewVoice() {
+  const V = await api("/api/voice"), n = V.keys.filter(k => k.have).length;
+  $("#main").innerHTML = `<div class="panel"><h3>🎙 Кыргызча үн — айдоочуга жаңы заказды ушул үн айтат</h3>
+    <div class="item"><div class="main"><b>${n} / ${V.keys.length} жазылды</b><span class="muted">Ар бир сөздү тынч жерде, телефонго жакын, кадимки ылдамдыкта айтыңыз.
+      Башы-аягындагы тынчтык өзү кесилет, үн катуулугу теңделет. Жазыла элек сөздү айдоочунун телефонунун үнү окуйт.</span>
+      <div class="vbar"><i style="width:${Math.round(100 * n / V.keys.length)}%"></i></div></div></div>
+    <div class="item" style="gap:8px">${n < V.keys.length ? `<button class="btn gold" id="vAll">🎙 Жазыла электерди катары менен жазуу</button>` : ""}
+      <button class="btn" id="vTest">🔊 Сынап угуу: «Жаңы заказ, 80 сом, 1,2 километр»</button></div>
+    <div id="vRec"></div>
+    ${V.keys.map(k => `<div class="item vrow"><div class="main"><b>${esc(k.t)}</b><span class="muted">${k.have ? "✓ жазылган" : "жазыла элек"}</span></div>
+      ${k.have ? `<button class="btn" data-vp="${k.k}" title="Угуу">▶</button>` : ""}<button class="btn ${k.have ? "" : "gold"}" data-vr="${k.k}" title="Жазуу">🎙</button>
+      ${k.have ? `<button class="btn" data-vd="${k.k}" title="Өчүрүү">🗑</button>` : ""}</div>`).join("")}</div>`;
+  const T = {}; V.keys.forEach(k => T[k.k] = k.t);
+  $("#vAll") && ($("#vAll").onclick = () => { VQ = V.keys.filter(k => !k.have).map(k => k.k); vRec(VQ.shift(), T); });
+  $("#vTest").onclick = () => vPlay(["new_order", "n80", "som", "n1", "point", "n2", "km"], V, T);
+  document.querySelectorAll("[data-vr]").forEach(b => b.onclick = () => { VQ = []; vRec(b.dataset.vr, T); });
+  document.querySelectorAll("[data-vp]").forEach(b => b.onclick = () => vPlay([b.dataset.vp], V, T));
+  document.querySelectorAll("[data-vd]").forEach(b => b.onclick = async () => {
+    if (!confirm("«" + T[b.dataset.vd] + "» өчүрүлсүнбү?")) return; await api("/api/a/voice_del", {key:b.dataset.vd}); viewVoice(); });
+}
+let VAC = null;
+const vAC = () => VAC = VAC || new (window.AudioContext || window.webkitAudioContext)();
+async function vPlay(keys, V, T) {
+  const ac = vAC(); ac.resume && ac.resume();
+  for (const k of keys) {
+    if (V.have.includes(k)) {
+      try { const ab = await (await fetch(`/voice/${k}.wav?v=${V.ver}`)).arrayBuffer();
+        const b = await new Promise((ok, no) => ac.decodeAudioData(ab, ok, no));
+        await new Promise(ok => { const s = ac.createBufferSource(); s.buffer = b; s.connect(ac.destination); s.onended = ok; s.start(); });
+      } catch (e) {}
+    } else if ("speechSynthesis" in window) {
+      await new Promise(ok => { const u = new SpeechSynthesisUtterance(T[k] || ""); u.lang = "ru-RU"; u.onend = u.onerror = ok; speechSynthesis.speak(u); setTimeout(ok, 3000); });
+    }
+  }
+}
+function vRec(key, T) {
+  if (!key) { VQ = []; return viewVoice(); }
+  VBLOB = VWAV = null;
+  const box = $("#vRec");
+  box.innerHTML = `<div class="vrec"><div class="muted">${VQ.length ? "Дагы " + VQ.length + " сөз калды" : "Жазуу"}</div>
+    <div class="vword">«${esc(T[key])}»</div>
+    <button class="vmic" id="vMic">🎙</button><div class="muted" id="vSt">Басыңыз да, сөздү айтыңыз — кайра басканда токтойт</div>
+    <div class="item" style="gap:8px;justify-content:center"><button class="btn hide" id="vHear">▶ Кайра угуу</button>
+      <button class="btn gold hide" id="vSave">✓ Сактоо${VQ.length ? " → «" + esc(T[VQ[0]]) + "»" : ""}</button>
+      <button class="btn" id="vCx">✕ Жабуу</button></div></div>`;
+  box.scrollIntoView({behavior:"smooth", block:"center"});
+  $("#vCx").onclick = () => { try { VR && VR.state === "recording" && VR.stop(); } catch (e) {} VQ = []; box.innerHTML = ""; };
+  $("#vMic").onclick = async () => {
+    if (VR && VR.state === "recording") return VR.stop();
+    let st;
+    try { st = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true, noiseSuppression:true}}); }
+    catch (e) { return $("#vSt").textContent = "Микрофонго уруксат бериңиз (браузердин жөндөөлөрүнөн)."; }
+    const ch = []; VR = new MediaRecorder(st); VR.ondataavailable = e => e.data.size && ch.push(e.data);
+    VR.onstop = async () => {
+      st.getTracks().forEach(t => t.stop()); $("#vMic").classList.remove("on"); clearTimeout(VR._t);
+      $("#vSt").textContent = "Иштетилүүдө…";
+      try { VWAV = await toWav(new Blob(ch, {type:VR.mimeType || "audio/webm"}));
+        $("#vSt").textContent = "Даяр (" + VWAV.sec.toFixed(1) + " сек). Угуп көрүңүз."; $("#vHear").classList.remove("hide"); $("#vSave").classList.remove("hide"); }
+      catch (e) { $("#vSt").textContent = e === "short" ? "Үн угулган жок — кайра басып, катуураак айтыңыз." : "Жазуу иштелбей калды, кайра аракет кылыңыз."; }
+    };
+    VR.start(); $("#vMic").classList.add("on"); $("#vSt").textContent = "● Жазылып жатат… бүткөндө кайра басыңыз";
+    $("#vHear").classList.add("hide"); $("#vSave").classList.add("hide");
+    VR._t = setTimeout(() => VR.state === "recording" && VR.stop(), 5000);
+  };
+  $("#vHear").onclick = () => { const ac = vAC(); ac.resume && ac.resume(); const s = ac.createBufferSource(); s.buffer = VWAV.buf; s.connect(ac.destination); s.start(); };
+  $("#vSave").onclick = async () => {
+    $("#vSave").disabled = true;
+    const r = await api("/api/a/voice_save", {key, b64:VWAV.b64});
+    if (!r.ok) { $("#vSave").disabled = false; return toast("Сакталбай калды", 2500); }
+    toast("✓ «" + T[key] + "» сакталды", 1500);
+    if (VQ.length) { await viewVoice(); vRec(VQ.shift(), T); } else viewVoice();
+  };
+}
+// MediaRecorder'дин файлы → тынчтыгы кесилген, катуулугу теңделген 16 кГц моно WAV (бардык телефондо ойнойт)
+async function toWav(blob) {
+  const ac = vAC(), ab = await blob.arrayBuffer();
+  const buf = await new Promise((ok, no) => ac.decodeAudioData(ab, ok, no));
+  const d = buf.getChannelData(0), sr = buf.sampleRate;
+  let peak = 0; for (let i = 0; i < d.length; i++) { const v = Math.abs(d[i]); if (v > peak) peak = v; }
+  if (peak < 0.02) throw "short";
+  const th = Math.max(0.015, peak * 0.1);
+  let a = 0, b = d.length - 1; while (a < d.length && Math.abs(d[a]) < th) a++; while (b > a && Math.abs(d[b]) < th) b--;
+  a = Math.max(0, a - Math.round(sr * 0.05)); b = Math.min(d.length, b + Math.round(sr * 0.1));
+  if (b - a < sr * 0.15) throw "short";
+  const R = 16000, off = new OfflineAudioContext(1, Math.ceil((b - a) * R / sr), R);
+  const src = off.createBuffer(1, b - a, sr); src.getChannelData(0).set(d.subarray(a, b));
+  const s = off.createBufferSource(); s.buffer = src; s.connect(off.destination); s.start();
+  const out = await off.startRendering(), x = out.getChannelData(0), g = 0.9 / peak, fd = Math.round(R * 0.01);
+  for (let i = 0; i < x.length; i++) { let v = x[i] * g; if (i < fd) v *= i / fd; if (i > x.length - fd) v *= (x.length - i) / fd; x[i] = Math.max(-1, Math.min(1, v)); }
+  const n = x.length, w = new DataView(new ArrayBuffer(44 + n * 2)), str = (o, t) => { for (let i = 0; i < t.length; i++) w.setUint8(o + i, t.charCodeAt(i)); };
+  str(0, "RIFF"); w.setUint32(4, 36 + n * 2, true); str(8, "WAVE"); str(12, "fmt "); w.setUint32(16, 16, true); w.setUint16(20, 1, true); w.setUint16(22, 1, true);
+  w.setUint32(24, R, true); w.setUint32(28, R * 2, true); w.setUint16(32, 2, true); w.setUint16(34, 16, true); str(36, "data"); w.setUint32(40, n * 2, true);
+  for (let i = 0; i < n; i++) w.setInt16(44 + i * 2, x[i] * 32767, true);
+  const u8 = new Uint8Array(w.buffer); let bin = ""; for (let i = 0; i < u8.length; i += 8192) bin += String.fromCharCode.apply(null, u8.subarray(i, i + 8192));
+  return {b64:btoa(bin), buf:out, sec:n / R};
+}
 function show(t) {
   tab = t; lyr = null;
   document.querySelectorAll("nav button").forEach(b => b.classList.toggle("on", b.dataset.t === t));
-  ({map:viewMap, disp:viewDisp, drivers:viewDrivers, topups:viewTopups, rides:viewRides, tariffs:viewTariffs, area:viewArea, finance:viewFinance, parks:viewParks, addr:() => viewAddr("")})[t]();
+  ({map:viewMap, disp:viewDisp, drivers:viewDrivers, topups:viewTopups, rides:viewRides, tariffs:viewTariffs, area:viewArea, finance:viewFinance, parks:viewParks, addr:() => viewAddr(""), voice:viewVoice})[t]();
 }
 document.querySelectorAll("nav button").forEach(b => b.onclick = () => show(b.dataset.t));
 async function boot() {

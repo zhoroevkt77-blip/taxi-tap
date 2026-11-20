@@ -2771,3 +2771,66 @@ def save_promo(code, amount, first_only=True, max_uses=0, expires=None, active=T
               "VALUES (?, ?, ?, ?, ?, ?, ?)",
               (code, amount, 1 if first_only else 0, max_uses, expires or None, 1 if active else 0, now()))
     return True
+
+
+# ==================== Кыргызча үн (админ жазган клиптер) ====================
+# Ар бир сөз/сан WAV (16 кГц, моно) катары settings'те сакталат: "voice:<key>".
+VOICE_KEYS = [
+    ("new_order", "Жаңы заказ"), ("new_delivery", "Жеткирүү заказы"), ("som", "сом"),
+    ("km", "километр"), ("point", "бүтүн"), ("goal", "Күндүк максат аткарылды"), ("voice_on", "Үн күйгүзүлдү"),
+    ("n0", "нөл"), ("n1", "бир"), ("n2", "эки"), ("n3", "үч"), ("n4", "төрт"), ("n5", "беш"),
+    ("n6", "алты"), ("n7", "жети"), ("n8", "сегиз"), ("n9", "тогуз"),
+    ("n10", "он"), ("n20", "жыйырма"), ("n30", "отуз"), ("n40", "кырк"), ("n50", "элүү"),
+    ("n60", "алтымыш"), ("n70", "жетимиш"), ("n80", "сексен"), ("n90", "токсон"),
+    ("n100", "жүз"), ("n1000", "миң"),
+]
+VOICE_OK = {k for k, _ in VOICE_KEYS}
+VOICE_MAX = 200 * 1024
+
+
+def voice_state():
+    have = get_setting("voice_have") or {}
+    return {"ver": int(get_setting("voice_ver") or 0),
+            "keys": [{"k": k, "t": t, "have": k in have} for k, t in VOICE_KEYS],
+            "have": sorted(k for k in have if k in VOICE_OK)}
+
+
+def voice_clip(key):
+    if key not in VOICE_OK:
+        return None
+    v = get_setting("voice:" + key)
+    if not v:
+        return None
+    try:
+        return base64.b64decode(v)
+    except Exception:
+        return None
+
+
+def voice_save(key, b64):
+    if key not in VOICE_OK or not isinstance(b64, str):
+        return False
+    try:
+        raw = base64.b64decode(b64, validate=True)
+    except Exception:
+        return False
+    if not (44 < len(raw) <= VOICE_MAX) or raw[:4] != b"RIFF" or raw[8:12] != b"WAVE":
+        return False
+    set_setting("voice:" + key, b64)
+    have = get_setting("voice_have") or {}
+    have[key] = int(now())
+    set_setting("voice_have", have)
+    set_setting("voice_ver", int(get_setting("voice_ver") or 0) + 1)
+    return True
+
+
+def voice_delete(key):
+    if key not in VOICE_OK:
+        return False
+    query("DELETE FROM settings WHERE key=?", ("voice:" + key,))
+    _settings_cache.pop("voice:" + key, None)
+    have = get_setting("voice_have") or {}
+    have.pop(key, None)
+    set_setting("voice_have", have)
+    set_setting("voice_ver", int(get_setting("voice_ver") or 0) + 1)
+    return True

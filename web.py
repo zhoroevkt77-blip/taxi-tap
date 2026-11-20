@@ -400,6 +400,15 @@ class H(BaseHTTPRequestHandler):
                 self.send_header("Cache-Control", "public, max-age=86400"); self.end_headers(); self.wfile.write(body); return
             if u.path == "/api/mapcfg":
                 return self._json({"p": maptiles.provider()})
+            if u.path == "/api/voice":
+                return self._json(core.voice_state())
+            mv = re.match(r"^/voice/(\w+)\.wav$", u.path)
+            if mv:
+                body = core.voice_clip(mv.group(1))
+                if not body:
+                    return self._json({"error": "not_found"}, 404)
+                self.send_response(200); self.send_header("Content-Type", "audio/wav"); self.send_header("Content-Length", str(len(body)))
+                self.send_header("Cache-Control", "public, max-age=31536000, immutable"); self.end_headers(); self.wfile.write(body); return
             uid = self._uid()
             if not uid:
                 return self._json({"error": "auth"}, 401)
@@ -1095,6 +1104,12 @@ class H(BaseHTTPRequestHandler):
             if r.get("error"):
                 return self._json(r, 400)
             return self._json(dict(core.area_info(), result=r))
+        if action == "voice_save":
+            ok = core.voice_save(_txt(b.get("key"), 20), b.get("b64"))
+            return self._json(dict(core.voice_state(), ok=ok), 200 if ok else 400)
+        if action == "voice_del":
+            ok = core.voice_delete(_txt(b.get("key"), 20))
+            return self._json(dict(core.voice_state(), ok=ok), 200 if ok else 400)
         if action == "unit_border_restore":
             ok = core.restore_unit_border(_txt(b.get("name"), 80), int(b.get("idx") or 0))
             return self._json({"ok": ok}, 200 if ok else 400)
