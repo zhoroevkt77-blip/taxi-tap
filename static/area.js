@@ -289,7 +289,7 @@ window.NAV = (function () {
   function watch() {
     if (watching || !navigator.geolocation) return; watching = true; wFix = Date.now();
     wid = navigator.geolocation.watchPosition(p => { wFix = Date.now(); if (!accept(p.coords, p.timestamp)) return;
-        const ll = [p.coords.latitude, p.coords.longitude]; set(ll, p.coords.heading, p.coords.speed); if (onFix) onFix(ll, p.coords.heading, p.coords.speed); },
+        const ll = [p.coords.latitude, p.coords.longitude]; set(ll, p.coords.heading, p.coords.speed); if (onFix) onFix(ll, p.coords.heading, p.coords.speed, p.coords.accuracy); },
       () => {}, {enableHighAccuracy:true, maximumAge:0, timeout:20000});
   }
   setInterval(() => {                             // GPS үнсүз токтоп калса (Android) — кайра иштетебиз

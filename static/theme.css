@@ -781,3 +781,18 @@ b,strong,h1,h2,h3,h4,th{font-weight:600}
 .ccbody>*:first-child{margin-top:2px}.ccbody>*:last-child{margin-bottom:4px}
 .cclist>button i{transition:transform .2s}.cclist>button.open{background:#fff8e1;box-shadow:inset 0 0 0 2px #ffb703}.cclist>button.open i{transform:rotate(90deg);color:#b07d00}
 .ccT{scroll-margin-top:70px}.ccFlash{animation:ccf 1.2s ease}@keyframes ccf{0%,40%{box-shadow:0 0 0 3px #ffc61a}100%{box-shadow:0 0 0 0 rgba(255,198,26,0)}}
+.cclist>button.dgc{background:#16161a;color:#fff;box-shadow:0 4px 14px rgba(0,0,0,.18)}.cclist>button.dgc i{color:#ffc61a}
+.dgc em{font-style:normal;min-width:28px;height:28px;padding:0 8px;border-radius:14px;display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-weight:700}
+.dgc em.n{background:#ef4444;color:#fff}.dgc em.z{background:#1fa64a;color:#fff}
+.dghero{border-radius:24px;padding:18px 18px 14px;margin:2px 0 14px;text-align:left}.dghero h2{margin:8px 0 4px;font-size:22px}.dghero p{margin:0;font-size:14px;opacity:.85}
+.dghero .yi{width:58px!important;height:40px!important}
+.dghero.bad{background:linear-gradient(160deg,#ffd9d6,#fff3f2)}.dghero.warn{background:linear-gradient(160deg,#ffe9b8,#fff8e6)}.dghero.ok{background:linear-gradient(160deg,#cdf2db,#f0fbf4)}
+.dgh{margin:14px 4px 6px;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:#8a8a94}
+.dg{display:flex;align-items:center;gap:10px;background:#fff;border-radius:18px;padding:10px 10px 10px 8px;margin:0 0 8px;box-shadow:0 2px 10px rgba(20,20,30,.06)}
+.dg.bad{box-shadow:inset 0 0 0 1.5px #f4a4a4}.dg.warn{box-shadow:inset 0 0 0 1.5px #ffc98a}
+.dgm{flex:none;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff}
+.dg.ok .dgm{background:#1fa64a}.dg.bad .dgm{background:#ef4444}.dg.warn .dgm{background:#f59e0b}
+.dg .yi{width:44px!important;height:30px!important;margin:0!important;flex:none}
+.dgt{flex:1;min-width:0}.dgt b{display:block;font-size:15px}.dgt small{display:block;color:#6b6b76;font-size:12.5px;margin-top:2px}
+.dgb{flex:none;border:0;border-radius:999px;padding:9px 12px;background:#ffc61a;font:inherit;font-weight:600;font-size:13px;cursor:pointer}
+.dgok{margin:10px 0}.dgok summary{cursor:pointer;color:#1a7a40;font-weight:600;padding:8px 4px}

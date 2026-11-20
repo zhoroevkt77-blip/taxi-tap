@@ -99,8 +99,8 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=118">
-<link rel="stylesheet" href="/static/dark.css?v=19">
+<link rel="stylesheet" href="/static/theme.css?v=119">
+<link rel="stylesheet" href="/static/dark.css?v=20">
 <script src="/static/night.js?v=2"></script>
 </head>
 <body>
@@ -122,7 +122,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 <div class="offer hide" id="ovl"><div class="ocard" id="ovlc"></div></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="/static/area.js?v=11"></script>
+<script src="/static/area.js?v=12"></script>
 <script src="/static/voice.js?v=5"></script>
 <script src="/static/qr.js"></script>
 <script src="/static/qrshare.js"></script>
@@ -141,7 +141,7 @@ const icon = (cls, t) => L.divIcon({className:"", html:`<div class="carm ${cls}"
 const layer = L.layerGroup().addTo(map);
 let me = null, myHead = null, mySpeed = 0, myPos = null, D = null, poll = null, watch = null, lock = null, lastOffer = null, lastRide = null, pingT = null;
 
-NAV.init(map, {onFix: (ll, h, sp) => { myPos = ll; myHead = h; mySpeed = sp; myAt = Date.now(); drawMe(); nearCheck(); },   // линияда эмес кезде да жаңы жер
+NAV.init(map, {onFix: (ll, h, sp, acc) => { myAcc = acc; myPos = ll; myHead = h; mySpeed = sp; myAt = Date.now(); drawMe(); nearCheck(); },   // линияда эмес кезде да жаңы жер
   onLocate: () => getPos().then(p => { FOLLOW = true; const b = $("#navLoc"); b && b.classList.remove("off");
   if (p) { NAV.set(myPos, myHead, mySpeed); if (map.getZoom() < 16) map.setZoom(16, {animate:false}); hupSync(); followMe(true); } }),
   onComp: () => { HUP = !HUP; try { localStorage.setItem("hup", HUP ? "1" : "0"); } catch (e) {}
@@ -644,7 +644,7 @@ function cabChips() {
   if (D.lic_until && D.lic_left !== undefined && D.lic_left <= 30) warn.push(["id", D.lic_left < 0 ? "Күбөлүктүн мөөнөтү бүттү" : `Күбөлүктүн мөөнөтүнө ${D.lic_left} күн калды`, "docs", D.lic_left < 0 ? "r" : "o"]);
   const ul = document.createElement("div"); ul.className = "cclist"; ul.id = "cList";
   const has = k => list.some(x => x[2] === k);
-  ul.innerHTML = warn.filter(w => has(w[2])).map(w => `<button data-cw="${w[2]}" class="w ${w[3]}">${yi(w[0], "s")}<span>${w[1]}</span><i>›</i></button>`).join("")
+  ul.innerHTML = `<button id="dgChip" class="dgc">${yi("tools", "s")}<span>Диагностика</span><em class="${DIAG_N ? "n" : DIAG_N === 0 ? "z" : ""}">${DIAG_N ? DIAG_N : DIAG_N === 0 ? "✓" : ""}</em><i>›</i></button>` + warn.filter(w => has(w[2])).map(w => `<button data-cw="${w[2]}" class="w ${w[3]}">${yi(w[0], "s")}<span>${w[1]}</span><i>›</i></button>`).join("")
     + list.map(x => `<button data-cc="${x[2]}">${yi(x[0], "s")}<span>${x[1]}</span><i>›</i></button><div class="ccbody" data-cb="${x[2]}"></div>`).join("");
   h2.after(ul);
   list.forEach(x => { const b = ul.querySelector(`[data-cb="${x[2]}"]`); x[3].forEach(e => b.appendChild(e)); });   // бөлүмдөр чиптин астына көчөт
@@ -657,9 +657,87 @@ function cabChips() {
   };
   ul.querySelectorAll("[data-cc]").forEach(b => b.onclick = () => toggle(b.dataset.cc));
   ul.querySelectorAll("[data-cw]").forEach(b => b.onclick = () => toggle(b.dataset.cw, true));
+  $("#dgChip").onclick = () => viewDiag();
+  diagChecks().then(L => { DIAG_N = L.filter(x => x.lvl !== "ok").length; const e = document.querySelector("#dgChip em");   // белгиси жаңылансын
+    if (e) { e.className = DIAG_N ? "n" : "z"; e.textContent = DIAG_N || "✓"; } });
   const pb = ul.querySelector('[data-cc="praise"]'); if (pb && !q("#praise").innerHTML.trim()) pb.style.display = "none";   // пикир жүктөлгөнчө жашырын
   if (CC_OPEN && has(CC_OPEN)) toggle(CC_OPEN, true);
 }
+// ==================== 🩺 Диагностика: «эмне үчүн заказ келбейт?» ====================
+let NET_OK = 0, myAcc = null;
+async function diagChecks() {
+  const L = [], add = (lvl, ic, t, why, fix, act) => L.push({lvl, ic, t, why, fix, act});   // lvl: ok | warn | bad
+  // аккаунт
+  if (D.status === "blocked") add("bad", "alert", "Аккаунт бөгөттөлгөн", D.blocked_by && D.blocked_by.startsWith("park:") ? "Таксопаркыңыз бөгөттөдү — алар менен байланышыңыз." : "Админ бөгөттөдү — жардамга жазыңыз.", "Жардам", () => typeof viewHelp === "function" && viewHelp());
+  else add("ok", "check", "Аккаунт тастыкталган", "Заказ ала аласыз.");
+  // баланс
+  if (D.min_balance > 0 && D.balance < D.min_balance) add("bad", "wallet", `Баланс аз: ${D.balance} с (минимум ${D.min_balance} с)`, "Баланс минимумдан аз болсо заказ келбейт.", "Толуктоо", viewTopup);
+  else add("ok", "wallet", `Баланс: ${D.balance} с`, "Жетиштүү.");
+  // күбөлүк
+  if (!D.lic_until) add("warn", "id", "Күбөлүктүн мөөнөтү жазылган эмес", "Мөөнөтүн жазып коюңуз — бүткөндө эскертебиз.", "Жазуу", viewLicense);
+  else if (D.lic_left < 0) add("bad", "id", "Айдоочулук күбөлүктүн мөөнөтү бүттү", "Мөөнөтү бүткөн күбөлүк менен линияга чыгууга болбойт.", "Жаңылоо", viewLicense);
+  else if (D.lic_left <= 30) add("warn", "id", `Күбөлүктүн мөөнөтүнө ${D.lic_left} күн калды`, "Алдын ала жаңылап коюңуз.", "Жаңылоо", viewLicense);
+  else add("ok", "id", "Күбөлүк жарактуу", D.lic_until + " чейин.");
+  // фотоконтроль
+  const ph = D.photo || {};
+  if (ph.status === "rejected") add("warn", "camera", "Фотоконтроль кабыл алынган жок", ph.note || "Сүрөттөрдү кайра тартыңыз.", "Тартуу", viewPhotos);
+  else if (ph.need && ph.status !== "pending") add("warn", "camera", "Фотоконтроль: унааны тартуу керек", "30 күндө бир жолу 4 тарабынан тартасыз.", "Тартуу", viewPhotos);
+  else if (ph.status === "pending") add("ok", "camera", "Фотоконтроль текшерилүүдө", "Күтүңүз.");
+  else add("ok", "camera", "Фотоконтроль өттү", "");
+  // GPS
+  let perm = "prompt"; try { perm = (await navigator.permissions.query({name:"geolocation"})).state; } catch (e) {}
+  if (perm === "denied") add("bad", "pin", "GPS'ке уруксат жок", "Жериңизди билбесек, заказ жибере албайбыз.", "Кантип ачам?", () => typeof gpsHelp === "function" ? gpsHelp() : alert("Браузердин жөндөөлөрүнөн «Жайгашкан жер» уруксатын бериңиз."));
+  else if (!myPos) add("warn", "pin", "GPS жериңизди таба элек", "Сыртка чыгып, бир аз күтүңүз.", "Кайра издөө", () => getPos().then(() => viewDiag()));
+  else if (myAcc && myAcc > 100) add("warn", "pin", `GPS тактыгы начар (±${Math.round(myAcc)} м)`, "Телефондун жөндөөсүнөн «Так жайгашкан жер»ди күйгүзүңүз.", "", null);
+  else add("ok", "pin", "GPS иштеп жатат" + (myAcc ? ` (±${Math.round(myAcc)} м)` : ""), "");
+  // аймак
+  if (D.in_area === false) add("bad", "map", "Иштөө аймагынын сыртындасыз", "Заказдар аймактын ичинде гана берилет.", "Картадан көрүү", () => { window.SHEET && SHEET.collapse(); });
+  else if (D.in_area) add("ok", "map", "Иштөө аймагынын ичиндесиз", D.area_name || "");
+  // интернет
+  if (!navigator.onLine || Date.now() - NET_OK > 15000) add("bad", "link", "Интернет же сервер менен байланыш жок", "Мобилдик интернетти текшериңиз.", "Кайра текшерүү", () => refresh().then(() => viewDiag()));
+  else add("ok", "link", "Интернет бар", "");
+  // үн
+  const ac = typeof VCTX !== "undefined" && VCTX ? VCTX.state : "";
+  if (!voiceOn()) add("warn", "volume", "Заказды үн менен айтуу өчүк", "Жолдо экранды карабай эле угасыз.", "Күйгүзүү", () => { try { localStorage.setItem("voice", "on"); } catch (e) {} speak(["voice_on"]); viewDiag(); });
+  else if (ac === "suspended") add("warn", "volume", "Үн бөгөттөлгөн", "Браузер үндү экранга тийгенден кийин гана ачат.", "Үндү сынап көрүү", () => { beep(); speak(["new_order", ...kyNum(80), "som"]); setTimeout(viewDiag, 1500); });
+  else add("ok", "volume", "Үн иштейт", "");
+  // Telegram
+  if (!D.tg) add("warn", "message", "Telegram туташкан эмес", "Экран өчүп турса да заказ Telegram'га келет.", "Туташтыруу", () => D.bot && open("https://t.me/" + D.bot, "_blank"));
+  else if (!D.notify) add("warn", "message", "Telegram билдирүүлөрү өчүк", "Жөндөөлөрдөн күйгүзүңүз.", "", null);
+  else add("ok", "message", "Telegram туташкан", "");
+  // экран
+  if (!("wakeLock" in navigator)) add("warn", "clock", "Экран өзү өчүп калышы мүмкүн", "Телефондун жөндөөсүнөн экрандын өчүү убактысын узартыңыз.", "", null);
+  else add("ok", "clock", "Линияда экран өчпөйт", "");
+  // батарея
+  try { if (navigator.getBattery) { const b = await navigator.getBattery();
+    if (!b.charging && b.level < 0.2) add("warn", "bolt", `Батарея аз: ${Math.round(b.level * 100)}%`, "Заряддагычка сайып коюңуз — GPS көп кубат алат.", "", null);
+    else add("ok", "bolt", `Батарея: ${Math.round(b.level * 100)}%${b.charging ? " · заряддалып жатат" : ""}`, ""); } } catch (e) {}
+  // активдүүлүк
+  if ((D.activity ?? 100) < 50) add("warn", "bolt", `Активдүүлүк төмөн: ${D.activity}`, "Аралыгы окшош болсо, активдүүлүгү жогору айдоочуга заказ биринчи барат.", "", null);
+  else add("ok", "bolt", `Активдүүлүк: ${D.activity ?? 100}`, "");
+  // жаңы версия
+  try { const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration();
+    if (reg && reg.waiting) add("warn", "tools", "Колдонмонун жаңы версиясы бар", "Жаңылаганда акыркы оңдоолор иштейт.", "Жаңылоо", () => { reg.waiting.postMessage && reg.waiting.postMessage("skip"); location.reload(); }); } catch (e) {}
+  return L;
+}
+async function viewDiag(fromOnline) {
+  const L = await diagChecks(), bad = L.filter(x => x.lvl === "bad"), warn = L.filter(x => x.lvl === "warn"), ok = L.filter(x => x.lvl === "ok");
+  DIAG_N = bad.length + warn.length;
+  const row = (x, i) => `<div class="dg ${x.lvl}" data-dg="${i}"><span class="dgm">${x.lvl === "ok" ? "✓" : x.lvl === "bad" ? "✕" : "!"}</span>${yi(x.ic, "s")}
+    <div class="dgt"><b>${esc(x.t)}</b>${x.why ? `<small>${esc(x.why)}</small>` : ""}</div>${x.fix ? `<button class="dgb" data-df="${i}">${esc(x.fix)} ›</button>` : ""}</div>`;
+  const all = [...bad, ...warn, ...ok];
+  render(`<div class="dghero ${bad.length ? "bad" : warn.length ? "warn" : "ok"}">${yi("check", "s")}
+      <h2>${bad.length ? `${bad.length} көйгөй заказга тоскоол` : warn.length ? "Заказ ала аласыз" : "Заказ алууга даярсыз ✓"}</h2>
+      <p>${bad.length ? (fromOnline ? "Линияга чыгуу үчүн буларды оңдоңуз:" : "Булар оңдолмоюнча заказ келбейт.") : warn.length ? `${warn.length} эскертүү бар — оңдосоңуз жакшыраак иштейт.` : "Баары жайында. Ийгиликтүү сапар!"}</p></div>
+    ${bad.length ? `<h3 class="dgh">Заказга тоскоол</h3>${bad.map(x => row(x, all.indexOf(x))).join("")}` : ""}
+    ${warn.length ? `<h3 class="dgh">Эскертүүлөр</h3>${warn.map(x => row(x, all.indexOf(x))).join("")}` : ""}
+    <details class="dgok"><summary>✓ Жайында — ${ok.length}</summary>${ok.map(x => row(x, all.indexOf(x))).join("")}</details>
+    <button class="btn ghost" id="dgRe">↻ Кайра текшерүү</button><button class="btn bk" id="dgBk">‹ Артка</button>`);
+  window.SHEET && SHEET.expand();
+  document.querySelectorAll("[data-df]").forEach(b => b.onclick = e => { e.stopPropagation(); const x = all[+b.dataset.df]; x.act && x.act(); });
+  $("#dgRe").onclick = () => viewDiag(); $("#dgBk").onclick = () => viewCabinet();
+}
+let DIAG_N = null;
 async function viewHistory() {
   const h = await api("/api/d/history");
   const name = {completed:"✅", cancelled:"✖️", accepted:"…", arrived:"…", in_trip:"…"};
@@ -843,7 +921,7 @@ async function goOnline(btn) {
   if (!p) { if (btn) btn.disabled = false; const e = $("#er"); if (e) e.textContent = "GPS'ке уруксат бериңиз (браузердин жөндөөлөрүнөн)."; else alert("GPS'ке уруксат бериңиз."); return; }
   const r = await api("/api/d/online", {on:true, p});
   if (r.error === "lic_expired") { if (btn) btn.disabled = false; alert("Айдоочулук күбөлүгүңүздүн мөөнөтү бүттү. Жаңы күбөлүктү жүктөңүз."); return viewLicense(); }
-  if (r.error) { if (btn) btn.disabled = false; return; }
+  if (r.error) { if (btn) btn.disabled = false; return viewDiag(true); }   // эмне тоскоол экенин көрсөтөбүз
   D = r; speak(["d_online"], 750);
   startGps(); wake(true); lastView = ""; show();
   if (D.photo && D.photo.need && D.photo.status !== "pending") setTimeout(() => toast("📷 Фотоконтроль: убакыт тапканда унааңыздын 4 тарабын тартып жибериңиз (Кабинет)", 4500), 1200);
@@ -1226,6 +1304,7 @@ function show() {
 async function refresh() {
   const s = await api("/api/d/state?vis=" + (document.visibilityState === "visible" ? 1 : 0));
   if (s.error === "auth") { clearInterval(poll); return viewLogin(false); }
+  if (!s.error) NET_OK = Date.now();
   const prev = D; D = s; voiceEvents(prev, s);
   show();
 }
