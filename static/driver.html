@@ -93,8 +93,8 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=102">
-<link rel="stylesheet" href="/static/dark.css?v=10">
+<link rel="stylesheet" href="/static/theme.css?v=103">
+<link rel="stylesheet" href="/static/dark.css?v=11">
 <script src="/static/night.js?v=2"></script>
 </head>
 <body>
@@ -189,7 +189,7 @@ function viewLogin(pending, link, err) {
   if (pending) {
     render(`<h2>Номериңизди ырастаңыз</h2><p class="muted">Telegram'да ботко өтүп, «Номеримди жөнөтүү» басыңыз.</p>
       ${link ? `<a class="btn dark" href="${esc(link)}" target="_blank">Telegram'да ырастоо</a>` : ""}
-      <button class="btn ghost" id="relog">Артка</button>`);
+      <button class="btn bk" id="relog">‹ Артка</button>`);
     $("#relog").onclick = () => viewLogin(false);
     const t = setInterval(async () => { const m = await api("/api/me"); if (m.auth) { clearInterval(t); boot(); } }, 2500);
     return;
@@ -284,7 +284,7 @@ function viewAddAddr() {
     <input class="f" id="an" maxlength="80" placeholder="Мис. Нурбек той-кана, Ак-Тилек дүкөнү">
     <select class="f" id="ak" style="width:100%">${K.map(([k, t]) => `<option value="${k}">${t}</option>`).join("")}</select>
     <div class="err" id="ae"></div>
-    <button class="btn main" id="as">Кошуу</button><button class="btn ghost" id="ab">Артка</button>`);
+    <button class="btn main" id="as">Кошуу</button><button class="btn bk" id="ab">‹ Артка</button>`);
   $("#ab").onclick = viewCabinet;
   $("#as").onclick = async () => {
     const nm = $("#an").value.trim(); if (nm.length < 2) return $("#ae").textContent = "Атын жазыңыз.";
@@ -293,7 +293,7 @@ function viewAddAddr() {
     const r = await api("/api/d/addr_suggest", {name:nm, kind:$("#ak").value, p});
     if (r.error) { $("#as").disabled = false; return $("#ae").textContent = "Кошулган жок: жер иштөө аймагынын ичинде болушу керек."; }
     render(`<h2>✓ Рахмат!</h2><p class="muted">«${esc(nm)}» сунушталды. Админ ырастагандан кийин (же дагы бир адам ушул жерди белгилесе) тизмеге кошулат.</p>
-      <button class="btn main" id="more">Дагы кошуу</button><button class="btn ghost" id="ab">Артка</button>`);
+      <button class="btn main" id="more">Дагы кошуу</button><button class="btn bk" id="ab">‹ Артка</button>`);
     $("#more").onclick = viewAddAddr; $("#ab").onclick = viewCabinet;
   };
   $("#an").focus();
@@ -366,7 +366,7 @@ function viewPhotos() {
   render(`<h2>📷 Фотоконтроль</h2>
     <p class="muted" style="margin-top:-4px">Унааңыздын 4 тарабын жарыкта, номери көрүнгөндөй тартыңыз. Ар 30 күндө бир жолу — жүргүнчүлөр таза, бүтүн унааны көрүшү үчүн.</p>
     <div class="docs" style="grid-template-columns:1fr 1fr">${S.map(([k, t, i]) => `<div class="doc" id="ph_${k}" style="aspect-ratio:1.3"><i>${i}</i>${t}<input type="file" accept="image/*" capture="environment"></div>`).join("")}</div>
-    <div class="err" id="er"></div><button class="btn main" id="send">Жиберүү</button><button class="btn ghost" id="back">Артка</button>`);
+    <div class="err" id="er"></div><button class="btn main" id="send">Жиберүү</button><button class="btn bk" id="back">‹ Артка</button>`);
   window.SHEET && SHEET.expand();
   S.forEach(([k]) => docInput($("#ph_" + k), box, k));
   $("#back").onclick = () => { lastView = ""; show(); };
@@ -439,7 +439,7 @@ function viewCar() {
   navOn("cab");
   const tar = (D.classes || []).map(c => ({econom:"Эконом", comfort:"Комфорт", minivan:"Минивэн", delivery:"Жеткирүү"}[c] || c)).join(", ");
   const I = k => `<img class="ci" src="/static/ci_${k}.webp?v=3" alt="">`;
-  render(`<div class="mycar"><button class="btn ghost" id="cBack" style="width:auto;margin:0 0 6px;padding:8px 14px">‹ Артка</button>
+  render(`<div class="mycar">
     <div class="mcplate">${kgPlate(D.car_plate)}</div>
     <img class="mcimg" src="${carImg(D.car_color)}" alt="${esc(D.car_model || "Унаа")}">
     <div class="mcmodel">${esc(carText(D.car_color, D.car_model) || "Унаа")}</div>
@@ -451,7 +451,7 @@ function viewCar() {
       <div class="mcc">
         <div class="mr mtop">${I("tariff")}<span>Тарифтер<small class="b">${esc(tar || "Эконом")}</small></span></div>
         <div class="mr mtop">${I("edit")}<span>Өзгөртүү<small>Түсүн, номерин же унааны алмаштыруу үчүн админге кайрылыңыз</small></span></div></div>
-    </div></div></div>`);
+    </div></div><button class="btn bk" id="cBack">‹ Артка</button></div>`);
   window.SHEET && SHEET.expand();
   $("#cBack").onclick = () => viewCabinet();
   $("#cYear").onclick = async () => { const v = prompt("Унаанын чыгарылган жылы:", D.car_year || ""); if (!v) return;
@@ -608,7 +608,7 @@ function drvCancel(r) {
   overlay(`<div class="lgx"><h2>Эмне үчүн жокко чыгарасыз?</h2><div class="rsn">${R.map(([k, t]) => `<button data-rs="${k}">${t}</button>`).join("")}</div>
     <p class="muted" style="margin:10px 0">Активдүүлүк −10. Заказ башка айдоочуга берилет. Бир күндө 3 жолудан көп жокко чыгарсаңыз — 30 мүнөт заказ келбейт.
     ${r.status === "arrived" ? "<br>Жүргүнчү 5 мүнөт келбесе — «🙋 Жүргүнчү келбеди» баскычын басыңыз (жаза жок)." : ""}</p>
-    <button class="btn red" id="dcY" disabled>Жокко чыгаруу</button><button class="btn ghost" id="ovlX">Артка</button></div>`);
+    <button class="btn red" id="dcY" disabled>Жокко чыгаруу</button><button class="btn bk" id="ovlX">‹ Артка</button></div>`);
   document.querySelectorAll("[data-rs]").forEach(b => b.onclick = () => { why = b.dataset.rs; $("#dcY").disabled = false;
     document.querySelectorAll("[data-rs]").forEach(x => x.classList.toggle("on", x === b)); });
   $("#dcY").onclick = async () => { $("#dcY").disabled = true; D = await api("/api/d/cancel", {id:r.id, reason:why}); closeOverlay(); lastView = ""; show(); };
@@ -656,7 +656,7 @@ function viewChat() {
   render(`<h2>💬 Жүргүнчү менен чат</h2><div class="msgs" id="msgs"></div>
     <div class="quick" id="qk">${["Келдим, күтүп турам", "5 мүнөттө келем", "Тыгын бар, кечигем", "Кайдасыз?"].map(t => `<button>${t}</button>`).join("")}</div>
     <div class="two"><input class="f" id="mt" placeholder="Билдирүү…" maxlength="300" style="margin:0"><button class="btn main" id="ms" style="margin:0;flex:0 0 90px">➤</button></div>
-    <button class="btn ghost" id="back">Артка</button>`);
+    <button class="btn bk" id="back">‹ Артка</button>`);
   unread();
   const send = async t => { t = (t || "").trim(); if (!t) return; $("#mt").value = "";
     const x = await api("/api/d/msg", {id:D.ride.id, text:t}); if (!x.error) { D = x; drawMsgs(); } };
@@ -885,7 +885,7 @@ function viewLicense() {
     <div class="docs" style="grid-template-columns:1fr"><div class="doc" id="nl" style="aspect-ratio:1.6"><i>🪪</i>Айдоочулук күбөлүк<input type="file" accept="image/*"></div></div>
     <label class="l">Мөөнөтү (качанга чейин)</label><input class="f" id="nd" type="date" value="${esc(D.lic_until || "")}">
     <p class="muted">Админ сүрөттү текшерет.</p>
-    <div class="err" id="er"></div><button class="btn main" id="send">Сактоо</button><button class="btn ghost" id="back">Артка</button>`);
+    <div class="err" id="er"></div><button class="btn main" id="send">Сактоо</button><button class="btn bk" id="back">‹ Артка</button>`);
   docInput($("#nl"), box, "license");
   $("#back").onclick = () => { lastView = ""; show(); };
   $("#send").onclick = async () => {
@@ -997,7 +997,7 @@ function viewTopup() {
     <div class="note">1. Төмөнкү реквизитке акча которуңуз:<br><b>${esc(D.pay_info)}</b><br>2. Чектин скриншотун жүктөп, сумманы жазыңыз.</div>
     <label class="l">Сумма (сом)</label><input class="f" id="am" inputmode="numeric" placeholder="500">
     <div class="docs" style="grid-template-columns:1fr"><div class="doc" id="pf" style="aspect-ratio:2"><i>🧾</i>Чектин скриншоту<input type="file" accept="image/*"></div></div>
-    <div class="err" id="er"></div><button class="btn main" id="send">Жөнөтүү</button><button class="btn ghost" id="back">Артка</button>`);
+    <div class="err" id="er"></div><button class="btn main" id="send">Жөнөтүү</button><button class="btn bk" id="back">‹ Артка</button>`);
   const box = {}; docInput($("#pf"), box, "proof");
   $("#back").onclick = () => { lastView = ""; show(); };
   $("#send").onclick = async () => {

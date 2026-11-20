@@ -746,3 +746,8 @@ b,strong,h1,h2,h3,h4,th{font-weight:600}
 .irow .yi,.phc .yi,.hotc .yi{flex:0 0 54px;width:54px;min-width:54px}
 .work a .yi{width:68px;height:68px}
 .mr .ci{width:48px;height:48px}
+
+/* «‹ Артка» — ар барактын эң түбүндө узун чип */
+.btn.bk{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin:14px 0 4px;padding:14px;border-radius:999px;
+  background:#fff;color:#16161a;border:0;font:600 16px Inter,system-ui,sans-serif;box-shadow:0 6px 16px rgba(20,20,30,.08),inset 0 0 0 1.5px #ffd666}
+.btn.bk:active{transform:scale(.98);background:#fff8e1}

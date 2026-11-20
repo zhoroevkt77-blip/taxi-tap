@@ -101,8 +101,8 @@ input.f:focus{border-color:var(--navy)}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
 <link rel="preload" as="image" href="/static/h_taxi.webp?v=11"><link rel="preload" as="image" href="/static/h_box.webp?v=11"><link rel="preload" as="image" href="/static/h_girl.webp?v=11"><link rel="preload" as="image" href="/static/h_map.webp?v=11">
-<link rel="stylesheet" href="/static/theme.css?v=102">
-<link rel="stylesheet" href="/static/dark.css?v=10">
+<link rel="stylesheet" href="/static/theme.css?v=103">
+<link rel="stylesheet" href="/static/dark.css?v=11">
 <script src="/static/night.js?v=2"></script>
 </head>
 <body>
@@ -465,7 +465,7 @@ function viewSearch(field) {
       <div class="abr${S.to ? " got" : " need"}" id="rt"><span class="bul to lt">Б</span><input class="ai" id="qt" placeholder="Б точка — каякка?" autocomplete="off" value="${S.to ? esc(S.toAddr) : ""}"><button class="mapb" id="mapB">🗺 Картадан<br>белгиле</button></div>
     </div>
     <div id="list"></div>
-    <button class="btn ghost" id="back">Артка</button>`);
+    <button class="btn bk" id="back">‹ Артка</button>`);
   const inp = {from:$("#qf"), to:$("#qt")};
   const focus = k => { act = k; $("#rf").classList.toggle("on", k === "from"); $("#rt").classList.toggle("on", k === "to");
     setPin(k === "from" ? "from" : "to"); showA(k === "to"); run(); };
@@ -524,7 +524,7 @@ function viewPickFrom() {
   S.mode = "pickFrom"; setPin("from");
   if (S.from) map.setView(S.from, map.getZoom());
   render(`<h2>А точка — каяктан?</h2><p class="muted">Картаны басыңыз же жылдырыңыз — кара пин (А) сизди алып кете турган жерди көрсөтөт.</p>
-    <button class="btn main" id="ok">Даяр</button><button class="btn ghost" id="back">Артка</button>`);
+    <button class="btn main" id="ok">Даяр</button><button class="btn bk" id="back">‹ Артка</button>`);
   $("#ok").onclick = () => { const c = map.getCenter(); S.from = [c.lat, c.lng]; S.fromAddr = $("#chipAddr").textContent; S.fromLock = true; picked("А");
     if (S.to) return viewQuote(); viewStepB(); };                    // эми Б точка
   $("#back").onclick = viewStepA;
@@ -538,7 +538,7 @@ function viewPickDest(save) {
     ${save ? "" : `<input class="f" id="pn" maxlength="80" placeholder="Бул жердин аты (мис. Нурбек той-кана)" value="${esc(S.pendName || "")}">
       <p class="muted" style="margin-top:-4px">Аты жазылса — тизмеге кошулуп, кийин башкалар да таба алат.</p>`}
     <button class="btn main" id="ok">${save ? "Сактоо" : "Даяр"}</button>
-    ${save ? "" : `<button class="btn ghost" id="typeB">✍️ Б точканы жазып тандоо</button>`}<button class="btn ghost" id="back">Артка</button>`);
+    ${save ? "" : `<button class="btn ghost" id="typeB">✍️ Б точканы жазып тандоо</button>`}<button class="btn bk" id="back">‹ Артка</button>`);
   if ($("#typeB")) $("#typeB").onclick = () => viewSearch("to");
   $("#ok").onclick = async () => { const c = map.getCenter(); S.to = [c.lat, c.lng]; S.toAddr = $("#chipAddr").textContent;
     if (save) { PLACES = await api("/api/place", {kind:save, p:S.to, name:S.toAddr}); map.setView(S.from, 15); return viewIdle(); }
@@ -558,7 +558,7 @@ async function viewQuote() {
   if (q.route) { routeSeq++; drawRoute(q.route); }
   if (q.error) { render(`<h2>Кечиресиз</h2><p class="muted">${q.error === "dest_out"
       ? `Такси ТАП! ${esc(window.AREA && AREA.label ? AREA.label + " аймагынын" : "иштөө аймагынын")} ичинде гана иштейт. Шаар аралык каттамдарга бара албайбыз.`
-      : "Бул жерде Такси ТАП! азырынча иштебейт."}</p><button class="btn ghost" id="back">Артка</button>`); $("#back").onclick = viewIdle; return; }
+      : "Бул жерде Такси ТАП! азырынча иштебейт."}</p><button class="btn bk" id="back">‹ Артка</button>`); $("#back").onclick = viewIdle; return; }
   S.quote = q;
   if (!q.classes.some(c => c.id === S.cls)) S.cls = q.classes[0].id;
   const ICON = {econom:'<img class="clsimg side" src="/static/car_sary.webp?v=4" alt="">', comfort:"🚘", minivan:"🚐",
@@ -581,7 +581,7 @@ async function viewQuote() {
     <div class="chips" style="flex-wrap:wrap"><button id="promoOpen">🎁 Промокод</button><button id="otherOpen">👤 Башка адамга</button><button id="noteOpen">📝 Каалоо</button></div>
     <div id="promoBox"></div><div id="whenBox"></div><div id="otherBox"></div><div id="noteBox"></div>
     <p class="muted" style="margin:6px 0 0">Айдоочу ${q.wait.free_min} мүнөт акысыз күтөт, андан кийин ${q.wait.per_min} сом/мүн.</p>
-    <button class="btn main" id="order">Чакыруу</button><button class="btn ghost" id="back">Артка</button>`);
+    <button class="btn main" id="order">Чакыруу</button><button class="btn bk" id="back">‹ Артка</button>`);
   S.promo = null; S.at = null; S.disc = 0; S.other = null; S.note = "";
   setTimeout(() => { let pp = ""; try { pp = localStorage.getItem("promoPre") || ""; } catch (e) {}
     if (pp && $("#promoOpen")) { $("#promoOpen").click(); $("#pc").value = pp; $("#pcGo").click(); }
@@ -733,7 +733,7 @@ function viewChat() {
   render(`<h2>💬 Айдоочу менен чат</h2><div class="msgs" id="msgs"></div>
     <div class="quick" id="qk">${["Чыгып жатам", "5 мүнөт күтүңүз", "Кайдасыз?", "Дарбазанын алдындамын"].map(t => `<button>${t}</button>`).join("")}</div>
     <div class="two"><input class="f" id="mt" placeholder="Билдирүү…" maxlength="300" style="margin:0"><button class="btn main" id="ms" style="margin:0;flex:0 0 90px">➤</button></div>
-    <button class="btn ghost" id="back">Артка</button>`);
+    <button class="btn bk" id="back">‹ Артка</button>`);
   S.seen = (S.ride.msgs || []).filter(m => !m.me).length;
   drawMsgs();
   const send = async t => { t = (t || "").trim(); if (!t) return; $("#mt").value = "";
