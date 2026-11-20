@@ -751,3 +751,6 @@ b,strong,h1,h2,h3,h4,th{font-weight:600}
 .btn.bk{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin:14px 0 4px;padding:14px;border-radius:999px;
   background:#fff;color:#16161a;border:0;font:600 16px Inter,system-ui,sans-serif;box-shadow:0 6px 16px rgba(20,20,30,.08),inset 0 0 0 1.5px #ffd666}
 .btn.bk:active{transform:scale(.98);background:#fff8e1}
+
+/* ➤ баскычы: карта машинаны ээрчибей калганда көк чекит менен эскертет */
+#navLoc.off{position:relative}#navLoc.off:after{content:"";position:absolute;top:8px;right:8px;width:11px;height:11px;border-radius:50%;background:#ffb703;box-shadow:0 0 0 2px #fff}

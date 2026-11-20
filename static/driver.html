@@ -93,7 +93,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=103">
+<link rel="stylesheet" href="/static/theme.css?v=104">
 <link rel="stylesheet" href="/static/dark.css?v=11">
 <script src="/static/night.js?v=2"></script>
 </head>
@@ -133,7 +133,8 @@ const icon = (cls, t) => L.divIcon({className:"", html:`<div class="carm ${cls}"
 const layer = L.layerGroup().addTo(map);
 let me = null, myHead = null, mySpeed = 0, myPos = null, D = null, poll = null, watch = null, lock = null, lastOffer = null, lastRide = null, pingT = null;
 
-NAV.init(map, {onLocate: () => getPos().then(p => { if (p) { drawMe(); map.setView(p, Math.max(map.getZoom(), 16)); } })});
+NAV.init(map, {onLocate: () => getPos().then(p => { FOLLOW = true; const b = $("#navLoc"); b && b.classList.remove("off");
+  if (p) { NAV.set(myPos, myHead, mySpeed); if (map.getZoom() < 16) map.setZoom(16, {animate:false}); followMe(true); } })});
 // ---------- GPS ----------
 function startGps() {
   if (!navigator.geolocation || watch !== null) return;
@@ -152,10 +153,23 @@ function getPos() {
       () => res(null), {enableHighAccuracy:true, timeout:10000});
   });
 }
+// Картаны машинанын артынан ээрчитүү: айдоочу картаны колу менен жылдырса токтойт, ➤ басса кайра күйөт
+let FOLLOW = true;
+map.on("dragstart", () => { FOLLOW = false; const b = $("#navLoc"); b && b.classList.add("off"); });
+function followMe(force) {
+  if (!myPos || (!FOLLOW && !force) || !map.latLngToContainerPoint) return;
+  const sz = map.getSize(), sh = window.SHEET ? SHEET.visible() : 0;
+  const top = 150, bot = Math.max(top + 80, sz.y - sh - 70);                 // үстүңкү чиптер жана ылдыйкы барак жаппаган жер
+  const p = map.latLngToContainerPoint(myPos);
+  if (!force && p.x > 50 && p.x < sz.x - 50 && p.y > top && p.y < bot) return;   // көрүнүп турат — тынч калсын
+  const tgt = L.point(sz.x / 2, (top + bot) / 2);
+  map.panTo(map.containerPointToLatLng(L.point(sz.x / 2, sz.y / 2).add(p.subtract(tgt))), {animate:true, duration:.6});
+}
 function drawMe() {
   if (!myPos) return;
   NAV.set(myPos, myHead, mySpeed);
   if (!me) { me = true; map.setView(myPos, 16); }
+  else followMe();
 }
 async function wake(on) {
   try {
