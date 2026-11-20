@@ -122,7 +122,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 <div class="offer hide" id="ovl"><div class="ocard" id="ovlc"></div></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="/static/area.js?v=9"></script>
+<script src="/static/area.js?v=10"></script>
 <script src="/static/voice.js?v=5"></script>
 <script src="/static/qr.js"></script>
 <script src="/static/qrshare.js"></script>
@@ -141,7 +141,8 @@ const icon = (cls, t) => L.divIcon({className:"", html:`<div class="carm ${cls}"
 const layer = L.layerGroup().addTo(map);
 let me = null, myHead = null, mySpeed = 0, myPos = null, D = null, poll = null, watch = null, lock = null, lastOffer = null, lastRide = null, pingT = null;
 
-NAV.init(map, {onLocate: () => getPos().then(p => { FOLLOW = true; const b = $("#navLoc"); b && b.classList.remove("off");
+NAV.init(map, {onFix: (ll, h, sp) => { myPos = ll; myHead = h; mySpeed = sp; myAt = Date.now(); drawMe(); nearCheck(); },   // линияда эмес кезде да жаңы жер
+  onLocate: () => getPos().then(p => { FOLLOW = true; const b = $("#navLoc"); b && b.classList.remove("off");
   if (p) { NAV.set(myPos, myHead, mySpeed); if (map.getZoom() < 16) map.setZoom(16, {animate:false}); hupSync(); followMe(true); } }),
   onComp: () => { HUP = !HUP; try { localStorage.setItem("hup", HUP ? "1" : "0"); } catch (e) {}
     if (HUP) { FOLLOW = true; const b = $("#navLoc"); b && b.classList.remove("off"); }
@@ -162,7 +163,7 @@ function hupLayout(on) {
 }
 function hupSync() {                                         // режим күйүк жана карта машинаны ээрчиши керек болсо — айлантабыз
   const want = HUP && FOLLOW && !!myPos;
-  if (want !== hupOn) { hupOn = want; if (!want) { hupAng = 0; } hupLayout(want); }
+  if (want !== hupOn) { hupOn = want; hupAng = 0; hupHead = null; hupLayout(want); }   // жаңыдан күйгөндө — машина жүрө баштаганча түндүк өйдө
   if (hupOn) {
     if (typeof myHead === "number" && !isNaN(myHead) && (mySpeed || 0) > 1.4) hupHead = myHead;   // 5 км/с'тан ылдам — бурулушту эске алабыз
     if (hupHead !== null) { const d = ((-hupHead - hupAng) % 360 + 540) % 360 - 180; hupAng += d; mapEl.style.transform = `rotate(${hupAng}deg)`; }
@@ -177,7 +178,7 @@ function startGps() {
   if (!navigator.geolocation || watch !== null) return;
   watch = navigator.geolocation.watchPosition(p => {
     if (window.NAV_ACCEPT && !NAV_ACCEPT(p.coords, p.timestamp)) return;   // начар/эски чекит — стрелка секирбесин
-    fixAt = Date.now();
+    fixAt = myAt = Date.now();
     myPos = [p.coords.latitude, p.coords.longitude]; myHead = p.coords.heading; mySpeed = p.coords.speed;
     drawMe(); nearCheck();
   }, e => { if (e && e.code === 1) jslog("gps denied"); }, {enableHighAccuracy:true, maximumAge:0, timeout:15000});
@@ -195,12 +196,13 @@ document.addEventListener("visibilitychange", () => {                     // э�
   if (document.visibilityState === "visible" && watch !== null && Date.now() - fixAt > 10000) {
     try { navigator.geolocation.clearWatch(watch); } catch (e) {} watch = null; startGps(); }
 });
+let myAt = 0;
 function getPos() {
   return new Promise(res => {
-    if (myPos) return res(myPos);
-    if (!navigator.geolocation) return res(null);
-    navigator.geolocation.getCurrentPosition(p => { myPos = [p.coords.latitude, p.coords.longitude]; res(myPos); },
-      () => res(null), {enableHighAccuracy:true, timeout:10000});
+    if (myPos && Date.now() - myAt < 15000) return res(myPos);           // эскирген жер болсо — жаңысын сурайбыз
+    if (!navigator.geolocation) return res(myPos);
+    navigator.geolocation.getCurrentPosition(p => { myPos = [p.coords.latitude, p.coords.longitude]; myHead = p.coords.heading; mySpeed = p.coords.speed; myAt = Date.now(); res(myPos); },
+      () => res(myPos), {enableHighAccuracy:true, timeout:10000, maximumAge:0});
   });
 }
 // Картаны машинанын артынан ээрчитүү: айдоочу картаны колу менен жылдырса токтойт, ➤ басса кайра күйөт
