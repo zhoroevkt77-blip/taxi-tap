@@ -831,7 +831,14 @@ let ZONES = [], CITIES_T = [], zdraw = false;
 function zoneList() {
   const el = $("#zList"); if (!el) return;
   el.innerHTML = `<p class="muted" style="margin:4px 0">🎯 <b>Тариф зонасы</b> — картада бир жерди тартып, ал жерге кайсы тариф колдонуларын тандайсыз (мис. аэропорттун тегереги — «Манас» тарифи). Зона район чегинен күчтүү.</p>
-    ${ZONES.map(z => `<div class="item"><div class="main">🎯 «${esc(z.city)}» тарифи</div><button class="btn" data-zdel="${z.id}">✕ Өчүрүү</button></div>`).join("")}`;
+    ${ZONES.map((z, i) => `<div class="item"><div class="main">🎯 Зона ${i + 1} · тарифи:
+      <select class="f" data-zcity="${z.id}" style="margin:4px 0 0;max-width:220px">${[...new Set([...CITIES_T, z.city])].map(c => `<option ${c === z.city ? "selected" : ""}>${esc(c)}</option>`).join("")}</select></div>
+      <button class="btn" data-zgo="${z.id}">🔍</button><button class="btn" data-zdel="${z.id}">✕ Өчүрүү</button></div>`).join("")}`;
+  el.querySelectorAll("[data-zcity]").forEach(s => s.onchange = async () => {
+    const r = await api("/api/a/tariff_zone", {id:+s.dataset.zcity, city:s.value});
+    toast(r.ok ? `✓ Эми бул зона «${s.value}» тарифи менен эсептелет` : "Сакталган жок", 2500); if (r.ok) viewArea(); });
+  el.querySelectorAll("[data-zgo]").forEach(b => b.onclick = () => { const z = ZONES.find(x => x.id == b.dataset.zgo);
+    if (z && amap) { amap.fitBounds(L.geoJSON(z.gj).getBounds(), {padding:[20, 20]}); amap.getContainer().scrollIntoView({behavior:"smooth", block:"center"}); } });
   el.querySelectorAll("[data-zdel]").forEach(b => b.onclick = async () => { if (!confirm("Зонаны өчүрөсүзбү?")) return;
     await api("/api/a/tariff_zone", {id:+b.dataset.zdel, delete:true}); viewArea(); });
 }
@@ -849,11 +856,12 @@ function areaTools(a) {
       await api("/api/a/area", {reset:true}); setTimeout(viewArea, 1500); };
     return;
   }
-  t.innerHTML = `${zdraw ? `<select class="f" id="zCity" style="margin:0;max-width:200px">${CITIES_T.map(c => `<option>${esc(c)}</option>`).join("")}</select>` : ""}
+  t.innerHTML = `${zdraw ? `<label style="display:flex;align-items:center;gap:6px;font-weight:600">🎯 Тарифи:<select class="f" id="zCity" style="margin:0;max-width:200px">${CITIES_T.map(c => `<option>${esc(c)}</option>`).join("")}</select></label>` : ""}
     <button class="btn ok" id="aSave">✓ Сактоо</button><button class="btn" id="aUndo">↶ Акыркы чекит</button>
     <button class="btn bad" id="aCancel">Жокко чыгаруу</button>`;
   $("#aSave").onclick = async () => {
     if (draw.length < 3) return $("#hint").textContent = "Кеминде 3 чекит коюңуз.";
+    if (zdraw && !confirm(`Бул тарткан жердеги сапарлар «${$("#zCity").value}» тарифи менен эсептелет. Туурабы?`)) return;
     if (zdraw) { const r = await api("/api/a/tariff_zone", {city:$("#zCity").value, points:draw});
       if (!r.ok) return $("#hint").textContent = "Сакталган жок: чекиттерди текшериңиз.";
       draw = null; zdraw = false; toast("✓ Тариф зонасы сакталды", 2500); return viewArea(); }
@@ -862,13 +870,27 @@ function areaTools(a) {
     draw = null; viewArea();
   };
   $("#aUndo").onclick = () => { draw.pop(); drawPreview(); };
+  if ($("#zCity")) $("#zCity").onchange = e => e.target.dataset.touched = "1";
   $("#aCancel").onclick = () => { draw = null; zdraw = false; viewArea(); };
+}
+// Тарткан жердин ортосу кайсы аймакта болсо — ошол тариф демейде тандалат (кичине аймак/шаар биринчи)
+function inRing(lat, lon, ring) { let c = false; for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) { const [xi, yi] = ring[i], [xj, yj] = ring[j];
+  if ((yi > lat) !== (yj > lat) && lon < (xj - xi) * (lat - yi) / (yj - yi) + xi) c = !c; } return c; }
+function inGj(lat, lon, gj) { const g = gj && (gj.geometry || gj); if (!g) return false;
+  const polys = g.type === "Polygon" ? [g.coordinates] : g.type === "MultiPolygon" ? g.coordinates : (g.features || []).flatMap(f => { const x = f.geometry; return x.type === "Polygon" ? [x.coordinates] : x.coordinates; });
+  return polys.some(p => inRing(lat, lon, p[0]) && !p.slice(1).some(h => inRing(lat, lon, h))); }
+function zAuto() {
+  const s = $("#zCity"); if (!zdraw || !s || !draw || draw.length < 3 || s.dataset.touched) return;
+  const la = draw.reduce((a, p) => a + p[0], 0) / draw.length, lo = draw.reduce((a, p) => a + p[1], 0) / draw.length;
+  const hit = UNITS.filter(u => inGj(la, lo, u.gj)).sort((a, b) => (a.km2 || 1e9) - (b.km2 || 1e9))[0];
+  if (hit) s.value = hit.city;
 }
 function drawPreview() {
   alyr.clearLayers();
   if (draw.length > 1) L.polygon(draw, {color:"#D8443A", weight:3, dashArray:"8 6", fillColor:"#D8443A", fillOpacity:.1}).addTo(alyr);
   draw.forEach((p, i) => L.marker(p, {icon:L.divIcon({className:"", html:`<div class="vx ${i ? "" : "first"}"></div>`,
     iconSize:[20, 20], iconAnchor:[10, 10]}), interactive:false}).addTo(alyr));
+  zAuto();
   $("#hint").textContent = draw.length ? `${draw.length} чекит. Аймакты толук айланып чыккандан кийин «Сактоо» басыңыз.` : "Картаны аймактын четтери боюнча басыңыз.";
 }
 

@@ -1025,6 +1025,14 @@ def tariff_zones():
 
 def set_tariff_zone(city, points, zid=None, delete=False):
     """Админ тарткан жер → ушул тариф (мис. аэропорттун тегереги «Манас» тарифи менен)."""
+    if zid and points is None and not delete:          # тарткан жерди өзгөртпөй, тарифин гана алмаштыруу
+        zs = tariff_zones()
+        z = next((z for z in zs if z.get("id") == zid), None)
+        if not z or not city:
+            return False
+        z["city"] = city
+        set_setting("tariff_zones", zs)
+        return True
     zs = [z for z in tariff_zones() if z.get("id") != zid]
     if delete:
         set_setting("tariff_zones", zs)

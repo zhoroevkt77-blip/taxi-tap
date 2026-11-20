@@ -1649,3 +1649,16 @@ class ParkSelfApprove(unittest.TestCase):
         core.query("DELETE FROM drivers WHERE uid=?", (u,))
         for x in (pid, pid2):
             core.query("DELETE FROM parks WHERE id=?", (x,))
+
+
+class TariffZoneRetag(unittest.TestCase):
+    def test_change_city_without_redraw(self):
+        core.init_db()
+        old = core.tariff_zones()
+        self.assertTrue(core.set_tariff_zone("Сузак", [[40.9, 72.9], [40.95, 72.9], [40.95, 73.0]]))
+        z = core.tariff_zones()[-1]
+        self.assertTrue(core.set_tariff_zone("Манас", None, z["id"]))
+        z2 = next(x for x in core.tariff_zones() if x["id"] == z["id"])
+        self.assertEqual(z2["city"], "Манас"); self.assertEqual(z2["gj"], z["gj"])
+        self.assertFalse(core.set_tariff_zone("Манас", None, 123))
+        core.set_setting("tariff_zones", old)
