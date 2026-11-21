@@ -894,6 +894,20 @@ class H(BaseHTTPRequestHandler):
     # ---------- админ ----------
 
     def _admin_get(self, action, q):
+        per = (q.get("per") or ["month"])[0]
+        per = per if per in ("today", "week", "month", "all") else "month"
+        if action == "drv_fin":
+            return self._json(core.drivers_fin(per))
+        if action == "drv_fin.csv":
+            body = core.drivers_fin_csv(per).encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/csv; charset=utf-8")
+            self.send_header("Content-Disposition", 'attachment; filename="taxitap-aydoochular-%s.csv"' % per)
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
         if action == "overview":
             return self._json(core.admin_overview())
         if action == "parks":

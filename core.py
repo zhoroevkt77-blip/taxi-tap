@@ -2780,6 +2780,37 @@ def hot_spot(lat, lon, km=12.0, minutes=30, min_n=3):
     return best
 
 
+def drivers_fin(period="month"):
+    """Админ: ар бир айдоочу боюнча — сапар, жалпы иштеген, комиссия, салык, камсыздандыруу, бонус, таза киреше."""
+    since = 0 if period == "all" else period_starts().get(period, period_starts()["month"])
+    rides = {r["driver"]: r for r in query("SELECT driver, COUNT(*) AS n, COALESCE(SUM(price),0) AS s FROM rides "
+                                           "WHERE status='completed' AND completed_at>=? GROUP BY driver", (since,), "all")}
+    tx = {}
+    for t in query("SELECT driver, kind, COALESCE(SUM(amount),0) AS a FROM balance_tx WHERE status='done' AND at>=? "
+                   "AND kind IN ('commission','tax','ins','promo') GROUP BY driver, kind", (since,), "all"):
+        tx.setdefault(t["driver"], {})[t["kind"]] = float(t["a"] or 0)
+    rows = []
+    for d in query("SELECT uid, car_plate, status FROM drivers WHERE status IN ('active','blocked')", (), "all"):
+        u = get_user(d["uid"]) or {}
+        r, x = rides.get(d["uid"]) or {}, tx.get(d["uid"], {})
+        g = round(float(r.get("s") or 0))
+        fee, tax, ins, bonus = round(-x.get("commission", 0)), round(-x.get("tax", 0)), round(-x.get("ins", 0)), round(max(0, x.get("promo", 0)))
+        rows.append({"uid": d["uid"], "name": u.get("name") or "", "phone": u.get("phone") or "", "plate": d.get("car_plate") or "",
+                     "rides": int(r.get("n") or 0), "gross": g, "fee": fee, "tax": tax, "ins": ins, "bonus": bonus,
+                     "clean": g - fee - tax - ins + bonus})
+    rows.sort(key=lambda z: (-z["gross"], z["name"]))
+    tot = {k: sum(z[k] for z in rows) for k in ("rides", "gross", "fee", "tax", "ins", "bonus", "clean")}
+    return {"period": period, "rows": rows, "total": tot}
+
+
+def drivers_fin_csv(period):
+    f = drivers_fin(period)
+    L = ["Айдоочу;Телефон;Номер;Сапар;Жалпы иштеген;Комиссия;Киреше салыгы;Камсыздандыруу төгүмү;Бонус;Таза киреше"]
+    for r in f["rows"] + [dict(f["total"], name="ЖАЛПЫ", phone="", plate="")]:
+        L.append(";".join(str(r[k]) for k in ("name", "phone", "plate", "rides", "gross", "fee", "tax", "ins", "bonus", "clean")))
+    return "\ufeff" + "\n".join(L) + "\n"
+
+
 def admin_finance():
     ps = period_starts()
     totals = {}
