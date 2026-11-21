@@ -2489,8 +2489,18 @@ def phone_rides(hours=24):
 
 
 def driver_history(uid, limit=20):
-    return query("SELECT id, status, price, dist_km, created_at, completed_at FROM rides "
+    rows = query("SELECT id, status, price, dist_km, created_at, completed_at FROM rides "
                  "WHERE driver=? ORDER BY id DESC LIMIT ?", (uid, limit), "all")
+    ids = [r["id"] for r in rows if r["status"] == "completed"]
+    m = {}
+    if ids:                                   # ар бир сапардан кармалгандар (комиссия, салык, камсыздандыруу, промо)
+        for t in query("SELECT ride_id, kind, SUM(amount) AS a FROM balance_tx WHERE driver=? AND status='done' AND ride_id IN (%s) "
+                       "GROUP BY ride_id, kind" % ",".join("?" * len(ids)), (uid,) + tuple(ids), "all"):
+            m.setdefault(t["ride_id"], {})[t["kind"]] = round(float(t["a"] or 0))
+    for r in rows:
+        x = m.get(r["id"], {})
+        r["fee"], r["tax"], r["ins"], r["bonus"] = -x.get("commission", 0), -x.get("tax", 0), -x.get("ins", 0), x.get("promo", 0)
+    return rows
 
 
 def offer_for(uid):

@@ -190,13 +190,13 @@ def _drivers(pid):
     return core.query("SELECT * FROM drivers WHERE park_id=?", (pid,), "all")
 
 
-def _sum_commission(uids, since, until=None):
+def _sum_commission(uids, since, until=None, kind="commission"):
     if not uids:
         return 0.0
     qs = ",".join("?" * len(uids))
-    r = core.query("SELECT COALESCE(SUM(-amount),0) AS s FROM balance_tx WHERE kind='commission' AND status='done' "
+    r = core.query("SELECT COALESCE(SUM(-amount),0) AS s FROM balance_tx WHERE kind=? AND status='done' "
                    "AND at>=? AND at<? AND driver IN (%s)" % qs,
-                   (since, until if until is not None else 1e12) + tuple(uids), "one")
+                   (kind, since, until if until is not None else 1e12) + tuple(uids), "one")
     return float(r["s"] or 0)
 
 
@@ -452,6 +452,8 @@ def driver_stats(pid, period="week"):
                      "online": bool(d.get("online")), "busy": bool(d.get("busy_ride")),
                      "rides": n, "gross": round(gross), "online_sec": round(core.online_sec(d["uid"], since)),
                      "accepted": acc, "offers": tot, "cancels": _dcancels(d["uid"], since), "share": round(fee * rate),
+                     "fee": round(fee), "tax": round(_sum_commission([d["uid"]], since, kind="tax")),
+                     "ins": round(_sum_commission([d["uid"]], since, kind="ins")),
                      "rating": d.get("rating"), "activity": d.get("activity") if d.get("activity") is not None else 100,
                      "idle_days": int((t - seen) // 86400) if seen else None, "diag": core.diag_brief(d, u)})
     rows.sort(key=lambda r: (-r["gross"], -r["rides"]))
@@ -516,9 +518,12 @@ def map_state(pid):
 
 def stats_csv(pid, period):
     s = driver_stats(pid, period)
-    lines = ["Айдоочу;Телефон;Номер;Сапар;Тапкан акча;Линияда (саат);Алган заказ;Сунуш;Жокко чыгаруу;Паркка тиешелүү"]
+    lines = ["Айдоочу;Телефон;Номер;Сапар;Жалпы иштеген;Комиссия;Киреше салыгы;Камсыздандыруу төгүмү;Таза киреше;"
+             "Линияда (саат);Алган заказ;Сунуш;Жокко чыгаруу;Паркка тиешелүү"]
     for r in s["rows"]:
+        clean = r["gross"] - r.get("fee", 0) - r.get("tax", 0) - r.get("ins", 0)
         lines.append(";".join(str(x) for x in (r["name"], r["phone"], r["plate"], r["rides"], r["gross"],
+                                                r.get("fee", 0), r.get("tax", 0), r.get("ins", 0), clean,
                                                 round(r["online_sec"] / 3600.0, 1), r["accepted"], r["offers"], r["cancels"], r["share"])))
     return "\ufeff" + "\n".join(lines) + "\n"
 

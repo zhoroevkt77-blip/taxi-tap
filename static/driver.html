@@ -41,6 +41,7 @@ input.f{width:100%;font-size:17px;padding:14px;border-radius:14px;border:1px sol
 .abpin{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:17px;border:3px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,.35)}.abpin.a{background:#16161a;color:#ffd31a}.abpin.b{background:#fff;color:#16161a;border-color:#16161a}
 .ohead{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.ocls{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;font-weight:700;font-size:13px;background:#fff3c4;color:#6b4e00}.ocls.comfort{background:#e7efff;color:#1d4fb8}.ocls.minivan{background:#efe7ff;color:#5b2bb8}.ocls.delivery{background:#e6f6ec;color:#1f7a45}
 .accbig .osurge{position:absolute;right:14px;top:50%;transform:translateY(-50%);z-index:2;background:#16161a;color:#ffd31a;border-radius:999px;padding:4px 10px;font-size:16px}
+.hbr{font-size:12.5px;color:#6b6b75;margin-top:2px}.hbr s{text-decoration:none;color:#b3261e}.hbr u{text-decoration:none;color:#1f7a45}.hbr b{color:#1f7a45}
 .ftab{background:#fff;border:1.5px solid #ffe08a;border-radius:18px;padding:6px 14px 10px;margin:10px 0}.fr{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px dashed #eee;font-size:15px}.fr em{font-style:normal;font-size:12px;font-weight:700;background:#f3f3f6;border-radius:999px;padding:1px 7px;margin-left:4px}.fr b{font-variant-numeric:tabular-nums}.fr.fsum b{font-size:18px}.fr.net{border:0;margin-top:4px;background:#e8f7ee;border-radius:12px;padding:11px 10px}.fr.net b{color:#1f7a45;font-size:20px}.fsub{font-size:12.5px;color:#7a7a85;margin-top:6px}
 .offer{position:fixed;left:0;right:0;bottom:0;z-index:20;background:transparent;display:flex;align-items:flex-end;pointer-events:none}.offer .ocard{pointer-events:auto}
 .ocard{background:#fff;width:100%;border-radius:22px 22px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));animation:up .25s ease-out}
@@ -867,8 +868,11 @@ let DIAG_N = null;
 async function viewHistory() {
   const h = await api("/api/d/history");
   const name = {completed:"✅", cancelled:"✖️", accepted:"…", arrived:"…", in_trip:"…"};
-  render(`<h2>Сапарлар</h2><div class="hist">${(h.rides || []).map(r =>
-    `<div class="row"><span>${name[r.status] || ""}</span><div style="flex:1">№${r.id} · ${new Date(r.created_at * 1000).toLocaleString("ky-KG", {day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit"})}</div><b>${r.price ? r.price + " с" : "—"}</b></div>`).join("") || `<p class="muted">Азырынча сапар жок.</p>`}</div>
+  const n = v => (+v || 0).toLocaleString("ru-RU").replace(/,/g, " ");
+  render(`<h2>Сапарлар</h2><div class="hist">${(h.rides || []).map(r => {
+    const ded = (r.fee || 0) + (r.tax || 0) + (r.ins || 0), net = (r.price || 0) - ded + (r.bonus || 0);
+    const br = r.status === "completed" && r.price && (ded || r.bonus) ? `<div class="hbr">${n(r.price)}${r.fee ? ` <s>−${r.fee} ком.</s>` : ""}${r.tax ? ` <s>−${r.tax} салык</s>` : ""}${r.ins ? ` <s>−${r.ins} камс.</s>` : ""}${r.bonus ? ` <u>+${r.bonus} бонус</u>` : ""} = <b>${n(net)} с</b></div>` : "";
+    return `<div class="row"><span>${name[r.status] || ""}</span><div style="flex:1">№${r.id} · ${new Date(r.created_at * 1000).toLocaleString("ky-KG", {day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit"})}${br}</div><b>${r.price ? r.price + " с" : "—"}</b></div>`; }).join("") || `<p class="muted">Азырынча сапар жок.</p>`}</div>
     `); navOn("hist"); window.SHEET && SHEET.expand();
 }
 
