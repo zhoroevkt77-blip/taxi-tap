@@ -825,3 +825,8 @@ html:not(.uidark) body{color:#0f0f12}
 html:not(.uidark) .muted,html:not(.uidark) small{color:#4a4a55}
 .cclist>button span,.rolesw .r,.sheet h2,.btn,.tile b,.stile b,.bnav a{font-weight:600;letter-spacing:-.005em}
 .cclist>button span{color:inherit}
+/* Ылдыйкы меню: чоңураак иконка жана жазуу */
+.bnav.pro a:not(.big) img{width:62px!important;height:48px!important;object-fit:contain!important;margin-bottom:1px}
+.bnav.pro a{font-size:14px!important;font-weight:600;letter-spacing:-.4px!important}
+.bnav.pro a.big{font-size:16px!important}.bnav.pro a.big img{width:84px!important;height:84px!important}
+@media (max-width:370px){.bnav.pro a:not(.big) img{width:54px!important;height:42px!important}.bnav.pro a{font-size:13px!important}}
