@@ -853,3 +853,12 @@ html.uidark .cclist>a.cl{background:#2a2410;color:#f2f2f5}
 body.ridp #bnav[data-l]::before,body.ridp #bnav[data-r]::after{display:none!important}
 .hhl{display:flex;flex-direction:column;align-items:flex-start}.hhl .modepill{margin-top:6px}
 .modepill img[src*="r_bag"]{width:34px}
+/* Фон: сары жибек лента — экранга толук (баракты сыдырганда да ордунда турат) */
+body:has(#home.cabbg)::before,body:has(#home.hbg)::before,body.parkp::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;background:#fff url(/static/rb_bg.webp?v=2) center/cover no-repeat}
+#home.cabbg,#home.hbg,.home{background:#fff url(/static/rb_bg.webp?v=2) center/cover no-repeat!important}
+body.parkp{background:#fff!important}body.parkp>*{position:relative;z-index:1}body.parkp .pkbg{display:none!important}
+.sheet.cabbg,body.drvp .sheet{background:#fff url(/static/rb_bg.webp?v=2) center top/cover no-repeat!important}
+#home.cabbg::before,#home.cabbg::after,#home.hbg::before,#home.hbg::after,.sheet.cabbg::before,.sheet.cabbg::after,.sheet::before,.sheet::after{background:none!important;display:none!important}
+html.uidark body:has(#home.cabbg)::before,html.uidark body:has(#home.hbg)::before,html.uidark body.parkp::before{background:#17181c}
+html.uidark .sheet.cabbg,html.uidark body.drvp .sheet{background-image:none!important}
+html.uidark .home{background:#17181c!important}
