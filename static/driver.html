@@ -102,7 +102,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=146">
+<link rel="stylesheet" href="/static/theme.css?v=147">
 <link rel="stylesheet" href="/static/dark.css?v=21">
 <script src="/static/night.js?v=2"></script>
 </head>
@@ -625,12 +625,24 @@ function earnSum() {
     <div><b>${x.gross} с</b><span class="muted">максат ${goal} · ${x.rides} сапар${x.online_sec ? " · " + hm(x.online_sec) : ""}</span></div></div>
     <div class="echips"><span>💵 Накталай ${x.gross} с</span><span>➖ Комиссия ${x.fee} с</span>${x.bonus ? `<span>🎁 Бонус +${x.bonus} с</span>` : ""}<span class="k">👛 Колуңузда ${x.net} с</span></div>`;
 }
+function avShrinkD(file) {
+  return new Promise(res => { const rd = new FileReader();
+    rd.onload = () => { const im = new Image(); im.onload = () => {
+      const q = Math.min(im.width, im.height), c = document.createElement("canvas"); c.width = c.height = 400;
+      c.getContext("2d").drawImage(im, (im.width - q) / 2, (im.height - q) / 2, q, q, 0, 0, 400, 400);
+      res(c.toDataURL("image/jpeg", 0.85)); }; im.src = rd.result; };
+    rd.readAsDataURL(file); });
+}
 function viewCabinet(part) {
   part = part === "earn" ? "earn" : "cab"; navOn(part);
   const f = D.finance || {}, row = (t, k) => { const x = f[k] || {rides:0, gross:0, fee:0, net:0};
     return `<tr><td>${t}</td><td>${x.rides}</td><td>${x.gross}</td><td>${x.fee}</td><td><b>${x.net}</b></td></tr>`; };
   const E = part === "earn", C = !E, on = c => c ? "" : ' style="display:none"';
-  render(`<h2>${E ? "💰 Киреше" : "Менин кабинетим"}</h2>${C ? `<div class="rolesw"><a href="/" id="toRider" class="r y"><img src="/static/r_bag.webp?v=24" alt="">Жүргүнчү болуу</a><span class="r g on"><img src="/static/r_car.webp?v=24" alt="">Айдоочу болуу<i>✓</i></span></div>` : ""}${C ? `<button class="carrow" id="myCar"><img src="${carImg(D.car_color)}" alt=""><span><b>Менин унаам</b><small>${esc(carText(D.car_color, D.car_model))}</small><div style="margin-top:4px">${kgPlate(D.car_plate)}</div></span><em>›</em></button>` + workHTML() + myQrHTML() : ""}
+  render(`<h2>${E ? "💰 Киреше" : "Менин кабинетим"}</h2>${C ? `<div class="rolesw"><a href="/" id="toRider" class="r y"><img src="/static/r_bag.webp?v=24" alt="">Жүргүнчү болуу</a><span class="r g on"><img src="/static/r_car.webp?v=24" alt="">Айдоочу болуу<i>✓</i></span></div>
+    <div class="cab2 dcab"><button class="cab-av" id="avBox">${ME_D && ME_D.avatar ? `<img src="${esc(ME_D.avatar)}" alt="">` : esc((D.name || "?")[0].toUpperCase())}<span class="cab-cam">📷</span></button>
+      <input type="file" accept="image/*" capture="user" id="avCam" hidden><input type="file" accept="image/*" id="avGal" hidden>
+      <div class="cab-nm">${esc(D.name || "Айдоочу")}</div><div class="cab-ph">${esc((ME_D && ME_D.phone) || D.phone || "")}</div>
+      <div class="dmeta"><span>★ ${D.rating ?? "5.0"}</span><span>${esc(D.car_plate || "")}</span></div></div>` : ""}${C ? `<button class="carrow" id="myCar"><img src="${carImg(D.car_color)}" alt=""><span><b>Менин унаам</b><small>${esc(carText(D.car_color, D.car_model))}</small><div style="margin-top:4px">${kgPlate(D.car_plate)}</div></span><em>›</em></button>` + workHTML() + myQrHTML() : ""}
     <div${on(C)}><div class="irow">${yi("car")}<span><b>Тарифтериңиз</b><small>${(D.classes || []).map(c => esc((D.class_names || {})[c] || c)).join(", ")} · Комфорт же Минивэнге өтүү үчүн админге кайрылыңыз</small></span></div>
       <div class="irow">${yi("percent")}<span><b>Комиссия</b><small>${esc(D.tariff)}</small></span></div></div>
     <div class="grid"><div class="stat"><span class="muted">Баланс</span><b style="color:${D.balance < D.min_balance ? "var(--bad)" : "inherit"}">${D.balance} с</b></div>
@@ -662,6 +674,20 @@ function viewCabinet(part) {
     <button class="outb ib2" id="cabOut">${yi("out", "s")}Чыгуу</button></div>`);
   bindLinks(); window.SHEET && SHEET.expand();
   if (C) cabChips();
+  if ($("#avBox")) {
+    $("#avBox").onclick = () => overlay(`<h2>📷 Профилдин сүрөтү</h2><p class="muted">Жүзүңүз ачык көрүнгөн, жарык жерде тартылган сүрөт коюңуз.</p>
+      <button class="btn go" id="avC">📸 Камера менен тартуу</button><button class="btn ghost" id="avG">🖼 Галереядан тандоо</button>
+      <button class="btn ghost" id="ovlX">Жабуу</button>`);
+    const avOpen = $("#avBox").onclick; $("#avBox").onclick = () => { avOpen();
+      $("#avC").onclick = () => { closeOverlay(); $("#avCam").click(); }; $("#avG").onclick = () => { closeOverlay(); $("#avGal").click(); }; };
+    const avUp = async e => {
+      const f = e.target.files && e.target.files[0]; if (!f) return; toast("Сүрөт жүктөлүүдө…", 1500);
+      const img = await avShrinkD(f), x = await api("/api/avatar", {img});
+      if (x.error) return toast("Сүрөттү жүктөй алган жокпуз — башкасын тандап көрүңүз", 2500);
+      ME_D.avatar = x.avatar; navAvatar(x.avatar, D.name); $("#cabBtn").innerHTML = `<img src="${esc(x.avatar)}" alt="" class="avbtn">`;
+      viewCabinet(part); toast("✓ Сүрөт коюлду", 1500); };
+    $("#avCam").onchange = avUp; $("#avGal").onchange = avUp;
+  }
   $("#top") && ($("#top").onclick = viewTopup);
   $("#addAddr").onclick = viewAddAddr; $("#cabOut").onclick = confirmOut; bindMyQr();
   $("#myCar") && ($("#myCar").onclick = viewCar);
@@ -731,7 +757,7 @@ function cabChips() {
   const wlHTML = wl.map(w => `<a class="cl" href="${w.href}">${yi(w.ic, "s")}<span>${esc(w.t)}${w.sub ? `<small>${esc(w.sub)}</small>` : ""}</span><i>›</i></a>`).join("");
   ul.innerHTML = `<button id="dgChip" class="dgc">${yi("tools", "s")}<span>Диагностика</span><em class="${DIAG_N ? "n" : DIAG_N === 0 ? "z" : ""}">${DIAG_N ? DIAG_N : DIAG_N === 0 ? "✓" : ""}</em><i>›</i></button>` + wlHTML + warn.filter(w => has(w[2])).map(w => `<button data-cw="${w[2]}" class="w ${w[3]}">${yi(w[0], "s")}<span>${w[1]}</span><i>›</i></button>`).join("")
     + list.map(x => `<button data-cc="${x[2]}">${yi(x[0], "s")}<span>${x[1]}</span><i>›</i></button><div class="ccbody" data-cb="${x[2]}"></div>`).join("");
-  (V.querySelector(".rolesw") || h2).after(ul);
+  (V.querySelector(".dcab") || V.querySelector(".rolesw") || h2).after(ul);
   list.forEach(x => { const b = ul.querySelector(`[data-cb="${x[2]}"]`); x[3].forEach(e => b.appendChild(e)); });   // бөлүмдөр чиптин астына көчөт
   const toggle = (k, force) => {
     const btn = ul.querySelector(`[data-cc="${k}"]`); if (!btn) return;
