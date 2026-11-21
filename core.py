@@ -15,6 +15,7 @@ import datetime
 import json
 import math
 import os
+import re
 import secrets
 import sqlite3
 import threading
@@ -2918,15 +2919,110 @@ def voice_state(vs=1):
     names, sets = voice_names(), []
     for s in VOICE_SETS:
         h = get_setting(_vk(s, "", "voice_have")) or {}
-        sets.append({"id": s, "name": names[s], "have": sorted(k for k in h if k in VOICE_OK)})
+        sets.append({"id": s, "name": names[s], "have": sorted(k for k in h if _vok(k))})
     have = sets[vs - 1]["have"]
-    return {"ver": int(get_setting("voice_ver") or 0), "set": vs, "sets": sets, "total": len(VOICE_KEYS),
-            "keys": [{"k": k, "t": t, "have": k in have} for k, t in VOICE_KEYS], "have": have}
+    tx, cus = voice_texts(vs), voice_custom()
+    keys = [{"k": k, "t": tx.get(k) or t, "def": t, "edit": k not in VOICE_FIXED and not re.match(r"n\d", k),
+             "own": bool(tx.get(k)), "have": k in have} for k, t in VOICE_KEYS]
+    keys = [{"k": c["k"], "t": tx.get(c["k"]) or c["t"], "def": c["t"], "edit": True, "own": False, "custom": True,
+             "ev": c.get("ev") or "", "have": c["k"] in have} for c in cus] + keys
+    after = {}
+    for c in cus:
+        if c.get("ev"):
+            after.setdefault(c["ev"], []).append(c["k"])
+    return {"ver": int(get_setting("voice_ver") or 0), "set": vs, "sets": sets, "total": len(keys),
+            "keys": keys, "have": have, "texts": {k["k"]: k["t"] for k in keys if k["own"] or k.get("custom")},
+            "after": after, "events": [{"k": k, "t": t} for k, t in VOICE_KEYS if k in VOICE_EVENTS]}
+
+
+# Админдин өз тексти жана кошумча сөздөрү
+VOICE_FIXED = {"som", "km", "point", "tenth"}
+VOICE_EVENTS = [k for k, _ in VOICE_KEYS if not re.match(r"n\d", k) and k not in VOICE_FIXED and k != "voice_on"]
+
+
+def voice_custom():
+    c = get_setting("voice_custom") or []
+    return [x for x in c if isinstance(x, dict) and x.get("k") and x.get("t")]
+
+
+def _vok(key):
+    return key in VOICE_OK or any(c["k"] == key for c in voice_custom())
+
+
+def voice_texts(vs):
+    return get_setting(_vk(vs, "", "voice_text")) or {}
+
+
+def _vbump():
+    set_setting("voice_ver", int(get_setting("voice_ver") or 0) + 1)
+
+
+def voice_set_text(key, text, vs=1):
+    """Сөздүн текстин өзгөртүү (бош — баштапкыга кайтат). Эски жазуу өчөт — жаңы текст кайра жаздырылат."""
+    vs = _vset(vs)
+    text = " ".join((text or "").split())[:120]
+    if not vs or not _vok(key) or key in VOICE_FIXED or re.match(r"n\d", key):
+        return False
+    tk = _vk(vs, "", "voice_text")
+    tx = get_setting(tk) or {}
+    if tx.get(key, "") == text:
+        return True
+    if text:
+        tx[key] = text
+    else:
+        tx.pop(key, None)
+    set_setting(tk, tx)
+    voice_delete(key, vs)
+    _vbump()
+    return True
+
+
+def voice_custom_add(text, ev):
+    text = " ".join((text or "").split())[:120]
+    if not text or (ev and ev not in VOICE_EVENTS):
+        return None
+    c = voice_custom()
+    if len(c) >= 30:
+        return None
+    n = max([int(x["k"][1:]) for x in c if x["k"][1:].isdigit()] + [0]) + 1
+    k = "c%d" % n
+    c.append({"k": k, "t": text, "ev": ev or ""})
+    set_setting("voice_custom", c)
+    _vbump()
+    return k
+
+
+def voice_custom_edit(key, ev):
+    c = voice_custom()
+    if ev and ev not in VOICE_EVENTS:
+        return False
+    for x in c:
+        if x["k"] == key:
+            x["ev"] = ev or ""
+            set_setting("voice_custom", c)
+            _vbump()
+            return True
+    return False
+
+
+def voice_custom_del(key):
+    c = voice_custom()
+    if not any(x["k"] == key for x in c):
+        return False
+    for vs in VOICE_SETS:
+        voice_delete(key, vs)
+        tk = _vk(vs, "", "voice_text")
+        tx = get_setting(tk) or {}
+        if tx.pop(key, None) is not None:
+            set_setting(tk, tx)
+    set_setting("voice_custom", [x for x in c if x["k"] != key])
+    _vbump()
+    return True
 
 
 def voice_clip(key, vs=1):
     vs = _vset(vs)
-    if key not in VOICE_OK or not vs:
+    if not _vok(key) or not vs:
         return None
     v = get_setting(_vk(vs, key, "voice"))
     if not v:
@@ -2939,7 +3035,7 @@ def voice_clip(key, vs=1):
 
 def voice_save(key, b64, vs=1):
     vs = _vset(vs)
-    if key not in VOICE_OK or not vs or not isinstance(b64, str):
+    if not _vok(key) or not vs or not isinstance(b64, str):
         return False
     try:
         raw = base64.b64decode(b64, validate=True)
@@ -2958,7 +3054,7 @@ def voice_save(key, b64, vs=1):
 
 def voice_delete(key, vs=1):
     vs = _vset(vs)
-    if key not in VOICE_OK or not vs:
+    if not _vok(key) or not vs:
         return False
     k = _vk(vs, key, "voice")
     query("DELETE FROM settings WHERE key=?", (k,))

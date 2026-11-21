@@ -64,14 +64,16 @@ async function voiceLoad() {
   } catch (e) {}
 }
 // speak(["new_order", ...kyNum(80), "som"], 750) — wait: бип бүткөнчө күтүү (мс)
+const VL = k => (VOICE && VOICE.texts && VOICE.texts[k]) || VLBL[k] || "";   // админдин өз тексти биринчи
 function speak(toks, wait) {
+  if (toks && VOICE && VOICE.after) toks = toks.flatMap(k => [k, ...(VOICE.after[k] || [])]);   // кошумча сөздөр окуядан кийин
   VGEN++; try { VSRC && VSRC.stop(); } catch (e) {} try { "speechSynthesis" in window && speechSynthesis.cancel(); } catch (e) {}
   if (!toks || !toks.length || !voiceOn() || vmode() === "off") return;
-  if (vmode() !== "ky" || !toks.some(k => VBUF[k])) { const t = toks.map(k => VLBL[k] || "").join(" "); return wait ? setTimeout(() => tts(t), wait) : tts(t); }
+  if (vmode() !== "ky" || !toks.some(k => VBUF[k])) { const t = toks.map(VL).join(" "); return wait ? setTimeout(() => tts(t), wait) : tts(t); }
   const g = VGEN; let i = 0;
   const next = () => {
     if (g !== VGEN || i >= toks.length) return; const k = toks[i++];
-    if (!VBUF[k]) return tts(VLBL[k] || "", next);
+    if (!VBUF[k]) return tts(VL(k), next);
     try { const ac = vctx(); ac.resume && ac.resume(); const src = ac.createBufferSource(); src.buffer = VBUF[k].b; src.connect(ac.destination);
       src.onended = () => setTimeout(next, 30); VSRC = src; src.start(); } catch (e) { next(); }
   };

@@ -1154,6 +1154,18 @@ class H(BaseHTTPRequestHandler):
         if action == "voice_del":
             ok = core.voice_delete(_txt(b.get("key"), 20), b.get("set") or 1)
             return self._json(dict(core.voice_state(b.get("set") or 1), ok=ok), 200 if ok else 400)
+        if action == "voice_text":
+            ok = core.voice_set_text(_txt(b.get("key"), 20), b.get("text") or "", b.get("set") or 1)
+            return self._json(dict(core.voice_state(b.get("set") or 1), ok=ok), 200 if ok else 400)
+        if action == "voice_add":
+            k = core.voice_custom_add(b.get("text") or "", _txt(b.get("ev") or "", 20))
+            return self._json(dict(core.voice_state(b.get("set") or 1), ok=bool(k), key=k), 200 if k else 400)
+        if action == "voice_ev":
+            ok = core.voice_custom_edit(_txt(b.get("key"), 20), _txt(b.get("ev") or "", 20))
+            return self._json(dict(core.voice_state(b.get("set") or 1), ok=ok), 200 if ok else 400)
+        if action == "voice_rm":
+            ok = core.voice_custom_del(_txt(b.get("key"), 20))
+            return self._json(dict(core.voice_state(b.get("set") or 1), ok=ok), 200 if ok else 400)
         if action == "voice_name":
             ok = core.voice_set_name(b.get("set"), _txt(b.get("name"), 30))
             return self._json(dict(core.voice_state(b.get("set") or 1), ok=ok), 200 if ok else 400)

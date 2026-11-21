@@ -77,6 +77,7 @@ td input.f{padding:7px 8px;max-width:90px;min-width:58px}
 .vbar{height:8px;background:#eee;border-radius:9px;margin-top:8px;width:100%}.vbar i{display:block;height:8px;border-radius:9px;background:#ffb703}
 .vrow{flex-wrap:nowrap!important;align-items:center}.vrow .main{flex:1;min-width:0}.vrow .btn{flex:0 0 auto;min-width:46px;width:auto}.vrec{background:#fff8e1;border-radius:18px;padding:18px;margin:10px 0;text-align:center}
 .vword{font-size:26px;font-weight:600;margin:6px 0 14px}.vmic{width:110px;height:110px;border-radius:50%;border:0;background:#e5383b;color:#fff;font-size:44px;cursor:pointer;box-shadow:0 0 0 12px rgba(229,56,59,.12)}
+.vform{display:flex;flex-direction:column;gap:6px}.vform textarea,.vform select{width:100%;box-sizing:border-box;font:inherit;font-size:17px;padding:12px;border:1.5px solid #f1d27a;border-radius:14px;background:#fff}.vev{display:block;font-size:13px;color:#1f9d55;font-weight:600;margin-top:2px}.vrow s{opacity:.6}
 .vmic.on{animation:vpulse 1s infinite}@keyframes vpulse{50%{box-shadow:0 0 0 22px rgba(229,56,59,.22)}}
 .dgl{display:block;margin-top:6px;font-size:13px}.dgl.ok{color:#1a7a40;font-weight:600}.dgl summary{cursor:pointer;list-style:none;font-weight:600}
 .dgl summary::-webkit-details-marker{display:none}.dgl summary b{display:inline!important;margin:0!important}.dgl summary{display:block}.dgl .r{color:#c22}.dgl .o{color:#b26a00}.dgi{padding:3px 0 0 4px;font-size:13px}.dgi.bad{color:#b42318}
@@ -1019,21 +1020,56 @@ async function fixedPanel() {
 }
 // ---------- 🎙 Кыргызча үн: айдоочуга заказды айтуучу сөздөрдү админ өзү жазат ----------
 let VQ = [], VR = null, VBLOB = null, VWAV = null, VSET = 1;
-const vGrp = k => /^r_/.test(k) ? "🧳 Жүргүнчүгө" : /^n\d/.test(k) ? "🔢 Сандар" : "🚕 Айдоочуга";
+const vGrp = k => /^c\d/.test(k) ? "✨ Кошумча сөздөр" : /^r_/.test(k) ? "🧳 Жүргүнчүгө" : /^n\d/.test(k) ? "🔢 Сандар" : "🚕 Айдоочуга";
+let EVT = {};
+function vForm(V, k) {            // k жок — жаңы сөз; k бар — текстин өзгөртүү
+  EVT = {}; V.events.forEach(e => EVT[e.k] = e.t);
+  const box = $("#vRec"), isNew = !k, cus = isNew || k.custom;
+  box.innerHTML = `<div class="vrec vform"><div class="vword" style="font-size:20px">${isNew ? "➕ Жаңы сөз" : "✏️ Текстти өзгөртүү"}</div>
+    ${!isNew ? `<div class="muted">Баштапкысы: «${esc(k.def)}»</div>` : ""}
+    <label class="muted" style="text-align:left">Айтыла турган сөз</label>
+    <textarea id="vfT" maxlength="120" rows="2" placeholder="Мисалы: Коопсуздук курун тагыңыз">${isNew ? "" : esc(k.t)}</textarea>
+    ${cus ? `<label class="muted" style="text-align:left">Качан айтылат?</label><select id="vfE"><option value="">— өзүнчө (окуяга байланбайт) —</option>
+      ${V.events.map(e => `<option value="${e.k}" ${k && k.ev === e.k ? "selected" : ""}>${/^r_/.test(e.k) ? "🧳" : "🚕"} «${esc(e.t)}» айтылгандан кийин</option>`).join("")}</select>` : ""}
+    ${!isNew && k.have ? `<div class="muted" style="color:#b26a00">⚠️ Текст өзгөрсө, «${esc(V.sets[V.set - 1].name)}» үнүндөгү эски жазуу өчөт — кайра жаздырасыз.</div>` : ""}
+    <div class="item" style="gap:8px;justify-content:center">${!isNew && k.own ? `<button class="btn" id="vfR">↺ Баштапкыга кайтаруу</button>` : ""}
+      <button class="btn gold" id="vfS">✓ Сактоо${isNew ? " жана жаздыруу" : ""}</button><button class="btn" id="vfC">✕ Жабуу</button></div></div>`;
+  box.scrollIntoView({behavior:"smooth", block:"center"}); $("#vfT").focus();
+  $("#vfC").onclick = () => box.innerHTML = "";
+  $("#vfR") && ($("#vfR").onclick = async () => { await api("/api/a/voice_text", {key:k.k, text:"", set:VSET}); toast("↺ Баштапкы текст", 1500); viewVoice(); });
+  $("#vfS").onclick = async () => {
+    const t = $("#vfT").value.trim(), ev = $("#vfE") ? $("#vfE").value : "";
+    if (!t) return toast("Сөздү жазыңыз", 1800);
+    if (isNew) {
+      const r = await api("/api/a/voice_add", {text:t, ev, set:VSET}); if (!r.ok) return toast("Сакталбай калды", 2200);
+      toast("✓ Кошулду — эми үнүн жаздырыңыз", 1800); await viewVoice(); const T = {}; r.keys.forEach(x => T[x.k] = x.t); VQ = []; return vRec(r.key, T);
+    }
+    if (k.custom && ev !== (k.ev || "")) await api("/api/a/voice_ev", {key:k.k, ev, set:VSET});
+    const r = t === k.t ? {ok:true} : await api("/api/a/voice_text", {key:k.k, text:t === k.def ? "" : t, set:VSET});
+    toast(r.ok ? "✓ Сакталды" : "Сакталбай калды", 1800); viewVoice();
+  };
+}
 async function viewVoice() {
-  const V = await api("/api/voice?set=" + VSET), n = V.keys.filter(k => k.have).length, IC = {1:"👨", 2:"👨", 3:"👩", 4:"👩"};
+  const V = await api("/api/voice?set=" + VSET), n = V.keys.filter(k => k.have).length; EVT = {}; (V.events || []).forEach(e => EVT[e.k] = e.t); const IC = {1:"👨", 2:"👨", 3:"👩", 4:"👩"};
   $("#main").innerHTML = `<div class="panel"><h3>🎙 Кыргызча үн — 4 адамдын үнү, айдоочу Кабинеттен тандайт</h3>
     <div class="vsets">${V.sets.map(x => `<button data-vset="${x.id}" class="${x.id === V.set ? "on" : ""}"><img src="/static/vs_${x.id}.webp?v=3" alt=""><b>${esc(x.name)}</b><small>${x.have.length}/${V.total}</small></button>`).join("")}</div>
     <div class="item"><div class="main"><b>${esc(V.sets[V.set - 1].name)}: ${n} / ${V.keys.length} жазылды</b><span class="muted">Ар бир сөздү тынч жерде, телефонго жакын, кадимки ылдамдыкта айтыңыз.
       Башы-аягындагы тынчтык өзү кесилет, үн катуулугу теңделет. Жазыла элек сөздү айдоочунун телефонунун үнү окуйт.</span>
       <div class="vbar"><i style="width:${Math.round(100 * n / V.keys.length)}%"></i></div></div></div>
     <div class="item" style="gap:8px"><button class="btn" id="vRen">✏️ Атын өзгөртүү</button>${n < V.keys.length ? `<button class="btn gold" id="vAll">🎙 Жазыла электерди катары менен жазуу</button>` : ""}
-      <button class="btn" id="vTest">🔊 Сынап угуу: «Жаңы заказ, 80 сом, 1,2 километр»</button></div>
+      <button class="btn" id="vTest">🔊 Сынап угуу: «Жаңы заказ, 80 сом, 1,2 километр»</button>
+      <button class="btn ok" id="vAdd">➕ Жаңы сөз кошуу</button></div>
     <div id="vRec"></div>
-    ${V.keys.map((k, i) => { const g = vGrp(k.k), h = i === 0 || vGrp(V.keys[i - 1].k) !== g ? `<div class="vsec">${g}</div>` : ""; return h + `<div class="item vrow"><div class="main"><b>${esc(k.t)}</b><span class="muted">${k.have ? "✓ жазылган" : "жазыла элек"}</span></div>
+    ${V.keys.map((k, i) => { const g = vGrp(k.k), h = i === 0 || vGrp(V.keys[i - 1].k) !== g ? `<div class="vsec">${g}</div>` : ""; return h + `<div class="item vrow"><div class="main"><b>${esc(k.t)}</b><span class="muted">${k.have ? "✓ жазылган" : "жазыла элек"}${k.own ? ` · ✏️ өз тексти <s>${esc(k.def)}</s>` : ""}</span>
+      ${k.custom ? `<span class="vev">🔔 ${k.ev ? "«" + esc(EVT[k.ev] || k.ev) + "» айтылгандан кийин" : "өзүнчө (окуяга байланбаган)"}</span>` : ""}</div>
       ${k.have ? `<button class="btn" data-vp="${k.k}" title="Угуу">▶</button>` : ""}<button class="btn ${k.have ? "" : "gold"}" data-vr="${k.k}" title="Жазуу">🎙</button>
-      ${k.have ? `<button class="btn" data-vd="${k.k}" title="Өчүрүү">🗑</button>` : ""}</div>`; }).join("")}</div>`;
+      ${k.edit ? `<button class="btn" data-ve="${k.k}" title="Текстин өзгөртүү">✏️</button>` : ""}
+      ${k.custom ? `<button class="btn" data-vx="${k.k}" title="Сөздү алып салуу">🗑</button>` : k.have ? `<button class="btn" data-vd="${k.k}" title="Өчүрүү">🗑</button>` : ""}</div>`; }).join("")}</div>`;
   const T = {}; V.keys.forEach(k => T[k.k] = k.t);
+  $("#vAdd").onclick = () => vForm(V);
+  document.querySelectorAll("[data-ve]").forEach(b => b.onclick = () => vForm(V, V.keys.find(k => k.k === b.dataset.ve)));
+  document.querySelectorAll("[data-vx]").forEach(b => b.onclick = async () => {
+    if (!confirm("«" + T[b.dataset.vx] + "» сөзү бардык үндөрдөн алынып салынсынбы?")) return; await api("/api/a/voice_rm", {key:b.dataset.vx, set:VSET}); viewVoice(); });
   document.querySelectorAll("[data-vset]").forEach(b => b.onclick = () => { VSET = +b.dataset.vset; VQ = []; viewVoice(); });
   $("#vRen").onclick = async () => { const nm = prompt("Үндүн аты (айдоочуга ушундай көрүнөт):", V.sets[V.set - 1].name); if (!nm) return;
     await api("/api/a/voice_name", {set:V.set, name:nm}); viewVoice(); };
