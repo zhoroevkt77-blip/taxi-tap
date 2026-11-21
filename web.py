@@ -228,6 +228,9 @@ def driver_state(uid, seen=False):
                        "discount": o.get("discount") or 0, "cls": o.get("cls") or "econom",
                        "chained": bool(d.get("busy_ride")),
                        "p_addr": o.get("p_addr"), "d_addr": o.get("d_addr"),
+                       "p": [o["p_lat"], o["p_lon"]] if o.get("p_lat") is not None else None,
+                       "d": [o["d_lat"], o["d_lon"]] if o.get("d_lat") is not None else None,
+                       "surge": round(float(o.get("surge") or 1.0), 2),
                        "p_rating": pu.get("p_rating") if (pu.get("p_rated") or 0) >= 3 else None,
                        "left": max(0, int(core.offer_deadline(o) - t)),
                        "total": int(core.OFFER_SEC)}

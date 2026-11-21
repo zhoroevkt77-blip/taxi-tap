@@ -38,7 +38,10 @@ input.f{width:100%;font-size:17px;padding:14px;border-radius:14px;border:1px sol
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:6px 0}
 .stat{background:var(--paper);border-radius:14px;padding:12px}
 .stat b{display:block;font-size:22px}
-.offer{position:fixed;inset:0;z-index:20;background:rgba(20,20,30,.55);display:flex;align-items:flex-end}
+.abpin{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:17px;border:3px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,.35)}.abpin.a{background:#16161a;color:#ffd31a}.abpin.b{background:#fff;color:#16161a;border-color:#16161a}
+.ohead{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.ocls{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;font-weight:700;font-size:13px;background:#fff3c4;color:#6b4e00}.ocls.comfort{background:#e7efff;color:#1d4fb8}.ocls.minivan{background:#efe7ff;color:#5b2bb8}.ocls.delivery{background:#e6f6ec;color:#1f7a45}
+.accbig .osurge{position:absolute;right:14px;top:50%;transform:translateY(-50%);z-index:2;background:#16161a;color:#ffd31a;border-radius:999px;padding:4px 10px;font-size:16px}
+.offer{position:fixed;left:0;right:0;bottom:0;z-index:20;background:transparent;display:flex;align-items:flex-end;pointer-events:none}.offer .ocard{pointer-events:auto}
 .ocard{background:#fff;width:100%;border-radius:22px 22px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));animation:up .25s ease-out}
 @keyframes up{from{transform:translateY(40px);opacity:.5}to{transform:none;opacity:1}}
 .ring{width:74px;height:74px;flex:none;position:relative}
@@ -226,7 +229,7 @@ let touchN = 0, userAt = 0;
 mapEl.addEventListener("touchmove", () => {                 // «Жол өйдө» режиминде манжа менен жылдырса — адегенде түндүк өйдөгө өтөбүз
   if (hupOn && touchN === 1) { FOLLOW = false; const b = $("#navLoc"); b && b.classList.add("off"); hupSync(); }
 }, {passive:true, capture:true});
-const userBusy = () => touchN > 0 || Date.now() - userAt < 2000;
+const userBusy = () => touchN > 0 || Date.now() - userAt < 2000 || document.body.classList.contains("offering");   // заказ келгенде карта маршрутту көрсөтүп турсун
 mapEl.addEventListener("touchstart", e => { touchN = e.touches.length; userAt = Date.now(); }, {passive:true, capture:true});
 ["touchend", "touchcancel"].forEach(ev => mapEl.addEventListener(ev, e => { touchN = e.touches.length; userAt = Date.now(); }, {passive:true, capture:true}));
 map.on("zoomstart", () => { userAt = Date.now(); }); map.on("zoomend", () => { userAt = Date.now(); });
@@ -982,10 +985,34 @@ function viewChat() {
   $("#back").onclick = () => { chatOpen = false; lastView = ""; show(); };
 }
 
-let RING = null, OFF_END = 0, OFF_TOT = 15;
+let RING = null, OFF_END = 0, OFF_TOT = 15, OFFL = null, OFF_VIEW = null;
+// Заказ келгенде: картада жүргүнчүгө чейин сары жол + A (жана B) белгиси
+function offerMapClear() {
+  if (OFFL) { try { OFFL.clearLayers(); map.removeLayer ? map.removeLayer(OFFL) : OFFL.remove(); } catch (e) {} OFFL = null; }
+  document.body.classList.remove("offering");
+}
+function offerMap(o) {
+  offerMapClear(); if (!o.p) return;
+  document.body.classList.add("offering");
+  OFFL = L.layerGroup().addTo(map);
+  const pin = (t, c) => L.marker(t === "A" ? o.p : o.d, {icon:L.divIcon({className:"", html:`<div class="abpin ${c}">${t}</div>`, iconSize:[34, 34], iconAnchor:[17, 17]}), interactive:false}).addTo(OFFL);
+  if (o.d) L.polyline([o.p, o.d], {color:"#8a8a95", weight:3, dashArray:"4 7", opacity:.8}).addTo(OFFL);
+  pin("A", "a"); if (o.d) pin("B", "b");
+  const me = myPos || (D.lat != null ? [D.lat, D.lon] : null);
+  if (me) {
+    const ln = L.polyline([me, o.p], {color:"#ffb703", weight:6, opacity:.95, dashArray:"8 8"}).addTo(OFFL);
+    const g = OFFL;
+    api(`/api/route?a=${me[0]},${me[1]}&b=${o.p[0]},${o.p[1]}`).then(rt => {
+      if (OFFL !== g || !rt || !rt.coords || rt.coords.length < 3) return;
+      ln.remove(); L.polyline(rt.coords, {color:"#ffb000", weight:7, opacity:1}).addTo(g);
+    }).catch(() => {});
+    const pts = [me, o.p].concat(o.d ? [o.d] : []), la = pts.map(x => x[0]), lo = pts.map(x => x[1]);
+    try { map.fitBounds(L.latLngBounds([[Math.min(...la), Math.min(...lo)], [Math.max(...la), Math.max(...lo)]]), {paddingTopLeft:[40, 130], paddingBottomRight:[90, 400], maxZoom:16}); } catch (e) {}
+  }
+}
 function showOffer() {
   const o = D.offer, box = $("#offer");
-  if (!o) { box.classList.add("hide"); lastOffer = null; clearInterval(RING); RING = null; return; }
+  if (!o) { box.classList.add("hide"); if (lastOffer) offerMapClear(); lastOffer = null; clearInterval(RING); RING = null; return; }
   const frac = Math.max(0, Math.min(1, o.left / o.total));
   if (lastOffer === o.id && $("#accBar")) {               // ошол эле заказ — убакытты гана жаңыртабыз
     OFF_END = Date.now() + o.left * 1000; return;
@@ -994,15 +1021,16 @@ function showOffer() {
   clearInterval(RING); RING = setInterval(() => {         // жооп бергенче ар 3 секундда үн + титирөө
     if (!D || !D.offer || lastOffer !== D.offer.id || Date.now() > OFF_END) { clearInterval(RING); RING = null; return; } beep(); }, 3000);
   speak(orderToks(o.chained ? "next_order" : o.cls === "delivery" ? "new_delivery" : "new_order", o.price, o.to_pickup_km), 750);
-  box.classList.remove("hide");
+  box.classList.remove("hide"); offerMap(o);
+  const sk = o.surge && o.surge > 1.04 ? o.surge : 0;
   $("#ocard").innerHTML = `<div style="display:flex;align-items:center;gap:14px">
-      <div style="flex:1"><div class="muted">${clsTag(o.cls)}${o.chained ? "🔁 Кийинки заказ · азыркы сапардан кийин" : "Жаңы заказ"}</div>
+      <div style="flex:1"><div class="muted ohead"><span class="ocls ${esc(o.cls || "econom")}">${ICON[o.cls] || "🚕"} ${esc((D.class_names || {})[o.cls] || (o.cls === "delivery" ? "Жеткирүү" : "Эконом"))}</span>${o.chained ? "🔁 Кийинки заказ · азыркы сапардан кийин" : "Жаңы заказ"}</div>
       <div class="ochips"><span>📍 ${o.to_pickup_km} км</span><span>⏱ ${Math.max(1, Math.round(o.to_pickup_km * 2.4))} мүн</span><span class="k">💵 ${o.price ? o.price + " с" : "Тариф"}</span>${o.p_rating ? `<span>⭐ ${o.p_rating}</span>` : ""}</div>
       <div class="muted">${o.has_dest ? "Сапар ~" + o.dist_km + " км" + (o.est_min ? " · " + o.est_min + " мүн" : "") : "Багытын жүргүнчү айтат"}</div>
       ${o.p_addr || o.d_addr ? `<div class="muted">${esc(o.p_addr || "")}${o.d_addr ? " → " + esc(o.d_addr) : ""}</div>` : ""}
       ${o.discount ? `<div class="muted">🎁 Жүргүнчү ${o.price - Math.round(o.discount)} с төлөйт, +${Math.round(o.discount)} с балансыңызга</div>` : ""}
       ${o.note ? `<div class="muted">📝 ${esc(o.note)}</div>` : ""}</div></div>
-    <button class="accbig" id="acc"><i id="accBar" style="width:${frac * 100}%"></i><span>АЛАМ <em id="oLeft">${o.left}</em></span></button>
+    <button class="accbig" id="acc"><i id="accBar" style="width:${frac * 100}%"></i><span>АЛАМ <em id="oLeft">${o.left}</em></span>${sk ? `<b class="osurge">⚡×${sk.toFixed(1)}</b>` : ""}</button>
     <button class="btn ghost" id="dec">Жок</button>`;
   const tickBar = () => { const b = $("#accBar"); if (!b || lastOffer !== o.id) return;
     const left = Math.max(0, (OFF_END - Date.now()) / 1000); b.style.width = (100 * left / OFF_TOT) + "%"; $("#oLeft").textContent = Math.ceil(left);
