@@ -329,7 +329,7 @@ function viewIdle() {
   if (P.home) rec.push({ico:"🏠", name:"Үй", sub:P.home.name || "", lat:P.home.lat, lon:P.home.lon});
   if (P.work) rec.push({ico:"💼", name:"Иш", sub:P.work.name || "", lat:P.work.lat, lon:P.work.lon});
   (P.recent || []).forEach(r => rec.push({ico:"🕘", name:r.name, sub:"Акыркы сапар", lat:r.lat, lon:r.lon}));
-  $("#home").innerHTML = `<div class="hh"><div class="hhl"><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b></div></div><div class="hhr">${rolePill()}<div class="modepill"><img src="/static/r_bag.webp?v=24" alt=""><span><b>Жүргүнчү</b><br>режиминдесиз</span></div><button class="round" id="hMenu" aria-label="Кабинет">${avBtn()}</button></div></div>
+  $("#home").innerHTML = `<div class="hh"><div class="hhl"><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b></div></div><div class="hhr"><div class="modepill"><img src="/static/r_bag.webp?v=24" alt=""><span><b>Жүргүнчү</b><br>режиминдесиз</span></div><button class="round" id="hMenu" aria-label="Кабинет">${avBtn()}</button></div></div>
     <button class="haddr" id="hAddr"><small><img class="pinI" src="/static/pin.webp?v=24" alt="">Сиз турган жер</small><b id="fromTxt">${esc(S.fromAddr || "Аныкталууда…")}</b><span>›</span></button>
     <div class="tiles">${tile("tTaxi", "h_taxi.webp?v=24", "Такси", `<span id="taxiEta">${homeEta()}</span>`, true, !has("delivery"))}
       ${has("delivery") ? tile("tDel", "h_box.webp?v=24", "Жеткирүү", "Буюм, документ") : ""}</div>
