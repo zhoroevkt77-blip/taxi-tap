@@ -1203,6 +1203,10 @@ class H(BaseHTTPRequestHandler):
 
 def start(port=None):
     port = int(port or os.environ.get("PORT") or 8000)
+    try:
+        core.voice_migrate_thanks()
+    except Exception as e:
+        print("voice migrate:", e, flush=True)
     srv = ThreadingHTTPServer(("0.0.0.0", port), H)
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     print("  Сайт: http://0.0.0.0:%d%s" % (port, "  (DEV кирүү)" if DEV_LOGIN else ""), flush=True)
@@ -1212,10 +1216,6 @@ def start(port=None):
 if __name__ == "__main__":
     import dispatch
     core.init_db()
-    try:
-        core.voice_migrate_thanks()
-    except Exception as e:
-        print("voice migrate:", e)
     threading.Thread(target=core.load_area, daemon=True).start()
     threading.Thread(target=addrbook.ensure_seeded, daemon=True).start()
     start()

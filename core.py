@@ -2989,7 +2989,7 @@ def voice_migrate_thanks():
     k = voice_custom_add("Кызматыңыз үчүн чоң рахмат!", "")
     if k:
         voice_set_tpl("d_done", ["d_done", "{price}", "som", k])
-    print("voice: rahmat phrase merged ->", k)
+    print("voice: rahmat phrase merged ->", k, flush=True)
 
 
 def voice_custom():
