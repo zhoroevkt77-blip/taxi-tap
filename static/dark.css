@@ -127,3 +127,4 @@ html.uidark .zpill{background:#23242b!important}html.uidark .zpill button{color:
 html.uidark .cclist>button:not(.w){background:#23242b!important;color:#f2f2f5!important;box-shadow:inset 0 0 0 1.5px #5a4a14!important}
 html.uidark .cclist>button.open{background:#2a2410!important;box-shadow:inset 0 0 0 2px #ffb703!important}
 html.uidark .dg{background:#23242b!important}html.uidark .dgt small{color:#a0a0aa!important}html.uidark .dghero{color:#16161a!important}
+html.uidark img[src*="/static/c_"]:not([src*="c_hdr"]),html.uidark img[src*="/static/n_"]:not([src*="n_go"]),html.uidark img[src*="/static/h_"],html.uidark img[src*="/static/ic_"],html.uidark img[src*="/static/ci_"],html.uidark .yi{background:#fff3c4!important;border-radius:12px!important;object-fit:contain}
