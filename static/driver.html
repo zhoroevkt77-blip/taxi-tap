@@ -995,9 +995,9 @@ function offerMap(o) {
   offerMapClear(); if (!o.p) return;
   document.body.classList.add("offering");
   OFFL = L.layerGroup().addTo(map);
-  const pin = (t, c) => L.marker(t === "A" ? o.p : o.d, {icon:L.divIcon({className:"", html:`<div class="abpin ${c}">${t}</div>`, iconSize:[34, 34], iconAnchor:[17, 17]}), interactive:false}).addTo(OFFL);
+  const pin = (t, c) => L.marker(c === "a" ? o.p : o.d, {icon:L.divIcon({className:"", html:`<div class="abpin ${c}">${t}</div>`, iconSize:[34, 34], iconAnchor:[17, 17]}), interactive:false}).addTo(OFFL);
   if (o.d) L.polyline([o.p, o.d], {color:"#8a8a95", weight:3, dashArray:"4 7", opacity:.8}).addTo(OFFL);
-  pin("A", "a"); if (o.d) pin("B", "b");
+  pin("А", "a"); if (o.d) pin("Б", "b");
   const me = myPos || (D.lat != null ? [D.lat, D.lon] : null);
   if (me) {
     const ln = L.polyline([me, o.p], {color:"#ffb703", weight:6, opacity:.95, dashArray:"8 8"}).addTo(OFFL);
