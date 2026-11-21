@@ -101,7 +101,7 @@ input.f:focus{border-color:var(--navy)}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
 <link rel="preload" as="image" href="/static/h_taxi.webp?v=24"><link rel="preload" as="image" href="/static/h_box.webp?v=24"><link rel="preload" as="image" href="/static/h_girl.webp?v=25"><link rel="preload" as="image" href="/static/h_map.webp?v=25">
-<link rel="stylesheet" href="/static/theme.css?v=136">
+<link rel="stylesheet" href="/static/theme.css?v=137">
 <link rel="stylesheet" href="/static/dark.css?v=21">
 <script src="/static/night.js?v=2"></script>
 </head>
@@ -335,8 +335,8 @@ function viewIdle() {
       ${has("delivery") ? tile("tDel", "h_box.webp?v=24", "Жеткирүү", "Буюм, документ") : ""}</div>
     <div class="tiles2">${stile("tOther", "h_girl.webp?v=25", "Башка адамга такси заказ кылуу")}${stile("tMap", "h_map.webp?v=25", "Картадан<br>белгилөө")}</div>
     ${has("comfort") || has("minivan") ? `<div class="tiles3">${has("comfort") ? `<button class="sm" id="tComf"><span>🚘</span>Комфорт</button>` : ""}${has("minivan") ? `<button class="sm" id="tVan"><span>🚐</span>Минивэн</button>` : ""}</div>` : ""}
-    <button class="hsearch" id="hSearch">🔍 <span>Каякка барасыз?</span><em>›</em></button>
-    <div class="hrec">${rec.slice(0, 5).map((r, i) => `<button class="rec" data-i="${i}"><span class="pi">${r.ico}</span><span class="rt"><b>${esc(r.name)}</b><small>${esc(r.sub)}</small></span><span class="t">${minsTo(r)}</span><span class="chev">›</span></button>`).join("")}</div>
+    <button class="hsearch" id="hSearch"><svg class="srch" viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#16161a" stroke-width="2.6" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg> <span>Каякка барасыз?</span><em>›</em></button>
+    <div class="hrec">${rec.slice(0, 5).map((r, i) => `<button class="rec" data-i="${i}"><span class="pi">${eic(r.ico)}</span><span class="rt"><b>${esc(r.name)}</b><small>${esc(r.sub)}</small></span><span class="t">${minsTo(r)}</span><span class="chev">›</span></button>`).join("")}</div>
     <p class="hnote" id="nearMsg">${esc(S.nearMsg || "")}</p>`;
   const go = (cls) => { if (cls) S.cls = cls; viewStepA(); };
   $("#hSearch").onclick = () => go("econom");
@@ -389,7 +389,7 @@ function viewStepA() {
 function viewStepB() {
   S.mode = "stepB"; setPin(null); showA(false); render(""); homeOn(true);
   const P = PLACES && !PLACES.error ? PLACES : {recent:[], popular:[]};
-  const it = (r, i) => `<button class="st-it" data-i="${i}"><span class="ic">${r.icon}</span><span class="tx"><b>${esc(r.name)}</b><small>${esc(r.area || "")}</small></span><span class="t">${minsTo(r)}</span></button>`;
+  const it = (r, i) => `<button class="st-it" data-i="${i}"><span class="ic">${eic(r.icon)}</span><span class="tx"><b>${esc(r.name)}</b><small>${esc(r.area || "")}</small></span><span class="t">${minsTo(r)}</span></button>`;
   const L1 = [], L2 = [], L3 = [];
   if (P.home) L1.push({icon:"🏠", name:"Үй", area:P.home.name || "", lat:P.home.lat, lon:P.home.lon});
   if (P.work) L1.push({icon:"💼", name:"Иш", area:P.work.name || "", lat:P.work.lat, lon:P.work.lon});
@@ -511,7 +511,7 @@ function viewSearch(field) {
       }
       const seenN = new Set(), all = quick.concat(items).filter(r => { const k = (r.name || "").toLowerCase(); if (seenN.has(k)) return false; seenN.add(k); return true; });
       $("#list").innerHTML = all.length ? all.map((r, i) =>
-        `<div class="res" data-i="${i}"><span class="ri">${r.icon}</span><div style="flex:1;min-width:0"><b>${esc(r.name)}</b>${r.area ? `<span class="muted">${esc(r.area)}</span>` : ""}</div>${act === "to" && r.lat != null ? `<span class="rt2">${minsTo(r)}</span>` : ""}</div>`).join("")
+        `<div class="res" data-i="${i}"><span class="ri">${eic(r.icon)}</span><div style="flex:1;min-width:0"><b>${esc(r.name)}</b>${r.area ? `<span class="muted">${esc(r.area)}</span>` : ""}</div>${act === "to" && r.lat != null ? `<span class="rt2">${minsTo(r)}</span>` : ""}</div>`).join("")
         : q.length >= 2 ? `<p class="muted">«${esc(q)}» табылган жок. Башкача жазып көрүңүз (мис. көчөнүн атын гана) же «Картадан белгилөө» басыңыз.</p>` : "";
       $("#list").querySelectorAll(".res").forEach(el => el.onclick = () => {
         const r = all[+el.dataset.i];
@@ -890,6 +890,9 @@ function viewDone(r) {
   };
 }
 let ME_BOT = "", ME_AV = null;
+// Эмодзинин ордуна 3D сүрөт (Үй, Иш, Акыркы сапар)
+const EIMG = {"🏠":"n_home", "💼":"ic_briefcase", "🕘":"c_trips"};
+const eic = e => EIMG[e] ? `<img class="eic" src="/static/${EIMG[e]}.webp?v=24" alt="">` : (e || "");
 // Сүрөттү браузерде чарчы кылып кесип, 400 px'ке кичирейтет
 function avShrink(file) {
   return new Promise(res => {

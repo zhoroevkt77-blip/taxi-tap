@@ -837,3 +837,6 @@ html:not(.uidark) .muted,html:not(.uidark) small{color:#4a4a55}
 .cclist>a.cl span{flex:1}.cclist>a.cl small{display:block;font-size:12.5px;font-weight:500;color:#6b6b76}.cclist>a.cl i{font-style:normal;font-size:22px;color:#b07d00}
 .cclist>a.cl .yi{width:52px!important;height:36px!important;margin:0!important;flex:none}
 html.uidark .cclist>a.cl{background:#2a2410;color:#f2f2f5}
+.eic{width:100%;height:100%;max-width:58px;max-height:44px;object-fit:contain;display:block;margin:auto}
+.rec .pi,.st-it .ic,.res .ri{display:flex;align-items:center;justify-content:center;overflow:hidden}
+.hsearch .srch{flex:none;margin-right:2px}
