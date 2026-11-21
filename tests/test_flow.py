@@ -93,7 +93,8 @@ class Ride(unittest.TestCase):
         self.assertEqual(flow.driver_step(d1, rid), [])                 # сапар башталды
         self.assertIn("бүттү", flow.driver_step(d1, rid)[0]["text"])
         price = core.get_ride(rid)["price"]
-        self.assertEqual(core.get_driver(d1)["balance"], 1000 - int(price * 0.1 + 0.5))
+        one = int(price * 0.01 + 0.5)                                       # салык 1% + камсыздандыруу 1%
+        self.assertEqual(core.get_driver(d1)["balance"], 1000 - int(price * 0.1 + 0.5) - 2 * one)
         self.assertTrue(core.rate(rid, p, 4))
         self.assertFalse(core.rate(rid, p, 1))
         self.assertEqual(core.get_driver(d1)["rating"], 4.0)
@@ -566,7 +567,8 @@ class Promo(unittest.TestCase):
         for _ in range(3):
             flow.driver_step(d, rid)
         fee = int(q["price"] * 0.10 + 0.5)                                    # COMMISSION_PCT=10
-        self.assertEqual(core.get_driver(d)["balance"], 50 - fee)            # +50 промо, −комиссия
+        one = int(q["price"] * 0.01 + 0.5)                                    # салык 1% + камсыздандыруу 1%
+        self.assertEqual(core.get_driver(d)["balance"], 50 - fee - 2 * one)  # +50 промо, −комиссия, −салык, −камсыздандыруу
         self.assertEqual(web.ride_view(core.get_ride(rid))["pay"], q["price"] - 50)
         p2 = rider("0555 000 092")
         self.assertIsNone(core.check_promo("ТАП50", p2)[1])

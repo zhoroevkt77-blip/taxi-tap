@@ -1832,6 +1832,12 @@ def _finish(rid, driver):
         fee = math.floor(r["price"] * pct / 100.0 + 0.5)        # бүтүн сомго
         if fee > 0:
             add_tx(driver, -fee, "commission", ride_id=rid)
+    cfg = finance_config()
+    for kind, p in (("tax", cfg["tax_pct"]), ("ins", cfg["ins_pct"])):     # киреше салыгы, камсыздандыруу — балансынан
+        if p > 0 and r["price"]:
+            v = math.floor(r["price"] * p / 100.0 + 0.5)
+            if v > 0:
+                add_tx(driver, -v, kind, ride_id=rid)
 
 
 def cancel(rid, by, allowed=("scheduled", "searching", "accepted", "arrived"), reason=None):
@@ -2616,11 +2622,16 @@ def finance_config():
     c = get_setting("finance") or {}
     return {"percent": float(c.get("percent", COMMISSION_PCT)),
             "free_until": c.get("free_until") or None,          # "2027-01-01"
-            "min_balance": float(c.get("min_balance", MIN_BALANCE))}
+            "min_balance": float(c.get("min_balance", MIN_BALANCE)),
+            "tax_pct": float(c.get("tax_pct", 1.0)),             # киреше салыгы, % (жалпы иштегенден)
+            "ins_pct": float(c.get("ins_pct", 1.0))}             # камсыздандыруу төгүмү, %
 
 
-def set_finance_config(percent, free_until=None, min_balance=0):
-    if not (0 <= percent <= 30) or not (-100000 <= min_balance <= 100000):
+def set_finance_config(percent, free_until=None, min_balance=0, tax_pct=None, ins_pct=None):
+    old = finance_config()
+    tax_pct = old["tax_pct"] if tax_pct is None else tax_pct
+    ins_pct = old["ins_pct"] if ins_pct is None else ins_pct
+    if not (0 <= percent <= 30) or not (-100000 <= min_balance <= 100000) or not (0 <= tax_pct <= 20) or not (0 <= ins_pct <= 20):
         return False
     if free_until:
         try:
@@ -2628,7 +2639,7 @@ def set_finance_config(percent, free_until=None, min_balance=0):
         except ValueError:
             return False
     set_setting("finance", {"percent": round(percent, 2), "free_until": free_until or None,
-                            "min_balance": min_balance})
+                            "min_balance": min_balance, "tax_pct": round(tax_pct, 2), "ins_pct": round(ins_pct, 2)})
     return True
 
 
@@ -2692,13 +2703,16 @@ def _tx_sum(kind, since, driver=None):
 
 def driver_finance(uid):
     """Айдоочунун кабинети: бүгүн / жума / ай — сапар, жүгүртүү, комиссия, бонус, линияда болгон убакыт, колунда калганы."""
-    out = {}
-    for k, since in period_starts().items():
+    out, cfg = {}, finance_config()
+    for k, since in dict(period_starts(), all=0).items():
         n, gross = _ride_sum(since, uid)
         fee = -_tx_sum("commission", since, uid)
         bonus = max(0.0, _tx_sum("promo", since, uid))
+        tax, ins = round(-_tx_sum("tax", since, uid)), round(-_tx_sum("ins", since, uid))
         out[k] = {"rides": n, "gross": int(gross), "fee": round(fee), "bonus": round(bonus),
-                  "net": int(gross - fee + bonus), "online_sec": round(online_sec(uid, since))}
+                  "tax": tax, "ins": ins, "net": int(gross - fee + bonus), "clean": int(gross - fee - tax - ins + bonus),
+                  "online_sec": round(online_sec(uid, since))}
+    out["pct"] = {"fee": commission_pct(), "tax": cfg["tax_pct"], "ins": cfg["ins_pct"]}
     return out
 
 
@@ -2763,6 +2777,7 @@ def admin_finance():
         n, gross = _ride_sum(since)
         totals[k] = {"rides": n, "gross": int(gross),
                      "commission": round(-_tx_sum("commission", since)),
+                     "tax": round(-_tx_sum("tax", since)), "ins": round(-_tx_sum("ins", since)),
                      "topups": round(_tx_sum("topup", since))}
     # акыркы 6 ай (Бишкек убактысы менен)
     months = []

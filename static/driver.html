@@ -41,6 +41,7 @@ input.f{width:100%;font-size:17px;padding:14px;border-radius:14px;border:1px sol
 .abpin{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:17px;border:3px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,.35)}.abpin.a{background:#16161a;color:#ffd31a}.abpin.b{background:#fff;color:#16161a;border-color:#16161a}
 .ohead{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.ocls{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;font-weight:700;font-size:13px;background:#fff3c4;color:#6b4e00}.ocls.comfort{background:#e7efff;color:#1d4fb8}.ocls.minivan{background:#efe7ff;color:#5b2bb8}.ocls.delivery{background:#e6f6ec;color:#1f7a45}
 .accbig .osurge{position:absolute;right:14px;top:50%;transform:translateY(-50%);z-index:2;background:#16161a;color:#ffd31a;border-radius:999px;padding:4px 10px;font-size:16px}
+.ftab{background:#fff;border:1.5px solid #ffe08a;border-radius:18px;padding:6px 14px 10px;margin:10px 0}.fr{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px dashed #eee;font-size:15px}.fr em{font-style:normal;font-size:12px;font-weight:700;background:#f3f3f6;border-radius:999px;padding:1px 7px;margin-left:4px}.fr b{font-variant-numeric:tabular-nums}.fr.fsum b{font-size:18px}.fr.net{border:0;margin-top:4px;background:#e8f7ee;border-radius:12px;padding:11px 10px}.fr.net b{color:#1f7a45;font-size:20px}.fsub{font-size:12.5px;color:#7a7a85;margin-top:6px}
 .offer{position:fixed;left:0;right:0;bottom:0;z-index:20;background:transparent;display:flex;align-items:flex-end;pointer-events:none}.offer .ocard{pointer-events:auto}
 .ocard{background:#fff;width:100%;border-radius:22px 22px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));animation:up .25s ease-out}
 @keyframes up{from{transform:translateY(40px);opacity:.5}to{transform:none;opacity:1}}
@@ -620,13 +621,21 @@ let EPER = "today";
 function hm(sec) { const h = Math.floor(sec / 3600), m = Math.round(sec % 3600 / 60); return h ? `${h} с ${m} мүн` : `${m} мүн`; }
 function earnSum() {
   const x = (D.finance || {})[EPER] || {rides:0, gross:0, fee:0, bonus:0, net:0, online_sec:0};
-  const goal = (D.goal || 1000) * (EPER === "week" ? 7 : EPER === "month" ? 30 : 1), f = Math.max(0, Math.min(1, x.gross / goal));
+  const goal = (D.goal || 1000) * (EPER === "week" ? 7 : EPER === "month" ? 30 : EPER === "all" ? 365 : 1), f = Math.max(0, Math.min(1, x.gross / goal));
   const C = 2 * Math.PI * 32;
   return `<div class="esum"><svg width="84" height="84" viewBox="0 0 80 80"><circle cx="40" cy="40" r="32" stroke="#eeeef2" stroke-width="8" fill="none"/>
       <circle cx="40" cy="40" r="32" stroke="#ffb703" stroke-width="8" fill="none" stroke-linecap="round" stroke-dasharray="${(C * f).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 40 40)"/>
       <text x="40" y="45" text-anchor="middle" font-size="16" font-weight="600" fill="currentColor">${Math.round(f * 100)}%</text></svg>
     <div><b>${x.gross} с</b><span class="muted">максат ${goal} · ${x.rides} сапар${x.online_sec ? " · " + hm(x.online_sec) : ""}</span></div></div>
-    <div class="echips"><span>💵 Накталай ${x.gross} с</span><span>➖ Комиссия ${x.fee} с</span>${x.bonus ? `<span>🎁 Бонус +${x.bonus} с</span>` : ""}<span class="k">👛 Колуңузда ${x.net} с</span></div>`;
+    ${finTable(x)}`;
+}
+function finTable(x) {               // жалпы иштеген → комиссия, салык, камсыздандыруу → таза киреше
+  const P = (D.finance || {}).pct || {fee:10, tax:1, ins:1}, n = v => (+v || 0).toLocaleString("ru-RU").replace(/,/g, " ");
+  const g = x.gross || 0, row = (ic, t, p, v, c) => `<div class="fr ${c || ""}"><span>${ic} ${t}${p != null ? ` <em>${p}%</em>` : ""}</span><b>${v}</b></div>`;
+  return `<div class="ftab">${row("💵", "Жалпы иштеген", null, n(g) + " с", "fsum")}
+    ${row("➖", "Комиссия", P.fee, "−" + n(x.fee) + " с")}${row("🏛", "Киреше салыгы", P.tax, "−" + n(x.tax) + " с")}${row("🛡", "Камсыздандыруу төгүмү", P.ins, "−" + n(x.ins) + " с")}
+    ${x.bonus ? row("🎁", "Бонус", null, "+" + n(x.bonus) + " с") : ""}${row("👛", "Таза киреше", null, n(x.clean ?? x.net) + " с", "net")}
+    <div class="fsub">${x.rides} сапар · орточо ${x.rides ? n(Math.round(g / x.rides)) : 0} с · салык жана камсыздандыруу эсептелип турат</div></div>`;
 }
 function avShrinkD(file) {
   return new Promise(res => { const rd = new FileReader();
@@ -650,7 +659,7 @@ function viewCabinet(part) {
       <div class="irow">${yi("percent")}<span><b>Комиссия</b><small>${esc(D.tariff)}</small></span></div></div>
     <div class="grid"><div class="stat"><span class="muted">Баланс</span><b style="color:${D.balance < D.min_balance ? "var(--bad)" : "inherit"}">${D.balance} с</b></div>
       <div class="stat"><span class="muted">Рейтинг</span><b>★ ${D.rating ?? "5.0"}</b></div></div>
-    <div${on(E)}><div class="seg" id="ePer">${[["today", "Бүгүн"], ["week", "Жума"], ["month", "Ай"]].map(([k, t]) => `<button data-ep="${k}" class="${k === EPER ? "on" : ""}">${t}</button>`).join("")}</div>
+    <div${on(E)}><div class="seg" id="ePer">${[["today", "Бүгүн"], ["week", "Жума"], ["month", "Ай"], ["all", "Жалпы"]].map(([k, t]) => `<button data-ep="${k}" class="${k === EPER ? "on" : ""}">${t}</button>`).join("")}</div>
     <div id="eSum">${earnSum()}</div>
     <p class="muted">«Колуңузда» — жүргүнчүлөр төлөгөн акча + бонус − комиссия. ${D.min_balance > 0 ? `Баланс ${D.min_balance} сомдон аз болсо, заказ келбейт.` : ""}</p>
     ${D.pending_topup ? `<div class="note">🕓 Чегиңиз текшерилүүдө.</div>` : `<button class="btn main" id="top">➕ Балансты толуктоо</button>`}

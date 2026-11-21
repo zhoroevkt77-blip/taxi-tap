@@ -1143,7 +1143,8 @@ class H(BaseHTTPRequestHandler):
         if action == "finance":
             pct, mb = _num(b.get("percent")), _num(b.get("min_balance") or 0)
             fu = _txt(b.get("free_until"), 10) or None
-            if pct is None or mb is None or not core.set_finance_config(pct, fu, mb):
+            tx, ins = _num(b.get("tax_pct")), _num(b.get("ins_pct"))
+            if pct is None or mb is None or not core.set_finance_config(pct, fu, mb, tx, ins):
                 return self._json({"error": "bad"}, 400)
             return self._json(core.admin_finance())
         if action == "area_title":

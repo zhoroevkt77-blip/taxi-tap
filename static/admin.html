@@ -607,13 +607,15 @@ async function viewFinance() {
         <div><label>Комиссия, %</label><input class="f" id="fp" inputmode="decimal" value="${c.percent}"></div>
         <div><label>Бекер мезгил ушул күнгө чейин (бош = жок)</label><input class="f" id="ff" type="date" value="${c.free_until || ""}"></div>
         <div><label>Минималдуу баланс, сом</label><input class="f" id="fm" inputmode="numeric" value="${c.min_balance}"></div>
+        <div><label>Киреше салыгы, %</label><input class="f" id="ftx" inputmode="decimal" value="${c.tax_pct ?? 1}"></div>
+        <div><label>Камсыздандыруу төгүмү, %</label><input class="f" id="fin" inputmode="decimal" value="${c.ins_pct ?? 1}"></div>
       </div>
       <div style="padding:0 14px 14px"><button class="btn gold" id="fsave">Сактоо</button> <span class="muted" id="fmsg"></span>
         <p class="muted">Бекер мезгил бүткөн күнү комиссия өзү күйөт. Баланс минималдуудан аз болсо, айдоочуга заказ келбейт жана Telegram'га эскертүү барат.</p></div>
     </div>
     <div class="cards">
       ${[["Бүгүн", "today"], ["Ушул жума", "week"], ["Ушул ай", "month"]].map(([t, k]) => `<div class="card"><span>${t}: комиссия</span><b>${money(T[k].commission)}</b>
-        <span>${T[k].rides} сапар · айдоочулар тапкан ${money(T[k].gross)}</span></div>`).join("")}
+        <span>${T[k].rides} сапар · айдоочулар тапкан ${money(T[k].gross)}</span><span>🏛 салык ${money(T[k].tax || 0)} · 🛡 камсыздандыруу ${money(T[k].ins || 0)}</span></div>`).join("")}
       <div class="card"><span>Ушул ай: толуктоолор</span><b>${money(T.month.topups)}</b><span>айдоочулар төлөгөн чектер</span></div>
     </div>
     <div class="panel"><h3>Акыркы 6 ай — ${key === "commission" ? "комиссия" : "айдоочулар тапкан (комиссия азырынча жок)"}</h3>
@@ -653,7 +655,7 @@ async function viewFinance() {
     await api("/api/a/promo", {...p, active:!p.active}); viewFinance();
   });
   $("#fsave").onclick = async () => {
-    const r = await api("/api/a/finance", {percent:$("#fp").value, free_until:$("#ff").value, min_balance:$("#fm").value});
+    const r = await api("/api/a/finance", {percent:$("#fp").value, free_until:$("#ff").value, min_balance:$("#fm").value, tax_pct:$("#ftx").value, ins_pct:$("#fin").value});
     if (r.error) return $("#fmsg").textContent = "Текшериңиз: комиссия 0–30%, күн туура болушу керек.";
     viewFinance();
   };
