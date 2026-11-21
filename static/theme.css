@@ -818,3 +818,10 @@ html.uidark .tapchip{background:#23242b;color:#f2f2f5}
 html.uidark .rolesw .r:not(.on){background:#23242b;color:#f2f2f5}
 .cclist>button.dgc .yi{background:#ffc61a;border-radius:14px}
 #tOther img{height:104px!important;max-width:44%!important;margin:-4px -2px -8px 0}
+/* Тунук жазуу: кара түс тереңирээк, боз жазуу караңгыраак, жазуулар сызыктуу так (geometricPrecision) */
+html:not(.uidark){--ink:#0f0f12;--navy:#0f0f12;--soft:#45454f}
+html,body{text-rendering:geometricPrecision;font-synthesis:none;-webkit-text-size-adjust:100%}
+html:not(.uidark) body{color:#0f0f12}
+html:not(.uidark) .muted,html:not(.uidark) small{color:#4a4a55}
+.cclist>button span,.rolesw .r,.sheet h2,.btn,.tile b,.stile b,.bnav a{font-weight:600;letter-spacing:-.005em}
+.cclist>button span{color:inherit}
