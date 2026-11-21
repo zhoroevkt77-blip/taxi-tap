@@ -234,7 +234,7 @@ function bindLinks() {
 // ---------- Навигация: сары жебе (мен), компас, «мен турган жер» баскычы ----------
 // Жебе телефон кайсы жакты караса ошол жакка бурулат (жүрүп баратканда — GPS багыты).
 window.NAV = (function () {
-  let compFn = null, compAng = 0, onFix = null;
+  let compFn = null, compAng = 0, onFix = null, single = false, showComp = false;
   let map = null, marker = null, pos = null, head = null, gpsHead = null, wrap = null, onLocate = null, watching = false, oriOn = false;
   const ARROW = `<svg viewBox="0 0 60 60" width="50" height="50"><path d="M30 6 L50 52 L30 42 L10 52 Z" fill="#FAC775" stroke="#fff" stroke-width="5" stroke-linejoin="round"/>
     <path d="M30 6 L50 52 L30 42 Z" fill="#E09A00"/><path d="M30 6 L10 52 L30 42 Z" fill="#FFC61A"/></svg>`;
@@ -245,7 +245,10 @@ window.NAV = (function () {
     const h = gpsHead !== null ? gpsHead : head;
     document.querySelectorAll(".navarr").forEach(e => e.style.transform = `rotate(${h || 0}deg)`);
     const c = document.getElementById("navComp");
-    if (c && compFn) { c.firstChild.style.transform = `rotate(${compAng}deg)`; c.classList.remove("hide"); }
+    if (c && compFn && single) {                         // бир баскыч: «Жол өйдө» күйүк болсо — компас, болбосо ➤ (ошол эле жерде)
+      c.firstChild.style.transform = `rotate(${compAng}deg)`; c.classList.toggle("hide", !showComp);
+      const l = document.getElementById("navLoc"); if (l) l.classList.toggle("hide", showComp);
+    } else if (c && compFn) { c.firstChild.style.transform = `rotate(${compAng}deg)`; c.classList.remove("hide"); }
     else if (c) { c.firstChild.style.transform = `rotate(${-(head || 0)}deg)`; c.classList.toggle("hide", head === null); }
   }
   function onOri(e) {
@@ -306,7 +309,7 @@ window.NAV = (function () {
   }
   function init(m, opts) {
     window.NAV_ACCEPT = accept;
-    map = m; onLocate = (opts && opts.onLocate) || null; compFn = (opts && opts.onComp) || null; onFix = (opts && opts.onFix) || null;
+    map = m; onLocate = (opts && opts.onLocate) || null; compFn = (opts && opts.onComp) || null; onFix = (opts && opts.onFix) || null; single = !!(opts && opts.single);
     wrap = document.createElement("div"); wrap.className = "navbtns"; wrap.id = "navBtns";
     wrap.innerHTML = `<button class="navb sat" id="navSat" aria-label="Спутник / Карта"><img src="/static/ic_sat.webp?v=12" alt="" style="width:44px;height:30px;object-fit:contain"></button><button class="navb hide" id="navComp" aria-label="Компас (түндүк)">${COMP}</button><button class="navb" id="navLoc" aria-label="Мен турган жер">${LOC}</button>`;
     document.body.appendChild(wrap);
@@ -319,7 +322,7 @@ window.NAV = (function () {
     setInterval(place, 300); place();
     document.addEventListener("click", askOri, {once:true});
   }
-  function comp(a) { compAng = a; paint(); }
+  function comp(a, show) { compAng = a; if (show !== undefined) showComp = !!show; paint(); }
   return {init, set, place, comp, pos: () => pos};
 })();
 

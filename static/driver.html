@@ -125,7 +125,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 <div class="offer hide" id="ovl"><div class="ocard" id="ovlc"></div></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="/static/area.js?v=14"></script>
+<script src="/static/area.js?v=15"></script>
 <script src="/static/voice.js?v=6"></script>
 <script src="/static/qr.js"></script>
 <script src="/static/qrshare.js"></script>
@@ -145,9 +145,12 @@ const layer = L.layerGroup().addTo(map);
 let me = null, myHead = null, mySpeed = 0, myPos = null, D = null, poll = null, watch = null, lock = null, lastOffer = null, lastRide = null, pingT = null;
 
 NAV.init(map, {onFix: (ll, h, sp, acc) => { myAcc = acc; myPos = ll; myHead = h; mySpeed = sp; myAt = Date.now(); drawMe(); nearCheck(); },   // линияда эмес кезде да жаңы жер
-  onLocate: () => getPos().then(p => { FOLLOW = true; const b = $("#navLoc"); b && b.classList.remove("off");
+  single: true,
+  // ➤: ээрчибей турса — машинага кайтат; ээрчип турса — «Жол өйдө» күйөт (ошол жерде компас чыгат)
+  onLocate: () => getPos().then(p => { if (FOLLOW && !HUP) { HUP = true; try { localStorage.setItem("hup", "1"); } catch (e) {} toast("🧭 Жол өйдө", 1500); }
+    FOLLOW = true; const b = $("#navLoc"); b && b.classList.remove("off");
   if (p) { NAV.set(myPos, myHead, mySpeed); if (map.getZoom() < 16) map.setZoom(16, {animate:false}); hupSync(); followMe(true); } }),
-  onComp: () => { HUP = !HUP; try { localStorage.setItem("hup", HUP ? "1" : "0"); } catch (e) {}
+  onComp: () => { HUP = false; try { localStorage.setItem("hup", "0"); } catch (e) {}
     if (HUP) { FOLLOW = true; const b = $("#navLoc"); b && b.classList.remove("off"); }
     hupSync(); followMe(true); toast(HUP ? "🧭 Жол өйдө — карта машинанын жүрүшүнө карай айланат" : "🧭 Түндүк өйдө — карта айланбайт", 2200); }});
 // ---------- «Жол өйдө»: стрелка дайыма өйдө, карта машина бараткан тарапка айланат ----------
@@ -174,7 +177,7 @@ function hupSync() {                                         // режим кү�
     if (hupHead !== null) { const d = ((-hupHead - hupAng) % 360 + 540) % 360 - 180; hupAng += d; mapEl.style.transform = `rotate(${hupAng}deg)`; }
     if (map.setView && !userBusy()) map.setView(myPos, map.getZoom(), {animate:true, duration:.5});
   }
-  NAV.comp && NAV.comp(hupOn ? hupAng : 0);
+  NAV.comp && NAV.comp(hupOn ? hupAng : 0, HUP && FOLLOW);
 }
 window.addEventListener("resize", () => { if (hupOn) hupLayout(true); });
 // ---------- GPS ----------
