@@ -101,7 +101,7 @@ input.f:focus{border-color:var(--navy)}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
 <link rel="preload" as="image" href="/static/h_taxi.webp?v=11"><link rel="preload" as="image" href="/static/h_box.webp?v=11"><link rel="preload" as="image" href="/static/h_girl.webp?v=11"><link rel="preload" as="image" href="/static/h_map.webp?v=11">
-<link rel="stylesheet" href="/static/theme.css?v=124">
+<link rel="stylesheet" href="/static/theme.css?v=126">
 <link rel="stylesheet" href="/static/dark.css?v=20">
 <script src="/static/night.js?v=2"></script>
 </head>
@@ -958,7 +958,9 @@ async function viewCabinet() {
   const li = (id, img, t, sub, href) => `<${href ? `a href="${href}"` : "button"} class="ccard" id="${id}"><img class="cimg" src="/static/${img}.webp?v=11" alt=""><span class="ct"><b>${t}</b>${sub ? `<small>${sub}</small>` : ""}</span><em>›</em></${href ? "a" : "button"}>`;
   let promo = ""; try { promo = localStorage.getItem("promoPre") || ""; } catch (e) {}
   render(""); homeOn(true);
-  $("#home").innerHTML = `<div class="cab2">
+  $("#home").innerHTML = `<div class="rolesw"><span class="r y on"><img src="/static/r_bag.webp?v=11" alt="">Жүргүнчү болуу<i>✓</i></span>
+      <a href="/driver" class="r g"><img src="/static/r_car.webp?v=11" alt="">Айдоочу болуу${me.driver ? "" : " →"}</a></div>
+    <div class="cab2">
       <button class="cab-av" id="avBox">${me.avatar ? `<img src="${esc(me.avatar)}" alt="">` : esc((me.name || "?")[0].toUpperCase())}<span class="cab-cam">📷</span></button>
       <input type="file" accept="image/*" capture="user" id="avCam" hidden><input type="file" accept="image/*" id="avGal" hidden>
       <div class="cab-nm">${esc(me.name || "Жүргүнчү")}</div><div class="cab-ph">${esc(me.phone)}</div>
@@ -967,7 +969,6 @@ async function viewCabinet() {
     <div id="cabMore"></div>
     ${li("cPromo", "c_gift", "Промокод", promo ? "Кийинки заказга: " + esc(promo) : "Промокод киргизүү")}
     ${li("cPay", "c_card", "Төлөм ыкмасы", "Накталай — айдоочуга түз")}
-    ${me.driver ? "" : li("cDrv", "c_car", "Таксиде иштөө", "Айдоочу болуп катталуу", "/driver")}
     ${li("cMap", "c_map", "Картаны жакшыртуу", "Жер кошуу, катаны оңдоо")}
     ${li("cSafe", "c_shield", "Коопсуздук", "112, сапарды бөлүшүү")}
     ${li("cInfo", "c_info", "Маалымат", "Колдонуу шарттары, купуялык", "/terms")}
@@ -1041,7 +1042,7 @@ const rolePill = () => ME_ROLE.driver ? `<a class="rpill" href="/driver" aria-la
   : ME_ROLE.park ? `<a class="rpill" href="/park"><span>🏢</span><span class="t">Паркка<br>өтүү</span></a>` : "";
 async function boot() {
   const me = await api("/api/me"); ME_ROLE = {park:me.park, driver:me.driver, admin:me.admin};
-  $("#topPill").innerHTML = rolePill(); if ($("#home .hh")) { const h = $("#home .hhr"); if (h && !h.querySelector(".rpill")) h.insertAdjacentHTML("afterbegin", rolePill()); }
+  $("#topPill").innerHTML = ME_ROLE.park && !ME_ROLE.driver ? rolePill() : "";   // айдоочу/жүргүнчү алмашуу — Кабинетте if ($("#home .hh")) { const h = $("#home .hhr"); if (h && !h.querySelector(".rpill") && ME_ROLE.park && !ME_ROLE.driver) h.insertAdjacentHTML("afterbegin", rolePill()); }
   try { if (me.auth && localStorage.getItem("nextPark")) { localStorage.removeItem("nextPark"); if (me.park || me.admin) return location.replace("/park"); } } catch (e) {}
   try { const rf = localStorage.getItem("parkRef"); if (me.auth && rf) { api("/api/ref", {code:rf}); localStorage.removeItem("parkRef"); } } catch (e) {} ME_BOT = me.bot || ""; ME_AV = me.avatar || null; $("#menuBtn").innerHTML = avBtn();
   await areaReady;

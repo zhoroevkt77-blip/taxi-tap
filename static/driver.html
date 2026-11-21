@@ -102,7 +102,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=124">
+<link rel="stylesheet" href="/static/theme.css?v=126">
 <link rel="stylesheet" href="/static/dark.css?v=20">
 <script src="/static/night.js?v=2"></script>
 </head>
@@ -113,7 +113,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
   <div class="lcol"><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b></div>
 </div>
   <div class="rcol"><button class="state hide" id="stBadge" style="display:none">Офлайн</button>
-    <div class="hhr"><a class="rpill" href="/" id="toRider" aria-label="Жүргүнчү режимине өтүү"><img src="/static/r_bag.webp?v=11" alt=""><span class="t">Жүргүнчүгө<br>өтүү</span></a>
+    <div class="hhr">
     <button class="tbtn hide topav" id="cabBtn" aria-label="Менин кабинетим">👤</button></div>
     <div class="r2"><button class="ep hide" id="earn"></button></div>
     <div class="tools hide" id="tools"><button class="sbtn" id="heatBtn" aria-label="Коэффициент"><i>💓</i>×1.0</button>
@@ -631,7 +631,7 @@ function viewCabinet(part) {
   const f = D.finance || {}, row = (t, k) => { const x = f[k] || {rides:0, gross:0, fee:0, net:0};
     return `<tr><td>${t}</td><td>${x.rides}</td><td>${x.gross}</td><td>${x.fee}</td><td><b>${x.net}</b></td></tr>`; };
   const E = part === "earn", C = !E, on = c => c ? "" : ' style="display:none"';
-  render(`<h2>${E ? "💰 Киреше" : "Менин кабинетим"}</h2>${C ? `<button class="carrow" id="myCar"><img src="${carImg(D.car_color)}" alt=""><span><b>Менин унаам</b><small>${esc(carText(D.car_color, D.car_model))}</small><div style="margin-top:4px">${kgPlate(D.car_plate)}</div></span><em>›</em></button>` + workHTML() + myQrHTML() : ""}
+  render(`<h2>${E ? "💰 Киреше" : "Менин кабинетим"}</h2>${C ? `<div class="rolesw"><a href="/" id="toRider" class="r y"><img src="/static/r_bag.webp?v=11" alt="">Жүргүнчү болуу</a><span class="r g on"><img src="/static/r_car.webp?v=11" alt="">Айдоочу болуу<i>✓</i></span></div>` : ""}${C ? `<button class="carrow" id="myCar"><img src="${carImg(D.car_color)}" alt=""><span><b>Менин унаам</b><small>${esc(carText(D.car_color, D.car_model))}</small><div style="margin-top:4px">${kgPlate(D.car_plate)}</div></span><em>›</em></button>` + workHTML() + myQrHTML() : ""}
     <div${on(C)}><div class="irow">${yi("car")}<span><b>Тарифтериңиз</b><small>${(D.classes || []).map(c => esc((D.class_names || {})[c] || c)).join(", ")} · Комфорт же Минивэнге өтүү үчүн админге кайрылыңыз</small></span></div>
       <div class="irow">${yi("percent")}<span><b>Комиссия</b><small>${esc(D.tariff)}</small></span></div></div>
     <div class="grid"><div class="stat"><span class="muted">Баланс</span><b style="color:${D.balance < D.min_balance ? "var(--bad)" : "inherit"}">${D.balance} с</b></div>
@@ -729,7 +729,7 @@ function cabChips() {
   const has = k => list.some(x => x[2] === k);
   ul.innerHTML = `<button id="dgChip" class="dgc">${yi("tools", "s")}<span>Диагностика</span><em class="${DIAG_N ? "n" : DIAG_N === 0 ? "z" : ""}">${DIAG_N ? DIAG_N : DIAG_N === 0 ? "✓" : ""}</em><i>›</i></button>` + warn.filter(w => has(w[2])).map(w => `<button data-cw="${w[2]}" class="w ${w[3]}">${yi(w[0], "s")}<span>${w[1]}</span><i>›</i></button>`).join("")
     + list.map(x => `<button data-cc="${x[2]}">${yi(x[0], "s")}<span>${x[1]}</span><i>›</i></button><div class="ccbody" data-cb="${x[2]}"></div>`).join("");
-  h2.after(ul);
+  (V.querySelector(".rolesw") || h2).after(ul);
   list.forEach(x => { const b = ul.querySelector(`[data-cb="${x[2]}"]`); x[3].forEach(e => b.appendChild(e)); });   // бөлүмдөр чиптин астына көчөт
   const toggle = (k, force) => {
     const btn = ul.querySelector(`[data-cc="${k}"]`); if (!btn) return;
@@ -1028,7 +1028,8 @@ async function goOffline() {
   D = r; speak(["d_offline"]); wake(false); lastView = ""; show(); window.SHEET && SHEET.expand();
 }
 $("#cabBtn").onclick = () => { if (!D || D.status !== "active") return; window.SHEET && SHEET.expand(); D.ride ? null : viewCabinet(); };
-$("#toRider").onclick = e => { if (busy()) { e.preventDefault(); busyBox("Азыр болбойт", "Сапар бүткөнчө жүргүнчү режимине өтүүгө болбойт."); } };
+document.addEventListener("click", e => { const a = e.target.closest && e.target.closest("#toRider");
+  if (a && busy()) { e.preventDefault(); busyBox("Азыр болбойт", "Сапар бүткөнчө жүргүнчү режимине өтүүгө болбойт."); } });
 let extNav = 0;     // навигатор, чалуу — бул чыгуу эмес, эскертпейбиз
 document.addEventListener("click", e => { const a = e.target.closest && e.target.closest("a[href]"); if (a && !/^\/(?!\/)/.test(a.getAttribute("href"))) extNav = Date.now(); }, true);
 window.addEventListener("beforeunload", e => { if (busy() && Date.now() - extNav > 3000) { e.preventDefault(); e.returnValue = ""; } });
