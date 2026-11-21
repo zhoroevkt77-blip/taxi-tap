@@ -102,7 +102,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=121">
+<link rel="stylesheet" href="/static/theme.css?v=122">
 <link rel="stylesheet" href="/static/dark.css?v=20">
 <script src="/static/night.js?v=2"></script>
 </head>
@@ -394,10 +394,10 @@ let tapLayer = null, tapChip = null, tapSeq = 0;
 function tapClear() { if (tapLayer) { tapLayer.remove(); tapLayer = null; } if (tapChip) { tapChip.remove(); tapChip = null; } }
 function tapLatLng(e) {                                   // «Жол өйдө» режиминде карта айланган — басылган чекитти кайра эсептейбиз
   if (!hupOn || !e.originalEvent || !map.containerPointToLatLng) return e.latlng;
-  const ev = e.originalEvent.changedTouches ? e.originalEvent.changedTouches[0] : e.originalEvent, r = mapEl.getBoundingClientRect();
+  const ev = e.originalEvent.changedTouches ? e.originalEvent.changedTouches[0] : e.originalEvent, r = mapEl.getBoundingClientRect();   // айланган картада
   const cx = r.left + r.width / 2, cy = r.top + r.height / 2, a = -hupAng * Math.PI / 180, dx = ev.clientX - cx, dy = ev.clientY - cy;
   const S = mapEl.offsetWidth;
-  return map.containerPointToLatLng(L.point(S / 2 + dx * Math.cos(a) - dy * Math.sin(a), S / 2 + dx * Math.sin(a) + dy * Math.cos(a)));
+  return map.containerPointToLatLng([S / 2 + dx * Math.cos(a) - dy * Math.sin(a), S / 2 + dx * Math.sin(a) + dy * Math.cos(a)]);
 }
 async function tapRoute(ll) {
   if (!ll || (D && D.ride)) return;
@@ -419,7 +419,21 @@ async function tapRoute(ll) {
   if (rt.coords && rt.coords.length > 2) { line.remove(); L.polyline(rt.coords, {color:"#17365C", weight:5, opacity:.85}).addTo(tapLayer); }
   const el = $("#tapInfo"); if (el) el.textContent = rt.km != null ? `📍 ${String(rt.km).replace(".", ",")} км · ~${rt.min} мүн` : "📍 Маршрут табылган жок";
 }
-map.on("click", e => { if (!D || D.ride || document.querySelector(".areachip")) return; tapRoute(tapLatLng(e)); });
+// Манжаны картада ~0,6 сек кармап турса (кыймылдатпай) — ошол жерге маршрут. Жөн тийүү/жылдыруу эч нерсе кылбайт.
+(() => {
+  const el = map.getContainer ? map.getContainer() : mapEl; let t = null, x0 = 0, y0 = 0, ring = null;
+  const stop = () => { clearTimeout(t); t = null; if (ring) { ring.remove(); ring = null; } };
+  el.addEventListener("touchstart", e => {
+    stop(); if (e.touches.length !== 1 || !D || D.ride || document.querySelector(".areachip")) return;
+    const p = e.touches[0]; x0 = p.clientX; y0 = p.clientY;
+    ring = document.createElement("div"); ring.className = "holdring"; ring.style.left = x0 + "px"; ring.style.top = y0 + "px"; document.body.appendChild(ring);
+    t = setTimeout(() => { stop(); tapRoute(tapLatLng({originalEvent:{clientX:x0, clientY:y0}, latlng:map.containerPointToLatLng ? map.containerPointToLatLng([x0 - mapEl.getBoundingClientRect().left, y0 - mapEl.getBoundingClientRect().top]) : null})); }, 600);
+  }, {passive:true});
+  el.addEventListener("touchmove", e => { const p = e.touches[0]; if (t && (Math.abs(p.clientX - x0) > 12 || Math.abs(p.clientY - y0) > 12)) stop(); }, {passive:true});
+  ["touchend", "touchcancel"].forEach(ev => el.addEventListener(ev, stop, {passive:true}));
+  el.addEventListener("contextmenu", e => e.preventDefault());
+  map.on("contextmenu", e => { if (!("ontouchstart" in window) && D && !D.ride) tapRoute(tapLatLng(e)); });   // компьютерде: оң баскыч
+})();
 
 function viewHome() {
   navOn("line");
