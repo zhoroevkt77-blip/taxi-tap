@@ -102,7 +102,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=119">
+<link rel="stylesheet" href="/static/theme.css?v=120">
 <link rel="stylesheet" href="/static/dark.css?v=20">
 <script src="/static/night.js?v=2"></script>
 </head>
@@ -126,7 +126,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="/static/area.js?v=12"></script>
-<script src="/static/voice.js?v=5"></script>
+<script src="/static/voice.js?v=6"></script>
 <script src="/static/qr.js"></script>
 <script src="/static/qrshare.js"></script>
 <script>
@@ -380,8 +380,15 @@ function outHTML() {
   const nm = D.area_title || (D.area_gen && D.area_gen !== "иштөө аймагынын" ? D.area_gen.replace(/нун$|нын$|нүн$|нин$/, "") : "");
   return `<div class="outn"><img src="/static/c_map.webp?v=11" alt=""><div><b>Сиз иштөө аймагынын сыртындасыз</b>
     <span>Такси ТАП! ${nm ? `<b>${esc(nm)}</b> аймагында` : "иштөө аймагында"} гана иштейт — бул жерде заказ келбейт. Аймакка киргенде заказдар өзү келе баштайт.</span>
-    <button class="btn ghost ib" id="areaShow"><img src="/static/c_map.webp?v=11" alt="">Аймакты картадан көрүү</button></div></div>`;
+    ${D.near ? `<div class="outd">📍 Аймакка чейин <b>${fmtKm(D.near.km)}</b></div>` : ""}
+    ${D.online && D.out_since && !D.ride && !D.area_free ? `<div class="outd t">⏳ <b id="outLeft">${outLeft()}</b> ичинде кайтпасаңыз, линиядан чыгасыз</div>` : ""}
+    <div class="outbtns">${D.near ? `<button class="btn ib navgo" id="areaGo">${yi("nav", "s")}Жол көрсөтүү</button>` : ""}
+    <button class="btn ghost ib" id="areaShow"><img src="/static/c_map.webp?v=11" alt="">Аймакты картадан көрүү</button></div></div></div>`;
 }
+const fmtKm = k => k < 1 ? Math.round(k * 1000) + " м" : (Math.round(k * 10) / 10).toString().replace(".", ",") + " км";
+function outLeft() { const s = Math.max(0, Math.round((D.out_since || 0) + (D.out_max || 600) - Date.now() / 1000)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); }
+setInterval(() => { const e = document.getElementById("outLeft"); if (e && D && D.out_since) e.textContent = outLeft(); }, 1000);
+document.addEventListener("click", e => { if (e.target.closest && e.target.closest("#areaGo") && D && D.near) openNav(D.near.p); });
 
 function viewHome() {
   navOn("line");
@@ -396,14 +403,14 @@ function viewHome() {
   const sw = D.tg ? `<div class="sw"><div><b>Telegram билдирүүлөрү</b><div class="muted">Сайт жабык болсо да жаңы заказ жөнүндө кабар келет</div></div>
     <input type="checkbox" id="nt" ${D.notify ? "checked" : ""} style="width:24px;height:24px"></div>` : "";
   if (D.online) {
-    render(`${outHTML()}<div class="wait"><div class="blink"${D.in_area === false ? ' style="background:var(--bad)"' : ""}></div><div><b>${D.in_area === false ? "Заказ келбейт — аймактын сыртындасыз" : "Заказ күтүлүүдө"}${D.home && D.home.on ? " · 🏠 үйгө карай" : ""}</b><div class="muted">${D.in_area === false ? "1 сааттын ичинде аймакка кирбесеңиз, линиядан өзү чыгарылат" : "Экранды өчүрбөңүз — GPS иштеп турат"}</div></div></div>
+    render(`${outHTML()}<div class="wait"><div class="blink"${D.in_area === false ? ' style="background:var(--bad)"' : ""}></div><div><b>${D.in_area === false ? "Заказ келбейт — аймактын сыртындасыз" : "Заказ күтүлүүдө"}${D.home && D.home.on ? " · 🏠 үйгө карай" : ""}</b><div class="muted">${D.in_area === false ? "10 мүнөттүн ичинде аймакка кирбесеңиз, линиядан өзү чыгарылат" : "Экранды өчүрбөңүз — GPS иштеп турат"}</div></div></div>
       ${stats}<div id="hot"></div>${homeHTML()}<button class="btn red" id="off">Линиядан чыгуу</button>`);
     bindHome();
     $("#off").onclick = goOffline;
   } else {
     render(`<h2>Салам, ${esc(D.name || "айдоочу")}!</h2><p class="muted">${esc(carText(D.car_color, D.car_model))}, ${esc(D.car_plate)}</p>
       ${low ? `<p class="err">Баланс жетишсиз — заказдар келбейт.</p>` : ""}${outHTML()}
-      <button class="btn go" id="on">Линияга чыгуу</button>${D.park ? `<p class="muted" style="font-size:12px;text-align:center;margin:4px 0 0">🏢 Парк сиздин линиядагы жайгашууңузду көрөт</p>` : ""}
+      ${D.in_area === false && !D.area_free ? `<button class="btn go off" id="on" disabled>Аймакка киргенде линияга чыга аласыз</button>` : `<button class="btn go" id="on">Линияга чыгуу</button>`}${D.park ? `<p class="muted" style="font-size:12px;text-align:center;margin:4px 0 0">🏢 Парк сиздин линиядагы жайгашууңузду көрөт</p>` : ""}
       <div class="err" id="er"></div><div id="hot"></div>${stats}${topup}
       ${D.photo && D.photo.need ? photoCard() : ""}${homeHTML()}${sw}
       ${installHTML()}<button class="outb" id="out">🚪 Чыгуу</button>`);
@@ -925,7 +932,10 @@ async function goOnline(btn) {
   if (btn) btn.disabled = true;
   const p = await getPos();
   if (!p) { if (btn) btn.disabled = false; const e = $("#er"); if (e) e.textContent = "GPS'ке уруксат бериңиз (браузердин жөндөөлөрүнөн)."; else alert("GPS'ке уруксат бериңиз."); return; }
-  const r = await api("/api/d/online", {on:true, p});
+  const r = await api("/api/d/online", {on:true, p, acc:myAcc || 0});
+  if (r.error === "out_area") { if (btn) btn.disabled = false; beep(); speak(["d_out"]); D.in_area = false; D.near = {km:r.km, p:r.to}; lastView = ""; show();
+    return toast(`Сиз аймактан ${r.km != null ? fmtKm(r.km) + " " : ""}сыртта турасыз — линияга чыгууга болбойт`, 3500); }
+  if (r.error === "gps_acc") { if (btn) btn.disabled = false; return toast(`GPS тактыгы начар (±${r.acc} м). Ачык жерге чыгып кайра басыңыз.`, 3500); }
   if (r.error === "lic_expired") { if (btn) btn.disabled = false; alert("Айдоочулук күбөлүгүңүздүн мөөнөтү бүттү. Жаңы күбөлүктү жүктөңүз."); return viewLicense(); }
   if (r.error) { if (btn) btn.disabled = false; return viewDiag(true); }   // эмне тоскоол экенин көрсөтөбүз
   D = r; speak(["d_online"], 750);
@@ -1328,6 +1338,11 @@ function voiceEvents(p, s) {
   if (pr && ["accepted", "arrived"].includes(pr.status) && (!sr || sr.id !== pr.id)) { beep(); speak(["d_cancel"], 750); }
   else if (p.offer && !s.offer && !(sr && sr.id === p.offer.id) && !(s.next && s.next.id === p.offer.id)) speak(["d_missed"]);
   if (sr && sr.status === "arrived" && sr.wait && sr.wait.arrived_at && sr.wait.now - sr.wait.arrived_at >= 300 && VE.wait !== sr.id) { VE.wait = sr.id; speak(["d_wait5"]); }
+  if (!s.area_free && p.in_area !== false && s.in_area === false && s.online && !sr) { beep(); speak(["d_out"], 750); }
+  if (!s.area_free && p.in_area === false && s.in_area === true && !s.online) { beep(); speak(["d_in"], 750);
+    overlay(`<div class="lgx"><div class="lg-ic" style="background:#e3f6ea"><img src="/static/c_map.webp?v=11" alt="" style="width:56px"></div><h2>Аймакка кирдиңиз ✅</h2>
+      <p class="muted">Эми линияга чыгып, заказ ала аласыз.</p><button class="btn go" id="inGo">Линияга чыгуу</button><button class="btn ghost" id="inNo">Азыр эмес</button></div>`);
+    setTimeout(() => { const g = $("#inGo"), n = $("#inNo"); if (g) g.onclick = () => { closeOverlay(); goOnline(); }; if (n) n.onclick = closeOverlay; }, 0); }
   const low = s.min_balance > 0 && s.balance < s.min_balance;
   if (VE.low === false && low && !sr) speak(["d_lowbal"]);
   VE.low = low;

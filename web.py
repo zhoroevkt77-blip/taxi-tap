@@ -206,7 +206,10 @@ def driver_state(uid, seen=False):
           "home": {"set": d.get("home_lat") is not None, "on": bool(d.get("home_on")),
                    "left": core.home_uses_left(d) if d else 0,
                    "p": [d["home_lat"], d["home_lon"]] if d.get("home_lat") is not None else None},
-          "in_area": (core.in_area(d["lat"], d["lon"]) if d and d.get("lat") is not None and core.AREA_ON else None),
+          "in_area": (core.in_area_buf(d["lat"], d["lon"]) if d and d.get("lat") is not None and core.AREA_ON else None),
+          "area_free": bool((d or {}).get("area_free")), "out_since": (d or {}).get("out_since"), "out_max": core.OUT_MAX_SEC,
+          "near": (lambda n: {"km": n[0], "p": n[1]} if n[0] is not None else None)(core.area_near(d["lat"], d["lon"]))
+                  if d and d.get("lat") is not None and core.AREA_ON and not core.in_area_buf(d["lat"], d["lon"]) else None,
           "area_name": core.AREA_CITY if core.AREA_ON else "", "area_gen": core.area_gen(), "area_title": core.area_title(), "area_label": core.area_label(),
           "bot": BOT_USERNAME,
           "notify": bool(u.get("notify", 1)), "tg": bool(u.get("tg_uid")),
@@ -814,6 +817,13 @@ class H(BaseHTTPRequestHandler):
                 p = _point(b.get("p"))
                 if not p:
                     return self._json({"error": "need_location"}, 400)
+                acc = _num(b.get("acc"))
+                if core.AREA_ON and not d.get("area_free"):
+                    if acc and acc > 500:
+                        return self._json({"error": "gps_acc", "acc": round(acc)}, 400)
+                    if not core.in_area_buf(p[0], p[1]):          # аймактан сыртта линияга чыгууга болбойт
+                        km, to = core.area_near(p[0], p[1])
+                        return self._json({"error": "out_area", "km": km, "to": to}, 403)
                 core.driver_location(uid, p[0], p[1], live_period=60)
             else:
                 if d["busy_ride"] or d.get("next_ride"):
@@ -951,6 +961,12 @@ class H(BaseHTTPRequestHandler):
                              active=b.get("active", True) is not False,
                              share_months=b.get("share_months", 6), share_after=b.get("share_after", 50))
             return self._json({"id": pid} if pid else {"error": "bad"}, 200 if pid else 400)
+        if action == "driver_area_free":
+            t = _txt(b.get("uid"), 40)
+            if not core.get_driver(t):
+                return self._json({"error": "not_found"}, 404)
+            core.set_driver(t, area_free=1 if b.get("on") is True else 0, out_since=None)
+            return self._json({"ok": True})
         if action == "park_self_approve":
             ok = parks.set_self_approve(int(b.get("id") or 0), b.get("on") is True)
             return self._json({"ok": ok}, 200 if ok else 400)

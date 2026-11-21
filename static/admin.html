@@ -81,7 +81,7 @@ td input.f{padding:7px 8px;max-width:90px;min-width:58px}
 .dgl{display:block;margin-top:6px;font-size:13px}.dgl.ok{color:#1a7a40;font-weight:600}.dgl summary{cursor:pointer;list-style:none;font-weight:600}
 .dgl summary::-webkit-details-marker{display:none}.dgl summary b{display:inline!important;margin:0!important}.dgl summary{display:block}.dgl .r{color:#c22}.dgl .o{color:#b26a00}.dgi{padding:3px 0 0 4px;font-size:13px}.dgi.bad{color:#b42318}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=119">
+<link rel="stylesheet" href="/static/theme.css?v=120">
 </head>
 <body class="adm">
 <header><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b><span class="ver">Админ</span></div><div class="live" id="live"></div></header>
@@ -318,6 +318,7 @@ async function viewDrivers() {
       ${d.status === "blocked" && d.blocked_by && d.blocked_by.startsWith("park:") ? `<span class="muted" style="display:block">⛔ парк бөгөттөгөн</span>` : ""}
       ${d.status === "rejected" && d.reject_note ? `<span class="muted">Себеби: ${esc(d.reject_note)}</span>` : ""}${lic(d)}
       ${diagLine(d.diag)}
+      <label style="display:flex;gap:6px;align-items:center;font-size:13px;margin-top:6px"><input type="checkbox" data-afree="${esc(d.uid)}" ${d.area_free ? "checked" : ""}> Аймак чектөөсүз (тест)</label>
       ${d.status === "pending" ? docs(d) + checks(d) : `<details><summary class="muted" style="cursor:pointer">📄 Документтер</summary>${docs(d)}</details>`}
       ${photoBox(d)}
       ${d.status === "active" ? `<span class="muted" data-cl="${esc(d.uid)}">${[["econom","Эконом"],["comfort","Комфорт"],["minivan","Минивэн"],["delivery","Жеткирүү"]].map(([c, t]) =>
@@ -509,6 +510,8 @@ function diagLine(g) {
   return `<details class="dgl"><summary>🩺 ${g.bad ? `<b class="r">${g.bad} ❌</b>` : ""}${g.bad && g.warn ? " · " : ""}${g.warn ? `<b class="o">${g.warn} ⚠️</b>` : ""}</summary>
     ${g.items.map(([l, t]) => `<div class="dgi ${l}">${l === "bad" ? "❌" : "⚠️"} ${esc(t)}</div>`).join("")}</details>`;
 }
+document.addEventListener("change", async e => { const c = e.target.closest && e.target.closest("[data-afree]"); if (!c) return;
+  const r = await api("/api/a/driver_area_free", {uid:c.dataset.afree, on:c.checked}); toast(r.ok ? (c.checked ? "✓ Аймактан сыртта да линияга чыга алат" : "Аймак чектөөсү күйдү") : "Ката", 2200); });
 function bindSelf() {
   document.querySelectorAll("[data-self]").forEach(c => c.onchange = async () => {
     if (c.checked && !confirm("Бул парк өз айдоочуларынын документтерин өзү текшерип, тастыктай алат. Макулсузбу?")) { c.checked = false; return; }

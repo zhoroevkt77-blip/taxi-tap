@@ -308,6 +308,7 @@ NEW_COLUMNS = {
                 "home_lat": "REAL", "home_lon": "REAL", "home_on": "INTEGER DEFAULT 0",
                 "home_day": "TEXT", "home_uses": "INTEGER DEFAULT 0",
                 "out_since": "REAL",
+                "area_free": "INTEGER DEFAULT 0",          # админ уруксаты: аймак чектөөсүз (тест үчүн)
                 "activity": "INTEGER DEFAULT 100",
                 "park_id": "INTEGER",
                 "doc_selfie": "TEXT",                # күбөлүктү кармап тартылган селфи
@@ -423,8 +424,8 @@ def driver_location(uid, lat, lon, live_period=None, msg_date=None):
     """
     t = now()
     fields = {"lat": lat, "lon": lon, "loc_at": t, "online": 1}
-    if AREA_ON and not in_area(lat, lon):
-        cur = query("SELECT out_since FROM drivers WHERE uid=?", (uid,), "one")
+    cur = query("SELECT out_since, area_free FROM drivers WHERE uid=?", (uid,), "one") if AREA_ON else None
+    if AREA_ON and not (cur and cur.get("area_free")) and not in_area_buf(lat, lon):
         fields["out_since"] = (cur and cur["out_since"]) or t
     else:
         fields["out_since"] = None
@@ -446,15 +447,15 @@ def is_available(d, t=None):
     return live or fresh
 
 
-OUT_MAX_SEC = float(os.environ.get("OUT_MAX_MIN") or 60) * 60   # аймактан сыртта ушунча турса — өзү линиядан чыгат
+OUT_MAX_SEC = float(os.environ.get("OUT_MAX_MIN") or 10) * 60   # аймактан сыртта ушунча турса — өзү линиядан чыгат
 
 
 def auto_offline_out():
     """Аймактан сыртта OUT_MAX_SEC'тен ашык линияда турган (сапарсыз) айдоочуларды офлайн кылат."""
     if not AREA_ON:
         return []
-    rows = query("SELECT uid FROM drivers WHERE online=1 AND busy_ride IS NULL AND out_since IS NOT NULL "
-                 "AND out_since<?", (now() - OUT_MAX_SEC,), "all")
+    rows = query("SELECT uid FROM drivers WHERE online=1 AND busy_ride IS NULL AND next_ride IS NULL AND out_since IS NOT NULL "
+                 "AND out_since<? AND COALESCE(area_free, 0)=0", (now() - OUT_MAX_SEC,), "all")
     for d in rows:
         set_driver(d["uid"], online=0, live_until=None, out_since=None)
     return [d["uid"] for d in rows]
@@ -597,6 +598,34 @@ def in_area(lat, lon):
     if not AREA_ON:
         return True
     return any(_in_ring(lat, lon, r) for r in _rings(area_geojson()))
+
+
+AREA_BUF_KM = 0.3          # GPS катасы үчүн: чектен 300 м ичинде болсо — аймакта деп эсептейбиз
+
+
+def area_near(lat, lon):
+    """Аймактын чегиндеги эң жакын чекит: (км, [lat, lon]). Аймак жок болсо (None, None)."""
+    best, pt = None, None
+    kx = math.cos(math.radians(lat)) * 111.32
+    for ring in _rings(area_geojson()):
+        for i in range(len(ring) - 1):
+            (x1, y1), (x2, y2) = ring[i], ring[i + 1]
+            ax, ay = (x1 - lon) * kx, (y1 - lat) * 110.57
+            bx, by = (x2 - lon) * kx, (y2 - lat) * 110.57
+            dx, dy = bx - ax, by - ay
+            t = max(0.0, min(1.0, -(ax * dx + ay * dy) / ((dx * dx + dy * dy) or 1e-12)))
+            px, py = ax + t * dx, ay + t * dy
+            dd = math.hypot(px, py)
+            if best is None or dd < best:
+                best, pt = dd, [lat + py / 110.57, lon + px / kx]
+    return (round(best, 2), [round(pt[0], 6), round(pt[1], 6)]) if best is not None else (None, None)
+
+
+def in_area_buf(lat, lon):
+    if not AREA_ON or in_area(lat, lon):
+        return True
+    km, _ = area_near(lat, lon)
+    return km is not None and km <= AREA_BUF_KM
 
 
 def unit_city(name):
@@ -2474,7 +2503,7 @@ def admin_drivers():
                  "d.car_color, d.car_plate, d.online, d.busy_ride, d.loc_at, d.live_until, d.lat, d.lon, "
                  "d.doc_license, d.doc_techpass, d.doc_car, d.doc_selfie, d.lic_until, d.reject_note, d.created_at, d.classes, "
                  "d.photos, d.photo_status, d.photo_at, d.photo_note, d.approved_by, d.approved_at, d.blocked_by, d.park_id, "
-                 "d.activity, d.diag_dev, d.diag_at, u.tg_uid, "
+                 "d.activity, d.diag_dev, d.diag_at, d.area_free, u.tg_uid, "
                  "p.name AS park_name, p.code AS park_code, p.self_approve AS park_self, "
                  "u.name, u.phone FROM drivers d LEFT JOIN users u ON u.uid=d.uid LEFT JOIN parks p ON p.id=d.park_id "
                  "ORDER BY d.status='pending' DESC, d.rides_done DESC", (), "all")
@@ -2796,7 +2825,7 @@ VOICE_KEYS = [
     ("d_done", "Сапар бүттү"), ("d_lowbal", "Балансыңыз аз, толуктаңыз"), ("d_missed", "Заказ башка айдоочуга өттү"),
     ("d_online", "Линиядасыз"), ("d_offline", "Линиядан чыктыңыз"), ("d_hot", "Бул жерде заказ көп"),
     ("r_found", "Айдоочу табылды"), ("r_arrived", "Айдоочу келди, чыгыңыз"), ("r_msg", "Айдоочудан билдирүү келди"),
-    ("r_go", "Ак жол!"), ("n0", "нөл"), ("n1", "бир"),
+    ("r_go", "Ак жол!"), ("d_out", "Аймактан чыгып кеттиңиз"), ("d_in", "Аймакка кирдиңиз, линияга чыгасызбы?"), ("n0", "нөл"), ("n1", "бир"),
     ("n2", "эки"), ("n3", "үч"), ("n4", "төрт"),
     ("n5", "беш"), ("n6", "алты"), ("n7", "жети"),
     ("n8", "сегиз"), ("n9", "тогуз"), ("n10", "он"),

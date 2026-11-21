@@ -1679,3 +1679,29 @@ class DriverDiag(unittest.TestCase):
         self.assertIn("📱 GPS'ке уруксат жок", texts); self.assertIn("📱 Батарея аз: 12%", texts)
         self.assertFalse(any("x" == t[-1:] and "📱" in t for t in texts))
         core.query("DELETE FROM drivers WHERE uid=?", (u,))
+
+
+class AreaOnlineGate(unittest.TestCase):
+    def test_near_and_buffer(self):
+        gj = {"type": "Polygon", "coordinates": [[[72.0, 41.0], [72.1, 41.0], [72.1, 41.1], [72.0, 41.1], [72.0, 41.0]]]}
+        old_on, old = core.AREA_ON, core._area.get("geojson")
+        core.AREA_ON = True; core._area["geojson"] = gj
+        try:
+            self.assertTrue(core.in_area_buf(41.05, 72.05))
+            self.assertTrue(core.in_area_buf(41.05, 72.1025))        # ~210 м сыртта — буфер ичинде
+            self.assertFalse(core.in_area_buf(41.05, 72.12))         # ~1.7 км
+            km, p = core.area_near(41.05, 72.12)
+            self.assertAlmostEqual(km, 1.68, delta=0.1); self.assertAlmostEqual(p[1], 72.1, places=4)
+            u = "tg:9900551"; core.ensure_user(u, "Аймак")
+            core.register_driver(u, "Аймак", "Соната", "Ак", "04KG551ABC", {"license": "a", "techpass": "b", "car": "c", "selfie": "d"})
+            core.set_driver(u, status="active", balance=1000)
+            core.driver_location(u, 41.05, 72.12)
+            self.assertIsNotNone(core.get_driver(u)["out_since"])
+            core.set_driver(u, out_since=core.now() - 11 * 60)
+            self.assertIn(u, core.auto_offline_out())
+            core.set_driver(u, online=1, area_free=1, out_since=None)
+            core.driver_location(u, 41.05, 72.12)
+            self.assertIsNone(core.get_driver(u)["out_since"])        # тест айдоочусу — чектөөсүз
+            core.query("DELETE FROM drivers WHERE uid=?", (u,))
+        finally:
+            core.AREA_ON = old_on; core._area["geojson"] = old
