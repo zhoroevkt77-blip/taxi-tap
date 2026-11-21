@@ -800,3 +800,7 @@ b,strong,h1,h2,h3,h4,th{font-weight:600}
 .btn.go.off{background:#d9d9de!important;color:#6b6b76!important;box-shadow:none!important;font-size:15px}
 .outn .outd b{display:inline!important;font-size:inherit!important;margin:0!important}
 .outn .btn.navgo{background:#ffc61a!important;color:#16161a!important;border:0!important;font-weight:600;box-shadow:0 4px 12px rgba(255,170,0,.3)!important}
+.tapchip{position:fixed;left:12px;right:12px;top:calc(env(safe-area-inset-top,0px) + 86px);z-index:640;display:flex;align-items:center;gap:8px;background:#fff;border-radius:22px;padding:8px 8px 8px 16px;box-shadow:0 6px 20px rgba(20,20,30,.2);font-weight:600;font-size:15px}
+.tapchip span{flex:1;min-width:0}.tapchip .tgo{display:inline-flex;align-items:center;gap:4px;border:0;border-radius:999px;background:#ffc61a;padding:8px 14px 8px 6px;font:inherit;font-weight:600;font-size:14px}
+.tapchip .tgo .yi{width:34px!important;height:24px!important;margin:0!important}.tapchip .tx{border:0;background:#f2f2f5;border-radius:50%;width:36px;height:36px;font-size:15px}
+html.uidark .tapchip{background:#23242b;color:#f2f2f5}

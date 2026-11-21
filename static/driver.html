@@ -102,7 +102,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=120">
+<link rel="stylesheet" href="/static/theme.css?v=121">
 <link rel="stylesheet" href="/static/dark.css?v=20">
 <script src="/static/night.js?v=2"></script>
 </head>
@@ -384,13 +384,42 @@ function outHTML() {
     <span>Такси ТАП! ${nm ? `<b>${esc(nm)}</b> аймагында` : "иштөө аймагында"} гана иштейт — бул жерде заказ келбейт. Аймакка киргенде заказдар өзү келе баштайт.</span>
     ${D.near ? `<div class="outd">📍 Аймакка чейин <b>${fmtKm(D.near.km)}</b></div>` : ""}
     ${D.online && D.out_since && !D.ride && !D.area_free ? `<div class="outd t">⏳ <b id="outLeft">${outLeft()}</b> ичинде кайтпасаңыз, линиядан чыгасыз</div>` : ""}
-    <div class="outbtns">${D.near ? `<button class="btn ib navgo" id="areaGo">${yi("nav", "s")}${D.near.name ? "Жол: " + esc(D.near.name) : "Жол көрсөтүү"}</button>` : ""}
-    <button class="btn ghost ib" id="areaShow"><img src="/static/c_map.webp?v=11" alt="">Аймакты картадан көрүү</button></div></div></div>`;
+    <div class="outbtns"><button class="btn ghost ib" id="areaShow"><img src="/static/c_map.webp?v=11" alt="">Аймакты картадан көрүү</button></div></div></div>`;
 }
 const fmtKm = k => k < 1 ? Math.round(k * 1000) + " м" : (Math.round(k * 10) / 10).toString().replace(".", ",") + " км";
 function outLeft() { const s = Math.max(0, Math.round((D.out_since || 0) + (D.out_max || 600) - Date.now() / 1000)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); }
 setInterval(() => { const e = document.getElementById("outLeft"); if (e && D && D.out_since) e.textContent = outLeft(); }, 1000);
-document.addEventListener("click", e => { if (e.target.closest && e.target.closest("#areaGo") && D && D.near) openNav(D.near.p); });
+// ---------- Картаны манжа менен басса — ошол жерге маршрут ----------
+let tapLayer = null, tapChip = null, tapSeq = 0;
+function tapClear() { if (tapLayer) { tapLayer.remove(); tapLayer = null; } if (tapChip) { tapChip.remove(); tapChip = null; } }
+function tapLatLng(e) {                                   // «Жол өйдө» режиминде карта айланган — басылган чекитти кайра эсептейбиз
+  if (!hupOn || !e.originalEvent || !map.containerPointToLatLng) return e.latlng;
+  const ev = e.originalEvent.changedTouches ? e.originalEvent.changedTouches[0] : e.originalEvent, r = mapEl.getBoundingClientRect();
+  const cx = r.left + r.width / 2, cy = r.top + r.height / 2, a = -hupAng * Math.PI / 180, dx = ev.clientX - cx, dy = ev.clientY - cy;
+  const S = mapEl.offsetWidth;
+  return map.containerPointToLatLng(L.point(S / 2 + dx * Math.cos(a) - dy * Math.sin(a), S / 2 + dx * Math.sin(a) + dy * Math.cos(a)));
+}
+async function tapRoute(ll) {
+  if (!ll || (D && D.ride)) return;
+  const to = [+ll.lat.toFixed(6), +ll.lng.toFixed(6)], my = ++tapSeq;
+  tapClear(); tapLayer = L.layerGroup().addTo(map);
+  L.marker(to, {icon:icon("to", "🏁"), interactive:false}).addTo(tapLayer);
+  tapChip = document.createElement("div"); tapChip.className = "tapchip";
+  tapChip.innerHTML = `<span id="tapInfo">⏳ Маршрут түзүлүүдө…</span><button class="tgo">${yi("nav", "s")}Навигатор</button><button class="tx" aria-label="Жабуу">✕</button>`;
+  document.body.appendChild(tapChip);
+  const nb = document.querySelector(".navb"); if (nb) { const t = nb.getBoundingClientRect().top; if (t > 200) tapChip.style.top = (t - 74) + "px"; }   // картанын баскычтарынын үстүнө
+  tapChip.querySelector(".tgo").onclick = () => openNav(to);
+  tapChip.querySelector(".tx").onclick = tapClear;
+  try { navigator.vibrate && navigator.vibrate(15); } catch (e) {}
+  const from = myPos;
+  if (!from) { $("#tapInfo").textContent = "📍 Жериңиз аныктала элек"; return; }
+  const line = L.polyline([from, to], {color:"#17365C", weight:4, dashArray:"6 8", opacity:.8}).addTo(tapLayer);
+  const rt = await api(`/api/route?a=${from[0]},${from[1]}&b=${to[0]},${to[1]}`);
+  if (my !== tapSeq || !tapLayer) return;
+  if (rt.coords && rt.coords.length > 2) { line.remove(); L.polyline(rt.coords, {color:"#17365C", weight:5, opacity:.85}).addTo(tapLayer); }
+  const el = $("#tapInfo"); if (el) el.textContent = rt.km != null ? `📍 ${String(rt.km).replace(".", ",")} км · ~${rt.min} мүн` : "📍 Маршрут табылган жок";
+}
+map.on("click", e => { if (!D || D.ride || document.querySelector(".areachip")) return; tapRoute(tapLatLng(e)); });
 
 function viewHome() {
   navOn("line");
@@ -763,7 +792,7 @@ async function viewHistory() {
 
 let seenRide = null;
 function viewRide() {
-  const r = D.ride;
+  const r = D.ride; tapClear();
   if (seenRide !== r.id) { seenRide = r.id; seen = 0; unread.last = 0; }
   layer.clearLayers();
   L.marker(r.p, {icon:icon("", "👤"), interactive:false}).addTo(layer);
