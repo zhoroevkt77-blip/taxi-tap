@@ -1212,6 +1212,10 @@ def start(port=None):
 if __name__ == "__main__":
     import dispatch
     core.init_db()
+    try:
+        core.voice_migrate_thanks()
+    except Exception as e:
+        print("voice migrate:", e)
     threading.Thread(target=core.load_area, daemon=True).start()
     threading.Thread(target=addrbook.ensure_seeded, daemon=True).start()
     start()

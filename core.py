@@ -2969,6 +2969,29 @@ def voice_set_tpl(kind, toks):
     return True
 
 
+def voice_migrate_thanks():
+    """Бир жолку: «кызматыңыз / үчүн / чоң / рахмат!» өзүнчө сөздөрүн бир сөзгө бириктирип, «Сапар бүттү» сүйлөмүнө коёт."""
+    if get_setting("mig_vthanks"):
+        return
+    set_setting("mig_vthanks", 1)
+    words = ["кызматыңыз", "үчүн", "чоң", "рахмат!"]
+    c = voice_custom()
+    old = [x for x in c if x["t"].strip().lower() in words]
+    if not old:
+        return
+    have = set()
+    for vs in VOICE_SETS:
+        have |= set(get_setting(_vk(vs, "", "voice_have")) or {})
+    if any(x["k"] in have for x in old):            # жазылып калса — тийбейбиз
+        return
+    for x in old:
+        voice_custom_del(x["k"])
+    k = voice_custom_add("Кызматыңыз үчүн чоң рахмат!", "")
+    if k:
+        voice_set_tpl("d_done", ["d_done", "{price}", "som", k])
+    print("voice: rahmat phrase merged ->", k)
+
+
 def voice_custom():
     c = get_setting("voice_custom") or []
     return [x for x in c if isinstance(x, dict) and x.get("k") and x.get("t")]
