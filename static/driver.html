@@ -485,11 +485,11 @@ function viewHome() {
       ${D.in_area === false && !D.area_free ? `<button class="btn go off" id="on" disabled>Аймакка киргенде линияга чыга аласыз</button>` : `<button class="btn go" id="on">Линияга чыгуу</button>`}${D.park ? `<p class="muted" style="font-size:12px;text-align:center;margin:4px 0 0">🏢 Парк сиздин линиядагы жайгашууңузду көрөт</p>` : ""}
       <div class="err" id="er"></div><div id="hot"></div>${stats}${topup}
       ${D.photo && D.photo.need ? photoCard() : ""}${homeHTML()}${sw}
-      ${installHTML()}<button class="outb" id="out">🚪 Чыгуу</button>`);
+      ${installHTML()}`);
     bindInstall();
     $("#top") && ($("#top").onclick = viewTopup);
     $("#nt") && ($("#nt").onchange = () => api("/api/notify", {on:$("#nt").checked}));
-    $("#out").onclick = confirmOut;
+    $("#out") && ($("#out").onclick = confirmOut);
     $("#on").onclick = () => goOnline($("#on"));
     $("#phCard") && ($("#phCard").onclick = viewPhotos);
     bindHome();
