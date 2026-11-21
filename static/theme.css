@@ -197,7 +197,7 @@ input.f::placeholder{color:#8a8a95}
 .navme i{position:absolute;left:8px;top:8px;width:36px;height:36px;border-radius:50%;background:rgba(255,183,3,.18);animation:navp 2s ease-out infinite}
 .navme b{position:absolute;inset:0;display:grid;place-items:center;transition:transform .25s linear;filter:drop-shadow(0 4px 4px rgba(0,0,0,.35))}
 @keyframes navp{0%{transform:scale(.6);opacity:1}100%{transform:scale(1.6);opacity:0}}
-.navbtns{position:fixed;right:12px;z-index:6;display:flex;gap:10px;align-items:center;pointer-events:none}
+.navbtns{position:fixed;right:12px;z-index:6;display:flex;flex-direction:column;gap:10px;align-items:center;pointer-events:none}
 .navb{pointer-events:auto;width:54px;height:54px;border-radius:50%;background:#fff;border:0;box-shadow:0 3px 12px rgba(20,20,30,.2);display:grid;place-items:center;cursor:pointer;padding:0}
 .navb.hide{display:none}
 .navb svg{display:block}
