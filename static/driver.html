@@ -374,7 +374,9 @@ function viewAddAddr() {
   $("#an").focus();
 }
 
-document.addEventListener("click", e => { if (e.target.closest && e.target.closest("#areaShow")) showAreaOnMap(map); });
+document.addEventListener("click", e => { if (e.target.closest && e.target.closest("#areaShow")) {
+  FOLLOW = false; const b = $("#navLoc"); b && b.classList.add("off"); hupSync();   // ээрчүү токтосун — болбосо карта кайра машинага кайтат
+  setTimeout(() => showAreaOnMap(map), 50); } });
 function outHTML() {
   if (D.in_area !== false) return "";
   const nm = D.area_title || (D.area_gen && D.area_gen !== "иштөө аймагынын" ? D.area_gen.replace(/нун$|нын$|нүн$|нин$/, "") : "");
@@ -382,7 +384,7 @@ function outHTML() {
     <span>Такси ТАП! ${nm ? `<b>${esc(nm)}</b> аймагында` : "иштөө аймагында"} гана иштейт — бул жерде заказ келбейт. Аймакка киргенде заказдар өзү келе баштайт.</span>
     ${D.near ? `<div class="outd">📍 Аймакка чейин <b>${fmtKm(D.near.km)}</b></div>` : ""}
     ${D.online && D.out_since && !D.ride && !D.area_free ? `<div class="outd t">⏳ <b id="outLeft">${outLeft()}</b> ичинде кайтпасаңыз, линиядан чыгасыз</div>` : ""}
-    <div class="outbtns">${D.near ? `<button class="btn ib navgo" id="areaGo">${yi("nav", "s")}Жол көрсөтүү</button>` : ""}
+    <div class="outbtns">${D.near ? `<button class="btn ib navgo" id="areaGo">${yi("nav", "s")}${D.near.name ? "Жол: " + esc(D.near.name) : "Жол көрсөтүү"}</button>` : ""}
     <button class="btn ghost ib" id="areaShow"><img src="/static/c_map.webp?v=11" alt="">Аймакты картадан көрүү</button></div></div></div>`;
 }
 const fmtKm = k => k < 1 ? Math.round(k * 1000) + " м" : (Math.round(k * 10) / 10).toString().replace(".", ",") + " км";
@@ -933,7 +935,7 @@ async function goOnline(btn) {
   const p = await getPos();
   if (!p) { if (btn) btn.disabled = false; const e = $("#er"); if (e) e.textContent = "GPS'ке уруксат бериңиз (браузердин жөндөөлөрүнөн)."; else alert("GPS'ке уруксат бериңиз."); return; }
   const r = await api("/api/d/online", {on:true, p, acc:myAcc || 0});
-  if (r.error === "out_area") { if (btn) btn.disabled = false; beep(); speak(["d_out"]); D.in_area = false; D.near = {km:r.km, p:r.to}; lastView = ""; show();
+  if (r.error === "out_area") { if (btn) btn.disabled = false; beep(); speak(["d_out"]); D.in_area = false; D.near = {km:r.km, p:r.to, name:r.name}; lastView = ""; show();
     return toast(`Сиз аймактан ${r.km != null ? fmtKm(r.km) + " " : ""}сыртта турасыз — линияга чыгууга болбойт`, 3500); }
   if (r.error === "gps_acc") { if (btn) btn.disabled = false; return toast(`GPS тактыгы начар (±${r.acc} м). Ачык жерге чыгып кайра басыңыз.`, 3500); }
   if (r.error === "lic_expired") { if (btn) btn.disabled = false; alert("Айдоочулук күбөлүгүңүздүн мөөнөтү бүттү. Жаңы күбөлүктү жүктөңүз."); return viewLicense(); }

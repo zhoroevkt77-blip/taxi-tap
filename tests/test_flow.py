@@ -1705,3 +1705,19 @@ class AreaOnlineGate(unittest.TestCase):
             core.query("DELETE FROM drivers WHERE uid=?", (u,))
         finally:
             core.AREA_ON = old_on; core._area["geojson"] = old
+
+
+class AreaEntry(unittest.TestCase):
+    def test_entry_village(self):
+        import addrbook
+        gj = {"type": "Polygon", "coordinates": [[[72.0, 41.0], [72.1, 41.0], [72.1, 41.1], [72.0, 41.1], [72.0, 41.0]]]}
+        old_on, old = core.AREA_ON, core._area.get("geojson")
+        core.AREA_ON = True; core._area["geojson"] = gj; core._entry_cache.clear()
+        rows = addrbook._rows
+        addrbook._rows = lambda: [{"kind": "village", "lat": 41.05, "lon": 72.09, "name": "Тест-Айыл"},
+                                  {"kind": "village", "lat": 41.5, "lon": 72.5, "name": "Сырттагы"}]
+        try:
+            e = core.area_entry(41.05, 72.3)
+            self.assertEqual(e["name"], "Тест-Айыл"); self.assertEqual(e["p"], [41.05, 72.09])
+        finally:
+            addrbook._rows = rows; core.AREA_ON = old_on; core._area["geojson"] = old; core._entry_cache.clear()

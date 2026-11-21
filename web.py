@@ -208,7 +208,7 @@ def driver_state(uid, seen=False):
                    "p": [d["home_lat"], d["home_lon"]] if d.get("home_lat") is not None else None},
           "in_area": (core.in_area_buf(d["lat"], d["lon"]) if d and d.get("lat") is not None and core.AREA_ON else None),
           "area_free": bool((d or {}).get("area_free")), "out_since": (d or {}).get("out_since"), "out_max": core.OUT_MAX_SEC,
-          "near": (lambda n: {"km": n[0], "p": n[1]} if n[0] is not None else None)(core.area_near(d["lat"], d["lon"]))
+          "near": core.area_entry(d["lat"], d["lon"])
                   if d and d.get("lat") is not None and core.AREA_ON and not core.in_area_buf(d["lat"], d["lon"]) else None,
           "area_name": core.AREA_CITY if core.AREA_ON else "", "area_gen": core.area_gen(), "area_title": core.area_title(), "area_label": core.area_label(),
           "bot": BOT_USERNAME,
@@ -822,8 +822,8 @@ class H(BaseHTTPRequestHandler):
                     if acc and acc > 500:
                         return self._json({"error": "gps_acc", "acc": round(acc)}, 400)
                     if not core.in_area_buf(p[0], p[1]):          # аймактан сыртта линияга чыгууга болбойт
-                        km, to = core.area_near(p[0], p[1])
-                        return self._json({"error": "out_area", "km": km, "to": to}, 403)
+                        e = core.area_entry(p[0], p[1]) or {}
+                        return self._json({"error": "out_area", "km": e.get("km"), "to": e.get("p"), "name": e.get("name")}, 403)
                 core.driver_location(uid, p[0], p[1], live_period=60)
             else:
                 if d["busy_ride"] or d.get("next_ride"):

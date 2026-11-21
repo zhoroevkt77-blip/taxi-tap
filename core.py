@@ -621,6 +621,39 @@ def area_near(lat, lon):
     return (round(best, 2), [round(pt[0], 6), round(pt[1], 6)]) if best is not None else (None, None)
 
 
+_entry_cache = {}
+
+
+def area_entry(lat, lon):
+    """«Жол көрсөтүү» үчүн: аймактын ичиндеги эң жакын айыл/шаар (жолдо турат). Жок болсо — чектин эң жакын чекити.
+    → {"km": түз аралык чекке чейин, "p": [lat, lon], "name": ат же None}"""
+    key = (round(lat, 2), round(lon, 2), id(area_geojson()))
+    hit = _entry_cache.get(key)
+    if hit and hit[0] > now() - 600:
+        return hit[1]
+    km, bp = area_near(lat, lon)
+    if km is None:
+        return None
+    best = None
+    try:
+        gj = area_geojson()
+        if _entry_cache.get("v") != id(gj):              # аймактын ичиндеги айылдар — бир жолу эсептелет
+            import addrbook
+            _entry_cache.clear(); _entry_cache["v"] = id(gj)
+            _entry_cache["vil"] = [(r["lat"], r["lon"], r["name"]) for r in addrbook._rows()
+                                   if r.get("kind") == "village" and r.get("lat") is not None and in_area(r["lat"], r["lon"])]
+        for vlat, vlon, vname in _entry_cache.get("vil", []):
+            r = {"lat": vlat, "lon": vlon, "name": vname}
+            d = haversine_km(lat, lon, r["lat"], r["lon"])
+            if best is None or d < best[0]:
+                best = (d, [r["lat"], r["lon"]], r["name"])
+    except Exception:                                   # noqa: BLE001
+        best = None
+    res = {"km": km, "p": best[1], "name": best[2]} if best and best[0] <= km + 25 else {"km": km, "p": bp, "name": None}
+    _entry_cache[key] = (now(), res)                    # айыл чектен анча алыс эмес болсо — ошого
+    return res
+
+
 def in_area_buf(lat, lon):
     if not AREA_ON or in_area(lat, lon):
         return True
