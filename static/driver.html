@@ -102,7 +102,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=122">
+<link rel="stylesheet" href="/static/theme.css?v=123">
 <link rel="stylesheet" href="/static/dark.css?v=20">
 <script src="/static/night.js?v=2"></script>
 </head>
@@ -391,7 +391,7 @@ function outLeft() { const s = Math.max(0, Math.round((D.out_since || 0) + (D.ou
 setInterval(() => { const e = document.getElementById("outLeft"); if (e && D && D.out_since) e.textContent = outLeft(); }, 1000);
 // ---------- Картаны манжа менен басса — ошол жерге маршрут ----------
 let tapLayer = null, tapChip = null, tapSeq = 0;
-function tapClear() { if (tapLayer) { tapLayer.remove(); tapLayer = null; } if (tapChip) { tapChip.remove(); tapChip = null; } }
+function tapClear() { if (tapLayer) { try { map.removeLayer ? map.removeLayer(tapLayer) : tapLayer.remove(); } catch (e) {} tapLayer = null; } if (tapChip) { tapChip.remove(); tapChip = null; } }
 function tapLatLng(e) {                                   // «Жол өйдө» режиминде карта айланган — басылган чекитти кайра эсептейбиз
   if (!hupOn || !e.originalEvent || !map.containerPointToLatLng) return e.latlng;
   const ev = e.originalEvent.changedTouches ? e.originalEvent.changedTouches[0] : e.originalEvent, r = mapEl.getBoundingClientRect();   // айланган картада
@@ -420,19 +420,31 @@ async function tapRoute(ll) {
   const el = $("#tapInfo"); if (el) el.textContent = rt.km != null ? `📍 ${String(rt.km).replace(".", ",")} км · ~${rt.min} мүн` : "📍 Маршрут табылган жок";
 }
 // Манжаны картада ~0,6 сек кармап турса (кыймылдатпай) — ошол жерге маршрут. Жөн тийүү/жылдыруу эч нерсе кылбайт.
+// Android'де узун басуу «contextmenu» чыгарып, touchcancel жиберет — ошону да кармайбыз.
 (() => {
-  const el = map.getContainer ? map.getContainer() : mapEl; let t = null, x0 = 0, y0 = 0, ring = null;
-  const stop = () => { clearTimeout(t); t = null; if (ring) { ring.remove(); ring = null; } };
-  el.addEventListener("touchstart", e => {
-    stop(); if (e.touches.length !== 1 || !D || D.ride || document.querySelector(".areachip")) return;
-    const p = e.touches[0]; x0 = p.clientX; y0 = p.clientY;
+  const el = mapEl; let t = null, x0 = 0, y0 = 0, ring = null, armed = false, fired = 0;
+  const clear = () => { clearTimeout(t); t = null; if (ring) { ring.remove(); ring = null; } };
+  const fire = () => {
+    if (!armed || Date.now() - fired < 800) return; armed = false; fired = Date.now(); clear();
+    const r = mapEl.getBoundingClientRect();
+    tapRoute(tapLatLng({originalEvent:{clientX:x0, clientY:y0}, latlng:map.containerPointToLatLng([x0 - r.left, y0 - r.top])}));
+  };
+  const down = (x, y) => {
+    clear(); armed = false;
+    if (!D || D.ride || document.querySelector(".areachip")) return;
+    x0 = x; y0 = y; armed = true;
     ring = document.createElement("div"); ring.className = "holdring"; ring.style.left = x0 + "px"; ring.style.top = y0 + "px"; document.body.appendChild(ring);
-    t = setTimeout(() => { stop(); tapRoute(tapLatLng({originalEvent:{clientX:x0, clientY:y0}, latlng:map.containerPointToLatLng ? map.containerPointToLatLng([x0 - mapEl.getBoundingClientRect().left, y0 - mapEl.getBoundingClientRect().top]) : null})); }, 600);
-  }, {passive:true});
-  el.addEventListener("touchmove", e => { const p = e.touches[0]; if (t && (Math.abs(p.clientX - x0) > 12 || Math.abs(p.clientY - y0) > 12)) stop(); }, {passive:true});
-  ["touchend", "touchcancel"].forEach(ev => el.addEventListener(ev, stop, {passive:true}));
-  el.addEventListener("contextmenu", e => e.preventDefault());
-  map.on("contextmenu", e => { if (!("ontouchstart" in window) && D && !D.ride) tapRoute(tapLatLng(e)); });   // компьютерде: оң баскыч
+    t = setTimeout(fire, 600);
+  };
+  const move = (x, y) => { if (armed && (Math.abs(x - x0) > 18 || Math.abs(y - y0) > 18)) { armed = false; clear(); } };
+  const up = () => { if (t) { armed = false; clear(); } };
+  el.addEventListener("touchstart", e => { if (e.touches.length === 1) down(e.touches[0].clientX, e.touches[0].clientY); else { armed = false; clear(); } }, {passive:true, capture:true});
+  el.addEventListener("touchmove", e => move(e.touches[0].clientX, e.touches[0].clientY), {passive:true, capture:true});
+  el.addEventListener("touchend", up, {passive:true, capture:true});
+  el.addEventListener("touchcancel", () => { if (t) { clearTimeout(t); t = setTimeout(fire, 300); } }, {passive:true, capture:true});   // узун басуу — cancel келсе да аткарабыз
+  el.addEventListener("contextmenu", e => { e.preventDefault();
+    if (armed) return fire();
+    if (!("ontouchstart" in window) && D && !D.ride) { x0 = e.clientX; y0 = e.clientY; armed = true; fire(); } }, true);   // компьютерде: оң баскыч
 })();
 
 function viewHome() {

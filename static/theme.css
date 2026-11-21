@@ -806,3 +806,4 @@ b,strong,h1,h2,h3,h4,th{font-weight:600}
 html.uidark .tapchip{background:#23242b;color:#f2f2f5}
 .holdring{position:fixed;z-index:700;width:64px;height:64px;margin:-32px 0 0 -32px;border-radius:50%;pointer-events:none;border:4px solid #ffc61a;animation:hold .6s linear forwards;box-shadow:0 0 0 2px rgba(255,255,255,.8)}
 @keyframes hold{from{transform:scale(.3);opacity:.4}to{transform:scale(1);opacity:1}}
+#map{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
