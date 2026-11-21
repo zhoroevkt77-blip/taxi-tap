@@ -100,8 +100,8 @@ input.f:focus{border-color:var(--navy)}
 .quick{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
-<link rel="preload" as="image" href="/static/h_taxi.webp?v=24"><link rel="preload" as="image" href="/static/h_box.webp?v=24"><link rel="preload" as="image" href="/static/h_girl.webp?v=24"><link rel="preload" as="image" href="/static/h_map.webp?v=24">
-<link rel="stylesheet" href="/static/theme.css?v=129">
+<link rel="preload" as="image" href="/static/h_taxi.webp?v=24"><link rel="preload" as="image" href="/static/h_box.webp?v=24"><link rel="preload" as="image" href="/static/h_girl.webp?v=25"><link rel="preload" as="image" href="/static/h_map.webp?v=25">
+<link rel="stylesheet" href="/static/theme.css?v=130">
 <link rel="stylesheet" href="/static/dark.css?v=21">
 <script src="/static/night.js?v=2"></script>
 </head>
@@ -333,7 +333,7 @@ function viewIdle() {
     <button class="haddr" id="hAddr"><small><img class="pinI" src="/static/pin.webp?v=24" alt="">Сиз турган жер</small><b id="fromTxt">${esc(S.fromAddr || "Аныкталууда…")}</b><span>›</span></button>
     <div class="tiles">${tile("tTaxi", "h_taxi.webp?v=24", "Такси", `<span id="taxiEta">${homeEta()}</span>`, true, !has("delivery"))}
       ${has("delivery") ? tile("tDel", "h_box.webp?v=24", "Жеткирүү", "Буюм, документ") : ""}</div>
-    <div class="tiles2">${stile("tOther", "h_girl.webp?v=24", "Башка адамга такси заказ кылуу")}${stile("tMap", "h_map.webp?v=24", "Картадан<br>белгилөө")}</div>
+    <div class="tiles2">${stile("tOther", "h_girl.webp?v=25", "Башка адамга такси заказ кылуу")}${stile("tMap", "h_map.webp?v=25", "Картадан<br>белгилөө")}</div>
     ${has("comfort") || has("minivan") ? `<div class="tiles3">${has("comfort") ? `<button class="sm" id="tComf"><span>🚘</span>Комфорт</button>` : ""}${has("minivan") ? `<button class="sm" id="tVan"><span>🚐</span>Минивэн</button>` : ""}</div>` : ""}
     <button class="hsearch" id="hSearch">🔍 <span>Каякка барасыз?</span><em>›</em></button>
     <div class="hrec">${rec.slice(0, 5).map((r, i) => `<button class="rec" data-i="${i}"><span class="pi">${r.ico}</span><span class="rt"><b>${esc(r.name)}</b><small>${esc(r.sub)}</small></span><span class="t">${minsTo(r)}</span><span class="chev">›</span></button>`).join("")}</div>
