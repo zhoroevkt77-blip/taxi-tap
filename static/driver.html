@@ -170,7 +170,7 @@ function hupSync() {                                         // режим кү�
   if (hupOn) {
     if (typeof myHead === "number" && !isNaN(myHead) && (mySpeed || 0) > 1.4) hupHead = myHead;   // 5 км/с'тан ылдам — бурулушту эске алабыз
     if (hupHead !== null) { const d = ((-hupHead - hupAng) % 360 + 540) % 360 - 180; hupAng += d; mapEl.style.transform = `rotate(${hupAng}deg)`; }
-    if (map.setView) map.setView(myPos, map.getZoom(), {animate:true, duration:.5});
+    if (map.setView && !userBusy()) map.setView(myPos, map.getZoom(), {animate:true, duration:.5});
   }
   NAV.comp && NAV.comp(hupOn ? hupAng : 0);
 }
@@ -216,8 +216,16 @@ const zoomBy = d => { const z = Math.max(map.getMinZoom ? map.getMinZoom() : 3, 
   try { navigator.vibrate && navigator.vibrate(10); } catch (e) {} };
 $("#zIn").onclick = () => zoomBy(1); $("#zOut").onclick = () => zoomBy(-1);
 map.on("dragstart", () => { FOLLOW = false; const b = $("#navLoc"); b && b.classList.add("off"); hupSync(); });
+// Айдоочу картаны манжалары менен чоңойтуп/кичирейтип жатканда (жана 2 сек кийин) карта өзү жылбасын —
+// болбосо GPS'тин жаңы чекити эски масштабды кайра коюп, «кичирейип кайра чоңоюп» кетет.
+let touchN = 0, userAt = 0;
+const userBusy = () => touchN > 0 || Date.now() - userAt < 2000;
+mapEl.addEventListener("touchstart", e => { touchN = e.touches.length; userAt = Date.now(); }, {passive:true, capture:true});
+["touchend", "touchcancel"].forEach(ev => mapEl.addEventListener(ev, e => { touchN = e.touches.length; userAt = Date.now(); }, {passive:true, capture:true}));
+map.on("zoomstart", () => { userAt = Date.now(); }); map.on("zoomend", () => { userAt = Date.now(); });
 function followMe(force) {
-  if (hupOn) return;                                         // «Жол өйдө» режиминде hupSync() өзү ээрчитет
+  if (hupOn) return;
+  if (!force && userBusy()) return;                                         // «Жол өйдө» режиминде hupSync() өзү ээрчитет
   if (!myPos || (!FOLLOW && !force) || !map.latLngToContainerPoint) return;
   const sz = map.getSize(), sh = window.SHEET ? SHEET.visible() : 0;
   const top = 150, bot = Math.max(top + 80, sz.y - sh - 70);                 // үстүңкү чиптер жана ылдыйкы барак жаппаган жер
