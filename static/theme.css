@@ -832,3 +832,4 @@ html:not(.uidark) .muted,html:not(.uidark) small{color:#4a4a55}
 @media (max-width:370px){.bnav.pro a:not(.big) img{width:54px!important;height:42px!important}.bnav.pro a{font-size:13px!important}}
 .bnav.pro a .navav{width:46px;height:46px;border-radius:50%;object-fit:cover;margin:1px 0 3px;box-shadow:0 0 0 2.5px #fff,0 0 0 4.5px #ffc61a;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#ffd31a,#fcbc00);color:#16161a;font-size:22px;font-weight:700}
 .bnav.pro a.on .navav{box-shadow:0 0 0 2.5px #fff,0 0 0 4.5px #16161a}
+.bnav.pro a:not(.big) img.navav{width:46px!important;height:46px!important;border-radius:50%!important;object-fit:cover!important;background:#fff!important}
