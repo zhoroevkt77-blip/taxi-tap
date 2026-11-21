@@ -102,7 +102,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=135">
+<link rel="stylesheet" href="/static/theme.css?v=136">
 <link rel="stylesheet" href="/static/dark.css?v=21">
 <script src="/static/night.js?v=2"></script>
 </head>
@@ -708,7 +708,6 @@ function cabChips() {
   const tarif = up(byB("Тарифтериңиз"), ".irow"), lnk = q(".lnks");
   const list = [
     ["car", "Менин унаам", "car", [q("#myCar")]],
-    ["briefcase", "Менин ишим", "work", [q(".work")]],
     ["wallet", "Баланс жана рейтинг", "bal", [q(".grid")]],
     ["car", "Тарифтер жана комиссия", "tar", [tarif && tarif.parentElement]],
     ["moon", "Режим (жарык / караңгы)", "mode", [q(".mtheme")]],
@@ -727,7 +726,11 @@ function cabChips() {
   if (D.lic_until && D.lic_left !== undefined && D.lic_left <= 30) warn.push(["id", D.lic_left < 0 ? "Күбөлүктүн мөөнөтү бүттү" : `Күбөлүктүн мөөнөтүнө ${D.lic_left} күн калды`, "docs", D.lic_left < 0 ? "r" : "o"]);
   const ul = document.createElement("div"); ul.className = "cclist"; ul.id = "cList";
   const has = k => list.some(x => x[2] === k);
-  ul.innerHTML = `<button id="dgChip" class="dgc">${yi("tools", "s")}<span>Диагностика</span><em class="${DIAG_N ? "n" : DIAG_N === 0 ? "z" : ""}">${DIAG_N ? DIAG_N : DIAG_N === 0 ? "✓" : ""}</em><i>›</i></button>` + warn.filter(w => has(w[2])).map(w => `<button data-cw="${w[2]}" class="w ${w[3]}">${yi(w[0], "s")}<span>${w[1]}</span><i>›</i></button>`).join("")
+  const work = q(".work"), wl = work ? [...work.querySelectorAll("a")].map(x => ({href:x.getAttribute("href"), t:x.firstChild && x.textContent.replace(x.querySelector("small") ? x.querySelector("small").textContent : "", "").trim(),
+    sub:x.querySelector("small") ? x.querySelector("small").textContent : "", ic:x.getAttribute("href") === "/admin" ? "tools" : "building"})) : [];
+  if (work) work.remove();
+  const wlHTML = wl.map(w => `<a class="cl" href="${w.href}">${yi(w.ic, "s")}<span>${esc(w.t)}${w.sub ? `<small>${esc(w.sub)}</small>` : ""}</span><i>›</i></a>`).join("");
+  ul.innerHTML = `<button id="dgChip" class="dgc">${yi("tools", "s")}<span>Диагностика</span><em class="${DIAG_N ? "n" : DIAG_N === 0 ? "z" : ""}">${DIAG_N ? DIAG_N : DIAG_N === 0 ? "✓" : ""}</em><i>›</i></button>` + wlHTML + warn.filter(w => has(w[2])).map(w => `<button data-cw="${w[2]}" class="w ${w[3]}">${yi(w[0], "s")}<span>${w[1]}</span><i>›</i></button>`).join("")
     + list.map(x => `<button data-cc="${x[2]}">${yi(x[0], "s")}<span>${x[1]}</span><i>›</i></button><div class="ccbody" data-cb="${x[2]}"></div>`).join("");
   (V.querySelector(".rolesw") || h2).after(ul);
   list.forEach(x => { const b = ul.querySelector(`[data-cb="${x[2]}"]`); x[3].forEach(e => b.appendChild(e)); });   // бөлүмдөр чиптин астына көчөт

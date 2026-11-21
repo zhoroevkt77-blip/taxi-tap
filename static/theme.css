@@ -833,3 +833,7 @@ html:not(.uidark) .muted,html:not(.uidark) small{color:#4a4a55}
 .bnav.pro a .navav{width:46px;height:46px;border-radius:50%;object-fit:cover;margin:1px 0 3px;box-shadow:0 0 0 2.5px #fff,0 0 0 4.5px #ffc61a;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#ffd31a,#fcbc00);color:#16161a;font-size:22px;font-weight:700}
 .bnav.pro a.on .navav{box-shadow:0 0 0 2.5px #fff,0 0 0 4.5px #16161a}
 .bnav.pro a:not(.big) img.navav{width:46px!important;height:46px!important;border-radius:50%!important;object-fit:cover!important;background:#fff!important}
+.cclist>a.cl{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:6px 18px 6px 8px;border-radius:999px;background:#fff8e1;box-shadow:inset 0 0 0 2px #ffc61a;font-size:16px;font-weight:600;color:#16161a;text-decoration:none;box-sizing:border-box}
+.cclist>a.cl span{flex:1}.cclist>a.cl small{display:block;font-size:12.5px;font-weight:500;color:#6b6b76}.cclist>a.cl i{font-style:normal;font-size:22px;color:#b07d00}
+.cclist>a.cl .yi{width:52px!important;height:36px!important;margin:0!important;flex:none}
+html.uidark .cclist>a.cl{background:#2a2410;color:#f2f2f5}
