@@ -101,7 +101,7 @@ input.f:focus{border-color:var(--navy)}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 </style>
 <link rel="preload" as="image" href="/static/h_taxi.webp?v=24"><link rel="preload" as="image" href="/static/h_box.webp?v=24"><link rel="preload" as="image" href="/static/h_girl.webp?v=25"><link rel="preload" as="image" href="/static/h_map.webp?v=25">
-<link rel="stylesheet" href="/static/theme.css?v=133">
+<link rel="stylesheet" href="/static/theme.css?v=134">
 <link rel="stylesheet" href="/static/dark.css?v=21">
 <script src="/static/night.js?v=2"></script>
 </head>
@@ -125,7 +125,7 @@ input.f:focus{border-color:var(--navy)}
 <nav id="bnav" class="bnav pro" data-l="Жүргүнчү" data-r="режиминдесиз"><a data-k="home" class="on"><img src="/static/n_home.webp?v=24" alt="">Башкы бет</a><a data-k="trips"><img src="/static/n_trips.webp?v=24" alt="">Сапарлар</a><a data-k="go" class="big"><img src="/static/n_go.webp?v=24" alt="">Чакыруу</a><a data-k="help"><img src="/static/n_help.webp?v=24" alt="">Жардам</a><a data-k="cab"><img src="/static/n_cab.webp?v=24" alt="">Кабинет</a></nav>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="/static/area.js?v=15"></script>
+<script src="/static/area.js?v=16"></script>
 <script src="/static/voice.js?v=6"></script>
 <script>
 const $ = s => document.querySelector(s);
@@ -950,7 +950,7 @@ async function viewCabinet() {
   if (S.mode === "login" || S.mode === "menu") return;
   const me = await api("/api/me");
   if (!me.auth) return;
-  ME_BOT = me.bot || ME_BOT; ME_AV = me.avatar || null; $("#menuBtn").innerHTML = avBtn();
+  ME_BOT = me.bot || ME_BOT; ME_AV = me.avatar || null; $("#menuBtn").innerHTML = avBtn(); navAvatar(ME_AV, (typeof me !== "undefined" && me && me.name) || "");
   prevView = S.mode; S.mode = "menu"; navOn("cab");
   const P = PLACES && !PLACES.error ? PLACES : await api("/api/places");
   const place = (k, ico, t) => `<div class="hrow"><span>${ico} <b>${t}</b> ${P[k] ? `<span class="muted">· ${esc(P[k].name || "белгиленген")}</span>` : `<span class="muted">· белгилене элек</span>`}</span>
@@ -984,14 +984,14 @@ async function viewCabinet() {
         $("#avC").onclick = () => { closeBox(); $("#avCam").click(); };
         $("#avG").onclick = () => { closeBox(); $("#avGal").click(); };
         if ($("#avDel")) $("#avDel").onclick = async () => { closeBox(); if (!confirm("Сүрөттү алып салабызбы?")) return;
-          await api("/api/avatar", {img:null}); ME_AV = null; S.mode = prevView; viewCabinet(); };
+          await api("/api/avatar", {img:null}); ME_AV = null; navAvatar(null, me.name); S.mode = prevView; viewCabinet(); };
       });
   const avUp = async e => {
     const f = e.target.files && e.target.files[0]; if (!f) return;
     toast("Сүрөт жүктөлүүдө…", 1500);
     const img = await avShrink(f), x = await api("/api/avatar", {img});
     if (x.error) return toast("Сүрөттү жүктөй алган жокпуз — башкасын тандап көрүңүз", 2500);
-    ME_AV = x.avatar; S.mode = prevView; viewCabinet(); toast("✓ Сүрөт коюлду", 1500);
+    ME_AV = x.avatar; navAvatar(ME_AV, me.name); S.mode = prevView; viewCabinet(); toast("✓ Сүрөт коюлду", 1500);
   };
   $("#avCam").onchange = avUp; $("#avGal").onchange = avUp;
   $("#out").onclick = confirmOut;
@@ -1044,7 +1044,7 @@ async function boot() {
   const me = await api("/api/me"); ME_ROLE = {park:me.park, driver:me.driver, admin:me.admin};
   $("#topPill").innerHTML = ME_ROLE.park && !ME_ROLE.driver ? rolePill() : "";   // айдоочу/жүргүнчү алмашуу — Кабинетте if ($("#home .hh")) { const h = $("#home .hhr"); if (h && !h.querySelector(".rpill") && ME_ROLE.park && !ME_ROLE.driver) h.insertAdjacentHTML("afterbegin", rolePill()); }
   try { if (me.auth && localStorage.getItem("nextPark")) { localStorage.removeItem("nextPark"); if (me.park || me.admin) return location.replace("/park"); } } catch (e) {}
-  try { const rf = localStorage.getItem("parkRef"); if (me.auth && rf) { api("/api/ref", {code:rf}); localStorage.removeItem("parkRef"); } } catch (e) {} ME_BOT = me.bot || ""; ME_AV = me.avatar || null; $("#menuBtn").innerHTML = avBtn();
+  try { const rf = localStorage.getItem("parkRef"); if (me.auth && rf) { api("/api/ref", {code:rf}); localStorage.removeItem("parkRef"); } } catch (e) {} ME_BOT = me.bot || ""; ME_AV = me.avatar || null; $("#menuBtn").innerHTML = avBtn(); navAvatar(ME_AV, (typeof me !== "undefined" && me && me.name) || "");
   await areaReady;
   if (!me.auth) return viewLogin(me.pending, me.link);
   const r = await api("/api/ride");

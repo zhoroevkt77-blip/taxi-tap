@@ -356,3 +356,13 @@ function toast(text, ms) {
   clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("on"), ms || 5000);
   t.onclick = () => t.classList.remove("on");
 }
+
+// Ылдыйкы менюдагы «Кабинет» — колдонуучунун өз сүрөтү (жок болсо — аты баш тамгасы сары тегеректе)
+function navAvatar(av, name) {
+  const a = document.querySelector('#bnav [data-k="cab"]'); if (!a) return;
+  const old = a.querySelector("img, .navav"); if (!old) return;
+  const el = document.createElement(av ? "img" : "span"); el.className = "navav";
+  if (av) { el.src = av; el.alt = ""; el.onerror = () => navAvatar(null, name); }
+  else el.textContent = ((name || "").trim()[0] || "?").toUpperCase();
+  old.replaceWith(el);
+}

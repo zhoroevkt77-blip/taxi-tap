@@ -102,7 +102,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=133">
+<link rel="stylesheet" href="/static/theme.css?v=134">
 <link rel="stylesheet" href="/static/dark.css?v=21">
 <script src="/static/night.js?v=2"></script>
 </head>
@@ -125,7 +125,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 <div class="offer hide" id="ovl"><div class="ocard" id="ovlc"></div></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="/static/area.js?v=15"></script>
+<script src="/static/area.js?v=16"></script>
 <script src="/static/voice.js?v=6"></script>
 <script src="/static/qr.js"></script>
 <script src="/static/qrshare.js"></script>
@@ -1427,6 +1427,7 @@ async function boot() {
   const m = await api("/api/me"); ME_D = m;
   if (!m.auth) return viewLogin(m.pending, m.link);
   if (m.avatar) $("#cabBtn").innerHTML = `<img src="${esc(m.avatar)}" alt="" class="avbtn">`;
+  navAvatar(m.avatar, m.name);
   await refresh();
   if (D.online || D.ride) { startGps(); wake(true); }
   else getPos().then(drawMe);
