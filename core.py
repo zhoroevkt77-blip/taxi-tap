@@ -858,7 +858,15 @@ def area_info():
             "bbox": [min(lats), min(lons), max(lats), max(lons)],
             "geojson": gj, "source": _area["source"], "gen": area_gen(), "title": area_title(), "label": area_label(),
             "units": [{"name": u["name"], "approx": u.get("approx"), "city": u.get("city")} for u in _area["units"]],
-            "selection": area_selection()}
+            "selection": area_selection(), "updated": _sel_mtime()}
+
+
+def _sel_mtime():
+    """Аймак акыркы жолу өзгөргөн күн (YYYY-MM-DD) — шарттар барагы үчүн."""
+    try:
+        return time.strftime("%Y-%m-%d", time.localtime(os.path.getmtime(_sel_path())))
+    except OSError:
+        return None
 
 
 def area_km2(gj):
