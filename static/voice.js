@@ -30,6 +30,18 @@ function kyNum(n) {                       // 0..999999 → клиптердин 
   if (n) o.push("n" + n);
   return o;
 }
+// Заказ сүйлөмү админ түзгөн тартипте: {price} → сандар, {km} → бүтүн ондон сандары
+function kyKmN(x) { const v = Math.round((+x || 0) * 10) / 10, i = Math.floor(v), d = Math.round((v - i) * 10);
+  return [...kyNum(i), ...(d ? ["point", "tenth", "n" + d] : [])]; }
+function orderToks(kind, price, km) {
+  const t = (VOICE && VOICE.tpl && VOICE.tpl[kind]) || [kind, "{price}", "som", "{km}", "km"], o = [];
+  for (let i = 0; i < t.length; i++) {
+    if (t[i] === "{price}") { if (price) o.push(...kyNum(price)); else if (t[i + 1] === "som") i++; }
+    else if (t[i] === "{km}") { if (km != null && km !== "") o.push(...kyKmN(km)); else if (t[i + 1] === "km") i++; }
+    else o.push(t[i]);
+  }
+  return o;
+}
 function kyKm(x) { const v = Math.round((+x || 0) * 10) / 10, i = Math.floor(v), d = Math.round((v - i) * 10);
   return [...kyNum(i), ...(d ? ["point", "tenth", "n" + d] : []), "km"]; }
 function tts(text, done) {
@@ -66,7 +78,7 @@ async function voiceLoad() {
 // speak(["new_order", ...kyNum(80), "som"], 750) — wait: бип бүткөнчө күтүү (мс)
 const VL = k => (VOICE && VOICE.texts && VOICE.texts[k]) || VLBL[k] || "";   // админдин өз тексти биринчи
 function speak(toks, wait) {
-  if (toks && VOICE && VOICE.after) toks = toks.flatMap(k => [k, ...(VOICE.after[k] || [])]);   // кошумча сөздөр окуядан кийин
+  if (toks && VOICE && VOICE.after) toks = toks.flatMap(k => [k, ...(VOICE.after[k] || []).filter(c => !toks.includes(c))]);   // кошумча сөздөр окуядан кийин
   VGEN++; try { VSRC && VSRC.stop(); } catch (e) {} try { "speechSynthesis" in window && speechSynthesis.cancel(); } catch (e) {}
   if (!toks || !toks.length || !voiceOn() || vmode() === "off") return;
   if (vmode() !== "ky" || !toks.some(k => VBUF[k])) { const t = toks.map(VL).join(" "); return wait ? setTimeout(() => tts(t), wait) : tts(t); }

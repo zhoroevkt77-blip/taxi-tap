@@ -127,7 +127,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="/static/area.js?v=16"></script>
-<script src="/static/voice.js?v=7"></script>
+<script src="/static/voice.js?v=8"></script>
 <script src="/static/qr.js"></script>
 <script src="/static/qrshare.js"></script>
 <script>
@@ -969,7 +969,7 @@ function showOffer() {
   lastOffer = o.id; beep(); OFF_END = Date.now() + o.left * 1000; OFF_TOT = o.total;
   clearInterval(RING); RING = setInterval(() => {         // жооп бергенче ар 3 секундда үн + титирөө
     if (!D || !D.offer || lastOffer !== D.offer.id || Date.now() > OFF_END) { clearInterval(RING); RING = null; return; } beep(); }, 3000);
-  speak([o.chained ? "next_order" : o.cls === "delivery" ? "new_delivery" : "new_order", ...(o.price ? [...kyNum(o.price), "som"] : []), ...kyKm(o.to_pickup_km)], 750);
+  speak(orderToks(o.chained ? "next_order" : o.cls === "delivery" ? "new_delivery" : "new_order", o.price, o.to_pickup_km), 750);
   box.classList.remove("hide");
   $("#ocard").innerHTML = `<div style="display:flex;align-items:center;gap:14px">
       <div style="flex:1"><div class="muted">${clsTag(o.cls)}${o.chained ? "🔁 Кийинки заказ · азыркы сапардан кийин" : "Жаңы заказ"}</div>
@@ -1061,7 +1061,7 @@ function vpickBind() {
     try { if (b.dataset.vs === "tts") localStorage.setItem("vmode", "tts"); else { localStorage.setItem("vmode", "ky"); localStorage.setItem("vset", b.dataset.vs); } } catch (x) { jslog("vpick LS " + x); }
     try { navigator.vibrate && navigator.vibrate(25); } catch (x) {}
     const el = $("#vPick"); if (el) { el.innerHTML = vpickHTML(); vpickBind(); }      // тандоо ошол замат көрүнсүн
-    const demo = () => speak(["new_order", ...kyNum(80), "som", ...kyKm(1.2)]);
+    const demo = () => speak(orderToks("new_order", 80, 1.2));
     if (b.dataset.vs === "tts") return demo();
     const st = ((VOICE && VOICE.sets) || []).find(x => String(x.id) === b.dataset.vs);
     if (st && !st.have.length) return toast(`✓ «${st.name}» тандалды. Бул үн азырынча жазыла элек — жазылганча башка үн менен айтылат.`, 4000);

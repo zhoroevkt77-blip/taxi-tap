@@ -2932,12 +2932,41 @@ def voice_state(vs=1):
             after.setdefault(c["ev"], []).append(c["k"])
     return {"ver": int(get_setting("voice_ver") or 0), "set": vs, "sets": sets, "total": len(keys),
             "keys": keys, "have": have, "texts": {k["k"]: k["t"] for k in keys if k["own"] or k.get("custom")},
-            "after": after, "events": [{"k": k, "t": t} for k, t in VOICE_KEYS if k in VOICE_EVENTS]}
+            "after": after, "tpl": voice_tpl(), "events": [{"k": k, "t": t} for k, t in VOICE_KEYS if k in VOICE_EVENTS]}
 
 
 # Админдин өз тексти жана кошумча сөздөрү
 VOICE_FIXED = {"som", "km", "point", "tenth"}
 VOICE_EVENTS = [k for k, _ in VOICE_KEYS if not re.match(r"n\d", k) and k not in VOICE_FIXED and k != "voice_on"]
+
+
+VOICE_TPL_KINDS = ("new_order", "new_delivery", "next_order")
+
+
+def _tpl_default(kind):
+    return [kind, "{price}", "som", "{km}", "km"]
+
+
+def voice_tpl():
+    t = get_setting("voice_tpl") or {}
+    return {k: (t.get(k) if isinstance(t.get(k), list) and t.get(k) else _tpl_default(k)) for k in VOICE_TPL_KINDS}
+
+
+def voice_set_tpl(kind, toks):
+    """Заказ сүйлөмүнүн тартиби: сөз ачкычтары + {price}, {km}. Бош — баштапкы."""
+    if kind not in VOICE_TPL_KINDS or not isinstance(toks, list) or len(toks) > 20:
+        return False
+    toks = [str(x)[:20] for x in toks]
+    if any(x not in ("{price}", "{km}") and not _vok(x) for x in toks):
+        return False
+    t = get_setting("voice_tpl") or {}
+    if toks and toks != _tpl_default(kind):
+        t[kind] = toks
+    else:
+        t.pop(kind, None)
+    set_setting("voice_tpl", t)
+    _vbump()
+    return True
 
 
 def voice_custom():
