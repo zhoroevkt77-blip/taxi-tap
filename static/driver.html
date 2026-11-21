@@ -102,7 +102,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=127">
+<link rel="stylesheet" href="/static/theme.css?v=129">
 <link rel="stylesheet" href="/static/dark.css?v=21">
 <script src="/static/night.js?v=2"></script>
 </head>
@@ -1046,7 +1046,7 @@ $("#stBadge").onclick = () => {
 function vpickHTML() {
   const sets = (VOICE && VOICE.sets) || [], tot = (VOICE && VOICE.total) || 43, ky = vmode() === "ky";
   return sets.map(x => { const n = x.have.length, on = ky && vset() === x.id;
-    return `<button data-vs="${x.id}" class="vc${on ? " on" : ""}${n ? "" : " empty"}"><img src="/static/vs_${x.id}.webp?v=1" alt="">
+    return `<button data-vs="${x.id}" class="vc${on ? " on" : ""}${n ? "" : " empty"}"><img src="/static/vs_${x.id}.webp?v=3" alt="">
       <span class="tx"><b>${esc(x.name)}</b><small>${n ? (n >= tot ? "толук" : n + "/" + tot) : "жазыла элек"}</small></span>${on ? "<i>✓</i>" : ""}</button>`; }).join("")
     + `<button data-vs="tts" class="${ky ? "" : "on"}"><span>📱</span><b>Телефондун үнү</b><small>орусча акцент</small>${ky ? "" : "<i>✓</i>"}</button>`;
 }
