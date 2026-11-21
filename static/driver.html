@@ -127,7 +127,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="/static/area.js?v=16"></script>
-<script src="/static/voice.js?v=8"></script>
+<script src="/static/voice.js?v=9"></script>
 <script src="/static/qr.js"></script>
 <script src="/static/qrshare.js"></script>
 <script>
@@ -909,7 +909,7 @@ function done(r) {
   layer.clearLayers(); chatOpen = false; seen = 0;
   lastView = D.ride ? "ride" + D.ride.id + D.ride.status + (D.next ? D.next.id : "") : D.online ? "on" : "off";
   const pay = r.price ? r.price - Math.round(r.discount || 0) : 0;
-  speak(["d_done", ...(pay > 0 ? [...kyNum(pay), "som"] : [])]);
+  speak(orderToks("d_done", pay > 0 ? pay : 0, null));
   render(`<h2 style="text-align:center">Сапар бүттү</h2><p class="oprice" style="text-align:center;margin:0">${pay ? pay + " сом" : "Тариф боюнча"}</p>
     <p class="muted" style="text-align:center">Жүргүнчүдөн акчаны алыңыз${r.discount ? ` · +${Math.round(r.discount)} с промокод балансыңызга кошулду` : ""}${r.wait && r.wait.fee ? ` · күтүү +${r.wait.fee} с баада бар` : ""}</p>
     <p class="muted" style="text-align:center;margin-bottom:0">Жүргүнчүнү баалаңыз</p><div class="stars" id="stars">${[1,2,3,4,5].map(n => `<span data-n="${n}">★</span>`).join("")}</div>

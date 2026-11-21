@@ -2940,11 +2940,11 @@ VOICE_FIXED = {"som", "km", "point", "tenth"}
 VOICE_EVENTS = [k for k, _ in VOICE_KEYS if not re.match(r"n\d", k) and k not in VOICE_FIXED and k != "voice_on"]
 
 
-VOICE_TPL_KINDS = ("new_order", "new_delivery", "next_order")
+VOICE_TPL_KINDS = ("new_order", "new_delivery", "next_order", "d_done")
 
 
 def _tpl_default(kind):
-    return [kind, "{price}", "som", "{km}", "km"]
+    return [kind, "{price}", "som"] if kind == "d_done" else [kind, "{price}", "som", "{km}", "km"]
 
 
 def voice_tpl():

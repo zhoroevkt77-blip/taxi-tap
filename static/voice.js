@@ -34,7 +34,7 @@ function kyNum(n) {                       // 0..999999 → клиптердин 
 function kyKmN(x) { const v = Math.round((+x || 0) * 10) / 10, i = Math.floor(v), d = Math.round((v - i) * 10);
   return [...kyNum(i), ...(d ? ["point", "tenth", "n" + d] : [])]; }
 function orderToks(kind, price, km) {
-  const t = (VOICE && VOICE.tpl && VOICE.tpl[kind]) || [kind, "{price}", "som", "{km}", "km"], o = [];
+  const t = (VOICE && VOICE.tpl && VOICE.tpl[kind]) || (kind === "d_done" ? [kind, "{price}", "som"] : [kind, "{price}", "som", "{km}", "km"]), o = [];
   for (let i = 0; i < t.length; i++) {
     if (t[i] === "{price}") { if (price) o.push(...kyNum(price)); else if (t[i + 1] === "som") i++; }
     else if (t[i] === "{km}") { if (km != null && km !== "") o.push(...kyKmN(km)); else if (t[i + 1] === "km") i++; }

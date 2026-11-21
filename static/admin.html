@@ -77,7 +77,7 @@ td input.f{padding:7px 8px;max-width:90px;min-width:58px}
 .vbar{height:8px;background:#eee;border-radius:9px;margin-top:8px;width:100%}.vbar i{display:block;height:8px;border-radius:9px;background:#ffb703}
 .vrow{flex-wrap:nowrap!important;align-items:center}.vrow .main{flex:1;min-width:0}.vrow .btn{flex:0 0 auto;min-width:46px;width:auto}.vrec{background:#fff8e1;border-radius:18px;padding:18px;margin:10px 0;text-align:center}
 .vword{font-size:26px;font-weight:600;margin:6px 0 14px}.vmic{width:110px;height:110px;border-radius:50%;border:0;background:#e5383b;color:#fff;font-size:44px;cursor:pointer;box-shadow:0 0 0 12px rgba(229,56,59,.12)}
-.vtabs{display:flex;gap:6px;margin:8px 0}.vtabs button{flex:1;border:0;border-radius:12px;padding:9px 4px;background:#f1f1f4;font:inherit;font-weight:600}.vtabs button.on{background:#ffd23f}.vchips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;padding:10px;border-radius:14px;background:#fffbea;border:1.5px dashed #f1d27a}.vchip{border:1.5px solid #e6e6ea;background:#fff;border-radius:999px;padding:8px 13px;font:inherit;font-size:15px;font-weight:600}.vchip.ph{background:#e8f7ee;border-color:#9fd9b4;color:#1f7a45}.vchip.sel{border-color:#16161a;box-shadow:0 0 0 2px #16161a}.vtool{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}.vtool .btn{flex:1;min-width:0}.vtpl select{width:100%;font:inherit;font-size:16px;padding:11px;border-radius:14px;border:1.5px solid #e6e6ea;background:#fff}.vform{display:flex;flex-direction:column;gap:6px}.vform textarea,.vform select{width:100%;box-sizing:border-box;font:inherit;font-size:17px;padding:12px;border:1.5px solid #f1d27a;border-radius:14px;background:#fff}.vev{display:block;font-size:13px;color:#1f9d55;font-weight:600;margin-top:2px}.vrow s{opacity:.6}
+.vtabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0}.vtabs button{flex:1;border:0;border-radius:12px;padding:9px 4px;background:#f1f1f4;font:inherit;font-weight:600}.vtabs button.on{background:#ffd23f}.vchips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;padding:10px;border-radius:14px;background:#fffbea;border:1.5px dashed #f1d27a}.vchip{border:1.5px solid #e6e6ea;background:#fff;border-radius:999px;padding:8px 13px;font:inherit;font-size:15px;font-weight:600}.vchip.ph{background:#e8f7ee;border-color:#9fd9b4;color:#1f7a45}.vchip.sel{border-color:#16161a;box-shadow:0 0 0 2px #16161a}.vtool{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}.vtool .btn{flex:1;min-width:0}.vtpl select{width:100%;font:inherit;font-size:16px;padding:11px;border-radius:14px;border:1.5px solid #e6e6ea;background:#fff}.vform{display:flex;flex-direction:column;gap:6px}.vform textarea,.vform select{width:100%;box-sizing:border-box;font:inherit;font-size:17px;padding:12px;border:1.5px solid #f1d27a;border-radius:14px;background:#fff}.vev{display:block;font-size:13px;color:#1f9d55;font-weight:600;margin-top:2px}.vrow s{opacity:.6}
 .vmic.on{animation:vpulse 1s infinite}@keyframes vpulse{50%{box-shadow:0 0 0 22px rgba(229,56,59,.22)}}
 .dgl{display:block;margin-top:6px;font-size:13px}.dgl.ok{color:#1a7a40;font-weight:600}.dgl summary{cursor:pointer;list-style:none;font-weight:600}
 .dgl summary::-webkit-details-marker{display:none}.dgl summary b{display:inline!important;margin:0!important}.dgl summary{display:block}.dgl .r{color:#c22}.dgl .o{color:#b26a00}.dgi{padding:3px 0 0 4px;font-size:13px}.dgi.bad{color:#b42318}
@@ -1022,7 +1022,7 @@ async function fixedPanel() {
 let VQ = [], VR = null, VBLOB = null, VWAV = null, VSET = 1;
 const vGrp = k => /^c\d/.test(k) ? "✨ Кошумча сөздөр" : /^r_/.test(k) ? "🧳 Жүргүнчүгө" : /^n\d/.test(k) ? "🔢 Сандар" : "🚕 Айдоочуга";
 let EVT = {}, TPLK = "new_order", TPLW = null, TPLS = -1;
-const TPLN = {new_order:"Жаңы заказ", new_delivery:"Жеткирүү", next_order:"Кийинки заказ"};
+const TPLN = {new_order:"Жаңы заказ", new_delivery:"Жеткирүү", next_order:"Кийинки заказ", d_done:"Сапар бүттү"};
 function aNum(n) { n = Math.max(0, Math.floor(+n || 0)); if (!n) return ["n0"]; const o = [];
   if (n >= 1000) { const t = Math.floor(n / 1000); if (t > 1) o.push(...aNum(t)); o.push("n1000"); n %= 1000; }
   if (n >= 100) { const h = Math.floor(n / 100); if (h > 1) o.push("n" + h); o.push("n100"); n %= 100; }
@@ -1032,11 +1032,11 @@ function vTplView(V, T) {          // 🧩 Заказ сүйлөмү — чип�
   if (!TPLW || TPLW.k !== TPLK) { TPLW = {k:TPLK, t:(V.tpl[TPLK] || []).slice()}; TPLS = -1; }
   const L = x => x === "{price}" ? "💰 баа" : x === "{km}" ? "📏 км саны" : T[x] || x, t = TPLW.t;
   const box = $("#vTpl");
-  box.innerHTML = `<div class="main" style="width:100%"><b>🧩 Заказ сүйлөмү — сөздөрдүн тартиби</b>
+  box.innerHTML = `<div class="main" style="width:100%"><b>🧩 Сүйлөм түзүү — сөздөрдүн тартиби</b>
     <div class="vtabs">${Object.keys(TPLN).map(k => `<button data-tk="${k}" class="${k === TPLK ? "on" : ""}">${TPLN[k]}</button>`).join("")}</div>
     <div class="vchips">${t.map((x, i) => `<button data-ti="${i}" class="vchip ${x[0] === "{" ? "ph" : ""} ${i === TPLS ? "sel" : ""}">${esc(L(x))}</button>`).join("") || `<span class="muted">Бош</span>`}</div>
     ${TPLS >= 0 ? `<div class="vtool"><button class="btn" data-tm="-1">◀ Солго</button><button class="btn" data-tm="1">Оңго ▶</button><button class="btn bad" id="tDel">✕ Алып салуу</button></div>` : `<div class="muted" style="font-size:13px">Чипти басып тандаңыз — жылдырып же алып салсаңыз болот.</div>`}
-    <select id="tAdd"><option value="">➕ Сөз кошуу…</option><option value="{price}">💰 баа (заказдын баасы)</option><option value="{km}">📏 км саны (жүргүнчүгө чейин)</option>
+    <select id="tAdd"><option value="">➕ Сөз кошуу…</option><option value="{price}">💰 баа (заказдын баасы)</option>${TPLK === "d_done" ? "" : `<option value="{km}">📏 км саны (жүргүнчүгө чейин)</option>`}
       ${V.keys.filter(k => !/^n\d/.test(k.k)).map(k => `<option value="${k.k}">${esc(k.t)}</option>`).join("")}</select>
     <div class="muted" style="font-size:14px;margin:4px 0">Угулат: «${esc(tplToks(t).map(x => T[x] || "").join(" "))}»</div>
     <div class="vtool"><button class="btn" id="tPlay">🔊 Сынап угуу</button><button class="btn gold" id="tSave">✓ Сактоо</button><button class="btn" id="tRst">↺ Баштапкы</button></div></div>`;
@@ -1047,7 +1047,7 @@ function vTplView(V, T) {          // 🧩 Заказ сүйлөмү — чип�
   $("#tDel") && ($("#tDel").onclick = () => { t.splice(TPLS, 1); TPLS = -1; vTplView(V, T); });
   $("#tAdd").onchange = e => { if (!e.target.value) return; t.splice(TPLS >= 0 ? TPLS + 1 : t.length, 0, e.target.value); TPLS = TPLS >= 0 ? TPLS + 1 : t.length - 1; vTplView(V, T); };
   $("#tPlay").onclick = () => vPlay(tplToks(t), V, T);
-  $("#tRst").onclick = () => { TPLW.t = [TPLK, "{price}", "som", "{km}", "km"]; TPLS = -1; vTplView(V, T); };
+  $("#tRst").onclick = () => { TPLW.t = TPLK === "d_done" ? [TPLK, "{price}", "som"] : [TPLK, "{price}", "som", "{km}", "km"]; TPLS = -1; vTplView(V, T); };
   $("#tSave").onclick = async () => { const r = await api("/api/a/voice_tpl", {kind:TPLK, toks:t, set:VSET}); toast(r.ok ? "✓ «" + TPLN[TPLK] + "» сүйлөмү сакталды" : "Сакталбай калды", 2000);
     if (r.ok) { TPLW = null; viewVoice(); } };
 }
