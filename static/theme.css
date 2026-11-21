@@ -863,3 +863,7 @@ body.parkp{background:#fff!important}body.parkp>*{position:relative;z-index:1}bo
 html.uidark body:has(#home.cabbg)::before,html.uidark body:has(#home.hbg)::before,html.uidark body.parkp::before{background:#17181c}
 html.uidark .sheet.cabbg,html.uidark body.drvp .sheet{background-image:none!important}
 html.uidark .home{background:#17181c!important}
+/* Режим чипи — аватардын жанында, өйдө */
+.hhr .modepill{margin-top:0;padding:3px 10px 3px 3px;font-size:11.5px;line-height:1.12;border-radius:14px;gap:4px}
+.hhr .modepill b{font-size:13px}.hhr .modepill img{width:36px;height:24px}.hhr .modepill img[src*="r_bag"]{width:26px}
+.top>.hhr{display:flex;align-items:center;gap:8px}
