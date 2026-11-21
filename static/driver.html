@@ -107,7 +107,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 <script src="/static/night.js?v=2"></script>
 </head>
 <body>
-<nav id="bnav" class="bnav pro drv" data-l="Айдоочу" data-r="режиминдесиз"><a data-k="earn"><img src="/static/n_earn.webp?v=21" alt="">Киреше</a><a data-k="hist"><img src="/static/n_trips.webp?v=21" alt="">Сапарлар</a><a data-k="line" class="big on"><img src="/static/n_go.webp?v=21" alt="">Линия</a><a data-k="help"><img src="/static/n_help.webp?v=21" alt="">Жардам</a><a data-k="cab"><img src="/static/n_cab.webp?v=21" alt="">Кабинет</a></nav>
+<nav id="bnav" class="bnav pro drv" data-l="Айдоочу" data-r="режиминдесиз"><a data-k="earn"><img src="/static/n_earn.webp?v=22" alt="">Киреше</a><a data-k="hist"><img src="/static/n_trips.webp?v=22" alt="">Сапарлар</a><a data-k="line" class="big on"><img src="/static/n_go.webp?v=22" alt="">Линия</a><a data-k="help"><img src="/static/n_help.webp?v=22" alt="">Жардам</a><a data-k="cab"><img src="/static/n_cab.webp?v=22" alt="">Кабинет</a></nav>
 <div id="map"></div>
 <div class="top dtop">
   <div class="lcol"><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b></div>
@@ -117,7 +117,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
     <button class="tbtn hide topav" id="cabBtn" aria-label="Менин кабинетим">👤</button></div>
     <div class="r2"><button class="ep hide" id="earn"></button></div>
     <div class="tools hide" id="tools"><button class="sbtn" id="heatBtn" aria-label="Коэффициент"><i>💓</i>×1.0</button>
-      <button class="sbtn peerb" id="peerBtn" aria-label="Жакын таксилер"><img src="/static/peer_free.webp?v=1" alt=""><span>0</span></button></div>
+      <button class="sbtn peerb" id="peerBtn" aria-label="Жакын таксилер"><img src="/static/peer_free.webp?v=2" alt=""><span>0</span></button></div>
     <div class="zpill" id="zoomBox"><button id="zIn" aria-label="Жакындатуу">+</button><i></i><button id="zOut" aria-label="Алыстатуу">−</button></div></div>
 </div>
 <div class="sheet"><div class="grab"></div><div id="view"></div></div>
@@ -396,11 +396,11 @@ document.addEventListener("click", e => { if (e.target.closest && e.target.close
 function outHTML() {
   if (D.in_area !== false) return "";
   const nm = D.area_title || (D.area_gen && D.area_gen !== "иштөө аймагынын" ? D.area_gen.replace(/нун$|нын$|нүн$|нин$/, "") : "");
-  return `<div class="outn"><img src="/static/c_map.webp?v=21" alt=""><div><b>Сиз иштөө аймагынын сыртындасыз</b>
+  return `<div class="outn"><img src="/static/c_map.webp?v=22" alt=""><div><b>Сиз иштөө аймагынын сыртындасыз</b>
     <span>Такси ТАП! ${nm ? `<b>${esc(nm)}</b> аймагында` : "иштөө аймагында"} гана иштейт — бул жерде заказ келбейт. Аймакка киргенде заказдар өзү келе баштайт.</span>
     ${D.near ? `<div class="outd">📍 Аймакка чейин <b>${fmtKm(D.near.km)}</b></div>` : ""}
     ${D.online && D.out_since && !D.ride && !D.area_free ? `<div class="outd t">⏳ <b id="outLeft">${outLeft()}</b> ичинде кайтпасаңыз, линиядан чыгасыз</div>` : ""}
-    <div class="outbtns"><button class="btn ghost ib" id="areaShow"><img src="/static/c_map.webp?v=21" alt="">Аймакты картадан көрүү</button></div></div></div>`;
+    <div class="outbtns"><button class="btn ghost ib" id="areaShow"><img src="/static/c_map.webp?v=22" alt="">Аймакты картадан көрүү</button></div></div></div>`;
 }
 const fmtKm = k => k < 1 ? Math.round(k * 1000) + " м" : (Math.round(k * 10) / 10).toString().replace(".", ",") + " км";
 function outLeft() { const s = Math.max(0, Math.round((D.out_since || 0) + (D.out_max || 600) - Date.now() / 1000)); return Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0"); }
@@ -562,8 +562,8 @@ const YI_P = {
   check:'<circle cx="12" cy="12" r="9"/><path d="m9 12 2 2 4-4"/>',
   clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>',
   alert:'<path d="M12 9v4M12 17h.01M10.4 3.9 2.6 17.5A1.9 1.9 0 0 0 4.2 20h15.6a1.9 1.9 0 0 0 1.6-2.5L13.6 3.9a1.9 1.9 0 0 0-3.2 0z"/>'};
-const YI_IMG = {tools:"c_tools", car:"c_taxi", message:"n_help", pin:"c_addr", wallet:"n_earn", check:"c_shield", clock:"c_trips"};
-function yi(n, cls) { const f = YI_IMG[n] || "ic_" + n; return `<img class="yi${cls ? " " + cls : ""}" src="/static/${f}.webp?v=21" alt="">`; }
+const YI_IMG = {tools:"ic_wrench", car:"c_taxi", message:"n_help", pin:"c_addr", wallet:"n_earn", check:"ic_check", clock:"c_trips"};
+function yi(n, cls) { const f = YI_IMG[n] || "ic_" + n; return `<img class="yi${cls ? " " + cls : ""}" src="/static/${f}.webp?v=22" alt="">`; }
 let ME_D = {};
 function workHTML() {
   if (!ME_D.park && !ME_D.admin) return "";
@@ -575,7 +575,7 @@ const SVG_SH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strok
 const SVG_ZM = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>';
 function myQrHTML() {
   const q = D.qr; if (!q || !window.qrSvg) return "";
-  return `<div class="myqr"><h3><img src="/static/n_cab.webp?v=21" alt="">Менин QR кодум</h3>
+  return `<div class="myqr"><h3><img src="/static/n_cab.webp?v=22" alt="">Менин QR кодум</h3>
     <div class="qq">${qrSvg(q.link, 170)}</div>
     <div class="nm">${esc(D.name || "")} · ${esc(q.park)}</div>
     <div class="muted">Жүргүнчүгө сапардан кийин көрсөтүңүз — сканерлесе, кийинки жолу сайттан чакырат</div>
@@ -595,7 +595,7 @@ function bindMyQr() {
 function viewCar() {
   navOn("cab");
   const tar = (D.classes || []).map(c => ({econom:"Эконом", comfort:"Комфорт", minivan:"Минивэн", delivery:"Жеткирүү"}[c] || c)).join(", ");
-  const I = k => `<img class="ci" src="/static/ci_${k}.webp?v=21" alt="">`;
+  const I = k => `<img class="ci" src="/static/ci_${k}.webp?v=22" alt="">`;
   render(`<div class="mycar">
     <div class="mcplate">${kgPlate(D.car_plate)}</div>
     <img class="mcimg" src="${carImg(D.car_color)}" alt="${esc(D.car_model || "Унаа")}">
@@ -631,7 +631,7 @@ function viewCabinet(part) {
   const f = D.finance || {}, row = (t, k) => { const x = f[k] || {rides:0, gross:0, fee:0, net:0};
     return `<tr><td>${t}</td><td>${x.rides}</td><td>${x.gross}</td><td>${x.fee}</td><td><b>${x.net}</b></td></tr>`; };
   const E = part === "earn", C = !E, on = c => c ? "" : ' style="display:none"';
-  render(`<h2>${E ? "💰 Киреше" : "Менин кабинетим"}</h2>${C ? `<div class="rolesw"><a href="/" id="toRider" class="r y"><img src="/static/r_bag.webp?v=21" alt="">Жүргүнчү болуу</a><span class="r g on"><img src="/static/r_car.webp?v=21" alt="">Айдоочу болуу<i>✓</i></span></div>` : ""}${C ? `<button class="carrow" id="myCar"><img src="${carImg(D.car_color)}" alt=""><span><b>Менин унаам</b><small>${esc(carText(D.car_color, D.car_model))}</small><div style="margin-top:4px">${kgPlate(D.car_plate)}</div></span><em>›</em></button>` + workHTML() + myQrHTML() : ""}
+  render(`<h2>${E ? "💰 Киреше" : "Менин кабинетим"}</h2>${C ? `<div class="rolesw"><a href="/" id="toRider" class="r y"><img src="/static/r_bag.webp?v=22" alt="">Жүргүнчү болуу</a><span class="r g on"><img src="/static/r_car.webp?v=22" alt="">Айдоочу болуу<i>✓</i></span></div>` : ""}${C ? `<button class="carrow" id="myCar"><img src="${carImg(D.car_color)}" alt=""><span><b>Менин унаам</b><small>${esc(carText(D.car_color, D.car_model))}</small><div style="margin-top:4px">${kgPlate(D.car_plate)}</div></span><em>›</em></button>` + workHTML() + myQrHTML() : ""}
     <div${on(C)}><div class="irow">${yi("car")}<span><b>Тарифтериңиз</b><small>${(D.classes || []).map(c => esc((D.class_names || {})[c] || c)).join(", ")} · Комфорт же Минивэнге өтүү үчүн админге кайрылыңыз</small></span></div>
       <div class="irow">${yi("percent")}<span><b>Комиссия</b><small>${esc(D.tariff)}</small></span></div></div>
     <div class="grid"><div class="stat"><span class="muted">Баланс</span><b style="color:${D.balance < D.min_balance ? "var(--bad)" : "inherit"}">${D.balance} с</b></div>
@@ -1017,7 +1017,7 @@ async function goOnline(btn) {
   if (window.SHEET && !D.ride) setTimeout(() => SHEET.collapse(), 400);   // карта толук көрүнсүн
 }
 function busyBox(title, text) {
-  overlay(`<div class="lgx"><div class="lg-ic" style="background:#fff6dd"><img src="/static/r_car.webp?v=21" alt="" style="width:56px"></div><h2>${title}</h2>
+  overlay(`<div class="lgx"><div class="lg-ic" style="background:#fff6dd"><img src="/static/r_car.webp?v=22" alt="" style="width:56px"></div><h2>${title}</h2>
       <p class="muted">${text}</p><button class="btn main" id="ovlX">Сапарга кайтуу</button></div>`);
 }
 const busy = () => D && (D.ride || D.next);
@@ -1414,7 +1414,7 @@ function voiceEvents(p, s) {
   if (sr && sr.status === "arrived" && sr.wait && sr.wait.arrived_at && sr.wait.now - sr.wait.arrived_at >= 300 && VE.wait !== sr.id) { VE.wait = sr.id; speak(["d_wait5"]); }
   if (!s.area_free && p.in_area !== false && s.in_area === false && s.online && !sr) { beep(); speak(["d_out"], 750); }
   if (!s.area_free && p.in_area === false && s.in_area === true && !s.online) { beep(); speak(["d_in"], 750);
-    overlay(`<div class="lgx"><div class="lg-ic" style="background:#e3f6ea"><img src="/static/c_map.webp?v=21" alt="" style="width:56px"></div><h2>Аймакка кирдиңиз ✅</h2>
+    overlay(`<div class="lgx"><div class="lg-ic" style="background:#e3f6ea"><img src="/static/c_map.webp?v=22" alt="" style="width:56px"></div><h2>Аймакка кирдиңиз ✅</h2>
       <p class="muted">Эми линияга чыгып, заказ ала аласыз.</p><button class="btn go" id="inGo">Линияга чыгуу</button><button class="btn ghost" id="inNo">Азыр эмес</button></div>`);
     setTimeout(() => { const g = $("#inGo"), n = $("#inNo"); if (g) g.onclick = () => { closeOverlay(); goOnline(); }; if (n) n.onclick = closeOverlay; }, 0); }
   const low = s.min_balance > 0 && s.balance < s.min_balance;
