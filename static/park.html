@@ -119,10 +119,10 @@ function payHead(s) {
   const t = s.pay_time, hm = x => { const [h, m] = x.split(":"); return h * 3600 + m * 60; };
   const now = Date.now() / 1000, mon = s.this_monday, a = mon + hm(t.from), b = mon + hm(t.to);
   const hhmm = u => new Date(u * 1000).toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"});
-  if (s.paid_this_week) return `<span class="ib2 w"><img src="/static/c_shield.webp?v=12" alt="">Ушул аптанын төлөмү берилди · ${dm(s.paid_this_week)}, ${hhmm(s.paid_this_week)}</span>`;
-  if (now < b && now >= mon && s.due > 0) return now >= a ? `<span class="ib2 w"><img src="/static/n_earn.webp?v=12" alt="">Бүгүн төлөм күнү · саат ${t.from}–${t.to}</span>` : `<span class="ib2 w"><img src="/static/n_trips.webp?v=12" alt="">Бүгүн төлөм күнү · саат ${t.from}дөн баштап</span>`;
+  if (s.paid_this_week) return `<span class="ib2 w"><img src="/static/c_shield.webp?v=20" alt="">Ушул аптанын төлөмү берилди · ${dm(s.paid_this_week)}, ${hhmm(s.paid_this_week)}</span>`;
+  if (now < b && now >= mon && s.due > 0) return now >= a ? `<span class="ib2 w"><img src="/static/n_earn.webp?v=20" alt="">Бүгүн төлөм күнү · саат ${t.from}–${t.to}</span>` : `<span class="ib2 w"><img src="/static/n_trips.webp?v=20" alt="">Бүгүн төлөм күнү · саат ${t.from}дөн баштап</span>`;
   const left = s.next_pay + hm(t.from) - now, d = Math.floor(left / 86400), h = Math.floor(left % 86400 / 3600);
-  return `<span class="ib2 w"><img src="/static/n_trips.webp?v=12" alt="">Дүйшөмбү, ${dm(s.next_pay)} · саат ${t.from}–${t.to}</span><br><span class="ib2 w" style="color:#ffc61a"><img src="/static/c_trips.webp?v=12" alt="">Төлөмгө ${d ? d + " күн " : ""}${h} саат калды</span>`;
+  return `<span class="ib2 w"><img src="/static/n_trips.webp?v=20" alt="">Дүйшөмбү, ${dm(s.next_pay)} · саат ${t.from}–${t.to}</span><br><span class="ib2 w" style="color:#ffc61a"><img src="/static/c_trips.webp?v=20" alt="">Төлөмгө ${d ? d + " күн " : ""}${h} саат калды</span>`;
 }
 const f1 = n => (Math.round((n || 0) * 10) / 10).toLocaleString("ru-RU");
 let ST = null, PER = "month";
@@ -164,14 +164,14 @@ function printTpl(k, p, link) {
 const ACT_ST = {sent:["Жооп күтүлүүдө", "w"], ok:["✅ Ырасталды", "o"], dispute:["❗ Пикир жөнөтүлдү", "d"]};
 function actsCard() {
   const A = ST.acts || [];
-  return `<div class="card"><h2 class="ih"><img src="/static/ic_id.webp?v=12" alt="">Акт салыштыруу</h2>
+  return `<div class="card"><h2 class="ih"><img src="/static/ic_id.webp?v=20" alt="">Акт салыштыруу</h2>
     ${A.length ? A.map(a => { const d = a.data, s = ACT_ST[a.status];
       return `<div class="act"><div class="ah"><b>${esc(a.label)}</b><span class="ast ${s[1]}">${s[0]}</span></div>
         <div class="ar"><span>Паркка тиешелүү акча</span><b>${fmt(d.due)} с</b></div><div class="ar"><span>Төлөндү</span><b>${fmt(d.paid)} с</b></div>
         <div class="ar"><span>Ай аягындагы калдык</span><b>${fmt(Math.abs(d.closing))} с${d.closing > 0 ? " · сизге карыз" : d.closing < 0 ? " · сиз карызсыз" : ""}</b></div>
         ${a.status === "dispute" ? `<div class="muted" style="margin-top:4px">Пикириңиз: ${esc(a.comment || "")}</div>` : ""}
-        <div class="row"><a class="btn g" href="/act/${a.id}" target="_blank" style="text-decoration:none;text-align:center"><span class="ib2"><img src="/static/ic_id.webp?v=12" alt="">Ачуу / PDF</span></a>
-          ${a.status !== "ok" ? `<button class="btn" data-aok="${a.id}"><span class="ib2"><img src="/static/c_shield.webp?v=12" alt="">Макулмун</span></button>` : ""}</div>
+        <div class="row"><a class="btn g" href="/act/${a.id}" target="_blank" style="text-decoration:none;text-align:center"><span class="ib2"><img src="/static/ic_id.webp?v=20" alt="">Ачуу / PDF</span></a>
+          ${a.status !== "ok" ? `<button class="btn" data-aok="${a.id}"><span class="ib2"><img src="/static/c_shield.webp?v=20" alt="">Макулмун</span></button>` : ""}</div>
         ${a.status !== "ok" ? `<details class="adis"><summary>Пикирим бар</summary><textarea class="f" id="ac${a.id}" rows="3" placeholder="Эмнеси туура эмес? Мис.: 2 сапар эсептелбей калган"></textarea>
           <button class="btn g" data-adis="${a.id}">Жөнөтүү</button></details>` : ""}</div>`; }).join("")
       : `<p class="muted">Ар айдын 1-күнү мурунку ай боюнча акт ушул жерге түшөт жана Telegram'га кабар келет. Текшерип, 10 күн ичинде жооп бериңиз.</p>`}</div>`;
@@ -198,12 +198,12 @@ function appsCard() {
       <div class="row"><button class="btn gr" data-ap="photo_ok" data-u="${esc(d.uid)}">✓ Кабыл алуу</button><button class="btn rd" data-ap="photo_no" data-u="${esc(d.uid)}">✕ Кайра тарттыруу</button></div></div>`;
   const blk = d => `<div class="app" style="display:flex;align-items:center;gap:8px"><div style="flex:1"><b>⛔ ${esc(d.name)}</b><div class="muted">${esc(d.plate)} · ${d.can_unblock ? "сиз бөгөттөгөнсүз" : "админ бөгөттөгөн"}</div></div>
       ${d.can_unblock ? `<button class="btn g" data-ap="unblock" data-u="${esc(d.uid)}">↺ Ачуу</button>` : ""}</div>`;
-  return `<div class="card"><h2 class="ih"><img src="/static/ic_briefcase.webp?v=12" alt="">Айдоочулардын арыздары${n ? ` <span class="bdg">${n}</span>` : ""}</h2>
+  return `<div class="card"><h2 class="ih"><img src="/static/ic_briefcase.webp?v=20" alt="">Айдоочулардын арыздары${n ? ` <span class="bdg">${n}</span>` : ""}</h2>
     ${ST.self_approve ? `<p class="muted" style="margin-top:0">Паркыңызга кирген айдоочулардын документтерин өзүңүз текшерип, тастыктайсыз. Жаңы арыз келгенде Telegram'га кабар келет.</p>`
       : `<p class="muted" style="margin-top:0">Азырынча арыздарды Такси ТАП! админи текшерет. Өзүңүз тастыктоо үчүн админге кайрылыңыз.</p>`}
     ${A.pending.map(pend).join("")}${ST.self_approve ? A.photos.map(phot).join("") : ""}${A.blocked.map(blk).join("")}
     ${n || A.blocked.length ? "" : `<p class="muted">Жаңы арыз жок.</p>`}
-    <div class="muted ib2" style="margin:12px 0 4px"><img src="/static/ic_link.webp?v=12" alt="">Айдоочу чакыруу шилтемеси — ушул аркылуу катталган айдоочу автоматтык түрдө паркыңызга кирет:</div>
+    <div class="muted ib2" style="margin:12px 0 4px"><img src="/static/ic_link.webp?v=20" alt="">Айдоочу чакыруу шилтемеси — ушул аркылуу катталган айдоочу автоматтык түрдө паркыңызга кирет:</div>
     <div class="row" style="margin-top:4px"><input class="f" readonly value="${esc(link)}" id="jLink" style="flex:1;font-size:13px"><button class="btn g ib" id="jShare">${IC.share}</button></div></div>`;
 }
 function bindApps() {
@@ -226,13 +226,13 @@ function draw() {
   const p = ST.park, s = ST.stats, P = s.periods[PER];
   const link = (ST.site || location.origin) + "/p/" + (p.code || "");
   $("#app").innerHTML = `<div class="hd"><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b></div><span class="tag">ПАРК</span></div>
-    <h1 class="ih"><img src="/static/ic_building.webp?v=12" alt="">${esc(p.name)}</h1><p class="muted">Айдоочулар: ${s.drivers_total} · линияда: <b style="color:#1D9E75">${s.drivers_online}</b></p>
+    <h1 class="ih"><img src="/static/ic_building.webp?v=20" alt="">${esc(p.name)}</h1><p class="muted">Айдоочулар: ${s.drivers_total} · линияда: <b style="color:#1D9E75">${s.drivers_online}</b></p>
     <div class="per">${Object.keys(PN).map(k => `<button data-p="${k}" class="${k === PER ? "on" : ""}">${PN[k]}</button>`).join("")}</div>
     <div class="big"><div class="s">${payHead(s)}</div>
       <div class="wk"><div><div class="s">Бул дүйшөмбүдө төлөнөт</div><div class="v">${fmt(s.due)} сом</div></div>
         <div><div class="s">Ушул апта топтолууда</div><div class="v2">${fmt(s.this_week)} с</div></div></div>
       <div class="s">Ар дүйшөмбүдө, саат ${s.pay_time.from}–${s.pay_time.to} аралыгында өткөн аптада тапканыңыз төлөнөт · ✅ бардыгы төлөнгөн: <b style="color:#fff">${fmt(s.paid)} с</b></div></div>
-    <div class="card"><h2 class="ih"><img src="/static/c_shield.webp?v=12" alt="">Төлөнгөн акчалар</h2>
+    <div class="card"><h2 class="ih"><img src="/static/c_shield.webp?v=20" alt="">Төлөнгөн акчалар</h2>
       ${ST.payouts.length ? ST.payouts.map(x => `<div class="pay"><span><b>${new Date(x.at * 1000).toLocaleDateString("ru-RU")}, ${new Date(x.at * 1000).toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"})}</b>${x.note ? "<br><small>" + esc(x.note) + "</small>" : ""}</span><b style="color:#16764f">+${fmt(x.amount)} с</b></div>`).join("")
         + `<div class="pay" style="border:0"><span>Бардыгы</span><b>${fmt(s.paid)} с</b></div>`
         : `<p class="muted">Азырынча төлөм болгон жок. Биринчи төлөм — дүйшөмбү, ${dm(s.next_pay)}, саат ${s.pay_time.from}–${s.pay_time.to}.</p>`}</div>
@@ -245,7 +245,7 @@ function draw() {
       <div class="st"><span>Жүргүнчү бонусу</span><b>${fmt(P.bonus)} с</b><i>Ар бир жаңы жүргүнчүнүн биринчи сапары үчүн ${fmt(p.ref_bonus)} сом</i></div>
       <div class="st"><span>${PN[PER]} тапкан</span><b style="color:#16764f">${fmt(P.earned)} с</b><i>Комиссиядан үлүш + жүргүнчү бонусу</i></div>
     </div>
-    <details class="how"><summary><span class="ib2"><img src="/static/c_info.webp?v=12" alt="">Кантип эсептелет? Мисал</span></summary>
+    <details class="how"><summary><span class="ib2"><img src="/static/c_info.webp?v=20" alt="">Кантип эсептелет? Мисал</span></summary>
       <p>Сиздин айдоочу 100 сомдук сапар бүтүрдү дейли:</p>
       <p>• <b>«Айдоочулар тапкан акча»</b> сумасына 100 сом кошулат.</p>
       <p>• Такси ТАП! айдоочудан комиссия алат${ST.commission_pct > 0 ? ` (азыр ${ST.commission_pct}%) — ${f1(ST.commission_pct)} сом` : " (мисалы 10% — 10 сом)"}.
@@ -255,15 +255,15 @@ function draw() {
     ${ST.commission_pct > 0 ? "" : `<div class="note">ℹ️ Азыр пилот: Такси ТАП! комиссия албайт (0%), ошондуктан комиссиядан үлүш 0. Жүргүнчү бонустары эсептеле берет.</div>`}
     <div id="appSlot">${appsCard()}</div>
     <div id="drvSlot"></div>
-    <div class="card"><h2 class="ih"><img src="/static/ic_plus.webp?v=12" alt="">Айдоочу кошуу</h2>
+    <div class="card"><h2 class="ih"><img src="/static/ic_plus.webp?v=20" alt="">Айдоочу кошуу</h2>
       <div class="row" style="margin-top:0"><input class="f" id="dph" placeholder="Айдоочунун номери: 0700 123 456" inputmode="tel"><button class="btn" id="dadd">Кошуу</button></div>
       <div id="dmsg"></div>${ST.drivers.length ? "" : `<p class="muted">Айдоочу адегенде сайтта «Айдоочу болуу» аркылуу катталып, текшерүүдөн өтүшү керек, андан кийин аны бул жерге номери менен кошосуз.</p>`}</div>
-    <div class="card"><h2 class="ih"><img src="/static/c_gift.webp?v=11" alt="">Жүргүнчүлөрдү тартуу</h2>
+    <div class="card"><h2 class="ih"><img src="/static/c_gift.webp?v=20" alt="">Жүргүнчүлөрдү тартуу</h2>
       <div class="qr"><div id="qr"></div><div><div class="muted">Паркыңыздын коду</div><div class="code">${esc(p.code)}</div>
         <div class="muted" style="margin-top:4px">Жаңы жүргүнчү ушул QR менен келип, биринчи сапарын бүтүрсө — сизге <b>${fmt(p.ref_bonus)} сом</b>.${p.promo_amount ? ` Ага биринчи сапарга <b>−${p.promo_amount} сом</b>.` : ""}</div></div></div>
       <div class="st3"><div><b>${ST.qr.scans}</b><small>сканерленди</small></div><div><b>${ST.qr.joined}</b><small>катталды</small></div><div><b>${ST.qr.rode}</b><small>сапар бүтүрдү</small></div></div>
       <div class="muted" style="margin:12px 0 6px">Басып чыгаруу үлгүсү</div>
-      <div class="tpl">${TPL.map(([k, im, t]) => `<button data-t="${k}" class="${k === TK ? "on" : ""}"><img src="/static/${im}.webp?v=11" alt="">${t}</button>`).join("")}</div>
+      <div class="tpl">${TPL.map(([k, im, t]) => `<button data-t="${k}" class="${k === TK ? "on" : ""}"><img src="/static/${im}.webp?v=20" alt="">${t}</button>`).join("")}</div>
       <div class="row"><button class="btn ib" id="print">${IC.print}Басып чыгаруу</button><button class="btn g ib" id="share">${IC.share}Бөлүшүү</button></div>
       <p class="muted" style="margin-top:8px;word-break:break-all">${esc(link)}</p>
       <p class="muted" style="font-size:12.5px">Ар бир айдоочуңуздун да өзүнүн QR'ы бар (айдоочунун кабинетинде) — ким канча жүргүнчү тартканы көрүнөт.</p>
@@ -294,8 +294,8 @@ const hrs = s => { const h = Math.floor(s / 3600), m = Math.round(s % 3600 / 60)
 const ago = t => { if (!t) return ""; const s = Date.now() / 1000 - t; return s < 120 ? "азыр" : s < 3600 ? Math.round(s / 60) + " мүн мурун" : s < 86400 ? Math.round(s / 3600) + " саат мурун" : Math.round(s / 86400) + " күн мурун"; };
 const STN = {free:'<i class="sdot f"></i>Бош', busy:'<i class="sdot b"></i>Заказда', off:'<i class="sdot o"></i>Эс алууда'};
 function drvBox() {
-  if (!BOX) { BOX = document.createElement("div"); BOX.className = "card"; BOX.innerHTML = `<h2 class="ih"><img src="/static/c_taxi.webp?v=12" alt="">Айдоочулар</h2>
-    <div class="tabs2"><button data-dt="stats" class="ib2"><img src="/static/ic_chart.webp?v=12" alt="">Статистика</button><button data-dt="map" class="ib2"><img src="/static/c_map.webp?v=12" alt="">Карта</button></div>
+  if (!BOX) { BOX = document.createElement("div"); BOX.className = "card"; BOX.innerHTML = `<h2 class="ih"><img src="/static/c_taxi.webp?v=20" alt="">Айдоочулар</h2>
+    <div class="tabs2"><button data-dt="stats" class="ib2"><img src="/static/ic_chart.webp?v=20" alt="">Статистика</button><button data-dt="map" class="ib2"><img src="/static/c_map.webp?v=20" alt="">Карта</button></div>
     <div id="dStats"></div><div id="dMap" style="display:none"><div class="chips" id="mChips"></div><div id="pmap"></div><div class="mlist" id="mList"></div>
     <p class="muted" style="font-size:12px;margin:8px 0 0">Ар 15 секундда жаңыланат. Эс алуудагы айдоочунун акыркы жери болжолдуу көрсөтүлөт. Жүргүнчүнүн маалыматы көрүнбөйт.</p></div>`;
     BOX.querySelectorAll("[data-dt]").forEach(b => b.onclick = () => { DTAB = b.dataset.dt; dShow(); });
@@ -322,13 +322,13 @@ function drawStats() {
     <div class="tot"><div><b>${T.rides}</b><small>сапар</small></div><div><b>${fmt(T.gross)}</b><small>тапкан, сом</small></div><div><b>${fmt(T.share)}</b><small>паркка, сом</small></div></div>
     <div class="srt">Иреттөө:${Object.keys(SN).map(k => `<button data-ds="${k}" class="${k === DSORT ? "on" : ""}">${SN[k]}</button>`).join("")}</div>
     ${rows.length ? rows.map(r => `<div class="ds" data-du="${esc(r.uid)}"><div class="t"><span class="dot ${r.busy ? "busy" : r.online ? "on" : ""}"></span><b>${esc(r.name || r.phone)}</b>
-        ${r.best && DPER !== "today" ? `<span class="flag b"><img class="mi" src="/static/ic_trophy.webp?v=12" alt="">мыкты</span>` : ""}${r.diag && (r.diag.bad || r.diag.warn) ? `<span class="flag ${r.diag.bad ? "dgb" : "dgw"}">🩺 ${r.diag.bad ? r.diag.bad + "❌" : ""}${r.diag.bad && r.diag.warn ? " " : ""}${r.diag.warn ? r.diag.warn + "⚠️" : ""}</span>` : ""}${r.idle_days >= 3 ? `<span class="flag i"><img class="mi" src="/static/ic_moon.webp?v=12" alt="">${r.idle_days} күн</span>` : ""}
+        ${r.best && DPER !== "today" ? `<span class="flag b"><img class="mi" src="/static/ic_trophy.webp?v=20" alt="">мыкты</span>` : ""}${r.diag && (r.diag.bad || r.diag.warn) ? `<span class="flag ${r.diag.bad ? "dgb" : "dgw"}">🩺 ${r.diag.bad ? r.diag.bad + "❌" : ""}${r.diag.bad && r.diag.warn ? " " : ""}${r.diag.warn ? r.diag.warn + "⚠️" : ""}</span>` : ""}${r.idle_days >= 3 ? `<span class="flag i"><img class="mi" src="/static/ic_moon.webp?v=20" alt="">${r.idle_days} күн</span>` : ""}
         <button class="x" data-rm="${esc(r.uid)}" aria-label="Чыгаруу">✕</button></div>
-      <small class="muted">${esc(r.car)} · ${esc(r.plate)} · <img class="mi" src="/static/ic_star.webp?v=12" alt="">${Number(r.rating ?? 5).toFixed(1)} · <img class="mi" src="/static/ic_bolt.webp?v=12" alt="">${r.activity}</small>
+      <small class="muted">${esc(r.car)} · ${esc(r.plate)} · <img class="mi" src="/static/ic_star.webp?v=20" alt="">${Number(r.rating ?? 5).toFixed(1)} · <img class="mi" src="/static/ic_bolt.webp?v=20" alt="">${r.activity}</small>
       <div class="m"><div><b>${r.rides}</b>сапар</div><div><b>${fmt(r.gross)}</b>сом</div><div><b>${r.online_sec ? hrs(r.online_sec) : "—"}</b>линияда</div>
         <div><b>${r.offers ? Math.round(100 * r.accepted / r.offers) + "%" : "—"}</b>алган${r.cancels ? ` · <span style="color:#b42318">✕${r.cancels}</span>` : ""}</div></div></div>`).join("")
       : `<p class="muted">Азырынча айдоочу жок.</p>`}
-    <a class="btn g" style="display:block;text-align:center;text-decoration:none;margin-top:10px" href="/park/stats.csv?period=${DPER}${PQ}"><span class="ib2"><img src="/static/ic_dl.webp?v=12" alt="">Excel'ге жүктөө (${DPN[DPER]})</span></a>
+    <a class="btn g" style="display:block;text-align:center;text-decoration:none;margin-top:10px" href="/park/stats.csv?period=${DPER}${PQ}"><span class="ib2"><img src="/static/ic_dl.webp?v=20" alt="">Excel'ге жүктөө (${DPN[DPER]})</span></a>
     <p class="muted" style="font-size:11.5px;margin:6px 0 0">«Линияда» убакыты 17-ноябрдан баштап эсептелет. «Алган %» — келген сунуштардын канчасын кабыл алганы.</p>`;
   el.querySelectorAll("[data-dp]").forEach(b => b.onclick = () => { DPER = b.dataset.dp; loadStats(); });
   el.querySelectorAll("[data-ds]").forEach(b => b.onclick = () => { DSORT = b.dataset.ds; drawStats(); });
@@ -343,7 +343,7 @@ async function openDriver(uid) {
   const WD = ["Дш", "Шй", "Шр", "Бш", "Жм", "Иш", "Жк"], mx = Math.max(1, ...d.days.map(x => x.gross));
   const o = document.createElement("div"); o.className = "sheet2";
   o.innerHTML = `<div><div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0;font-size:19px">${esc(d.name || d.phone)}</h2><button class="x" data-close>✕</button></div>
-    <p class="muted" style="margin:4px 0">${esc(d.car)} · ${esc(d.plate)} · <img class="mi" src="/static/ic_star.webp?v=12" alt="">${Number(d.rating ?? 5).toFixed(1)} · <img class="mi" src="/static/ic_bolt.webp?v=12" alt="">${d.activity}</p>
+    <p class="muted" style="margin:4px 0">${esc(d.car)} · ${esc(d.plate)} · <img class="mi" src="/static/ic_star.webp?v=20" alt="">${Number(d.rating ?? 5).toFixed(1)} · <img class="mi" src="/static/ic_bolt.webp?v=20" alt="">${d.activity}</p>
     ${d.phone ? `<a class="btn call" href="tel:${esc(d.phone)}">📞 Чалуу</a>` : ""}
     ${d.diag && (d.diag.bad || d.diag.warn) ? `<div class="pdg"><b>🩺 Диагностика</b>${d.diag.items.map(([l, t]) => `<div class="${l}">${l === "bad" ? "❌" : "⚠️"} ${esc(t)}</div>`).join("")}</div>`
       : d.diag ? `<div class="pdg ok">🩺 Диагностика жайында ✓</div>` : ""}
