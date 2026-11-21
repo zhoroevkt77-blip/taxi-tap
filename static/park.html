@@ -396,5 +396,6 @@ function popHtml(d) {
 async function refresh() { const id = new URLSearchParams(location.search).get("id"); ST = await api("/api/park/state" + (id ? "?id=" + id : "")); if (!ST.error) draw(); }
 boot(); setInterval(refresh, 30000);
 </script>
+<script src="/static/upd.js?v=1"></script>
 </body>
 </html>

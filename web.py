@@ -31,6 +31,7 @@ import flow
 import ops
 
 STATIC = os.path.join(core.BASE, "static")
+BUILD_VER = (os.environ.get("RAILWAY_GIT_COMMIT_SHA") or os.environ.get("RAILWAY_DEPLOYMENT_ID") or str(int(time.time())))[:12]
 DEV_LOGIN = os.environ.get("WEB_DEV_LOGIN") == "1"
 BOT_USERNAME = (os.environ.get("BOT_USERNAME") or "").lstrip("@")
 COOKIE = "tt"
@@ -370,6 +371,8 @@ class H(BaseHTTPRequestHandler):
                 return self._json({"ok": True})
             if u.path == "/api/me":
                 return self._me()
+            if u.path == "/api/ver":
+                return self._json({"v": BUILD_VER})
             if u.path == "/api/area":
                 return self._json(core.area_info())
             if u.path == "/api/near":
