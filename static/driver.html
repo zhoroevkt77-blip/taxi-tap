@@ -125,7 +125,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 <div class="offer hide" id="ovl"><div class="ocard" id="ovlc"></div></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="/static/area.js?v=12"></script>
+<script src="/static/area.js?v=13"></script>
 <script src="/static/voice.js?v=6"></script>
 <script src="/static/qr.js"></script>
 <script src="/static/qrshare.js"></script>
@@ -138,7 +138,7 @@ const api = async (path, body) => {
   return r.json();
 };
 const map = L.map("map", {zoomControl:false}).setView([41.0377, 72.7470], 14);
-setupArea(map, {zoom:14});
+setupArea(map, {zoom:14, bounds:false});
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:"© OpenStreetMap"}).addTo(map);
 const icon = (cls, t) => L.divIcon({className:"", html:`<div class="carm ${cls}">${t}</div>`, iconSize:[30,30], iconAnchor:[15,15]});
 const layer = L.layerGroup().addTo(map);
@@ -155,6 +155,7 @@ NAV.init(map, {onFix: (ll, h, sp, acc) => { myAcc = acc; myPos = ll; myHead = h;
 let HUP = (() => { try { return localStorage.getItem("hup") !== "0"; } catch (e) { return true; } })(), hupOn = false, hupAng = 0, hupHead = null;
 const mapEl = document.getElementById("map");
 function hupLayout(on) {
+  const c = map.getCenter ? map.getCenter() : null, z = map.getZoom();      // өлчөм өзгөргөндө борбор ордунда калсын
   if (!on) { mapEl.removeAttribute("style"); mapEl.classList.remove("hup"); }
   else {
     const W = innerWidth, H = innerHeight, cx = W / 2, cy = Math.round(H * 0.6);
@@ -163,6 +164,7 @@ function hupLayout(on) {
     mapEl.classList.add("hup");
   }
   map.invalidateSize && map.invalidateSize(false);
+  if (c && map.setView) map.setView(c, z, {animate:false});
 }
 function hupSync() {                                         // режим күйүк жана карта машинаны ээрчиши керек болсо — айлантабыз
   const want = HUP && FOLLOW && !!myPos;
@@ -219,6 +221,9 @@ map.on("dragstart", () => { FOLLOW = false; const b = $("#navLoc"); b && b.class
 // Айдоочу картаны манжалары менен чоңойтуп/кичирейтип жатканда (жана 2 сек кийин) карта өзү жылбасын —
 // болбосо GPS'тин жаңы чекити эски масштабды кайра коюп, «кичирейип кайра чоңоюп» кетет.
 let touchN = 0, userAt = 0;
+mapEl.addEventListener("touchmove", () => {                 // «Жол өйдө» режиминде манжа менен жылдырса — адегенде түндүк өйдөгө өтөбүз
+  if (hupOn && touchN === 1) { FOLLOW = false; const b = $("#navLoc"); b && b.classList.add("off"); hupSync(); }
+}, {passive:true, capture:true});
 const userBusy = () => touchN > 0 || Date.now() - userAt < 2000;
 mapEl.addEventListener("touchstart", e => { touchN = e.touches.length; userAt = Date.now(); }, {passive:true, capture:true});
 ["touchend", "touchcancel"].forEach(ev => mapEl.addEventListener(ev, e => { touchN = e.touches.length; userAt = Date.now(); }, {passive:true, capture:true}));

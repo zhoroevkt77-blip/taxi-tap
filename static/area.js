@@ -53,9 +53,11 @@ async function setupArea(map, opts = {}) {
     window.AREA = a;
     if (!a.on) return a;
     const [s, w, n, e] = a.bbox, pad = 0.06;
-    map.setMaxBounds(L.latLngBounds([s - pad, w - pad], [n + pad, e + pad]));
-    map.options.maxBoundsViscosity = 0.9;
-    map.setMinZoom(opts.minZoom || 10);
+    if (opts.bounds !== false) {                       // айдоочунун картасында чектөө жок — каалаган жерге жылдыра алат
+      map.setMaxBounds(L.latLngBounds([s - pad, w - pad], [n + pad, e + pad]));
+      map.options.maxBoundsViscosity = 0.9;
+      map.setMinZoom(opts.minZoom || 10);
+    }
     const holes = areaRings(a.geojson).map(r => r.map(([lon, lat]) => [lat, lon]));
     if (L.Layer && L.Layer.extend && map.latLngToContainerPoint) areaMask(a.geojson).addTo(map);
     else L.polygon([[[89, -179], [89, 179], [-89, 179], [-89, -179]], ...holes],
