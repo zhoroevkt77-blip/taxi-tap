@@ -126,7 +126,7 @@ input.f:focus{border-color:var(--navy)}
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="/static/area.js?v=16"></script>
-<script src="/static/voice.js?v=9"></script>
+<script src="/static/voice.js?v=10"></script>
 <script>
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -703,6 +703,17 @@ function riderVoice(a, b) {
   }
   const n = x => (x.msgs || []).filter(m => !m.me).length;
   if (n(b) > n(a) && S.mode !== "chat") speak(["r_msg"]);
+  // Б чекитине 100 м калганда: «...буюмдарыңызды унутпаңыз» (бир сапарга бир жолу)
+  const d = b.driver;
+  if (b.status === "in_trip" && b.d_lat != null && d && d.lat != null && END100 !== b.id && distM(d.lat, d.lon, b.d_lat, b.d_lon) <= 100) {
+    END100 = b.id; speak(["r_end100"]);
+  }
+}
+let END100 = null;
+function distM(a, b, c, e) {
+  const R = 6371000, la = (c - a) * Math.PI / 180, lo = (e - b) * Math.PI / 180;
+  const x = Math.sin(la / 2) ** 2 + Math.cos(a * Math.PI / 180) * Math.cos(c * Math.PI / 180) * Math.sin(lo / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(x));
 }
 function updateDriver() {
   const d = S.ride && S.ride.driver;
