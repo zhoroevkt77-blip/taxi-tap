@@ -883,3 +883,6 @@ body.mefar .melbl{opacity:1}
 body.ridp .bul.lt{width:34px!important;height:34px!important;font-size:17px!important;font-weight:800!important}
 /* Жүргүнчүгө компас керек эмес */
 body.ridp #navComp{display:none!important}
+/* Жүргүнчү: тандалган тариф плиткасы ак, сары чек менен */
+body.ridp .cls>div.on{background:#fff!important;box-shadow:0 0 0 2.5px #ffc400,0 6px 18px rgba(255,180,0,.25)!important;border:0!important;color:#16161a!important}
+body.ridp .cls>div.on *{color:#16161a!important}
