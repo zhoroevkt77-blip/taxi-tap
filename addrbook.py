@@ -487,14 +487,65 @@ def dgis_search(q, near=None, limit=6):
     return res
 
 
+_osm_cache = {}
+
+
+def osm_search(q, near=None, limit=6):
+    """Камдык: OpenStreetMap (Nominatim) — 2ГИС лимити бүтсө же табылбаса. Аймактын ичинде гана."""
+    q = (q or "").strip()
+    if len(q) < 3:
+        return []
+    key = norm(q)
+    hit = _osm_cache.get(key)
+    if hit and hit[0] > time.time():
+        return hit[1]
+    b = core.AREA_BBOX            # [lat1, lon1, lat2, lon2]
+    params = {"q": q, "format": "jsonv2", "limit": 10, "accept-language": "ky,ru", "bounded": 1,
+              "viewbox": "%f,%f,%f,%f" % (b[1], b[2], b[3], b[0]), "countrycodes": "kg"}
+    res = []
+    try:
+        req = urllib.request.Request("https://nominatim.openstreetmap.org/search?" + urllib.parse.urlencode(params),
+                                     headers={"User-Agent": "TaksiTAP/1.0 (taxi-tap.kg)"})
+        with urllib.request.urlopen(req, timeout=6) as r:
+            data = json.loads(r.read().decode())
+        seen = set()
+        for it in data or []:
+            lat, lon = float(it["lat"]), float(it["lon"])
+            if core.AREA_ON and not core.in_area(lat, lon):
+                continue
+            parts = [x.strip() for x in (it.get("display_name") or "").split(",")]
+            name = it.get("name") or (parts[0] if parts else q)
+            area = next((x for x in parts[1:] if x and not x.isdigit()), "")
+            k = norm(name) + "|" + norm(area)
+            if k in seen:
+                continue
+            seen.add(k)
+            st = it.get("category") == "highway" or it.get("type") in ("residential", "tertiary", "secondary", "primary", "unclassified", "living_street")
+            res.append({"id": None, "name": pretty(name) if st else name, "kind": "street" if st else "poi", "icon": "📍",
+                        "area": area, "lat": lat, "lon": lon, "aliases": "", "source": "osm", "approx": False})
+    except Exception as e:
+        print("osm search:", e, flush=True)
+    if near:
+        res.sort(key=lambda x: core.haversine_km(near[0], near[1], x["lat"], x["lon"]))
+    res = res[:limit]
+    if len(_osm_cache) > 2000:
+        _osm_cache.clear()
+    _osm_cache[key] = (time.time() + 6 * 3600, res)
+    return res
+
+
 def search_all(q, near=None, limit=8):
-    """Адегенде өз тизмебиз; аз болсо — 2ГИС (кайталанганы чыкпайт)."""
+    """Адегенде өз тизмебиз; аз болсо — 2ГИС; ал да аз болсо — OpenStreetMap (кайталанганы чыкпайт)."""
     own = search(q, near, limit)
-    if len(own) >= 3 or not DGIS_KEY:
+    if len(own) >= 3:
         return own
     names = {norm(x["name"]) for x in own}
-    extra = [x for x in dgis_search(q, near) if norm(x["name"]) not in names]
-    return (own + extra)[:limit + 3]
+    extra = [x for x in (dgis_search(q, near) if DGIS_KEY else []) if norm(x["name"]) not in names]
+    out = own + extra
+    if len(out) < 3:
+        names |= {norm(x["name"]) for x in extra}
+        out += [x for x in osm_search(q, near) if norm(x["name"]) not in names]
+    return out[:limit + 3]
 
 
 def dgis_selftest():
