@@ -291,7 +291,7 @@ window.NAV = (function () {
       const d = 0.03; map.setMaxBounds(L.latLngBounds(mb.getSouthWest(), mb.getNorthEast()).extend([p[0] - d, p[1] - d]).extend([p[0] + d, p[1] + d]));
     }
     if (!marker) { const rid = document.body.classList.contains("ridp");
-      marker = L.marker(p, {icon:icon(), interactive:rid, zIndexOffset:900, keyboard:false}).addTo(map);
+      marker = L.marker(p, {icon:icon(), interactive:rid, zIndexOffset:rid ? 300 : 900, keyboard:false}).addTo(map);
       if (rid) marker.on("click", () => { if (pos) map.setView(pos, Math.max(map.getZoom(), 16)); }); }
     else { if (map.hasLayer && !map.hasLayer(marker)) marker.addTo(map); marker.setLatLng(p); }
     paint();
