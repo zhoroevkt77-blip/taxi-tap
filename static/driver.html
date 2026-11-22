@@ -44,8 +44,11 @@ input.f{width:100%;font-size:17px;padding:14px;border-radius:14px;border:1px sol
 .hbr{font-size:12.5px;color:#6b6b75;margin-top:2px}.hbr s{text-decoration:none;color:#b3261e}.hbr u{text-decoration:none;color:#1f7a45}.hbr b{color:#1f7a45}
 .ftab{background:#fff;border:1.5px solid #ffe08a;border-radius:18px;padding:6px 14px 10px;margin:10px 0}.fr{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px dashed #eee;font-size:15px}.fr em{font-style:normal;font-size:12px;font-weight:700;background:#f3f3f6;border-radius:999px;padding:1px 7px;margin-left:4px}.fr b{font-variant-numeric:tabular-nums}.fr.fsum b{font-size:18px}.fr.net{border:0;margin-top:4px;background:#e8f7ee;border-radius:12px;padding:11px 10px}.fr.net b{color:#1f7a45;font-size:20px}.fsub{font-size:12.5px;color:#7a7a85;margin-top:6px}
 #earn,#heatBtn,#peerBtn{transition:transform .28s cubic-bezier(.2,.8,.2,1),opacity .2s;touch-action:pan-y}
-#earn.tucked,#heatBtn.tucked,#peerBtn.tucked,body.ridetuck #earn,body.ridetuck #heatBtn,body.ridetuck #peerBtn{transform:translateX(calc(100% - 50px))!important;border-radius:18px 0 0 18px;box-shadow:-3px 4px 14px rgba(20,20,30,.18);opacity:.95}
-#earn.tucked::after,#heatBtn.tucked::after,#peerBtn.tucked::after{content:"";position:absolute;left:3px;top:50%;width:3px;height:18px;margin-top:-9px;border-radius:2px;background:#ffb703}
+#earn.tucked,#heatBtn.tucked,#peerBtn.tucked,body.ridetuck #earn,body.ridetuck #heatBtn,body.ridetuck #peerBtn{transform:none!important;padding:9px 18px 9px 10px!important;margin-right:-16px!important;border-radius:16px 0 0 16px!important;min-width:0!important;width:auto!important;height:auto!important;box-shadow:-3px 4px 14px rgba(20,20,30,.18)!important;background:#fff!important;color:#16161a!important;border:0!important;font-size:0!important}
+#earn.tucked>*,#heatBtn.tucked>*,#peerBtn.tucked>*,body.ridetuck #earn>*,body.ridetuck #heatBtn>*,body.ridetuck #peerBtn>*{display:none!important}
+#earn.tucked::before,#heatBtn.tucked::before,#peerBtn.tucked::before,body.ridetuck #earn::before,body.ridetuck #heatBtn::before,body.ridetuck #peerBtn::before{content:attr(data-tab);font-weight:800;font-size:15px!important;white-space:nowrap;padding-left:16px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='14'%3E%3Cpath d='M8 1L2 7l6 6' fill='none' stroke='%23ffb300' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") left center no-repeat}
+#heatBtn.tucked.hot::before{color:#c2185b}
+.swhint{position:fixed;z-index:30;right:150px;background:#16161a;color:#fff;font-size:13px;font-weight:600;padding:7px 11px;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.3);animation:swh 2.6s ease forwards;pointer-events:none}.swhint::after{content:"";position:absolute;right:-6px;top:50%;margin-top:-6px;border:6px solid transparent;border-right:0;border-left-color:#16161a}@keyframes swh{0%{opacity:0;transform:translateX(-8px)}12%,80%{opacity:1;transform:none}100%{opacity:0}}
 #earn,#heatBtn,#peerBtn{position:relative}.peek{animation:peek 1s ease 3}@keyframes peek{50%{box-shadow:0 0 0 5px rgba(255,183,3,.55)}}
 .offer{position:fixed;left:0;right:0;bottom:0;z-index:20;background:transparent;display:flex;align-items:flex-end;pointer-events:none}.offer .ocard{pointer-events:auto}
 .ocard{background:#fff;width:100%;border-radius:22px 22px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));animation:up .25s ease-out}
@@ -123,9 +126,9 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
   <div class="rcol"><button class="state hide" id="stBadge" style="display:none">Офлайн</button>
     <div class="hhr"><div class="modepill"><img src="/static/r_car.webp?v=24" alt=""><span><b>Айдоочу</b><br>режиминдесиз</span></div>
     <button class="tbtn hide topav" id="cabBtn" aria-label="Менин кабинетим">👤</button></div>
-    <div class="r2"><button class="ep hide" id="earn"></button></div>
-    <div class="tools hide" id="tools"><button class="sbtn" id="heatBtn" aria-label="Коэффициент"><i>💓</i>×1.0</button>
-      <button class="sbtn peerb" id="peerBtn" aria-label="Жакын таксилер"><img src="/static/peer_free.webp?v=4" alt=""><span>0</span></button></div>
+    <div class="r2"><button class="ep hide" id="earn" data-tab="🎯"></button></div>
+    <div class="tools hide" id="tools"><button class="sbtn" id="heatBtn" aria-label="Коэффициент" data-tab="×1.0"><i>💓</i>×1.0</button>
+      <button class="sbtn peerb" id="peerBtn" aria-label="Жакын таксилер" data-tab="🚗 0"><img src="/static/peer_free.webp?v=4" alt=""><span>0</span></button></div>
     <div class="zpill" id="zoomBox"><button id="zIn" aria-label="Жакындатуу">+</button><i></i><button id="zOut" aria-label="Алыстатуу">−</button></div></div>
 </div>
 <div class="sheet"><div class="grab"></div><div id="view"></div></div>
@@ -320,6 +323,7 @@ const EYE = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke=
 const EYE_OFF = `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.6 5.1A10.4 10.4 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-2.6 3.6M6.6 6.6C3.9 8.3 2 12 2 12s3.6 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="M3 3l18 18"/></svg>`;
 function earnPill() {
   const e = $("#earn"), got = D.today.earned || 0, goal = D.goal || 1000;
+  e.dataset.tab = "🎯 " + Math.min(100, Math.round(got / goal * 100)) + "%";
   const low = D.min_balance > 0 && D.balance < D.min_balance;
   let hid = false; try { hid = localStorage.getItem("earnHide") === "1"; } catch (x) {}
   const key = [low, got, goal, D.balance, hid].join("|"); if (e.dataset.k === key) return; e.dataset.k = key;
@@ -1209,10 +1213,17 @@ TUCK.forEach(id => {
     if (el.dataset.swiped || el.classList.contains("tucked")) { e.stopImmediatePropagation(); e.preventDefault(); if (!el.dataset.swiped) tuckSet(id, false); }
   }, true);
 });
+function swipeHint() {             // бир жолу: «→ сүрүп жашырыңыз»
+  try { if (localStorage.getItem("swHint")) return; localStorage.setItem("swHint", "1"); } catch (e) { return; }
+  const b = document.getElementById("heatBtn"); if (!b || b.classList.contains("tucked") || !b.offsetParent) return;
+  const r = b.getBoundingClientRect(), h = document.createElement("div"); h.className = "swhint"; h.textContent = "Чипти оңго сүрүп жашырыңыз →";
+  h.style.top = (r.top + r.height / 2 - 16) + "px"; h.style.right = (innerWidth - r.left + 10) + "px"; document.body.appendChild(h); setTimeout(() => h.remove(), 2800);
+}
 async function loadHeat() {
   const x = await api("/api/d/heat"); if (!x || x.error) return;
   const k = x.k_here || 1, b = $("#heatBtn");
-  if (k >= 1.2) tuckPeek("heatBtn");
+  setTimeout(swipeHint, 1500);
+  if (k >= 1.2) tuckPeek("heatBtn"); b.dataset.tab = "×" + k.toFixed(1);
   b.innerHTML = `<i>💓</i>×${k.toFixed(1)}`; b.classList.toggle("hot", k > 1); b.classList.toggle("warm", k <= 1 && (x.k_max || 1) > 1);
   heatLayer.clearLayers();
   if (!heatOn) return;
@@ -1238,7 +1249,7 @@ async function loadPeers() {
   if (!D || D.status !== "active" || !D.online || D.ride) return;
   const x = await api("/api/d/peers"); if (!x || x.error) return;
   const ps = x.peers || [], free = ps.filter(p => !p.busy).length;
-  $("#peerBtn span").textContent = ps.length ? `${ps.length} · ${free} бош` : "0";
+  $("#peerBtn span").textContent = ps.length ? `${ps.length} · ${free} бош` : "0"; $("#peerBtn").dataset.tab = "🚗 " + (ps.length ? free : 0);
   $("#peerBtn").classList.toggle("on", peerOn);
   if (!peerOn) return;
   ps.forEach((p, i) => L.marker([p.lat, p.lon], {interactive:false, zIndexOffset:-100,
