@@ -387,7 +387,7 @@ function viewIdle(o) {
   if (P.work) rec.push({ico:"ic_briefcase", name:"Иш", lat:P.work.lat, lon:P.work.lon, addr:P.work.name});
   (P.recent || []).slice(0, 4).forEach(r => rec.push({ico:"c_trips", name:r.name, lat:r.lat, lon:r.lon}));
   render(`<div class="sx">
-    <button class="sx-srch" id="hSearch"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#16161a" stroke-width="2.6" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg><span id="sxT">Каяктан?</span><i class="sxb a" id="sxI">А</i><em>›</em></button>
+    <button class="sx-srch" id="hSearch"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#16161a" stroke-width="2.6" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg><span id="sxT">Каяктан?</span><i class="sxb a" id="sxI">А</i></button>
     <div class="sx-ab"><button id="pA"><i class="a">А</i><span>А точканы белгилеймин</span></button><button id="pB"><i class="b">Б</i><span>Б точканы белгилеймин</span></button></div>
     ${rec.length ? `<div class="sx-chips">${rec.map((r, i) => `<button data-i="${i}"><img src="/static/${r.ico}.webp?v=24" alt="">${esc(r.name)}</button>`).join("")}</div>` : ""}
     <div class="sx-cards">${has("delivery") ? `<button class="sx-cd" id="tDel"><b>Жеткирүү</b><small>Буюм, документ</small><img src="/static/h_box.webp?v=24" alt=""></button>` : ""}
