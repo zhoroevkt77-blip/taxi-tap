@@ -323,7 +323,7 @@ NEW_COLUMNS = {
                 "diag_dev": "TEXT", "diag_at": "REAL"},          # телефондон келген диагностика (GPS, үн, батарея…)                          # admin | park:<id> — ким бөгөттөдү                  # күндүк максат (сом)                # күбөлүктүн мөөнөтү YYYY-MM-DD                # таксопарк (жок болсо — өз алдынча)   # активдүүлүк 0..100 (Яндекс Pro'догудай)              # аймактан сыртка чыккан убакыт
     "balance_tx": {"claimed": "REAL"},
     "tariffs": {"inc_km": "REAL DEFAULT 0", "inc_min": "REAL DEFAULT 0"},   # отуруу баасына кирген км/мүн (Яндекстей)
-    "rides": {"offer_seen": "REAL",       # айдоочу сунушту көргөн убакыт
+    "rides": {"stops": "TEXT", "stop_i": "INTEGER", "offer_seen": "REAL",       # айдоочу сунушту көргөн убакыт
         "note": "TEXT", "source": "TEXT",   # source: web | phone (диспетчер)
               "est_min": "REAL",
               "cancel_reason": "TEXT", "accept_km": "REAL", "requeued": "INTEGER DEFAULT 0",                           # маршруттун пробкасыз убактысы (автоматтык баа үчүн)
@@ -1532,7 +1532,26 @@ def fixed_match(p_lat, p_lon, d_lat, d_lon):
     return None
 
 
-def quote(p_lat, p_lon, d_lat=None, d_lon=None, cls="econom"):
+MAX_STOPS = 3
+
+
+def route_via(p_lat, p_lon, stops, d_lat, d_lon):
+    """А → токтоочу жерлер → Б: бөлүктөрдүн суммасы."""
+    pts = [(p_lat, p_lon)] + [tuple(x) for x in stops] + [(d_lat, d_lon)]
+    km = mn = 0.0
+    coords, real = [], True
+    for a, b in zip(pts, pts[1:]):
+        r = route(a[0], a[1], b[0], b[1])
+        km += r["km"]; mn += r["min"]; real = real and r.get("real", False)
+        coords += (r.get("coords") or [])[1 if coords else 0:]
+    return {"km": km, "min": mn, "coords": coords, "real": real}
+
+
+def stop_fee():
+    return int((get_setting("finance") or {}).get("stop_fee", 0) or 0)
+
+
+def quote(p_lat, p_lon, d_lat=None, d_lon=None, cls="econom", stops=None):
     """Маршрут → баа (price_of). Баа заказ берилгенде белгиленет, жолдо өзгөрбөйт.
     prices — ар бир класстын баасы (класстын коэффициенти × тариф)."""
     city = city_of(p_lat, p_lon)
@@ -1548,19 +1567,23 @@ def quote(p_lat, p_lon, d_lat=None, d_lon=None, cls="econom"):
         return dict(base, dest_out=True)
     if d_lat is None:
         return base
-    rt = route(p_lat, p_lon, d_lat, d_lon)
+    stops = [x for x in (stops or []) if x and in_area(x[0], x[1])][:MAX_STOPS]
+    if stops:
+        base["stops"] = len(stops)
+    rt = route_via(p_lat, p_lon, stops, d_lat, d_lon) if stops else route(p_lat, p_lon, d_lat, d_lon)
     pk = traffic_k(city) or peak_k()                       # үйрөнгөн пробка, болбосо кол менен коюлган пик
     km, minutes = rt["km"], rt["min"] * pk                 # пик саатта жол узагыраак
     if pk > 1.05:
         base["peak"] = round(pk, 2)
     ak = auto_k(city)
-    fx = fixed_match(p_lat, p_lon, d_lat, d_lon)
+    fx = None if stops else fixed_match(p_lat, p_lon, d_lat, d_lon)
     if fx:
         prices = {c: int(round(fx["price"] * cfg[c]["k"] / 10.0) * 10) for c in cfg if cfg[c]["on"]}
         return dict(base, surge=1.0, dist_km=round(km, 1), minutes=round(minutes), price=prices[cls],
                     prices=prices, route=rt, fixed=fx["label"])
     ff, fkm = far_fee(p_lat, p_lon)
-    prices = {c: price_of(t, km, minutes, k * cfg[c]["k"] * ak) + ff for c in cfg if cfg[c]["on"]}
+    sf = stop_fee() * len(stops)
+    prices = {c: price_of(t, km, minutes, k * cfg[c]["k"] * ak) + ff + sf for c in cfg if cfg[c]["on"]}
     if ff:
         base["far_fee"], base["far_km"] = ff, round(fkm, 1)
     return dict(base, dist_km=round(km, 1), minutes=round(minutes), price=prices[cls],
@@ -1664,7 +1687,7 @@ def wait_fee_for(r, at=None):
 
 def create_ride(passenger, q, p_lat, p_lon, d_lat=None, d_lon=None, note=None, source="web",
                 promo=None, discount=0, scheduled_at=None, other_name=None, other_phone=None,
-                p_addr=None, d_addr=None):
+                p_addr=None, d_addr=None, stops=None):
     status = "scheduled" if scheduled_at else "searching"
     rid = query("INSERT INTO rides (passenger, city, p_lat, p_lon, d_lat, d_lon, dist_km, "
                 "price, surge, status, created_at, note, source, promo, discount, scheduled_at, "
@@ -1677,8 +1700,30 @@ def create_ride(passenger, q, p_lat, p_lon, d_lat=None, d_lon=None, note=None, s
     est = (q.get("route") or {}).get("min")
     if est:
         query("UPDATE rides SET est_min=? WHERE id=?", (est, rid))
+    if stops:
+        query("UPDATE rides SET stops=?, stop_i=0 WHERE id=?", (json.dumps(stops, ensure_ascii=False), rid))
     log_event(rid, status, passenger)
     return rid
+
+
+def ride_stops(r):
+    try:
+        return json.loads(r.get("stops") or "[]") if r else []
+    except (TypeError, ValueError):
+        return []
+
+
+def stop_done(rid, uid):
+    """Айдоочу: «✓ Токтоочу жерге келдим» — кийинки чекитке өтөт."""
+    r = get_ride(rid)
+    if not r or r["driver"] != uid or r["status"] != "in_trip":
+        return None
+    n, i = len(ride_stops(r)), int(r.get("stop_i") or 0)
+    if i >= n:
+        return i
+    query("UPDATE rides SET stop_i=? WHERE id=?", (i + 1, rid))
+    log_event(rid, "stop_%d" % (i + 1), uid)
+    return i + 1
 
 
 def get_ride(rid):
@@ -2671,12 +2716,16 @@ def finance_config():
     return {"percent": float(c.get("percent", COMMISSION_PCT)),
             "free_until": c.get("free_until") or None,          # "2027-01-01"
             "min_balance": float(c.get("min_balance", MIN_BALANCE)),
+            "stop_fee": int(c.get("stop_fee", 0) or 0),           # ар бир токтоочу жер үчүн, сом
             "tax_pct": float(c.get("tax_pct", 1.0)),             # киреше салыгы, % (жалпы иштегенден)
             "ins_pct": float(c.get("ins_pct", 1.0))}             # камсыздандыруу төгүмү, %
 
 
-def set_finance_config(percent, free_until=None, min_balance=0, tax_pct=None, ins_pct=None):
+def set_finance_config(percent, free_until=None, min_balance=0, tax_pct=None, ins_pct=None, stop_fee=None):
     old = finance_config()
+    stop_fee = old["stop_fee"] if stop_fee is None else int(stop_fee)
+    if not (0 <= stop_fee <= 500):
+        return False
     tax_pct = old["tax_pct"] if tax_pct is None else tax_pct
     ins_pct = old["ins_pct"] if ins_pct is None else ins_pct
     if not (0 <= percent <= 30) or not (-100000 <= min_balance <= 100000) or not (0 <= tax_pct <= 20) or not (0 <= ins_pct <= 20):
@@ -2687,7 +2736,8 @@ def set_finance_config(percent, free_until=None, min_balance=0, tax_pct=None, in
         except ValueError:
             return False
     set_setting("finance", {"percent": round(percent, 2), "free_until": free_until or None,
-                            "min_balance": min_balance, "tax_pct": round(tax_pct, 2), "ins_pct": round(ins_pct, 2)})
+                            "min_balance": min_balance, "tax_pct": round(tax_pct, 2), "ins_pct": round(ins_pct, 2),
+                            "stop_fee": stop_fee})
     return True
 
 

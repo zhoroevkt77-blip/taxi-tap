@@ -128,6 +128,18 @@ def _msgs(r, me):
             for m in core.messages(r["id"])]
 
 
+def _stops(raw):
+    """[[lat, lon, "дарек"], ...] → эң көп 3, туура чекиттер гана."""
+    out = []
+    for x in (raw if isinstance(raw, list) else [])[:core.MAX_STOPS]:
+        if isinstance(x, dict):
+            x = (x.get("p") or [None, None]) + [x.get("addr")]
+        pt = _point(x[:2]) if isinstance(x, (list, tuple)) and len(x) >= 2 else None
+        if pt:
+            out.append([pt[0], pt[1], _txt(x[2] if len(x) > 2 else "", 80) or ""])
+    return out
+
+
 def ride_view(r):
     """Сапар жүргүнчүнүн көзү менен."""
     if not r:
@@ -135,6 +147,7 @@ def ride_view(r):
     v = {k: r[k] for k in ("id", "status", "city", "price", "dist_km", "surge",
                            "p_lat", "p_lon", "d_lat", "d_lon", "cancel_by")}
     v["cls"] = r.get("cls") or "econom"
+    v["stops"], v["stop_i"] = core.ride_stops(r), int(r.get("stop_i") or 0)
     v["p_addr"], v["d_addr"] = r.get("p_addr"), r.get("d_addr")
     v["other_name"], v["other_phone"] = r.get("other_name"), r.get("other_phone")
     v["wait"] = _wait(r)
@@ -228,6 +241,7 @@ def driver_state(uid, seen=False):
                        "discount": o.get("discount") or 0, "cls": o.get("cls") or "econom",
                        "chained": bool(d.get("busy_ride")),
                        "p_addr": o.get("p_addr"), "d_addr": o.get("d_addr"),
+                       "stops": len(core.ride_stops(o)),
                        "p": [o["p_lat"], o["p_lon"]] if o.get("p_lat") is not None else None,
                        "d": [o["d_lat"], o["d_lon"]] if o.get("d_lat") is not None else None,
                        "surge": round(float(o.get("surge") or 1.0), 2),
@@ -255,6 +269,7 @@ def _driver_ride(r):
          "other_name": r.get("other_name"), "other_phone": r.get("other_phone"),
          "p_rating": p.get("p_rating") if (p.get("p_rated") or 0) >= 3 else None,
          "wait": _wait(r), "msgs": _msgs(r, r["driver"]),
+         "stops": core.ride_stops(r), "stop_i": int(r.get("stop_i") or 0),
          "d": [r["d_lat"], r["d_lon"]] if r["d_lat"] is not None else None}
     return v
 
@@ -605,7 +620,8 @@ class H(BaseHTTPRequestHandler):
             p, d = _point(b.get("p")), _point(b.get("d"))
             if not p:
                 return self._json({"error": "bad_point"}, 400)
-            q = core.quote(p[0], p[1], *(d or (None, None)))
+            stops = _stops(b.get("stops"))
+            q = core.quote(p[0], p[1], *(d or (None, None)), stops=stops)
             if not q["city"]:
                 return self._json({"error": "no_city"})
             if q.get("dest_out"):
@@ -619,6 +635,7 @@ class H(BaseHTTPRequestHandler):
                                "minutes": q.get("minutes"), "surge": q["surge"], "fixed": q.get("fixed"),
                                "peak": q.get("peak"), "route": (q.get("route") or {}).get("coords"),
                                "far_fee": q.get("far_fee"), "far_km": q.get("far_km"),
+                               "stops": q.get("stops") or 0, "stop_fee": core.stop_fee(),
                                "cancels": pc if pc >= core.P_CANCEL_WEEK else 0,
                                "dbg": {"city": q["city"], "base": t.get("base"), "per_km": t.get("per_km"), "per_min": t.get("per_min"),
                                        "min": t.get("min_price"), "inc_km": t.get("inc_km"), "inc_min": t.get("inc_min"),
@@ -642,7 +659,8 @@ class H(BaseHTTPRequestHandler):
                 return self._json({"error": "need_dest"}, 400)     # баа алдын ала белгилүү болушу керек
             if core.active_ride_of(uid):
                 return self._json({"error": "have_active"}, 409)
-            q = core.quote(p[0], p[1], *(d or (None, None)), cls=b.get("cls") or "econom")
+            stops = _stops(b.get("stops"))
+            q = core.quote(p[0], p[1], *(d or (None, None)), cls=b.get("cls") or "econom", stops=stops)
             if not q["city"]:
                 return self._json({"error": "no_city"}, 400)
             if q.get("dest_out"):
@@ -668,7 +686,8 @@ class H(BaseHTTPRequestHandler):
                                    scheduled_at=at, note=_txt(b.get("note"), 200) or None,
                                    other_name=other_name, other_phone=other_phone,
                                    p_addr=_txt(b.get("p_addr"), 80) or None,
-                                   d_addr=_txt(b.get("d_addr"), 80) or None if d else None)
+                                   d_addr=_txt(b.get("d_addr"), 80) or None if d else None,
+                                   stops=[{"p": [x[0], x[1]], "addr": x[2]} for x in stops] if stops and q.get("stops") else None)
             return self._json({"ride": ride_view(core.get_ride(rid))})
         if path == "/api/cancel":
             r = core.active_ride_of(uid)
@@ -745,6 +764,11 @@ class H(BaseHTTPRequestHandler):
 
     def _driver_post(self, uid, action, b):
         d = core.get_driver(uid)
+        if action == "stop_done":                      # «✓ Токтоочу жерге келдим»
+            i = core.stop_done(_num(b.get("id")) or 0, uid)
+            if i is None:
+                return self._json({"error": "no_ride"}, 409)
+            return self._json({"ok": True, "stop_i": i})
         if action == "register":
             if d and d["status"] in ("active", "blocked"):
                 return self._json({"error": "already"}, 409)
@@ -1159,8 +1183,8 @@ class H(BaseHTTPRequestHandler):
         if action == "finance":
             pct, mb = _num(b.get("percent")), _num(b.get("min_balance") or 0)
             fu = _txt(b.get("free_until"), 10) or None
-            tx, ins = _num(b.get("tax_pct")), _num(b.get("ins_pct"))
-            if pct is None or mb is None or not core.set_finance_config(pct, fu, mb, tx, ins):
+            tx, ins, sf = _num(b.get("tax_pct")), _num(b.get("ins_pct")), _num(b.get("stop_fee"))
+            if pct is None or mb is None or not core.set_finance_config(pct, fu, mb, tx, ins, sf):
                 return self._json({"error": "bad"}, 400)
             return self._json(core.admin_finance())
         if action == "area_title":

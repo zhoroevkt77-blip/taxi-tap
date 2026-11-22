@@ -50,6 +50,7 @@ input.f{width:100%;font-size:17px;padding:14px;border-radius:14px;border:1px sol
 #heatBtn.tucked.hot::before{color:#c2185b}
 .swhint{position:fixed;z-index:30;right:150px;background:#16161a;color:#fff;font-size:13px;font-weight:600;padding:7px 11px;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.3);animation:swh 2.6s ease forwards;pointer-events:none}.swhint::after{content:"";position:absolute;right:-6px;top:50%;margin-top:-6px;border:6px solid transparent;border-right:0;border-left-color:#16161a}@keyframes swh{0%{opacity:0;transform:translateX(-8px)}12%,80%{opacity:1;transform:none}100%{opacity:0}}
 #earn,#heatBtn,#peerBtn{position:relative}.peek{animation:peek 1s ease 3}@keyframes peek{50%{box-shadow:0 0 0 5px rgba(255,183,3,.55)}}
+.ocls.stp{background:#16161a;color:#ffd31a}.carm.ok{background:#1f9d55!important}.stl .row.dn{opacity:.5}.stl .row.cur{background:#fff6d6;border-radius:12px}.stn{background:#fff!important;color:#16161a!important;border:2px solid #16161a}.nowb{color:#b27700;font-size:13px}
 .offer{position:fixed;left:0;right:0;bottom:0;z-index:20;background:transparent;display:flex;align-items:flex-end;pointer-events:none}.offer .ocard{pointer-events:auto}
 .ocard{background:#fff;width:100%;border-radius:22px 22px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));animation:up .25s ease-out}
 @keyframes up{from{transform:translateY(40px);opacity:.5}to{transform:none;opacity:1}}
@@ -892,8 +893,10 @@ function viewRide() {
   layer.clearLayers();
   L.marker(r.p, {icon:icon("", "👤"), interactive:false}).addTo(layer);
   if (r.d) L.marker(r.d, {icon:icon("to", "Б"), interactive:false}).addTo(layer);
-  const target = r.status === "in_trip" ? r.d : r.p;
-  if (lastRide !== r.id + r.status && myPos && target) {
+  const sts = r.stops || [], si = r.stop_i || 0, nextStop = r.status === "in_trip" && si < sts.length ? sts[si] : null;
+  sts.forEach((x, i) => L.marker(x.p, {icon:icon(i < si ? "ok" : "", i < si ? "✓" : String(i + 1)), interactive:false}).addTo(layer));
+  const target = r.status === "in_trip" ? (nextStop ? nextStop.p : r.d) : r.p;
+  if (lastRide !== r.id + r.status + si && myPos && target) {
     // жол боюнча маршрут: айдоочудан → жүргүнчүгө, сапарда → бара турган жерге
     const line = L.polyline([myPos, target], {color:"#17365C", weight:4, dashArray:"6 8"}).addTo(layer);
     map.fitBounds(L.latLngBounds([myPos, target]), {paddingTopLeft:[40, 90], paddingBottomRight:[40, 360]});
@@ -905,7 +908,7 @@ function viewRide() {
       const el = $("#rinfo"); if (el) el.textContent = `${rt.km} км · ~${rt.min} мүн`;
     });
   }
-  lastRide = r.id + r.status;
+  lastRide = r.id + r.status + si;
   const del = r.cls === "delivery";
   const title = del ? {accepted:"Буюмду алууга барыңыз", arrived:"Буюмду алыңыз", in_trip:"Алуучуга жеткириңиз"}[r.status]
     : {accepted:"Жүргүнчүгө барыңыз", arrived:"Жүргүнчүнү күтүңүз", in_trip:"Сапар жүрүп жатат"}[r.status];
@@ -916,6 +919,7 @@ function viewRide() {
     <div class="row"><span class="bul lt">А</span><div style="flex:1"><b>${who}</b>${r.p_rating ? `<span class="muted"> · ★ ${r.p_rating}</span>` : ""}
       <div class="muted">${r.price ? r.price + " сом" : "Тариф боюнча"}${r.dist_km ? " · ~" + r.dist_km + " км" : ""}${r.p_addr ? " · " + esc(r.p_addr) : ""}</div></div></div>
     ${r.d ? (r.d_addr ? `<div class="row"><span class="bul to lt">Б</span><div>${esc(r.d_addr)}</div></div>` : "") : `<div class="row"><span class="bul to lt">Б</span><div class="muted">Бара турган жерин жүргүнчү өзү айтат</div></div>`}
+    ${sts.length ? `<div class="stl">${sts.map((x, i) => `<div class="row${i < si ? " dn" : i === si && r.status === "in_trip" ? " cur" : ""}"><span class="bul lt stn">${i < si ? "✓" : i + 1}</span><div>${esc(x.addr || "Токтоочу жер " + (i + 1))}${i === si && r.status === "in_trip" ? ` <b class="nowb">← азыр бул жерге</b>` : ""}</div></div>`).join("")}</div>` : ""}
     ${del && r.other_phone ? `<div class="note">📦 Алуучу: <a href="tel:${esc(r.other_phone)}">${esc(r.other_phone)}</a></div>` : ""}
     ${r.note ? `<div class="note">📝 ${esc(r.note)}</div>` : ""}
     ${r.status === "arrived" ? `<div class="note" id="wt">${waitText(r)}</div>` : r.wait && r.wait.fee ? `<div class="note">⏳ Күтүү акысы: +${r.wait.fee} сом (баага кошулду)</div>` : ""}
@@ -924,7 +928,7 @@ function viewRide() {
       <a href="#" id="nx" style="color:var(--bad)">Баш тартуу</a></div>` : ""}
     <div class="rbtns"><a href="tel:${esc(callPh)}"><span>📞</span>Чалуу</a><button id="chat" class="chatb"><span>💬<em id="chatN" class="hide"></em></span>Чат</button>
       ${target ? `<button id="navGo"><span>🧭</span>Навигатор</button>` : ""}<button id="rSos" class="sos"><span>🆘</span>Жардам</button></div>
-    <button class="btn ${next[1]}" id="step">${next[0]}</button>
+    ${nextStop ? `<button class="btn go" id="stopOk">✓ Токтоочу жерге келдим (${si + 1}/${sts.length})</button>` : `<button class="btn ${next[1]}" id="step">${next[0]}</button>`}
     ${r.status === "arrived" && r.wait && r.wait.arrived_at && r.wait.now - r.wait.arrived_at >= 300 ? `<button class="btn" id="noshow" style="background:#fff6dd">🙋 Жүргүнчү келбеди</button>` : ""}
     ${r.status !== "in_trip" ? `<button class="btn red" id="cx">Жокко чыгаруу</button>` : ""}`);
   $("#rSos").onclick = sosOpen;
@@ -933,7 +937,10 @@ function viewRide() {
   const nx = $("#nx"); if (nx) nx.onclick = async e => { e.preventDefault(); if (!confirm("Кийинки заказдан баш тартасызбы?")) return;
     D = await api("/api/d/cancel", {id:D.next.id}); lastView = ""; show(); };
   unread();
-  $("#step").onclick = async () => { $("#step").disabled = true; const prev = r; D = await api("/api/d/step", {id:r.id});
+  if ($("#stopOk")) $("#stopOk").onclick = async () => { $("#stopOk").disabled = true;
+    const x = await api("/api/d/stop_done", {id:r.id}); if (x.error) { toast("Болбой калды", 1500); }
+    D = await api("/api/d/state"); lastView = ""; show(); };
+  if ($("#step")) $("#step").onclick = async () => { $("#step").disabled = true; const prev = r; D = await api("/api/d/step", {id:r.id});
     if (prev.status === "in_trip" && (!D.ride || D.ride.id !== prev.id)) done(prev); else show(); };
   const cx = $("#cx");
   if (cx) cx.onclick = () => drvCancel(r);
@@ -1046,7 +1053,7 @@ function showOffer() {
   box.classList.remove("hide"); offerMap(o);
   const sk = o.surge && o.surge > 1.04 ? o.surge : 0;
   $("#ocard").innerHTML = `<div style="display:flex;align-items:center;gap:14px">
-      <div style="flex:1"><div class="muted ohead"><span class="ocls ${esc(o.cls || "econom")}">${ICON[o.cls] || "🚕"} ${esc((D.class_names || {})[o.cls] || (o.cls === "delivery" ? "Жеткирүү" : "Эконом"))}</span>${o.chained ? "🔁 Кийинки заказ · азыркы сапардан кийин" : "Жаңы заказ"}</div>
+      <div style="flex:1"><div class="muted ohead">${o.stops ? `<span class="ocls stp">🔁 ${o.stops} токтоочу жер</span>` : ""}<span class="ocls ${esc(o.cls || "econom")}">${ICON[o.cls] || "🚕"} ${esc((D.class_names || {})[o.cls] || (o.cls === "delivery" ? "Жеткирүү" : "Эконом"))}</span>${o.chained ? "🔁 Кийинки заказ · азыркы сапардан кийин" : "Жаңы заказ"}</div>
       <div class="ochips"><span>📍 ${o.to_pickup_km} км</span><span>⏱ ${Math.max(1, Math.round(o.to_pickup_km * 2.4))} мүн</span><span class="k">💵 ${o.price ? o.price + " с" : "Тариф"}</span>${o.p_rating ? `<span>⭐ ${o.p_rating}</span>` : ""}</div>
       <div class="muted">${o.has_dest ? "Сапар ~" + o.dist_km + " км" + (o.est_min ? " · " + o.est_min + " мүн" : "") : "Багытын жүргүнчү айтат"}</div>
       ${o.p_addr || o.d_addr ? `<div class="muted">${esc(o.p_addr || "")}${o.d_addr ? " → " + esc(o.d_addr) : ""}</div>` : ""}

@@ -128,6 +128,9 @@ body.pinup #map{top:-34vh}body.pinup .pin{top:calc(25vh - 46px)}
 .sx-ab button#pA:not(.done),.sx-ab button.next{animation:beat 1.3s ease-in-out infinite;transform-origin:center}
 @keyframes beat{0%,40%,100%{transform:scale(1)}12%{transform:scale(1.06)}24%{transform:scale(.97)}32%{transform:scale(1.04)}}
 @media (prefers-reduced-motion:reduce){.sx-ab button{animation:none!important}}
+.sx-ab.m3{grid-template-columns:repeat(3,minmax(0,1fr))}.sx-ab.m3 button{font-size:12.5px;padding:9px 6px;gap:5px;min-width:0}.sx-ab.m3 i{width:22px;height:22px}.sx-ab i.s{background:#fff;color:#16161a;border:2.5px dashed #16161a;font-size:16px}
+.stpm.ok{background:#1f9d55;color:#fff;border-color:#fff}
+.stpm{width:38px;height:38px;border-radius:50%;background:#fff;border:3px solid #16161a;display:grid;place-items:center;font-weight:800;font-size:18px;box-shadow:0 3px 10px rgba(0,0,0,.3)}
 .sx-ab i{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-weight:800;font-size:12px}.sx-ab i.a{background:#16161a;color:#ffd31a}.sx-ab i.b{background:#fff;color:#16161a;border:2.5px solid #16161a}
 .sxb{flex:none;margin-left:auto;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-weight:800;font-size:16px}.sxb.a{background:#16161a;color:#ffd31a}.sxb.b{background:#ffc61a;color:#16161a;border:2.5px solid #16161a}.sxb+em{margin-left:10px!important}
 .sx-srch input{flex:1;min-width:0;border:0;background:none;font:inherit;font-size:19px;font-weight:600;color:#16161a;outline:none;padding:0}.sx-srch input::placeholder{color:#55555f}
@@ -138,7 +141,7 @@ body.sxtyping .sx-ab,body.sxtyping .sx-chips,body.sxtyping .sx-cards,body.sxtypi
 .sx-chips{display:flex;gap:8px;margin:12px 0 2px;overflow-x:auto;scrollbar-width:none}.sx-chips::-webkit-scrollbar{display:none}
 .sx-chips button{flex:none;display:flex;align-items:center;gap:6px;white-space:nowrap;padding:9px 13px;border:0;border-radius:999px;background:#f3f3f6;font:inherit;font-size:15px;font-weight:600;max-width:220px;overflow:hidden;text-overflow:ellipsis}.sx-chips img{width:22px;height:22px;object-fit:contain}
 .sx-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}.sx-cd{border:0;border-radius:20px;padding:14px;height:108px;position:relative;overflow:hidden;background:#fff4c2;text-align:left;font:inherit;color:#16161a}.sx-cd.k{background:#16161a;color:#fff}.sx-cd.w{background:#fff;color:#16161a;border:1.5px solid #ececf0;box-shadow:0 4px 14px rgba(0,0,0,.07)}.sx-cd.w small{color:#6b6b75;opacity:1}
-.sx-cards .sx-cd:only-child{grid-column:1/-1}.sx-cd b{font-size:17px;display:block}.sx-cd small{font-size:13px;opacity:.75}.sx-cd img{position:absolute;right:-6px;bottom:-6px;width:84px}
+.sx-cards .sx-cd:only-child{grid-column:1/-1}.sx-cards .sx-cd:nth-child(3){grid-column:1/-1;height:92px}.sx-cd b{font-size:17px;display:block}.sx-cd small{font-size:13px;opacity:.75}.sx-cd img{position:absolute;right:-6px;bottom:-6px;width:84px}
 #drw{position:fixed;inset:0;z-index:60}.drw-dim{position:absolute;inset:0;background:rgba(0,0,0,.4);opacity:0;transition:opacity .25s}#drw.on .drw-dim{opacity:1}
 .drw-p{position:absolute;right:0;top:0;bottom:0;width:min(310px,84vw);background:#fff;border-radius:24px 0 0 24px;padding:calc(env(safe-area-inset-top,0px) + 34px) 20px 22px;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s cubic-bezier(.2,.8,.2,1);overflow-y:auto}
 #drw.on .drw-p{transform:none}
@@ -214,6 +217,15 @@ function abMark(p, cls, t, btn) {
   const m = L.marker(p, {interactive:!!can, zIndexOffset:800, icon:L.divIcon({className:"", iconSize:[46, 46], iconAnchor:[23, 23],
     html:`<div class="abwrap"><div class="carm ${cls} abig">${t}</div>${can ? `<span class="abchg">✎ Өзгөртүү</span>` : ""}</div>`})}).addTo(rideLayer);
   if (can) m.on("click", () => { const b = document.querySelector(btn); if (b) b.click(); });
+}
+// Токтоочу жерлердин белгилери (1, 2, 3) + А→…→Б боз сызык
+const stopLayer = L.layerGroup().addTo(map);
+function drawStops() {
+  stopLayer.clearLayers(); const st = S.stops || []; if (!S.multi || !st.length) return;
+  st.forEach((x, i) => L.marker(x.p, {interactive:false, zIndexOffset:700, icon:L.divIcon({className:"", iconSize:[38, 38], iconAnchor:[19, 19],
+    html:`<div class="stpm">${i + 1}</div>`})}).addTo(stopLayer));
+  const pts = [S.from].concat(st.map(x => x.p)).filter(Boolean);
+  if (pts.length > 1) L.polyline(pts, {color:"#16161a", weight:3, dashArray:"6 7", opacity:.6}).addTo(stopLayer);
 }
 function showA(on) { aLayer.clearLayers(); if (on && S.from) L.marker(S.from, {icon:icon("", "А"), interactive:false}).addTo(aLayer); }
 
@@ -409,7 +421,7 @@ function viewIdle(o) {
   document.body.classList.remove("cabsolo"); if (!(o && o.keep)) S.keepTo = null;            // Жөнөкөй башкы бет: карта + борбордо пин + ылдыйда «Каякка барасыз?»
   navOn("home");
   S.mode = "idle"; S.to = null; S.quote = null; S.hnT = ""; S.lmT = ""; setPin("from"); showA(false);
-  o = o || {}; if (!o.keep) { S.openWhen = S.openOther = false; S.cls = "econom"; }
+  o = o || {}; if (!o.keep) { S.openWhen = S.openOther = false; S.cls = "econom"; S.multi = false; S.stops = []; stopLayer.clearLayers(); }
   rideLayer.clearLayers(); driverMarker = null;
   const N = S.near || {}, has = c => (N.classes || ["econom", "delivery"]).includes(c);
   const P = PLACES && !PLACES.error ? PLACES : {recent:[]};
@@ -420,10 +432,11 @@ function viewIdle(o) {
   render(`<div class="sx">
     <div class="sx-srch" id="hSearch"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#16161a" stroke-width="2.6" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg><input id="sxQ" type="search" autocomplete="off" enterkeyhint="search" placeholder="Каяктан?"><button class="sxx hide" id="sxX" aria-label="Тазалоо">✕</button><i class="sxb a" id="sxI">А</i></div>
     <div class="sx-res hide" id="sxRes"></div>
-    <div class="sx-ab"><button id="pA"><i class="a">А</i><span>А точканы белгилеймин</span></button><button id="pB"><i class="b">Б</i><span>Б точканы белгилеймин</span></button></div>
+    <div class="sx-ab${S.multi ? " m3" : ""}"><button id="pA"><i class="a">А</i><span>А точканы белгилеймин</span></button>${S.multi ? `<button id="pS" class="stp"><i class="s">+</i><span>Токтоочу жер (${(S.stops || []).length + 1})</span></button>` : ""}<button id="pB"><i class="b">Б</i><span>Б точканы белгилеймин</span></button></div>
     ${rec.length ? `<div class="sx-chips">${rec.map((r, i) => `<button data-i="${i}"><img src="/static/${r.ico}.webp?v=24" alt="">${esc(r.name)}</button>`).join("")}</div>` : ""}
     <div class="sx-cards">${has("delivery") ? `<button class="sx-cd" id="tDel"><b>Жеткирүү</b><small>Буюм, документ</small><img src="/static/h_box.webp?v=24" alt=""></button>` : ""}
-      <button class="sx-cd w" id="tOther"><b>Башка адамга</b><small>Такси чакыруу</small><img src="/static/h_girl.webp?v=25" alt=""></button></div>
+      <button class="sx-cd w" id="tOther"><b>Башка адамга</b><small>Такси чакыруу</small><img src="/static/h_girl.webp?v=25" alt=""></button>
+      <button class="sx-cd w" id="tMulti"><b>Бир нече дарекке</b><small>Жолдо токтоп өтүү</small><img src="/static/c_addr.webp?v=24" alt=""></button></div>
     <p class="hnote" id="nearMsg">${esc(S.nearMsg || "")}</p></div>`);
   homeOn(false);
   // Издөө тилкеси: адегенде «Каяктан? А», А тандалгандан кийин «Каякка барасыз? Б»
@@ -451,10 +464,18 @@ function viewIdle(o) {
   };
   if ($("#tDel")) $("#tDel").onclick = () => { S.cls = "delivery"; S.openOther = false; viewStepA(); };
   $("#tOther").onclick = () => { S.openOther = true; S.cls = "econom"; viewStepA(); };
+  // Бир нече дарекке: А → 1 → 2 → 3 → Б
+  $("#tMulti").onclick = () => { S.multi = true; S.stops = []; S.cls = "econom"; viewIdle({keep:true});
+    toast("Адегенде А точканы, анан токтоочу жерлерди, акырында Б точканы белгилеңиз", 2800); };
+  if ($("#pS")) $("#pS").onclick = () => {
+    if (!S.aSet) return toast("Адегенде А точканы белгилеңиз", 1800);
+    if ((S.stops || []).length >= 3) return toast("Эң көп 3 токтоочу жер", 1800);
+    const c = map.getCenter(); S.stops.push({p:[c.lat, c.lng], addr:pinAddr()}); drawStops(); picked(String(S.stops.length));
+    $("#pS").querySelector("span").textContent = S.stops.length >= 3 ? "Токтоочу жерлер: 3" : `Токтоочу жер (${S.stops.length + 1})`; };
   // Ошол эле жерден: пин турган жер А болот, анан пин Б'га айланат; экинчи басуу — Б, анан баа
   const pinAddr = () => { const t = $("#chipAddr").textContent; return t && t !== "…" ? t : "Картадагы чекит"; };
   const markA = (quiet) => {
-    S.mode = "pickDest"; setPin("to"); showA(true);
+    S.mode = "pickDest"; setPin("to"); showA(true); drawStops();
     const a = $("#pA"); a.classList.add("done"); a.querySelector("span").innerHTML = `<small>А ✓</small>${esc(S.fromAddr || "")}`;
     S.aSet = true; $("#sxQ").placeholder = S.cls === "delivery" ? "Кайда жеткирилет?" : "Каякка барасыз?"; $("#sxI").textContent = "Б"; $("#sxI").className = "sxb b";
     $("#pB").classList.add("next"); if (!quiet) toast("Эми картаны жылдырып, Б точканы белгилеңиз", 2200); };
@@ -720,10 +741,10 @@ function viewPickDest(save) {
 }
 
 async function viewQuote() {
-  S.mode = "quote"; setPin(null); showA(false);
+  S.mode = "quote"; setPin(null); showA(false); stopLayer.clearLayers();
   drawRoute(null, false);
   render(`<p class="muted">Маршрут жана баа эсептелүүдө…</p>`);
-  const q = await api("/api/quote", {p:S.from, d:S.to});
+  const q = await api("/api/quote", {p:S.from, d:S.to, stops:(S.multi && S.stops && S.stops.length ? S.stops.map(x => [x.p[0], x.p[1], x.addr || ""]) : undefined)});
   if (q.route) { routeSeq++; drawRoute(q.route); }
   if (q.error) { render(`<h2>Кечиресиз</h2><p class="muted">${q.error === "dest_out"
       ? `Такси ТАП! ${esc(window.AREA && AREA.label ? AREA.label + " аймагынын" : "иштөө аймагынын")} ичинде гана иштейт. Шаар аралык каттамдарга бара албайбыз.`
@@ -732,7 +753,8 @@ async function viewQuote() {
   if (!q.classes.some(c => c.id === S.cls)) S.cls = q.classes[0].id;
   const ICON = {econom:'<img class="clsimg side" src="/static/car_sary.webp?v=4" alt="">', comfort:"🚘", minivan:"🚐",
     delivery:'<img class="clsimg" src="/static/h_box.webp?v=24" alt="">'};
-  const sub = q.price ? `${q.dist_km} км · ~${q.minutes} мүн${q.peak && !q.fixed ? " · 🚦 пик саат" : ""}` : `отуруу ${Math.round(q.tariff.base)} с + ${Math.round(q.tariff.per_km)} с/км`;
+  const stTxt = q.stops ? ` · 🔁 ${q.stops} токтоочу жер${q.stop_fee ? ` (+${q.stop_fee * q.stops} с)` : ""}` : "";
+  const sub = q.price ? `${q.dist_km} км${stTxt} · ~${q.minutes} мүн${q.peak && !q.fixed ? " · 🚦 пик саат" : ""}` : `отуруу ${Math.round(q.tariff.base)} с + ${Math.round(q.tariff.per_km)} с/км`;
   const cxWarn = q.cancels ? `<div class="farn">⚠️ Акыркы күндөрү ${q.cancels} заказды жокко чыгардыңыз. Айдоочулар сизге жол басып келишет — заказ бергенден кийин жокко чыгарбаңыз 🙏</div>` : "";
   const dbg = q.dbg ? `<div class="muted" style="font-size:12px;margin-top:4px">🛠 Админ үчүн: тариф «${esc(q.dbg.city || "?")}»${q.dbg.saved ? "" : " (сакталган эмес — демейки!)"} · ${q.dbg.base}/${q.dbg.inc_km || 0}км/${q.dbg.inc_min || 0}мүн/${q.dbg.per_km}/${q.dbg.per_min}/мин ${q.dbg.min} · коэф. ×${(+q.dbg.surge || 1).toFixed(2)} · авто ×${(+q.dbg.auto || 1).toFixed(2)}${q.dbg.fixed ? " · туруктуу баа" : ""}</div>` : "";
   const farTxt = dbg + cxWarn + (q.far_fee ? `<div class="farn">🚗 Жакынкы айдоочу ~${q.far_km} км алыста · алыс подача <b>+${q.far_fee} с</b> (баага кирди)</div>` : "");
@@ -811,7 +833,7 @@ async function viewQuote() {
     const oth = del ? {other_phone:S.dPh || "", other_name:(S.dNm || "").trim() || "Алуучу"}
       : $("#oPh") && $("#oPh").value.trim() ? {other_phone:$("#oPh").value, other_name:$("#oNm").value} : {};
     $("#order").disabled = true;
-    const r = await api("/api/order", {p:S.from, d:S.to, promo:S.promo, at:S.at, cls:S.cls, note:nt,
+    const r = await api("/api/order", {p:S.from, d:S.to, stops:(S.multi && S.stops && S.stops.length ? S.stops.map(x => [x.p[0], x.p[1], x.addr || ""]) : undefined), promo:S.promo, at:S.at, cls:S.cls, note:nt,
       p_addr:withLm(withHn(S.fromAddr, $("#hnF").value), $("#lmF").value), d_addr:withLm(withHn(S.toAddr, $("#hnT").value), $("#lmT").value), ...oth});
     if (r.ride) { S.ride = r.ride; viewRide(); poll(); }
     else { $("#order").disabled = false; alertBox(r.error === "have_active" ? "Сизде активдүү заказ бар."
@@ -835,12 +857,16 @@ function drawRoute(coords, fetchIt = true) {
   abMark(a, "", "А", "#chgA");
   if (!b) { map.setView(a, 16); return; }
   abMark(b, "mine", "Б", "#chgB");
+  const sts = S.ride ? (S.ride.stops || []) : (S.multi ? S.stops || [] : []);
+  sts.forEach((x, i) => L.marker(x.p, {interactive:false, zIndexOffset:700, icon:L.divIcon({className:"", iconSize:[38, 38], iconAnchor:[19, 19],
+    html:`<div class="stpm${S.ride && i < (S.ride.stop_i || 0) ? " ok" : ""}">${S.ride && i < (S.ride.stop_i || 0) ? "✓" : i + 1}</div>`})}).addTo(rideLayer));
+  if (sts.length) fetchIt = false;            // жол сервердеги q.route менен келет
   const show = pts => {
     if (routeLine) routeLine.remove();
     const real = pts && pts.length > 2;
-    routeLine = L.polyline(real ? pts : [a, b], real ? {color:"#17365C", weight:5, opacity:.85}
+    routeLine = L.polyline(real ? pts : [a].concat(sts.map(x => x.p), [b]), real ? {color:"#17365C", weight:5, opacity:.85}
                                                     : {color:"#17365C", weight:4, dashArray:"6 8"}).addTo(rideLayer);
-    map.fitBounds(L.latLngBounds(real ? pts : [a, b]), {paddingTopLeft:[40, 90], paddingBottomRight:[40, 340]});
+    map.fitBounds(L.latLngBounds(real ? pts : [a].concat(sts.map(x => x.p), [b])), {paddingTopLeft:[40, 90], paddingBottomRight:[40, 340]});
   };
   if (coords) return show(coords);
   show(null);
