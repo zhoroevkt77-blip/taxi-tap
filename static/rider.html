@@ -119,7 +119,7 @@ body.ridp #bnav,body.ridp .top .modepill,body.ridp #menuBtn{display:none!importa
 .sx-ab i{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-weight:800;font-size:12px}.sx-ab i.a{background:#16161a;color:#ffd31a}.sx-ab i.b{background:#fff;color:#16161a;border:2.5px solid #16161a}
 .sx-chips{display:flex;gap:8px;margin:12px 0 2px;overflow-x:auto;scrollbar-width:none}.sx-chips::-webkit-scrollbar{display:none}
 .sx-chips button{flex:none;display:flex;align-items:center;gap:6px;white-space:nowrap;padding:9px 13px;border:0;border-radius:999px;background:#f3f3f6;font:inherit;font-size:15px;font-weight:600;max-width:220px;overflow:hidden;text-overflow:ellipsis}.sx-chips img{width:22px;height:22px;object-fit:contain}
-.sx-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}.sx-cd{border:0;border-radius:20px;padding:14px;height:108px;position:relative;overflow:hidden;background:#fff4c2;text-align:left;font:inherit;color:#16161a}.sx-cd.k{background:#16161a;color:#fff}
+.sx-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}.sx-cd{border:0;border-radius:20px;padding:14px;height:108px;position:relative;overflow:hidden;background:#fff4c2;text-align:left;font:inherit;color:#16161a}.sx-cd.k{background:#16161a;color:#fff}.sx-cd.w{background:#fff;color:#16161a;border:1.5px solid #ececf0;box-shadow:0 4px 14px rgba(0,0,0,.07)}.sx-cd.w small{color:#6b6b75;opacity:1}
 .sx-cards .sx-cd:only-child{grid-column:1/-1}.sx-cd b{font-size:17px;display:block}.sx-cd small{font-size:13px;opacity:.75}.sx-cd img{position:absolute;right:-6px;bottom:-6px;width:84px}
 #drw{position:fixed;inset:0;z-index:60}.drw-dim{position:absolute;inset:0;background:rgba(0,0,0,.4);opacity:0;transition:opacity .25s}#drw.on .drw-dim{opacity:1}
 .drw-p{position:absolute;right:0;top:0;bottom:0;width:min(310px,84vw);background:#fff;border-radius:24px 0 0 24px;padding:calc(env(safe-area-inset-top,0px) + 34px) 20px 22px;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s cubic-bezier(.2,.8,.2,1);overflow-y:auto}
@@ -362,7 +362,7 @@ function viewIdle() {            // Жөнөкөй башкы бет: карта
     <div class="sx-ab"><button id="pA"><i class="a">А</i><span>А точканы белгилеймин</span></button><button id="pB"><i class="b">Б</i><span>Б точканы белгилеймин</span></button></div>
     ${rec.length ? `<div class="sx-chips">${rec.map((r, i) => `<button data-i="${i}"><img src="/static/${r.ico}.webp?v=24" alt="">${esc(r.name)}</button>`).join("")}</div>` : ""}
     <div class="sx-cards">${has("delivery") ? `<button class="sx-cd" id="tDel"><b>Жеткирүү</b><small>Буюм, документ</small><img src="/static/h_box.webp?v=24" alt=""></button>` : ""}
-      <button class="sx-cd k" id="tOther"><b>Башка адамга</b><small>Такси чакыруу</small><img src="/static/h_girl.webp?v=25" alt=""></button></div>
+      <button class="sx-cd w" id="tOther"><b>Башка адамга</b><small>Такси чакыруу</small><img src="/static/h_girl.webp?v=25" alt=""></button></div>
     <p class="hnote" id="nearMsg">${esc(S.nearMsg || "")}</p></div>`);
   homeOn(false);
   $("#hSearch").onclick = () => { S.cls = "econom"; if (S.from) { picked("А"); viewStepB(); } else viewStepA(); };
