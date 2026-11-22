@@ -129,6 +129,7 @@ body.pinup #map{top:-34vh}body.pinup .pin{top:calc(25vh - 46px)}
 @keyframes beat{0%,40%,100%{transform:scale(1)}12%{transform:scale(1.06)}24%{transform:scale(.97)}32%{transform:scale(1.04)}}
 @media (prefers-reduced-motion:reduce){.sx-ab button{animation:none!important}}
 .sx-ab.m3{grid-template-columns:repeat(3,minmax(0,1fr))}.sx-ab.m3 button{font-size:12.5px;padding:9px 6px;gap:5px;min-width:0}.sx-ab.m3 i{width:22px;height:22px}.sx-ab i.s{background:#fff;color:#16161a;border:2.5px dashed #16161a;font-size:16px}
+.mbar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:10px 0 0;padding:8px 10px;border-radius:14px;background:#16161a;color:#fff;font-size:14px;font-weight:700}.mbar span{flex:1;min-width:120px}.mbar button{border:0;border-radius:10px;padding:7px 10px;font:inherit;font-size:13px;font-weight:700;background:#ffd31a;color:#16161a}.mbar #mX{background:#fff}
 .stpm.ok{background:#1f9d55;color:#fff;border-color:#fff}
 .stpm{width:38px;height:38px;border-radius:50%;background:#fff;border:3px solid #16161a;display:grid;place-items:center;font-weight:800;font-size:18px;box-shadow:0 3px 10px rgba(0,0,0,.3)}
 .sx-ab i{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-weight:800;font-size:12px}.sx-ab i.a{background:#16161a;color:#ffd31a}.sx-ab i.b{background:#fff;color:#16161a;border:2.5px solid #16161a}
@@ -432,7 +433,9 @@ function viewIdle(o) {
   render(`<div class="sx">
     <div class="sx-srch" id="hSearch"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#16161a" stroke-width="2.6" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg><input id="sxQ" type="search" autocomplete="off" enterkeyhint="search" placeholder="Каяктан?"><button class="sxx hide" id="sxX" aria-label="Тазалоо">✕</button><i class="sxb a" id="sxI">А</i></div>
     <div class="sx-res hide" id="sxRes"></div>
-    <div class="sx-ab${S.multi ? " m3" : ""}"><button id="pA"><i class="a">А</i><span>А точканы белгилеймин</span></button>${S.multi ? `<button id="pS" class="stp"><i class="s">+</i><span>Токтоочу жер (${(S.stops || []).length + 1})</span></button>` : ""}<button id="pB"><i class="b">Б</i><span>Б точканы белгилеймин</span></button></div>
+    ${S.multi ? `<div class="mbar"><span>🔁 Бир нече дарек${(S.stops || []).length ? ` · ${S.stops.length} токтоочу жер` : ""}</span>
+      ${(S.stops || []).length ? `<button id="mUndo">↶ Акыркысын өчүрүү</button>` : ""}<button id="mX">✕ Жокко чыгаруу</button></div>` : ""}
+    <div class="sx-ab${S.multi ? " m3" : ""}"><button id="pA"><i class="a">А</i><span>А точканы белгилеймин</span></button>${S.multi ? `<button id="pS" class="stp"><i class="s">+</i><span>${(S.stops || []).length >= 3 ? "Токтоочу жерлер: 3" : `Токтоочу жер (${(S.stops || []).length + 1})`}</span></button>` : ""}<button id="pB"><i class="b">Б</i><span>Б точканы белгилеймин</span></button></div>
     ${rec.length ? `<div class="sx-chips">${rec.map((r, i) => `<button data-i="${i}"><img src="/static/${r.ico}.webp?v=24" alt="">${esc(r.name)}</button>`).join("")}</div>` : ""}
     <div class="sx-cards">${has("delivery") ? `<button class="sx-cd" id="tDel"><b>Жеткирүү</b><small>Буюм, документ</small><img src="/static/h_box.webp?v=24" alt=""></button>` : ""}
       <button class="sx-cd w" id="tOther"><b>Башка адамга</b><small>Такси чакыруу</small><img src="/static/h_girl.webp?v=25" alt=""></button>
@@ -467,11 +470,13 @@ function viewIdle(o) {
   // Бир нече дарекке: А → 1 → 2 → 3 → Б
   $("#tMulti").onclick = () => { S.multi = true; S.stops = []; S.cls = "econom"; viewIdle({keep:true});
     toast("Адегенде А точканы, анан токтоочу жерлерди, акырында Б точканы белгилеңиз", 2800); };
+  if ($("#mX")) $("#mX").onclick = () => { S.multi = false; S.stops = []; stopLayer.clearLayers(); viewIdle({keep:true}); toast("Бир нече дарек жокко чыгарылды", 1600); };
+  if ($("#mUndo")) $("#mUndo").onclick = () => { S.stops.pop(); drawStops(); const a = S.aSet; viewIdle({keep:true, b:a}); };
   if ($("#pS")) $("#pS").onclick = () => {
     if (!S.aSet) return toast("Адегенде А точканы белгилеңиз", 1800);
     if ((S.stops || []).length >= 3) return toast("Эң көп 3 токтоочу жер", 1800);
     const c = map.getCenter(); S.stops.push({p:[c.lat, c.lng], addr:pinAddr()}); drawStops(); picked(String(S.stops.length));
-    $("#pS").querySelector("span").textContent = S.stops.length >= 3 ? "Токтоочу жерлер: 3" : `Токтоочу жер (${S.stops.length + 1})`; };
+    viewIdle({keep:true, b:true}); };
   // Ошол эле жерден: пин турган жер А болот, анан пин Б'га айланат; экинчи басуу — Б, анан баа
   const pinAddr = () => { const t = $("#chipAddr").textContent; return t && t !== "…" ? t : "Картадагы чекит"; };
   const markA = (quiet) => {
@@ -479,7 +484,7 @@ function viewIdle(o) {
     const a = $("#pA"); a.classList.add("done"); a.querySelector("span").innerHTML = `<small>А ✓</small>${esc(S.fromAddr || "")}`;
     S.aSet = true; $("#sxQ").placeholder = S.cls === "delivery" ? "Кайда жеткирилет?" : "Каякка барасыз?"; $("#sxI").textContent = "Б"; $("#sxI").className = "sxb b";
     $("#pB").classList.add("next"); if (!quiet) toast("Эми картаны жылдырып, Б точканы белгилеңиз", 2200); };
-  $("#pA").onclick = () => { if (S.aSet) { S.aSet = false; return viewIdle({keep:true}); }   // кайра басса — А'ны кайра тандоо
+  $("#pA").onclick = () => { if (S.aSet) { S.aSet = false; if (S.stops && S.stops.length) { S.stops = []; stopLayer.clearLayers(); } return viewIdle({keep:true}); }   // кайра басса — А'ны кайра тандоо
     const c = map.getCenter(); S.from = [c.lat, c.lng]; S.fromAddr = pinAddr(); picked("А");
     if (S.keepTo) { S.to = S.keepTo.to; S.toAddr = S.keepTo.addr; S.keepTo = null; return viewQuote(); }
     markA(); };
