@@ -388,8 +388,6 @@ button.state{white-space:normal!important;line-height:1.2;text-align:center;max-
 .stile img{height:84px;max-width:46%}
 .stile b{font-size:16.5px}
 .tile.big .art{-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 40%),linear-gradient(180deg,transparent 0,#000 16%);-webkit-mask-composite:source-in;mask-image:linear-gradient(90deg,transparent 0,#000 40%),linear-gradient(180deg,transparent 0,#000 16%);mask-composite:intersect}
-#tOther b{font-size:15px;line-height:1.25}
-#tOther img{max-width:38%;height:78px}#tOther{gap:4px}
 .tools{flex-wrap:wrap;justify-content:flex-end;max-width:132px}
 .r2{display:flex;gap:8px;align-items:center}.r2 .tbtn{width:50px;height:50px;font-size:22px}
 .pinI{height:16px;vertical-align:-3px;margin-right:5px}.logo img{border-radius:10px;background:#000}
@@ -817,7 +815,6 @@ html.uidark .tapchip{background:#23242b;color:#f2f2f5}
 .rolesw a.r.y{box-shadow:inset 0 0 0 1.5px #ffd24d}.rolesw a.r.g{box-shadow:inset 0 0 0 1.5px #5cc79a}
 html.uidark .rolesw .r:not(.on){background:#23242b;color:#f2f2f5}
 .cclist>button.dgc .yi{background:#ffc61a;border-radius:14px}
-#tOther img{height:104px!important;max-width:44%!important;margin:-4px -2px -8px 0}
 /* Тунук жазуу: кара түс тереңирээк, боз жазуу караңгыраак, жазуулар сызыктуу так (geometricPrecision) */
 html:not(.uidark){--ink:#0f0f12;--navy:#0f0f12;--soft:#45454f}
 html,body{text-rendering:geometricPrecision;font-synthesis:none;-webkit-text-size-adjust:100%}
