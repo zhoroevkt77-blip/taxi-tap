@@ -118,6 +118,7 @@ body.ridp #bnav,body.ridp .top .modepill,body.ridp #menuBtn{display:none!importa
 body.cabsolo #home>*:not(#cabMore):not(.solohd){display:none!important}
 body.cabsolo #cabMore .lnks>h3:first-child{display:none}body.cabsolo #cabMore{text-align:left;margin-top:4px}
 .solohd{display:flex;align-items:center;gap:12px;margin:0 0 12px}.solohd button{width:46px;height:46px;border-radius:50%;border:0;background:#fff;box-shadow:0 3px 10px rgba(0,0,0,.12);font-size:28px;font-weight:700;line-height:1}.solohd b{font-size:24px}
+.chg{flex:none;margin-left:6px;border:0;background:#fff4c2;color:#16161a;font:inherit;font-size:13.5px;font-weight:700;border-radius:12px;padding:9px 10px}
 .sx-ab{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 0}.sx-ab button{display:flex;align-items:center;gap:8px;border:1.5px solid #ffe08a;background:#fffbea;border-radius:16px;padding:11px 10px;font:inherit;font-size:14.5px;font-weight:700;color:#16161a;text-align:left;line-height:1.15}.sx-ab button.done{background:#16161a;color:#fff;border-color:#16161a}.sx-ab button.done small{display:block;font-size:11px;color:#ffd31a}.sx-ab button.done span{overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.sx-ab button.next{background:#ffd31a;border-color:#f0b400;animation:nxt 1.2s ease 2}@keyframes nxt{50%{transform:scale(1.04)}}
 .sx-ab i{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-weight:800;font-size:12px}.sx-ab i.a{background:#16161a;color:#ffd31a}.sx-ab i.b{background:#fff;color:#16161a;border:2.5px solid #16161a}
 .sxb{flex:none;margin-left:auto;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-weight:800;font-size:16px}.sxb.a{background:#16161a;color:#ffd31a}.sxb.b{background:#ffc61a;color:#16161a;border:2.5px solid #16161a}.sxb+em{margin-left:10px!important}
@@ -366,7 +367,7 @@ function viewStepA() { viewIdle({keep:true}); if (S.cls === "delivery") toast("�
   else if (S.openOther) toast("Ал кишини кайдан алып кетсин? Пинди коюп, «А точканы белгилеймин» басыңыз", 2600); }
 function viewStepB() { viewIdle({keep:true, b:true}); }
 function viewIdle(o) {
-  document.body.classList.remove("cabsolo");            // Жөнөкөй башкы бет: карта + борбордо пин + ылдыйда «Каякка барасыз?»
+  document.body.classList.remove("cabsolo"); if (!(o && o.keep)) S.keepTo = null;            // Жөнөкөй башкы бет: карта + борбордо пин + ылдыйда «Каякка барасыз?»
   navOn("home");
   S.mode = "idle"; S.to = null; S.quote = null; S.hnT = ""; S.lmT = ""; setPin("from"); showA(false);
   o = o || {}; if (!o.keep) { S.openWhen = S.openOther = false; S.cls = "econom"; }
@@ -398,7 +399,9 @@ function viewIdle(o) {
     S.aSet = true; $("#sxT").textContent = S.cls === "delivery" ? "Кайда жеткирилет?" : "Каякка барасыз?"; $("#sxI").textContent = "Б"; $("#sxI").className = "sxb b";
     $("#pB").classList.add("next"); if (!quiet) toast("Эми картаны жылдырып, Б точканы белгилеңиз", 2200); };
   $("#pA").onclick = () => { if (S.aSet) { S.aSet = false; return viewIdle({keep:true}); }   // кайра басса — А'ны кайра тандоо
-    const c = map.getCenter(); S.from = [c.lat, c.lng]; S.fromAddr = pinAddr(); picked("А"); markA(); };
+    const c = map.getCenter(); S.from = [c.lat, c.lng]; S.fromAddr = pinAddr(); picked("А");
+    if (S.keepTo) { S.to = S.keepTo.to; S.toAddr = S.keepTo.addr; S.keepTo = null; return viewQuote(); }
+    markA(); };
   if (o.b && S.from) { markA(true); if (S.to) map.setView(S.to, map.getZoom()); }
   $("#pB").onclick = () => { const c = map.getCenter();
     if (S.mode !== "pickDest") {           // А белгиленбесе — А = сиз турган жер (GPS)
@@ -675,9 +678,9 @@ async function viewQuote() {
   const farTxt = dbg + cxWarn + (q.far_fee ? `<div class="farn">🚗 Жакынкы айдоочу ~${q.far_km} км алыста · алыс подача <b>+${q.far_fee} с</b> (баага кирди)</div>` : "");
   const cur = () => q.classes.find(c => c.id === S.cls);
   const priceTxt = c => c.price ? `${c.price} с` : `${c.min} с+`;
-  render(`<div class="row"><span class="bul lt">А</span><div style="flex:1"><b>${esc(S.fromAddr)}</b></div><input class="hn" id="hnF" placeholder="үй №" maxlength="12" value="${esc(S.hnF || "")}"></div>
+  render(`<div class="row"><span class="bul lt">А</span><div style="flex:1"><b>${esc(S.fromAddr)}</b></div><input class="hn" id="hnF" placeholder="үй №" maxlength="12" value="${esc(S.hnF || "")}"><button class="chg" id="chgA">Өзгөртүү</button></div>
     <input class="f lm" id="lmF" maxlength="60" placeholder="А белгиси: мис. көк дарбаза, дүкөндүн алдында" value="${esc(S.lmF || "")}">
-    <div class="row"><span class="bul to lt">Б</span><div style="flex:1"><b>${esc(S.toAddr)}</b></div><input class="hn" id="hnT" placeholder="үй №" maxlength="12" value="${esc(S.hnT || "")}"></div>
+    <div class="row"><span class="bul to lt">Б</span><div style="flex:1"><b>${esc(S.toAddr)}</b></div><input class="hn" id="hnT" placeholder="үй №" maxlength="12" value="${esc(S.hnT || "")}"><button class="chg" id="chgB">Өзгөртүү</button></div>
     <input class="f lm" id="lmT" maxlength="60" placeholder="Б белгиси (милдеттүү эмес)" value="${esc(S.lmT || "")}">
     <div class="cls" id="cls">${q.classes.map(c => `<div data-c="${c.id}"><i>${ICON[c.id] || "🚕"}</i><div class="muted">${esc(c.name)}</div><b>${priceTxt(c)}${q.surge > 1 && c.price ? `<s>${Math.round(c.price / q.surge / 10) * 10} с</s>` : ""}</b></div>`).join("")}</div>
     ${q.fixed ? `<div class="fixbox"><img src="/static/c_map.webp?v=24" alt=""><span><b>Туруктуу баа</b>${esc(q.fixed)} — баа өзгөрбөйт</span></div>` : ""}
@@ -688,6 +691,9 @@ async function viewQuote() {
     <div id="promoBox"></div><div id="whenBox"></div><div id="otherBox"></div><div id="noteBox"></div>
     <p class="muted" style="margin:6px 0 0">Айдоочу ${q.wait.free_min} мүнөт акысыз күтөт, андан кийин ${q.wait.per_min} сом/мүн.</p>
     <button class="btn main" id="order">Чакыруу</button><button class="btn bk" id="back">‹ Артка</button>`);
+  $("#chgA").onclick = () => { const f = S.from, t = S.to, ta = S.toAddr; viewIdle({keep:true}); if (f) map.setView(f, Math.max(map.getZoom(), 16));
+    S.keepTo = t ? {to:t, addr:ta} : null; toast("Пинди жылдырып, «А точканы белгилеймин» басыңыз", 2200); };
+  $("#chgB").onclick = () => { const t = S.to; viewStepB(); if (t) map.setView(t, Math.max(map.getZoom(), 16)); toast("Пинди жылдырып, «Б точканы белгилеймин» басыңыз", 2200); };
   S.promo = null; S.at = null; S.disc = 0; S.other = null; S.note = "";
   setTimeout(() => { let pp = ""; try { pp = localStorage.getItem("promoPre") || ""; } catch (e) {}
     if (pp && $("#promoOpen")) { $("#promoOpen").click(); $("#pc").value = pp; $("#pcGo").click(); }
