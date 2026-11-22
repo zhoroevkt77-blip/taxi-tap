@@ -358,10 +358,14 @@ function pollMe() {
   mePoll = setInterval(async () => { const m = await api("/api/me"); if (m.auth) { clearInterval(mePoll); boot(); } }, 2500);
 }
 
-function viewIdle() {            // Жөнөкөй башкы бет: карта + борбордо пин + ылдыйда «Каякка барасыз?»
+// А/Б кадамдары өзүнчө бет эмес — башкы беттин эле ичинде (картада)
+function viewStepA() { viewIdle({keep:true}); if (S.cls === "delivery") toast("📦 Буюмду кайдан алып кетсин? Пинди коюп, «А точканы белгилеймин» басыңыз", 2600);
+  else if (S.openOther) toast("Ал кишини кайдан алып кетсин? Пинди коюп, «А точканы белгилеймин» басыңыз", 2600); }
+function viewStepB() { viewIdle({keep:true, b:true}); }
+function viewIdle(o) {            // Жөнөкөй башкы бет: карта + борбордо пин + ылдыйда «Каякка барасыз?»
   navOn("home");
   S.mode = "idle"; S.to = null; S.quote = null; S.hnT = ""; S.lmT = ""; setPin("from"); showA(false);
-  S.openWhen = S.openOther = false; S.cls = "econom";
+  o = o || {}; if (!o.keep) { S.openWhen = S.openOther = false; S.cls = "econom"; }
   rideLayer.clearLayers(); driverMarker = null;
   const N = S.near || {}, has = c => (N.classes || ["econom", "delivery"]).includes(c);
   const P = PLACES && !PLACES.error ? PLACES : {recent:[]};
@@ -379,32 +383,32 @@ function viewIdle() {            // Жөнөкөй башкы бет: карта
   homeOn(false);
   // Издөө тилкеси: адегенде «Каяктан? А», А тандалгандан кийин «Каякка барасыз? Б»
   S.aSet = false;
-  $("#hSearch").onclick = () => { S.cls = "econom";
-    if (!S.aSet) return viewSearch("from");
-    viewStepB(); };
-  if ($("#tDel")) $("#tDel").onclick = () => { S.cls = "delivery"; viewStepA(); };
+  $("#hSearch").onclick = () => viewSearch(S.aSet ? "to" : "from");
+  if ($("#tDel")) $("#tDel").onclick = () => { S.cls = "delivery"; S.openOther = false; viewStepA(); };
   $("#tOther").onclick = () => { S.openOther = true; S.cls = "econom"; viewStepA(); };
   // Ошол эле жерден: пин турган жер А болот, анан пин Б'га айланат; экинчи басуу — Б, анан баа
   const pinAddr = () => { const t = $("#chipAddr").textContent; return t && t !== "…" ? t : "Картадагы чекит"; };
-  $("#pA").onclick = () => { const c = map.getCenter();
-    S.cls = "econom"; S.from = [c.lat, c.lng]; S.fromAddr = pinAddr(); picked("А");
+  const markA = (quiet) => {
     S.mode = "pickDest"; setPin("to"); showA(true);
-    const a = $("#pA"); a.classList.add("done"); a.querySelector("span").innerHTML = `<small>А ✓</small>${esc(S.fromAddr)}`;
-    S.aSet = true; $("#sxT").textContent = "Каякка барасыз?"; $("#sxI").textContent = "Б"; $("#sxI").className = "sxb b";
-    $("#pB").classList.add("next"); toast("Эми картаны жылдырып, Б точканы белгилеңиз", 2200); };
+    const a = $("#pA"); a.classList.add("done"); a.querySelector("span").innerHTML = `<small>А ✓</small>${esc(S.fromAddr || "")}`;
+    S.aSet = true; $("#sxT").textContent = S.cls === "delivery" ? "Кайда жеткирилет?" : "Каякка барасыз?"; $("#sxI").textContent = "Б"; $("#sxI").className = "sxb b";
+    $("#pB").classList.add("next"); if (!quiet) toast("Эми картаны жылдырып, Б точканы белгилеңиз", 2200); };
+  $("#pA").onclick = () => { if (S.aSet) { S.aSet = false; return viewIdle({keep:true}); }   // кайра басса — А'ны кайра тандоо
+    const c = map.getCenter(); S.from = [c.lat, c.lng]; S.fromAddr = pinAddr(); picked("А"); markA(); };
+  if (o.b && S.from) { markA(true); if (S.to) map.setView(S.to, map.getZoom()); }
   $("#pB").onclick = () => { const c = map.getCenter();
-    S.cls = "econom";
     if (S.mode !== "pickDest") {           // А белгиленбесе — А = сиз турган жер (GPS)
+      if (S.openOther) return toast("Адегенде ал кишини алып кете турган жерди (А) белгилеңиз", 2200);
       if (S.gps && S.gps.state === "ok" && S.gps.ll) { S.from = S.gps.ll; }
       if (!S.from) return toast("Адегенде А точканы белгилеңиз", 2000);
     }
     S.to = [c.lat, c.lng]; S.toAddr = pinAddr(); picked("Б"); viewQuote(); };
   $("#view").querySelectorAll(".sx-chips [data-i]").forEach(b => b.onclick = () => { const r = rec[+b.dataset.i];
-    if (!S.from) return viewStepA();
-    S.cls = "econom"; S.to = [r.lat, r.lon]; S.toAddr = r.addr && (r.name === "Үй" || r.name === "Иш") ? r.addr : r.name; picked("Б"); viewQuote(); });
+    if (!S.from) return toast("Адегенде А точканы белгилеңиз", 2000);
+    S.to = [r.lat, r.lon]; S.toAddr = r.addr && (r.name === "Үй" || r.name === "Иш") ? r.addr : r.name; picked("Б"); viewQuote(); });
   const sig = JSON.stringify(PLACES && PLACES.recent || null);
-  loadPlaces(true).then(() => { if (S.mode === "idle" && JSON.stringify(PLACES && PLACES.recent || null) !== sig) viewIdle(); });
-  onPinMoved();
+  loadPlaces(true).then(() => { if (S.mode === "idle" && JSON.stringify(PLACES && PLACES.recent || null) !== sig) viewIdle({keep:true}); });
+  if (!o.b) onPinMoved();
 }
 // ☰ Меню — оң жактан ачылат
 function drawer(open) {
@@ -437,7 +441,7 @@ const PAGE_MODES = ["idle", "stepA", "stepB", "menu"];
 const delChip = () => S.cls === "delivery" ? `<span class="st-del">📦 Жеткирүү<button id="delX" aria-label="Такси">✕</button></span>` : "";
 function delBind(again) { const x = $("#delX"); if (x) x.onclick = () => { S.cls = "econom"; again(); toast("🚕 Такси заказына өттүңүз"); }; }
 // ---------- 1-кадам: «Сизди кайдан алып кетсин?» ----------
-function viewStepA() {
+function viewStepA_old() {
   S.mode = "stepA"; S.to = null; setPin(null); showA(false); render(""); homeOn(true);
   const del = S.cls === "delivery", oth = !!S.openOther && !del;       // башка адамга: GPS баскычы жок
   const P = PLACES || {}, qp = oth ? [P.home && ["🏠", "Үй", P.home], P.work && ["💼", "Иш", P.work]].concat((P.recent || []).slice(0, 3).map(r => ["🕘", r.name, r])).filter(Boolean) : [];
@@ -466,7 +470,7 @@ function viewStepA() {
   window.scrollTo(0, 0); $("#home").scrollTop = 0;
 }
 // ---------- 2-кадам: «Кайда барасыз?» ----------
-function viewStepB() {
+function viewStepB_old() {
   S.mode = "stepB"; setPin(null); showA(false); render(""); homeOn(true);
   const P = PLACES && !PLACES.error ? PLACES : {recent:[], popular:[]};
   const it = (r, i) => `<button class="st-it" data-i="${i}"><span class="ic">${eic(r.icon)}</span><span class="tx"><b>${esc(r.name)}</b><small>${esc(r.area || "")}</small></span><span class="t">${minsTo(r)}</span></button>`;
