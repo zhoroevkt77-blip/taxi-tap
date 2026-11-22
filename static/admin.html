@@ -149,13 +149,14 @@ function viewMap() {
       <span class="muted">Кардар чалса — «☎ Диспетчер» бөлүмүнөн заказ бериңиз.</span></div>
       <button class="btn gold" id="poOpen">☎ Диспетчер</button></div></div>
     <div id="map"></div>
-    <div class="legend"><label style="cursor:pointer"><input type="checkbox" id="lostT"> <i style="background:#D8443A"></i>Айдоочусуз калгандар (7 күн)</label><span><i style="background:var(--ok)"></i>Бош айдоочу</span><span><i style="background:var(--navy)"></i>Сапардагы айдоочу</span><span><i style="background:var(--gold)"></i>Айдоочу изделүүдө</span><span><i style="background:#378ADD"></i>Жүргүнчү күтүп турат</span></div>
+    <div class="legend"><label style="cursor:pointer"><input type="checkbox" id="lostT"> <i style="background:#D8443A"></i>Айдоочусуз калгандар (7 күн)</label><span><i style="background:var(--ok)"></i>Бош айдоочу</span><label style="cursor:pointer"><input type="checkbox" id="restT" checked> <i style="background:#9a9aa5"></i>Эс алууда (24 саат)</label><span><i style="background:var(--navy)"></i>Сапардагы айдоочу</span><span><i style="background:var(--gold)"></i>Айдоочу изделүүдө</span><span><i style="background:#378ADD"></i>Жүргүнчү күтүп турат</span></div>
     <div class="panel"><h3>Активдүү заказдар</h3><div id="act"></div></div>`;
   map = L.map("map", {zoomControl:true}).setView([41.0377, 72.7470], 12);
   setupArea(map, {minZoom:9, center:false});
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:"© OpenStreetMap"}).addTo(map);
   lyr = L.layerGroup().addTo(map); fitted = false; drawMap();
   const lostL = L.layerGroup().addTo(map);
+  $("#restT").onchange = () => drawMap();
   $("#lostT").onchange = async e => {
     lostL.clearLayers();
     if (!e.target.checked) return;
@@ -272,6 +273,9 @@ function drawMap() {
   if (!lyr) return;
   lyr.clearLayers();
   const pts = [];
+  const ago = s => s < 3600 ? Math.max(1, Math.round(s / 60)) + " мүн" : Math.round(s / 3600) + " саат";
+  if (!$("#restT") || $("#restT").checked) (O.resting || []).forEach(d => L.marker(d.pos, {icon:dot("#9a9aa5"), zIndexOffset:-500})
+    .bindTooltip(`😴 ${esc(d.name)} · ${esc(d.plate || "")}<br>линиядан ${ago(d.ago)} мурун чыккан`).addTo(lyr));
   O.drivers.forEach(d => { pts.push(d.pos); L.marker(d.pos, {icon:dot(d.busy ? "#17365C" : "#1D9E75")}).bindTooltip(`${esc(d.name)} · ${esc(d.plate)}`).addTo(lyr); });
   O.rides.forEach(r => {
     if (["searching", "accepted", "arrived"].includes(r.status)) { pts.push(r.p); L.marker(r.p, {icon:dot(r.status === "searching" ? "#C9A03A" : "#378ADD")}).bindTooltip(`№${r.id} · ${esc(r.passenger)}`).addTo(lyr); }

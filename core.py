@@ -2539,6 +2539,11 @@ def admin_overview():
         "drivers": [{"uid": d["uid"], "name": d["name"], "pos": [d["lat"], d["lon"]],
                      "busy": bool(d["busy_ride"]), "plate": d["car_plate"]}
                     for d in online if d["lat"] is not None],
+        # эс алуудагылар: линияда эмес, акыркы 24 саатта жайгашкан жери белгилүү болгон айдоочулар
+        "resting": [{"uid": d["uid"], "name": d["name"], "pos": [d["lat"], d["lon"]], "plate": d["car_plate"],
+                     "ago": int(now() - (d.get("loc_at") or 0))}
+                    for d in drivers if d not in online and d.get("status") == "active" and d["lat"] is not None
+                    and d.get("loc_at") and now() - d["loc_at"] < 86400],
         "rides": [{"id": r["id"], "status": r["status"], "p": [r["p_lat"], r["p_lon"]],
                    "d": [r["d_lat"], r["d_lon"]] if r["d_lat"] is not None else None,
                    "price": r["price"], "city": r["city"], "passenger": r["p_name"],
