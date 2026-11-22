@@ -99,6 +99,7 @@ input.f:focus{border-color:var(--navy)}
 .msgs div.me{align-self:flex-end;background:var(--navy);color:#fff}
 .quick{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
+.qpl{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 10px}.qpl button{border:1.5px solid #ffe08a;background:#fff;border-radius:999px;padding:9px 14px;font:inherit;font-size:15px;font-weight:600;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tmon{font-size:15px;font-weight:700;color:#7a7a85;margin:14px 2px 6px}.tcard{background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.08);margin-bottom:12px;border:1px solid #f0f0f2}
 .tmap{display:block;width:100%;height:130px;background:#f6f3ea}.tmap .sx{stroke:#fff;stroke-width:7}.tmap .pk{fill:#dcefd8}.tmap .rt0{fill:none;stroke:#16161a;stroke-width:8;stroke-linecap:round;opacity:.18}.tmap .rt{fill:none;stroke:#ffb300;stroke-width:5;stroke-linecap:round}
 .tmap .pa{fill:#16161a;stroke:#fff;stroke-width:3}.tmap .ta{fill:#ffd31a;font-size:11px;font-weight:800;text-anchor:middle}.tmap .pb{fill:#fff;stroke:#16161a;stroke-width:3}
@@ -375,16 +376,25 @@ function delBind(again) { const x = $("#delX"); if (x) x.onclick = () => { S.cls
 // ---------- 1-кадам: «Сизди кайдан алып кетсин?» ----------
 function viewStepA() {
   S.mode = "stepA"; S.to = null; setPin(null); showA(false); render(""); homeOn(true);
-  const del = S.cls === "delivery";
+  const del = S.cls === "delivery", oth = !!S.openOther && !del;       // башка адамга: GPS баскычы жок
+  const P = PLACES || {}, qp = oth ? [P.home && ["🏠", "Үй", P.home], P.work && ["💼", "Иш", P.work]].concat((P.recent || []).slice(0, 3).map(r => ["🕘", r.name, r])).filter(Boolean) : [];
   $("#home").innerHTML = `<div class="st-top"><button class="st-back" id="sBack">‹</button>${delChip()}<div class="st-steps"><i class="on">А</i><b></b><i>Б</i></div></div>
-    <h1 class="st-h">${del ? "Буюмду кайдан<br>алып кетсин?" : "Сизди кайдан<br>алып кетсин?"}</h1><p class="st-sub">${del ? "А точка — айдоочу буюмду ушул жерден алат" : "А точка — айдоочу ушул жерге келет"}</p>
-    <button class="st-big y" id="aHere"><span class="i">📍</span><span class="tx">${del ? "Буюм менде — азыр турган жерим" : "Азыр турган жеримден (GPS)"}<small id="fromTxt">${esc(S.fromAddr || "Аныкталууда…")}</small></span><em>›</em></button>
+    <h1 class="st-h">${oth ? "Ал кишини кайдан<br>алып кетсин?" : del ? "Буюмду кайдан<br>алып кетсин?" : "Сизди кайдан<br>алып кетсин?"}</h1><p class="st-sub">${del ? "А точка — айдоочу буюмду ушул жерден алат" : "А точка — айдоочу ушул жерге келет"}</p>
+    ${oth ? `<button class="st-big y" id="aType2"><span class="i">✍️</span><span class="tx">Дарегин жазып табам<small>Көчө, дүкөн, мекеме…</small></span><em>›</em></button>
+    <button class="st-big" id="aMap2"><span class="i">🗺</span><span class="tx">Картадан белгилейм<small>Ал киши турган жерге пин коёсуз</small></span><em>›</em></button>
+    ${qp.length ? `<div class="qpl">${qp.map((q, i) => `<button data-qp="${i}">${q[0]} ${esc(q[1])}</button>`).join("")}</div>` : ""}` : `<button class="st-big y" id="aHere"><span class="i">📍</span><span class="tx">${del ? "Буюм менде — азыр турган жерим" : "Азыр турган жеримден (GPS)"}<small id="fromTxt">${esc(S.fromAddr || "Аныкталууда…")}</small></span><em>›</em></button>
     <button class="st-big" id="aMap"><span class="i">🗺</span><span class="tx">Картадан белгилейм<small>Пинди так жериңизге коёсуз</small></span><em>›</em></button>
-    <button class="st-big" id="aType"><span class="i">✍️</span><span class="tx">Жазып табам<small>Көчө, дүкөн, мекеме…</small></span><em>›</em></button>
+    <button class="st-big" id="aType"><span class="i">✍️</span><span class="tx">Жазып табам<small>Көчө, дүкөн, мекеме…</small></span><em>›</em></button>`}
     <p class="gpsinfo" id="gpsInfo"></p><button class="btn bk" id="sBk">‹ Артка</button>`;
   $("#sBk").onclick = viewIdle; delBind(viewStepA);
-  gpsPaint(); if (S.gps.state !== "ok") locate(false);
+  if (!oth) { gpsPaint(); if (S.gps.state !== "ok") locate(false); }
   $("#sBack").onclick = viewIdle;
+  if (oth) {
+    $("#aType2").onclick = () => viewSearch("from"); $("#aMap2").onclick = viewPickFrom;
+    $("#home").querySelectorAll("[data-qp]").forEach(b => b.onclick = () => { const q = qp[+b.dataset.qp][2];
+      S.from = [q.lat, q.lon]; S.fromAddr = qp[+b.dataset.qp][1] === "Үй" || qp[+b.dataset.qp][1] === "Иш" ? q.name : q.name; S.fromLock = true; picked("А"); viewStepB(); });
+    return;
+  }
   $("#aHere").onclick = () => {
     if (S.gps.state !== "ok") { locate(true); return toast(S.gps.state === "denied" ? "GPS'ке уруксат бериңиз же «Картадан белгилейм» басыңыз" : "Жериңиз аныктала элек — бир аз күтүңүз же «Картадан белгилейм» басыңыз", 3000); }
     if (S.gps.ll) S.from = S.gps.ll; S.fromLock = true; picked("А"); viewStepB(); };
