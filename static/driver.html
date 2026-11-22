@@ -115,7 +115,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=159">
+<link rel="stylesheet" href="/static/theme.css?v=160">
 <link rel="stylesheet" href="/static/dark.css?v=21">
 <script src="/static/night.js?v=2"></script>
 </head>
@@ -477,14 +477,33 @@ async function tapRoute(ll) {
     if (!("ontouchstart" in window) && D && !D.ride) { x0 = e.clientX; y0 = e.clientY; armed = true; fire(); } }, true);   // компьютерде: оң баскыч
 })();
 
+// Чиптерди басканда түшүндүрмө
+function statTip(k) {
+  document.querySelectorAll(".tipw").forEach(e => e.remove());
+  const t = D.today || {}, pc = D.pct_now || 0, tx = D.tax_pct || 0, ins = D.ins_pct || 0;
+  const T = {
+    rides: ["🚕", "Бүгүн сапар", `Бүгүн бүтүргөн сапарыңыз: <b>${t.rides || 0}</b>, иштегениңиз: <b>${t.earned || 0} с</b>.<br>Саноо ар күнү түн ортосунда (00:00) кайра башталат.`],
+    bal: ["👛", "Баланс", `Азыр: <b>${D.balance} с</b>.<br>Ар бир сапардан комиссия ${pc}%${tx ? `, киреше салыгы ${tx}%` : ""}${ins ? `, камсыздандыруу ${ins}%` : ""} ушул баланстан кармалат.<br>Баланс <b>${D.min_balance} сомдон</b> аз болсо, заказ келбейт.`, $("#top") ? ["➕ Толуктоо", () => $("#top").click()] : null],
+    rate: ["⭐", "Рейтинг", `Азыр: <b>★ ${D.rating ?? "5.0"}</b>.<br>Жүргүнчүлөр сапардан кийин 1–5 жылдыз коёт, рейтинг — алардын орточосу.<br>Таза унаа, сылык мамиле жана өз убагында келүү рейтингди көтөрөт.`],
+    act: ["⚡", "Активдүүлүк", `Азыр: <b>${D.activity ?? 100} / 100</b>.<br>Заказды кабыл алсаңыз <b>+1</b>, бүтүрсөңүз <b>+1</b>.<br>Сунуштан баш тартсаңыз же жооп бербесеңиз <b>−3</b>, кабыл алып жокко чыгарсаңыз <b>−10</b>.<br>Аралыгы окшош болсо, активдүүлүгү жогору айдоочуга заказ биринчи барат.`]}[k];
+  if (!T) return;
+  const w = document.createElement("div"); w.className = "tipw";
+  w.innerHTML = `<div class="tipc"><div class="tiph"><span class="tipi">${T[0]}</span><b>${T[1]}</b><button class="tipx" aria-label="Жабуу">✕</button></div><p>${T[2]}</p>${T[3] ? `<button class="btn main tipa">${T[3][0]}</button>` : ""}<button class="btn ghost tipok">Түшүндүм</button></div>`;
+  document.body.appendChild(w); requestAnimationFrame(() => w.classList.add("on"));
+  const close = () => { w.classList.remove("on"); setTimeout(() => w.remove(), 200); };
+  w.onclick = e => { if (e.target === w || e.target.closest(".tipx,.tipok")) close(); };
+  const a = w.querySelector(".tipa"); if (a) a.onclick = () => { close(); T[3][1](); };
+}
+document.addEventListener("click", e => { const s = e.target.closest(".stat[data-tip]"); if (s) statTip(s.dataset.tip); });
+
 function viewHome() {
   navOn("line");
   const low = D.balance < D.min_balance;
   const stats = `<div class="grid">
-      <div class="stat"><span class="muted">Бүгүн сапар</span><b>${D.today.rides}</b></div>
-      <div class="stat"><span class="muted">Баланс</span><b style="color:${low ? "var(--bad)" : "inherit"}">${D.balance} с</b></div>
-      <div class="stat"><span class="muted">Рейтинг</span><b>★ ${D.rating ?? "5.0"}</b></div>
-      <div class="stat" id="actSt"><span class="muted">Активдүүлүк</span><b style="color:${actColor(D.activity)}">⚡ ${D.activity ?? 100}</b></div></div>`;
+      <div class="stat" data-tip="rides"><span class="muted">Бүгүн сапар</span><b>${D.today.rides}</b></div>
+      <div class="stat" data-tip="bal"><span class="muted">Баланс</span><b style="color:${low ? "var(--bad)" : "inherit"}">${D.balance} с</b></div>
+      <div class="stat" data-tip="rate"><span class="muted">Рейтинг</span><b>★ ${D.rating ?? "5.0"}</b></div>
+      <div class="stat" id="actSt" data-tip="act"><span class="muted">Активдүүлүк</span><b style="color:${actColor(D.activity)}">⚡ ${D.activity ?? 100}</b></div></div>`;
   const topup = D.pending_topup ? `<div class="note">🕓 Чегиңиз текшерилүүдө. Ырасталганда балансыңызга кошулат.</div>`
     : `<button class="btn ghost" id="top">➕ Балансты толуктоо</button>`;
   const sw = D.tg ? `<div class="sw"><div><b>Telegram билдирүүлөрү</b><div class="muted">Сайт жабык болсо да жаңы заказ жөнүндө кабар келет</div></div>
@@ -668,8 +687,8 @@ function viewCabinet(part) {
       <div class="dmeta"><span>★ ${D.rating ?? "5.0"}</span><span>${esc(D.car_plate || "")}</span></div></div>` : ""}${C ? `<button class="carrow" id="myCar"><img src="${carImg(D.car_color)}" alt=""><span><b>Менин унаам</b><small>${esc(carText(D.car_color, D.car_model))}</small><div style="margin-top:4px">${kgPlate(D.car_plate)}</div></span><em>›</em></button>` + workHTML() + myQrHTML() : ""}
     <div${on(C)}><div class="irow">${yi("car")}<span><b>Тарифтериңиз</b><small>${(D.classes || []).map(c => esc((D.class_names || {})[c] || c)).join(", ")} · Комфорт же Минивэнге өтүү үчүн админге кайрылыңыз</small></span></div>
       <div class="irow">${yi("percent")}<span><b>Комиссия</b><small>${esc(D.tariff)}</small></span></div>${D.tax_pct > 0 ? `<div class="irow">${yi("building")}<span><b>Киреше салыгы</b><small>Ар бир сапардан ${D.tax_pct}% · балансыңыздан кармалат</small></span></div>` : ""}${D.ins_pct > 0 ? `<div class="irow"><img class="yi" src="/static/c_shield.webp?v=24" alt=""><span><b>Камсыздандыруу төгүмү</b><small>Ар бир сапардан ${D.ins_pct}% · балансыңыздан кармалат</small></span></div>` : ""}${(D.tax_pct || 0) + (D.ins_pct || 0) > 0 ? `<div class="irow tot">${yi("chart")}<span><b>Баары: ${+(D.pct_now + (D.tax_pct || 0) + (D.ins_pct || 0)).toFixed(2)}%</b><small>Комиссия + салык + камсыздандыруу ар бир сапардан</small></span></div>` : ""}</div>
-    <div class="grid"><div class="stat"><span class="muted">Баланс</span><b style="color:${D.balance < D.min_balance ? "var(--bad)" : "inherit"}">${D.balance} с</b></div>
-      <div class="stat"><span class="muted">Рейтинг</span><b>★ ${D.rating ?? "5.0"}</b></div></div>
+    <div class="grid"><div class="stat" data-tip="bal"><span class="muted">Баланс</span><b style="color:${D.balance < D.min_balance ? "var(--bad)" : "inherit"}">${D.balance} с</b></div>
+      <div class="stat" data-tip="rate"><span class="muted">Рейтинг</span><b>★ ${D.rating ?? "5.0"}</b></div></div>
     <div${on(E)}><div class="seg" id="ePer">${[["today", "Бүгүн"], ["week", "Жума"], ["month", "Ай"], ["all", "Жалпы"]].map(([k, t]) => `<button data-ep="${k}" class="${k === EPER ? "on" : ""}">${t}</button>`).join("")}</div>
     <div id="eSum">${earnSum()}</div>
     <p class="muted">«Колуңузда» — жүргүнчүлөр төлөгөн акча + бонус − комиссия. ${D.min_balance > 0 ? `Баланс ${D.min_balance} сомдон аз болсо, заказ келбейт.` : ""}</p>
