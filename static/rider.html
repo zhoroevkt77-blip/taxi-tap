@@ -115,6 +115,9 @@ body.ridp #bnav,body.ridp .top .modepill,body.ridp #menuBtn{display:none!importa
 .burg i,.burg i:before,.burg i:after{display:block;width:20px;height:2.6px;background:#16161a;border-radius:2px;position:relative}.burg i:before,.burg i:after{content:"";position:absolute;left:0}.burg i:before{top:-7px}.burg i:after{top:7px}
 .sx{padding:2px 0 6px}.sx-srch{width:100%;display:flex;align-items:center;gap:12px;height:58px;border:0;border-radius:18px;background:#f3f3f6;padding:0 16px;font:inherit;font-size:19px;font-weight:600;color:#55555f;text-align:left}
 .sx-srch em{margin-left:auto;font-style:normal;font-size:28px;font-weight:700;color:#16161a}
+body.cabsolo #home>*:not(#cabMore):not(.solohd){display:none!important}
+body.cabsolo #cabMore .lnks>h3:first-child{display:none}body.cabsolo #cabMore{text-align:left;margin-top:4px}
+.solohd{display:flex;align-items:center;gap:12px;margin:0 0 12px}.solohd button{width:46px;height:46px;border-radius:50%;border:0;background:#fff;box-shadow:0 3px 10px rgba(0,0,0,.12);font-size:28px;font-weight:700;line-height:1}.solohd b{font-size:24px}
 .sx-ab{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 0}.sx-ab button{display:flex;align-items:center;gap:8px;border:1.5px solid #ffe08a;background:#fffbea;border-radius:16px;padding:11px 10px;font:inherit;font-size:14.5px;font-weight:700;color:#16161a;text-align:left;line-height:1.15}.sx-ab button.done{background:#16161a;color:#fff;border-color:#16161a}.sx-ab button.done small{display:block;font-size:11px;color:#ffd31a}.sx-ab button.done span{overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.sx-ab button.next{background:#ffd31a;border-color:#f0b400;animation:nxt 1.2s ease 2}@keyframes nxt{50%{transform:scale(1.04)}}
 .sx-ab i{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-weight:800;font-size:12px}.sx-ab i.a{background:#16161a;color:#ffd31a}.sx-ab i.b{background:#fff;color:#16161a;border:2.5px solid #16161a}
 .sxb{flex:none;margin-left:auto;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-weight:800;font-size:16px}.sxb.a{background:#16161a;color:#ffd31a}.sxb.b{background:#ffc61a;color:#16161a;border:2.5px solid #16161a}.sxb+em{margin-left:10px!important}
@@ -362,7 +365,8 @@ function pollMe() {
 function viewStepA() { viewIdle({keep:true}); if (S.cls === "delivery") toast("📦 Буюмду кайдан алып кетсин? Пинди коюп, «А точканы белгилеймин» басыңыз", 2600);
   else if (S.openOther) toast("Ал кишини кайдан алып кетсин? Пинди коюп, «А точканы белгилеймин» басыңыз", 2600); }
 function viewStepB() { viewIdle({keep:true, b:true}); }
-function viewIdle(o) {            // Жөнөкөй башкы бет: карта + борбордо пин + ылдыйда «Каякка барасыз?»
+function viewIdle(o) {
+  document.body.classList.remove("cabsolo");            // Жөнөкөй башкы бет: карта + борбордо пин + ылдыйда «Каякка барасыз?»
   navOn("home");
   S.mode = "idle"; S.to = null; S.quote = null; S.hnT = ""; S.lmT = ""; setPin("from"); showA(false);
   o = o || {}; if (!o.keep) { S.openWhen = S.openOther = false; S.cls = "econom"; }
@@ -410,6 +414,15 @@ function viewIdle(o) {            // Жөнөкөй башкы бет: карт�
   loadPlaces(true).then(() => { if (S.mode === "idle" && JSON.stringify(PLACES && PLACES.recent || null) !== sig) viewIdle({keep:true}); });
   if (!o.b) onPinMoved();
 }
+// Менюдагы ар бир пункт — өзүнчө барак (кабинеттин калганы көрүнбөйт)
+function soloPage(title) {
+  const h = $("#home"), m = $("#cabMore"); if (!h || !m) return;
+  h.querySelectorAll(".solohd").forEach(e => e.remove());
+  const hd = document.createElement("div"); hd.className = "solohd";
+  hd.innerHTML = `<button id="soloBack" aria-label="Артка">‹</button><b>${esc(title)}</b>`;
+  h.prepend(m); h.prepend(hd); document.body.classList.add("cabsolo"); h.scrollTop = 0;
+  $("#soloBack").onclick = () => { document.body.classList.remove("cabsolo"); viewIdle(); drawer(true); };
+}
 // ☰ Меню — оң жактан ачылат
 function drawer(open) {
   let d = $("#drw");
@@ -427,7 +440,10 @@ function drawer(open) {
   let x0 = null; d.addEventListener("touchstart", e => x0 = e.touches[0].clientX, {passive:true});
   d.addEventListener("touchend", e => { if (x0 !== null && e.changedTouches[0].clientX - x0 > 60) drawer(false); x0 = null; }, {passive:true});
   d.querySelectorAll("[data-dk]").forEach(b => b.onclick = async () => { const k = b.dataset.dk; drawer(false);
-    await viewCabinet(); if (k !== "cab") { const el = document.getElementById(k); if (el) el.click(); } });
+    document.body.classList.remove("cabsolo"); await viewCabinet(); if (k === "cab") return;
+    const el = document.getElementById(k); if (!el) return; el.click();
+    await new Promise(r => setTimeout(r, 30));
+    soloPage((b.querySelector("span") || b).childNodes[0].textContent.trim()); });
 }
 const homeEta = () => { const n = S.near; return !n ? "Айдоочу изделүүдө…" : !n.city ? "Бул жерде иштебейбиз" : n.eta_min ? `${n.eta_min} мүнөттө келет` : "Бош айдоочу азыр жок"; };
 function minsTo(r) {
@@ -1095,13 +1111,18 @@ async function viewCabinet() {
   };
   $("#avCam").onchange = avUp; $("#avGal").onchange = avUp;
   $("#out").onclick = confirmOut;
-  $("#cPromo").onclick = () => { const v = prompt("Промокод (кийинки заказга колдонулат):", promo);
-    if (v === null) return; try { v.trim() ? localStorage.setItem("promoPre", v.trim().toUpperCase()) : localStorage.removeItem("promoPre"); } catch (e) {}
-    S.mode = prevView; viewCabinet(); };
-  $("#cPay").onclick = () => toast("Азырынча накталай гана. Картадан төлөө кийин кошулат.", 2500);
-  $("#cSafe").onclick = () => sheetBox(`<h2>🛡 Коопсуздук</h2><a class="btn red" href="tel:112" style="display:block;text-align:center;text-decoration:none">📞 112</a>
-    <p class="muted">Сапар учурунда «📤 Бөлүшүү» аркылуу жакыныңыз унааны картадан көрөт. Айдоочу номериңизди көрбөйт — чат аркылуу байланышасыз. Ар бир айдоочу текшерилген (паспорт, айдоочулук күбөлүк, унаа).</p>
-    <button class="btn ghost" id="bxX">Жабуу</button>`);
+  $("#cPromo").onclick = () => { more(`<div class="lnks"><h3 style="margin:4px 0 8px">🎁 Промокод</h3>
+      <p class="muted" style="margin:0 0 8px">Промокод кийинки заказыңызга өзү колдонулат.</p>
+      <input class="f" id="prIn" maxlength="24" placeholder="Мисалы: TAP50" value="${esc(promo)}" style="text-transform:uppercase">
+      <button class="btn main" id="prOk">✓ Сактоо</button>${promo ? `<button class="btn ghost" id="prDel">✕ Алып салуу</button>` : ""}</div>`);
+    $("#prOk").onclick = () => { const v = $("#prIn").value.trim().toUpperCase(); try { v ? localStorage.setItem("promoPre", v) : localStorage.removeItem("promoPre"); } catch (e) {}
+      toast(v ? "✓ Промокод сакталды: " + v : "Промокод алынды", 1800); };
+    if ($("#prDel")) $("#prDel").onclick = () => { try { localStorage.removeItem("promoPre"); } catch (e) {} $("#prIn").value = ""; toast("Промокод алынды", 1500); }; };
+  $("#cPay").onclick = () => more(`<div class="lnks"><h3 style="margin:4px 0 8px">💳 Төлөм ыкмасы</h3>
+      <div class="hrow" style="padding:12px 0"><span>💵 <b>Накталай</b> <span class="muted">· айдоочуга түз</span></span><b style="color:#1f9d55">✓</b></div>
+      <div class="hrow" style="padding:12px 0;opacity:.55"><span>💳 <b>Карта / MBank / Элкарт</b> <span class="muted">· жакында</span></span></div></div>`);
+  $("#cSafe").onclick = () => more(`<div class="lnks"><h3 style="margin:4px 0 8px">🛡 Коопсуздук</h3><a class="btn red" href="tel:112" style="display:block;text-align:center;text-decoration:none">📞 112</a>
+    <p class="muted">Сапар учурунда «📤 Бөлүшүү» аркылуу жакыныңыз унааны картадан көрөт. Айдоочу номериңизди көрбөйт — чат аркылуу байланышасыз. Ар бир айдоочу текшерилген (паспорт, айдоочулук күбөлүк, унаа).</p></div>`);
   $("#cMap").onclick = () => { S.mode = prevView; viewPickDest(); toast("Картадан жерди белгилеп, атын жазыңыз — тизмеге кошулат", 3000); };
   $("#qA").onclick = () => { more(`<div class="lnks"><h3 style="margin:4px 0 4px">📍 Даректерим</h3>${place("home", "🏠", "Үй")}${place("work", "💼", "Иш")}</div>`);
     document.querySelectorAll("[data-pl]").forEach(b => b.onclick = () => viewPickDest(b.dataset.pl));
