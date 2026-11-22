@@ -899,3 +899,5 @@ body.ridp .cls .clsimg:not(.side){width:58px!important;margin:2px auto 6px!impor
 /* Өчүк тариф — бозомтук */
 body.ridp .cls>div.off{filter:grayscale(1);opacity:.55;box-shadow:none!important;background:#f3f3f6!important}
 body.ridp .cls>div.off b{font-size:14px!important;color:#7a7a85!important}
+/* Тандалган тариф чеги кесилбесин */
+body.ridp .cls{padding:5px 4px 6px!important;overflow:visible!important}
