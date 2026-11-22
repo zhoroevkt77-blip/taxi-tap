@@ -643,7 +643,11 @@ class H(BaseHTTPRequestHandler):
                                        "surge": q.get("surge"), "auto": q.get("auto"), "fixed": q.get("fixed")} if core.is_admin(uid) else None,
                                "classes": [{"id": c, "name": cfg[c]["name"], "price": pr,
                                             "min": int(t["min_price"] * cfg[c]["k"])}
-                                           for c, pr in q["prices"].items()],
+                                           for c, pr in q["prices"].items()]
+                                          + [{"id": c, "name": cfg[c]["name"], "off": True,
+                                              "price": int(round((q["price"] or 0) * cfg[c]["k"] / 10.0) * 10) or None,
+                                              "min": int(t["min_price"] * cfg[c]["k"])}
+                                             for c in ("comfort",) if c in cfg and not cfg[c]["on"]],
                                "wait": core.wait_config(),
                                "tariff": {k: t[k] for k in ("base", "per_km", "min_price")}})
         if path == "/api/promo":

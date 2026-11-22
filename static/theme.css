@@ -896,3 +896,6 @@ body.ridp .cls>div i{display:flex;justify-content:center;width:100%;font-style:n
 body.ridp .cls .clsimg,body.ridp .cls .clsimg.side{height:auto!important;width:118px!important;margin:0 auto 2px!important}
 body.ridp .cls>div .muted{font-size:14px;margin:0}body.ridp .cls>div b{font-size:19px}
 body.ridp .cls .clsimg:not(.side){width:58px!important;margin:2px auto 6px!important}
+/* Өчүк тариф — бозомтук */
+body.ridp .cls>div.off{filter:grayscale(1);opacity:.55;box-shadow:none!important;background:#f3f3f6!important}
+body.ridp .cls>div.off b{font-size:14px!important;color:#7a7a85!important}
