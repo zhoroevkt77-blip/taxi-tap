@@ -115,7 +115,8 @@ body.ridp #bnav,body.ridp .top .modepill,body.ridp #menuBtn{display:none!importa
 .burg i,.burg i:before,.burg i:after{display:block;width:20px;height:2.6px;background:#16161a;border-radius:2px;position:relative}.burg i:before,.burg i:after{content:"";position:absolute;left:0}.burg i:before{top:-7px}.burg i:after{top:7px}
 .sx{padding:2px 0 6px}.sx-srch{width:100%;display:flex;align-items:center;gap:12px;height:58px;border:0;border-radius:18px;background:#f3f3f6;padding:0 16px;font:inherit;font-size:19px;font-weight:600;color:#55555f;text-align:left}
 .sx-srch em{margin-left:auto;font-style:normal;font-size:28px;font-weight:700;color:#16161a}
-.sx-ab{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 0}.sx-ab button{display:flex;align-items:center;gap:8px;border:1.5px solid #ffe08a;background:#fffbea;border-radius:16px;padding:11px 10px;font:inherit;font-size:14.5px;font-weight:700;color:#16161a;text-align:left;line-height:1.15}.sx-ab i{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-weight:800;font-size:12px}.sx-ab i.a{background:#16161a;color:#ffd31a}.sx-ab i.b{background:#fff;color:#16161a;border:2.5px solid #16161a}
+.sx-ab{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 0}.sx-ab button{display:flex;align-items:center;gap:8px;border:1.5px solid #ffe08a;background:#fffbea;border-radius:16px;padding:11px 10px;font:inherit;font-size:14.5px;font-weight:700;color:#16161a;text-align:left;line-height:1.15}.sx-ab button.done{background:#16161a;color:#fff;border-color:#16161a}.sx-ab button.done small{display:block;font-size:11px;color:#ffd31a}.sx-ab button.done span{overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.sx-ab button.next{background:#ffd31a;border-color:#f0b400;animation:nxt 1.2s ease 2}@keyframes nxt{50%{transform:scale(1.04)}}
+.sx-ab i{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-weight:800;font-size:12px}.sx-ab i.a{background:#16161a;color:#ffd31a}.sx-ab i.b{background:#fff;color:#16161a;border:2.5px solid #16161a}
 .sx-chips{display:flex;gap:8px;margin:12px 0 2px;overflow-x:auto;scrollbar-width:none}.sx-chips::-webkit-scrollbar{display:none}
 .sx-chips button{flex:none;display:flex;align-items:center;gap:6px;white-space:nowrap;padding:9px 13px;border:0;border-radius:999px;background:#f3f3f6;font:inherit;font-size:15px;font-weight:600;max-width:220px;overflow:hidden;text-overflow:ellipsis}.sx-chips img{width:22px;height:22px;object-fit:contain}
 .sx-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}.sx-cd{border:0;border-radius:20px;padding:14px;height:108px;position:relative;overflow:hidden;background:#fff4c2;text-align:left;font:inherit;color:#16161a}.sx-cd.k{background:#16161a;color:#fff}
@@ -358,7 +359,7 @@ function viewIdle() {            // Жөнөкөй башкы бет: карта
   (P.recent || []).slice(0, 4).forEach(r => rec.push({ico:"c_trips", name:r.name, lat:r.lat, lon:r.lon}));
   render(`<div class="sx">
     <button class="sx-srch" id="hSearch"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#16161a" stroke-width="2.6" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg><span>Каякка барасыз?</span><em>›</em></button>
-    <div class="sx-ab"><button id="pA"><i class="a">А</i>А точканы белгилөө</button><button id="pB"><i class="b">Б</i>Б точканы белгилөө</button></div>
+    <div class="sx-ab"><button id="pA"><i class="a">А</i><span>А точканы белгилеймин</span></button><button id="pB"><i class="b">Б</i><span>Б точканы белгилеймин</span></button></div>
     ${rec.length ? `<div class="sx-chips">${rec.map((r, i) => `<button data-i="${i}"><img src="/static/${r.ico}.webp?v=24" alt="">${esc(r.name)}</button>`).join("")}</div>` : ""}
     <div class="sx-cards">${has("delivery") ? `<button class="sx-cd" id="tDel"><b>Жеткирүү</b><small>Буюм, документ</small><img src="/static/h_box.webp?v=24" alt=""></button>` : ""}
       <button class="sx-cd k" id="tOther"><b>Башка адамга</b><small>Такси чакыруу</small><img src="/static/h_girl.webp?v=25" alt=""></button></div>
@@ -367,8 +368,20 @@ function viewIdle() {            // Жөнөкөй башкы бет: карта
   $("#hSearch").onclick = () => { S.cls = "econom"; if (S.from) { picked("А"); viewStepB(); } else viewStepA(); };
   if ($("#tDel")) $("#tDel").onclick = () => { S.cls = "delivery"; viewStepA(); };
   $("#tOther").onclick = () => { S.openOther = true; S.cls = "econom"; viewStepA(); };
-  $("#pA").onclick = () => { S.cls = "econom"; viewPickFrom(); };
-  $("#pB").onclick = () => { S.cls = "econom"; if (S.from) picked("А"); viewPickDest(); };
+  // Ошол эле жерден: пин турган жер А болот, анан пин Б'га айланат; экинчи басуу — Б, анан баа
+  const pinAddr = () => { const t = $("#chipAddr").textContent; return t && t !== "…" ? t : "Картадагы чекит"; };
+  $("#pA").onclick = () => { const c = map.getCenter();
+    S.cls = "econom"; S.from = [c.lat, c.lng]; S.fromAddr = pinAddr(); picked("А");
+    S.mode = "pickDest"; setPin("to"); showA(true);
+    const a = $("#pA"); a.classList.add("done"); a.querySelector("span").innerHTML = `<small>А ✓</small>${esc(S.fromAddr)}`;
+    $("#pB").classList.add("next"); toast("Эми картаны жылдырып, Б точканы белгилеңиз", 2200); };
+  $("#pB").onclick = () => { const c = map.getCenter();
+    S.cls = "econom";
+    if (S.mode !== "pickDest") {           // А белгиленбесе — А = сиз турган жер (GPS)
+      if (S.gps && S.gps.state === "ok" && S.gps.ll) { S.from = S.gps.ll; }
+      if (!S.from) return toast("Адегенде А точканы белгилеңиз", 2000);
+    }
+    S.to = [c.lat, c.lng]; S.toAddr = pinAddr(); picked("Б"); viewQuote(); };
   $("#view").querySelectorAll(".sx-chips [data-i]").forEach(b => b.onclick = () => { const r = rec[+b.dataset.i];
     if (!S.from) return viewStepA();
     S.cls = "econom"; S.to = [r.lat, r.lon]; S.toAddr = r.addr && (r.name === "Үй" || r.name === "Иш") ? r.addr : r.name; picked("Б"); viewQuote(); });
