@@ -881,3 +881,5 @@ body.mefar .melbl{opacity:1}
 /* А жана Б чекиттери чоңураак: картада жана заказ берүүдө */
 .carm.abig{width:46px!important;height:46px!important;font-size:22px!important;font-weight:800!important;border-width:4px!important;box-shadow:0 4px 12px rgba(0,0,0,.35)!important}
 body.ridp .bul.lt{width:34px!important;height:34px!important;font-size:17px!important;font-weight:800!important}
+/* Жүргүнчүгө компас керек эмес */
+body.ridp #navComp{display:none!important}
