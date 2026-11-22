@@ -111,7 +111,7 @@ html.uidark .tcard{background:#1f2026;border-color:#2b2c33}html.uidark .tmap{bac
 
 /* ===== Жөнөкөй башкы бет (WB стилиндей, биздин түстөр) ===== */
 body.ridp #bnav,body.ridp .top .modepill,body.ridp #menuBtn{display:none!important}
-.burg{width:52px;height:52px;border-radius:50%;background:#fff;border:0;box-shadow:0 4px 14px rgba(0,0,0,.15);display:grid;place-items:center}
+.burg{height:52px;border-radius:26px;background:#fff;border:0;box-shadow:0 4px 14px rgba(0,0,0,.15);display:flex;align-items:center;gap:8px;padding:4px 14px 4px 4px;font:inherit}.burg b{font-size:16px;font-weight:800;color:#16161a}.bav{width:44px;height:44px;border-radius:50%;border:2.5px solid #ffd31a;display:grid;place-items:center;overflow:hidden;font-size:22px;background:#fff7d1}.bav img{width:100%;height:100%;object-fit:cover}
 .burg i,.burg i:before,.burg i:after{display:block;width:20px;height:2.6px;background:#16161a;border-radius:2px;position:relative}.burg i:before,.burg i:after{content:"";position:absolute;left:0}.burg i:before{top:-7px}.burg i:after{top:7px}
 .sx{padding:2px 0 6px}.sx-srch{width:100%;display:flex;align-items:center;gap:12px;height:58px;border:0;border-radius:18px;background:#f3f3f6;padding:0 16px;font:inherit;font-size:19px;font-weight:600;color:#55555f;text-align:left}
 .sx-srch em{margin-left:auto;font-style:normal;font-size:28px;font-weight:700;color:#16161a}
@@ -165,7 +165,7 @@ html.uidark .drw-p{background:#1c1d22}html.uidark .drw-l button,html.uidark .drw
 <div class="top">
   <div class="lcol"><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b></div>
     <span id="topPill"></span></div>
-  <div class="hhr"><div class="modepill"><img src="/static/r_bag.webp?v=24" alt=""><span><b>Жүргүнчү</b><br>режиминдесиз</span></div><button class="round" id="menuBtn" aria-label="Кабинет">👤</button><button class="round burg" id="burg" aria-label="Меню"><i></i></button></div>
+  <div class="hhr"><div class="modepill"><img src="/static/r_bag.webp?v=24" alt=""><span><b>Жүргүнчү</b><br>режиминдесиз</span></div><button class="round" id="menuBtn" aria-label="Кабинет">👤</button><button class="burg" id="burg" aria-label="Кабинет"><span class="bav" id="burgAv">👤</span><b>Кабинет</b></button></div>
 </div>
 
 <div class="pin" id="pin">
@@ -512,6 +512,7 @@ function soloPage(title) {
   h.prepend(m); h.prepend(hd); document.body.classList.add("cabsolo"); h.scrollTop = 0;
   $("#soloBack").onclick = () => { document.body.classList.remove("cabsolo"); viewIdle(); drawer(true); };
 }
+function burgAv() { const b = document.getElementById("burgAv"); if (b) b.innerHTML = ME_AV ? `<img src="${esc(ME_AV)}" alt="">` : "👤"; }
 // ☰ Меню — оң жактан ачылат
 function drawer(open) {
   let d = $("#drw");
@@ -1165,7 +1166,7 @@ async function viewCabinet() {
   if (S.mode === "login" || S.mode === "menu") return;
   const me = await api("/api/me");
   if (!me.auth) return;
-  ME_BOT = me.bot || ME_BOT; ME_AV = me.avatar || null; $("#menuBtn").innerHTML = avBtn(); navAvatar(ME_AV, (typeof me !== "undefined" && me && me.name) || "");
+  ME_BOT = me.bot || ME_BOT; ME_AV = me.avatar || null; burgAv(); $("#menuBtn").innerHTML = avBtn(); navAvatar(ME_AV, (typeof me !== "undefined" && me && me.name) || "");
   prevView = S.mode; S.mode = "menu"; navOn("cab");
   const P = PLACES && !PLACES.error ? PLACES : await api("/api/places");
   const place = (k, ico, t) => `<div class="hrow"><span>${ico} <b>${t}</b> ${P[k] ? `<span class="muted">· ${esc(P[k].name || "белгиленген")}</span>` : `<span class="muted">· белгилене элек</span>`}</span>
@@ -1200,14 +1201,14 @@ async function viewCabinet() {
         $("#avC").onclick = () => { closeBox(); $("#avCam").click(); };
         $("#avG").onclick = () => { closeBox(); $("#avGal").click(); };
         if ($("#avDel")) $("#avDel").onclick = async () => { closeBox(); if (!confirm("Сүрөттү алып салабызбы?")) return;
-          await api("/api/avatar", {img:null}); ME_AV = null; navAvatar(null, me.name); S.mode = prevView; viewCabinet(); };
+          await api("/api/avatar", {img:null}); ME_AV = null; burgAv(); navAvatar(null, me.name); S.mode = prevView; viewCabinet(); };
       });
   const avUp = async e => {
     const f = e.target.files && e.target.files[0]; if (!f) return;
     toast("Сүрөт жүктөлүүдө…", 1500);
     const img = await avShrink(f), x = await api("/api/avatar", {img});
     if (x.error) return toast("Сүрөттү жүктөй алган жокпуз — башкасын тандап көрүңүз", 2500);
-    ME_AV = x.avatar; navAvatar(ME_AV, me.name); S.mode = prevView; viewCabinet(); toast("✓ Сүрөт коюлду", 1500);
+    ME_AV = x.avatar; burgAv(); navAvatar(ME_AV, me.name); S.mode = prevView; viewCabinet(); toast("✓ Сүрөт коюлду", 1500);
   };
   $("#avCam").onchange = avUp; $("#avGal").onchange = avUp;
   $("#out").onclick = confirmOut;
@@ -1319,7 +1320,7 @@ async function boot() {
   try { const rf = localStorage.getItem("parkRef"); if (me.auth && rf) { api("/api/ref", {code:rf}); localStorage.removeItem("parkRef"); } } catch (e) {} ME_BOT = me.bot || ""; ME_AV = me.avatar || null; $("#menuBtn").innerHTML = avBtn(); navAvatar(ME_AV, (typeof me !== "undefined" && me && me.name) || "");
   await areaReady;
   if (!me.auth) return viewLogin(me.pending, me.link);
-  ME_AV = me.avatar || null; ME_BOT = me.bot || ME_BOT;
+  ME_AV = me.avatar || null; ME_BOT = me.bot || ME_BOT; burgAv();
   if (me.ask_role) { if (viaRef) api("/api/role", {as:"rider"}); else return viewRole(me.name); }
   const r = await api("/api/ride");
   if (r.ride && ["scheduled", "searching", "accepted", "arrived", "in_trip"].includes(r.ride.status)) {
