@@ -108,6 +108,27 @@ input.f:focus{border-color:var(--navy)}
 .tdrv{font-size:13.5px;color:#6b6b75;margin:8px 0 2px}.trate{display:flex;align-items:center;gap:2px;margin:8px 0 2px;font-size:14px}.trate span{margin-right:6px;color:#6b6b75}.trate button{border:0;background:none;font-size:24px;color:#d6d6dc;padding:0 2px}.trate button:hover{color:#ffb300}
 .tbtns{display:flex;gap:8px;margin-top:10px}.tbtns .btn{flex:1;margin:0;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;padding:12px 6px;font-size:15px}
 html.uidark .tcard{background:#1f2026;border-color:#2b2c33}html.uidark .tmap{background:#26272e}html.uidark .tmap .sx{stroke:#30313a}html.uidark .tmap .pk{fill:#24352a}
+
+/* ===== Жөнөкөй башкы бет (WB стилиндей, биздин түстөр) ===== */
+body.ridp #bnav,body.ridp .top .modepill,body.ridp #menuBtn{display:none!important}
+.burg{width:52px;height:52px;border-radius:50%;background:#fff;border:0;box-shadow:0 4px 14px rgba(0,0,0,.15);display:grid;place-items:center}
+.burg i,.burg i:before,.burg i:after{display:block;width:20px;height:2.6px;background:#16161a;border-radius:2px;position:relative}.burg i:before,.burg i:after{content:"";position:absolute;left:0}.burg i:before{top:-7px}.burg i:after{top:7px}
+.sx{padding:2px 0 6px}.sx-srch{width:100%;display:flex;align-items:center;gap:12px;height:58px;border:0;border-radius:18px;background:#f3f3f6;padding:0 16px;font:inherit;font-size:19px;font-weight:600;color:#55555f;text-align:left}
+.sx-srch em{margin-left:auto;font-style:normal;font-size:28px;font-weight:700;color:#16161a}
+.sx-chips{display:flex;gap:8px;margin:12px 0 2px;overflow-x:auto;scrollbar-width:none}.sx-chips::-webkit-scrollbar{display:none}
+.sx-chips button{flex:none;display:flex;align-items:center;gap:6px;white-space:nowrap;padding:9px 13px;border:0;border-radius:999px;background:#f3f3f6;font:inherit;font-size:15px;font-weight:600;max-width:220px;overflow:hidden;text-overflow:ellipsis}.sx-chips img{width:22px;height:22px;object-fit:contain}
+.sx-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}.sx-cd{border:0;border-radius:20px;padding:14px;height:108px;position:relative;overflow:hidden;background:#fff4c2;text-align:left;font:inherit;color:#16161a}.sx-cd.k{background:#16161a;color:#fff}
+.sx-cards .sx-cd:only-child{grid-column:1/-1}.sx-cd b{font-size:17px;display:block}.sx-cd small{font-size:13px;opacity:.75}.sx-cd img{position:absolute;right:-6px;bottom:-6px;width:84px}
+#drw{position:fixed;inset:0;z-index:60}.drw-dim{position:absolute;inset:0;background:rgba(0,0,0,.4);opacity:0;transition:opacity .25s}#drw.on .drw-dim{opacity:1}
+.drw-p{position:absolute;right:0;top:0;bottom:0;width:min(310px,84vw);background:#fff;border-radius:24px 0 0 24px;padding:calc(env(safe-area-inset-top,0px) + 34px) 20px 22px;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s cubic-bezier(.2,.8,.2,1);overflow-y:auto}
+#drw.on .drw-p{transform:none}
+.drw-me{display:flex;align-items:center;gap:12px;border:0;background:none;padding:0 0 18px;font:inherit;text-align:left;width:100%}.drw-av{width:54px;height:54px;border-radius:50%;border:3px solid #ffd31a;display:grid;place-items:center;overflow:hidden;font-size:26px;background:#fff}.drw-av img{width:100%;height:100%;object-fit:cover}
+.drw-me b{font-size:18px;display:block}.drw-me small{color:#7a7a85}
+.drw-l button,.drw-l a{display:flex;align-items:center;gap:14px;width:100%;border:0;background:none;padding:12px 2px;font:inherit;font-size:18px;font-weight:500;color:#16161a;text-decoration:none;text-align:left}
+.drw-l img{width:30px;height:30px;object-fit:contain}.drw-l small{display:block;font-size:13px;color:#8a8a95}.drw-l a.y{margin-top:8px;background:#ffd31a;border-radius:16px;padding:12px 14px;font-weight:700}
+.drw-ver{margin-top:auto;padding-top:16px;color:#8a8a95;font-size:14px;text-decoration:none}
+.cab-back{display:inline-flex;align-items:center;margin:0 0 10px;border:0;border-radius:999px;background:#fff;box-shadow:0 3px 10px rgba(0,0,0,.1);padding:10px 16px;font:inherit;font-size:16px;font-weight:700}
+html.uidark .drw-p{background:#1c1d22}html.uidark .drw-l button,html.uidark .drw-l a{color:#eee}html.uidark .sx-srch,html.uidark .sx-chips button{background:#2a2b31;color:#ddd}
 </style>
 <link rel="preload" as="image" href="/static/h_taxi.webp?v=24"><link rel="preload" as="image" href="/static/h_box.webp?v=24"><link rel="preload" as="image" href="/static/h_girl.webp?v=25"><link rel="preload" as="image" href="/static/h_map.webp?v=25">
 <link rel="stylesheet" href="/static/theme.css?v=148">
@@ -120,7 +141,7 @@ html.uidark .tcard{background:#1f2026;border-color:#2b2c33}html.uidark .tmap{bac
 <div class="top">
   <div class="lcol"><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b></div>
     <span id="topPill"></span></div>
-  <div class="hhr"><div class="modepill"><img src="/static/r_bag.webp?v=24" alt=""><span><b>Жүргүнчү</b><br>режиминдесиз</span></div><button class="round" id="menuBtn" aria-label="Кабинет">👤</button></div>
+  <div class="hhr"><div class="modepill"><img src="/static/r_bag.webp?v=24" alt=""><span><b>Жүргүнчү</b><br>режиминдесиз</span></div><button class="round" id="menuBtn" aria-label="Кабинет">👤</button><button class="round burg" id="burg" aria-label="Меню"><i></i></button></div>
 </div>
 
 <div class="pin" id="pin">
@@ -323,45 +344,52 @@ function pollMe() {
   mePoll = setInterval(async () => { const m = await api("/api/me"); if (m.auth) { clearInterval(mePoll); boot(); } }, 2500);
 }
 
-function viewIdle() {
+function viewIdle() {            // Жөнөкөй башкы бет: карта + борбордо пин + ылдыйда «Каякка барасыз?»
   navOn("home");
   S.mode = "idle"; S.to = null; S.quote = null; S.hnT = ""; S.lmT = ""; setPin("from"); showA(false);
-  S.openWhen = S.openOther = false;
+  S.openWhen = S.openOther = false; S.cls = "econom";
   rideLayer.clearLayers(); driverMarker = null;
-  render("");
-  homeOn(true);
   const N = S.near || {}, has = c => (N.classes || ["econom", "delivery"]).includes(c);
-  const tile = (id, img, t, sub, big, wide) => `<button class="tile${big ? " big" : ""}${wide ? " wide" : ""}" id="${id}"><b>${t}</b><small>${sub}</small><img class="art" src="/static/${img}" alt=""></button>`;
-  const stile = (id, img, t) => `<button class="stile" id="${id}"><img src="/static/${img}" alt=""><b>${t}</b></button>`;
   const P = PLACES && !PLACES.error ? PLACES : {recent:[]};
   const rec = [];
-  if (P.home) rec.push({ico:"🏠", name:"Үй", sub:P.home.name || "", lat:P.home.lat, lon:P.home.lon});
-  if (P.work) rec.push({ico:"💼", name:"Иш", sub:P.work.name || "", lat:P.work.lat, lon:P.work.lon});
-  (P.recent || []).forEach(r => rec.push({ico:"🕘", name:r.name, sub:"Акыркы сапар", lat:r.lat, lon:r.lon}));
-  $("#home").innerHTML = `<div class="hh"><div class="hhl"><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b></div></div><div class="hhr"><div class="modepill"><img src="/static/r_bag.webp?v=24" alt=""><span><b>Жүргүнчү</b><br>режиминдесиз</span></div><button class="round" id="hMenu" aria-label="Кабинет">${avBtn()}</button></div></div>
-    <button class="haddr" id="hAddr"><small><img class="pinI" src="/static/pin.webp?v=24" alt="">Сиз турган жер</small><b id="fromTxt">${esc(S.fromAddr || "Аныкталууда…")}</b><span>›</span></button>
-    <div class="tiles">${tile("tTaxi", "h_taxi.webp?v=24", "Такси", `<span id="taxiEta">${homeEta()}</span>`, true, !has("delivery"))}
-      ${has("delivery") ? tile("tDel", "h_box.webp?v=24", "Жеткирүү", "Буюм, документ") : ""}</div>
-    <div class="tiles2">${stile("tOther", "h_girl.webp?v=25", "Башка адамга такси заказ кылуу")}${stile("tMap", "h_map.webp?v=25", "Картадан<br>белгилөө")}</div>
-    ${has("comfort") || has("minivan") ? `<div class="tiles3">${has("comfort") ? `<button class="sm" id="tComf"><span>🚘</span>Комфорт</button>` : ""}${has("minivan") ? `<button class="sm" id="tVan"><span>🚐</span>Минивэн</button>` : ""}</div>` : ""}
-    <button class="hsearch" id="hSearch"><svg class="srch" viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#16161a" stroke-width="2.6" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg> <span>Каякка барасыз?</span><em>›</em></button>
-    <div class="hrec">${rec.slice(0, 5).map((r, i) => `<button class="rec" data-i="${i}"><span class="pi">${eic(r.ico)}</span><span class="rt"><b>${esc(r.name)}</b><small>${esc(r.sub)}</small></span><span class="t">${minsTo(r)}</span><span class="chev">›</span></button>`).join("")}</div>
-    <p class="hnote" id="nearMsg">${esc(S.nearMsg || "")}</p>`;
-  const go = (cls) => { if (cls) S.cls = cls; viewStepA(); };
-  $("#hSearch").onclick = () => go("econom");
-  $("#tTaxi").onclick = () => go("econom");
-  $("#hAddr").onclick = () => viewStepA();
-  $("#hMenu").onclick = viewCabinet;
-  if ($("#tDel")) $("#tDel").onclick = () => go("delivery");
-  if ($("#tComf")) $("#tComf").onclick = () => go("comfort");
-  if ($("#tVan")) $("#tVan").onclick = () => go("minivan");
-  if ($("#tMap")) $("#tMap").onclick = () => { S.cls = "econom"; viewPickDest(); };
-  $("#tOther").onclick = () => { S.openOther = true; go("econom"); };
-  $("#home").querySelectorAll(".rec").forEach(b => b.onclick = () => { const r = rec[+b.dataset.i];
-    S.cls = "econom"; S.to = [r.lat, r.lon]; S.toAddr = r.name === "Үй" || r.name === "Иш" ? r.name : r.name; picked("Б"); viewQuote(); });
+  if (P.home) rec.push({ico:"n_home", name:"Үй", lat:P.home.lat, lon:P.home.lon, addr:P.home.name});
+  if (P.work) rec.push({ico:"ic_briefcase", name:"Иш", lat:P.work.lat, lon:P.work.lon, addr:P.work.name});
+  (P.recent || []).slice(0, 4).forEach(r => rec.push({ico:"c_trips", name:r.name, lat:r.lat, lon:r.lon}));
+  render(`<div class="sx">
+    <button class="sx-srch" id="hSearch"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#16161a" stroke-width="2.6" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg><span>Каякка барасыз?</span><em>›</em></button>
+    ${rec.length ? `<div class="sx-chips">${rec.map((r, i) => `<button data-i="${i}"><img src="/static/${r.ico}.webp?v=24" alt="">${esc(r.name)}</button>`).join("")}</div>` : ""}
+    <div class="sx-cards">${has("delivery") ? `<button class="sx-cd" id="tDel"><b>Жеткирүү</b><small>Буюм, документ</small><img src="/static/h_box.webp?v=24" alt=""></button>` : ""}
+      <button class="sx-cd k" id="tOther"><b>Башка адамга</b><small>Такси чакыруу</small><img src="/static/h_girl.webp?v=25" alt=""></button></div>
+    <p class="hnote" id="nearMsg">${esc(S.nearMsg || "")}</p></div>`);
+  homeOn(false);
+  $("#hSearch").onclick = () => { S.cls = "econom"; if (S.from) { picked("А"); viewStepB(); } else viewStepA(); };
+  if ($("#tDel")) $("#tDel").onclick = () => { S.cls = "delivery"; viewStepA(); };
+  $("#tOther").onclick = () => { S.openOther = true; S.cls = "econom"; viewStepA(); };
+  $("#view").querySelectorAll(".sx-chips [data-i]").forEach(b => b.onclick = () => { const r = rec[+b.dataset.i];
+    if (!S.from) return viewStepA();
+    S.cls = "econom"; S.to = [r.lat, r.lon]; S.toAddr = r.addr && (r.name === "Үй" || r.name === "Иш") ? r.addr : r.name; picked("Б"); viewQuote(); });
   const sig = JSON.stringify(PLACES && PLACES.recent || null);
   loadPlaces(true).then(() => { if (S.mode === "idle" && JSON.stringify(PLACES && PLACES.recent || null) !== sig) viewIdle(); });
   onPinMoved();
+}
+// ☰ Меню — оң жактан ачылат
+function drawer(open) {
+  let d = $("#drw");
+  if (!open) { if (d) { d.classList.remove("on"); setTimeout(() => d.remove(), 250); } return; }
+  if (d) d.remove();
+  d = document.createElement("div"); d.id = "drw";
+  const it = (k, img, t, sub) => `<button data-dk="${k}"><img src="/static/${img}.webp?v=24" alt=""><span>${t}${sub ? `<small>${sub}</small>` : ""}</span></button>`;
+  d.innerHTML = `<div class="drw-dim"></div><div class="drw-p"><button class="drw-me" data-dk="cab"><span class="drw-av">${ME_AV ? `<img src="${esc(ME_AV)}" alt="">` : "👤"}</span><span><b id="drwNm">Менин кабинетим</b><small>Профиль, сүрөт</small></span></button>
+    <div class="drw-l">${it("qH", "c_trips", "Сапарларым")}${it("qA", "c_addr", "Тандалган даректер")}${it("cPay", "c_card", "Төлөм ыкмасы", "Накталай")}${it("cPromo", "c_gift", "Промокод")}${it("cSafe", "c_shield", "Коопсуздук")}
+      <a href="${ME_BOT ? "https://t.me/" + ME_BOT : "/terms"}" target="_blank"><img src="/static/n_help.webp?v=24" alt=""><span>Колдоо</span></a>${it("qS", "c_set", "Жөндөөлөр")}
+      <a class="y" href="/driver"><img src="/static/r_car.webp?v=24" alt=""><span>Айдоочу болуу</span></a></div>
+    <a class="drw-ver" href="/terms">Колдонмо тууралуу · шарттар</a></div>`;
+  document.body.appendChild(d); requestAnimationFrame(() => d.classList.add("on"));
+  d.querySelector(".drw-dim").onclick = () => drawer(false);
+  let x0 = null; d.addEventListener("touchstart", e => x0 = e.touches[0].clientX, {passive:true});
+  d.addEventListener("touchend", e => { if (x0 !== null && e.changedTouches[0].clientX - x0 > 60) drawer(false); x0 = null; }, {passive:true});
+  d.querySelectorAll("[data-dk]").forEach(b => b.onclick = async () => { const k = b.dataset.dk; drawer(false);
+    await viewCabinet(); if (k !== "cab") { const el = document.getElementById(k); if (el) el.click(); } });
 }
 const homeEta = () => { const n = S.near; return !n ? "Айдоочу изделүүдө…" : !n.city ? "Бул жерде иштебейбиз" : n.eta_min ? `${n.eta_min} мүнөттө келет` : "Бош айдоочу азыр жок"; };
 function minsTo(r) {
@@ -978,6 +1006,7 @@ function viewRide() {
 
 let prevView = null;
 $("#menuBtn").onclick = () => viewCabinet();
+$("#burg").onclick = () => drawer(true);
 async function viewCabinet() {
   if (S.mode === "login" || S.mode === "menu") return;
   const me = await api("/api/me");
@@ -990,7 +1019,7 @@ async function viewCabinet() {
   const li = (id, img, t, sub, href) => `<${href ? `a href="${href}"` : "button"} class="ccard" id="${id}"><img class="cimg" src="/static/${img}.webp?v=24" alt=""><span class="ct"><b>${t}</b>${sub ? `<small>${sub}</small>` : ""}</span><em>›</em></${href ? "a" : "button"}>`;
   let promo = ""; try { promo = localStorage.getItem("promoPre") || ""; } catch (e) {}
   render(""); homeOn(true);
-  $("#home").innerHTML = `<div class="rolesw"><span class="r y on"><img src="/static/r_bag.webp?v=24" alt="">Жүргүнчү болуу<i>✓</i></span>
+  $("#home").innerHTML = `<button class="cab-back" id="cabBack">‹ Картага</button><div class="rolesw"><span class="r y on"><img src="/static/r_bag.webp?v=24" alt="">Жүргүнчү болуу<i>✓</i></span>
       <a href="/driver" class="r g"><img src="/static/r_car.webp?v=24" alt="">Айдоочу болуу${me.driver ? "" : " →"}</a></div>
     <div class="cab2">
       <button class="cab-av" id="avBox">${me.avatar ? `<img src="${esc(me.avatar)}" alt="">` : esc((me.name || "?")[0].toUpperCase())}<span class="cab-cam">📷</span></button>
@@ -1006,6 +1035,7 @@ async function viewCabinet() {
     ${li("cInfo", "c_info", "Маалымат", "Колдонуу шарттары, купуялык", "/terms")}
     ${installHTML()}<button class="cab-out" id="out"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><path d="M3 12h11M10 8l4 4-4 4"/></svg>Чыгуу</button>`;
   $("#home").scrollTop = 0;
+  $("#cabBack").onclick = () => { S.mode = prevView === "menu" ? "idle" : "idle"; viewIdle(); };
   bindInstall();
   const more = html => { $("#cabMore").innerHTML = html; $("#cabMore").scrollIntoView({behavior:"smooth", block:"start"}); };
   $("#avBox").onclick = () => sheetBox(`<h2>📷 Профилдин сүрөтү</h2>
@@ -1130,6 +1160,7 @@ async function boot() {
   try { const rf = localStorage.getItem("parkRef"); if (me.auth && rf) { api("/api/ref", {code:rf}); localStorage.removeItem("parkRef"); } } catch (e) {} ME_BOT = me.bot || ""; ME_AV = me.avatar || null; $("#menuBtn").innerHTML = avBtn(); navAvatar(ME_AV, (typeof me !== "undefined" && me && me.name) || "");
   await areaReady;
   if (!me.auth) return viewLogin(me.pending, me.link);
+  ME_AV = me.avatar || null; ME_BOT = me.bot || ME_BOT;
   if (me.ask_role) { if (viaRef) api("/api/role", {as:"rider"}); else return viewRole(me.name); }
   const r = await api("/api/ride");
   if (r.ride && ["scheduled", "searching", "accepted", "arrived", "in_trip"].includes(r.ride.status)) {
