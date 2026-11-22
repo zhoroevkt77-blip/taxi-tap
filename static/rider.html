@@ -100,6 +100,7 @@ input.f:focus{border-color:var(--navy)}
 .quick{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .qpl{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 10px}.qpl button{border:1.5px solid #ffe08a;background:#fff;border-radius:999px;padding:9px 14px;font:inherit;font-size:15px;font-weight:600;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rolepick{padding:70px 18px 30px}.rolepick .st-h{margin-bottom:22px}.rpc{display:flex;align-items:center;gap:14px;width:100%;border:0;border-radius:24px;background:#fff;padding:18px 16px;margin:0 0 14px;box-shadow:0 6px 22px rgba(0,0,0,.1);font:inherit;text-align:left}.rpc.y{background:linear-gradient(135deg,#ffd31a,#fcbc00)}.rpc img{width:84px;height:62px;object-fit:contain}.rpc span{flex:1}.rpc b{display:block;font-size:21px}.rpc small{display:block;font-size:14.5px;color:#4a4a52;margin-top:3px}.rpc em{font-style:normal;font-size:26px;font-weight:700}
 .tmon{font-size:15px;font-weight:700;color:#7a7a85;margin:14px 2px 6px}.tcard{background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.08);margin-bottom:12px;border:1px solid #f0f0f2}
 .tmap{display:block;width:100%;height:130px;background:#f6f3ea}.tmap .sx{stroke:#fff;stroke-width:7}.tmap .pk{fill:#dcefd8}.tmap .rt0{fill:none;stroke:#16161a;stroke-width:8;stroke-linecap:round;opacity:.18}.tmap .rt{fill:none;stroke:#ffb300;stroke-width:5;stroke-linecap:round}
 .tmap .pa{fill:#16161a;stroke:#fff;stroke-width:3}.tmap .ta{fill:#ffd31a;font-size:11px;font-weight:800;text-anchor:middle}.tmap .pb{fill:#fff;stroke:#16161a;stroke-width:3}
@@ -1083,6 +1084,19 @@ try { if (new URLSearchParams(location.search).get("next") === "park") localStor
 try { const qs = new URLSearchParams(location.search), rf = qs.get("ref"), pm = qs.get("promo");
   if (rf) { localStorage.setItem("parkRef", rf); if (pm) localStorage.setItem("promoPre", pm.toUpperCase()); history.replaceState(null, "", "/"); } } catch (e) {}
 let ME_ROLE = {};
+// Жаңы адам: «Кантип колдоносуз?» — Жүргүнчү катары / Айдоочу катары (бир жолу)
+function viewRole(name) {
+  homeOn(true);
+  $("#home").innerHTML = `<div class="rolepick"><h1 class="st-h">Кош келиңиз${name ? ", " + esc(name) : ""}!<br>Кантип колдоносуз?</h1>
+    <button class="rpc y" data-as="rider"><img src="/static/r_bag.webp?v=24" alt=""><span><b>Жүргүнчү катары</b><small>Такси чакырам, буюм жөнөтөм</small></span><em>›</em></button>
+    <button class="rpc" data-as="driver"><img src="/static/r_car.webp?v=24" alt=""><span><b>Айдоочу катары</b><small>Заказ алып, акча табам</small></span><em>›</em></button>
+    <p class="muted" style="text-align:center;margin-top:14px">Кийин кабинеттен алмаштырсаңыз болот</p></div>`;
+  $("#home").querySelectorAll("[data-as]").forEach(b => b.onclick = async () => {
+    b.disabled = true; await api("/api/role", {as:b.dataset.as});
+    if (b.dataset.as === "driver") return location.href = "/driver";
+    toast("🧳 Кош келиңиз! Каякка барасыз?", 2000); boot();
+  });
+}
 // Сапарларым: жөнөкөйлөтүлгөн карта (2ГИС лимитин коротпойт) — А→Б сары сызык, Б жанында машина
 function tripSvg(r) {
   const W = 360, H = 130, seed = r.id * 9301 % 233280, rnd = k => ((seed * (k + 7) * 49297) % 233280) / 233280;
@@ -1112,9 +1126,11 @@ async function boot() {
   const me = await api("/api/me"); ME_ROLE = {park:me.park, driver:me.driver, admin:me.admin};
   $("#topPill").innerHTML = ME_ROLE.park && !ME_ROLE.driver ? rolePill() : "";   // айдоочу/жүргүнчү алмашуу — Кабинетте if ($("#home .hh")) { const h = $("#home .hhr"); if (h && !h.querySelector(".rpill") && ME_ROLE.park && !ME_ROLE.driver) h.insertAdjacentHTML("afterbegin", rolePill()); }
   try { if (me.auth && localStorage.getItem("nextPark")) { localStorage.removeItem("nextPark"); if (me.park || me.admin) return location.replace("/park"); } } catch (e) {}
+  let viaRef = false; try { viaRef = !!localStorage.getItem("parkRef"); } catch (e) {}
   try { const rf = localStorage.getItem("parkRef"); if (me.auth && rf) { api("/api/ref", {code:rf}); localStorage.removeItem("parkRef"); } } catch (e) {} ME_BOT = me.bot || ""; ME_AV = me.avatar || null; $("#menuBtn").innerHTML = avBtn(); navAvatar(ME_AV, (typeof me !== "undefined" && me && me.name) || "");
   await areaReady;
   if (!me.auth) return viewLogin(me.pending, me.link);
+  if (me.ask_role) { if (viaRef) api("/api/role", {as:"rider"}); else return viewRole(me.name); }
   const r = await api("/api/ride");
   if (r.ride && ["scheduled", "searching", "accepted", "arrived", "in_trip"].includes(r.ride.status)) {
     S.ride = r.ride; drawRoute(); viewRide(); poll();

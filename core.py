@@ -291,7 +291,7 @@ NEW_COLUMNS = {
     "addresses": {"approx": "INTEGER DEFAULT 0",        # жери болжолдуу (аты гана белгилүү)
                   "status": "TEXT DEFAULT 'ok'",        # ok | pending (жүргүнчү/айдоочу сунуштаган)
                   "votes": "INTEGER DEFAULT 0", "suggested_by": "TEXT"},
-    "users": {"park_ref": "INTEGER", "park_ref_at": "REAL", "tg_uid": "TEXT", "notify": "INTEGER DEFAULT 1", "terms_at": "REAL",
+    "users": {"signup_as": "TEXT", "park_ref": "INTEGER", "park_ref_at": "REAL", "tg_uid": "TEXT", "notify": "INTEGER DEFAULT 1", "terms_at": "REAL",
               "places": "TEXT",                              # {"home": {...}, "work": {...}}
               "p_rating": "REAL", "p_rated": "INTEGER DEFAULT 0",
               "avatar": "TEXT",
@@ -2448,6 +2448,30 @@ def demand_heat(minutes=120):
             for k, v in cells.items()]
 
 
+ROLE_ASK_FROM = 1795320000          # ушул убакыттан кийин катталгандардан гана суралат (2026-11-22)
+
+
+def ask_role(uid):
+    """Жаңы адамга «Айдоочу катары же Жүргүнчү катары?» суроосу керекпи."""
+    u = get_user(uid) or {}
+    if u.get("signup_as") or (u.get("created_at") or 0) < ROLE_ASK_FROM or get_driver(uid):
+        return False
+    return query("SELECT id FROM rides WHERE passenger=? LIMIT 1", (uid,), "one") is None
+
+
+def set_signup_as(uid, role):
+    if role in ("rider", "driver") and not (get_user(uid) or {}).get("signup_as"):
+        set_user(uid, signup_as=role)
+        return True
+    return False
+
+
+def signups_today():
+    t0 = day_start()
+    rows = query("SELECT signup_as, COUNT(*) AS n FROM users WHERE created_at>=? GROUP BY signup_as", (t0,), "all")
+    return {(r["signup_as"] or "unknown"): r["n"] for r in rows}
+
+
 def passenger_history(uid, limit=30):
     rows = query("SELECT r.id, r.status, r.price, r.discount, r.wait_fee, r.dist_km, r.p_addr, r.d_addr, r.cls, r.created_at, "
                  "r.completed_at, r.p_lat, r.p_lon, r.d_lat, r.d_lon, r.driver, d.car_plate, d.car_model, d.car_color, u.name AS d_name "
@@ -2544,7 +2568,7 @@ def admin_overview():
                   "online_out": sum(1 for d in online if _is_out(d)),
                   "active": len(rides), "searching": sum(1 for r in rides if r["status"] == "searching"),
                   "done_today": today["n"], "gross_today": int(today["s"] or 0),
-                  "fee_today": round(fee["s"] or 0), "lost_today": lost["n"]},
+                  "fee_today": round(fee["s"] or 0), "lost_today": lost["n"], "signups": signups_today()},
         "drivers": [{"uid": d["uid"], "name": d["name"], "pos": [d["lat"], d["lon"]],
                      "busy": bool(d["busy_ride"]), "plate": d["car_plate"]}
                     for d in online if d["lat"] is not None],

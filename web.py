@@ -536,7 +536,7 @@ class H(BaseHTTPRequestHandler):
                            "admin": core.is_admin(s["uid"]),
                            "notify": bool(u.get("notify", 1)), "tg": bool(u.get("tg_uid")),
                            "avatar": core.avatar_url(u), "bot": BOT_USERNAME,
-                           "park": (parks.by_owner(s["uid"]) or {}).get("name")})
+                           "park": (parks.by_owner(s["uid"]) or {}).get("name"), "ask_role": core.ask_role(s["uid"])})
 
     def _near(self, q):
         p = _point([(q.get("lat") or [None])[0], (q.get("lon") or [None])[0]])
@@ -569,6 +569,8 @@ class H(BaseHTTPRequestHandler):
             uid = self._uid()
             if not uid:
                 return self._json({"error": "auth"}, 401)
+            if path == "/api/role":                  # жаңы адам: «Жүргүнчү катары / Айдоочу катары»
+                return self._json({"ok": core.set_signup_as(uid, b.get("as"))})
             if path == "/api/notify":
                 core.set_user(uid, notify=1 if b.get("on") else 0)
                 return self._json({"ok": True})

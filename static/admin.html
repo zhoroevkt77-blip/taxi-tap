@@ -144,6 +144,7 @@ function viewMap() {
     <div class="card"><span>Онлайн айдоочу</span><b>${s.online}</b><span>${s.busy} сапарда${s.online_out ? ` · ${s.online_out} аймактан сыртта` : ""}</span></div>
     <div class="card"><span>Активдүү заказ</span><b>${s.active}</b><span>${s.searching} изделүүдө</span></div>
     <div class="card"><span>Бүгүн бүттү</span><b>${s.done_today}</b><span>${s.lost_today} айдоочусуз калды</span></div>
+    <div class="card"><span>Бүгүн катталды</span><b>${Object.values(s.signups || {}).reduce((a, b) => a + b, 0)}</b><span>🧳 ${(s.signups || {}).rider || 0} жүргүнчү · 🚕 ${(s.signups || {}).driver || 0} айдоочу</span></div>
     <div class="card"><span>Бүгүн айдоочулар тапкан</span><b>${s.gross_today.toLocaleString("ru-RU")} с</b><span>комиссия ${s.fee_today} с</span></div></div>
     <div class="panel"><div class="item"><div class="main"><b>📞 Телефон аркылуу заказ</b>
       <span class="muted">Кардар чалса — «☎ Диспетчер» бөлүмүнөн заказ бериңиз.</span></div>

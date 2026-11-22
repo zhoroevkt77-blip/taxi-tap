@@ -1528,6 +1528,7 @@ function voiceEvents(p, s) {
 
 async function boot() {
   const m = await api("/api/me"); ME_D = m;
+  if (m.auth && m.ask_role) api("/api/role", {as:"driver"});      // айдоочу баракчасынан келди — суроосуз
   if (!m.auth) return viewLogin(m.pending, m.link);
   if (m.avatar) $("#cabBtn").innerHTML = `<img src="${esc(m.avatar)}" alt="" class="avbtn">`;
   navAvatar(m.avatar, m.name);
