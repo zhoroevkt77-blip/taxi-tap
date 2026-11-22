@@ -116,8 +116,9 @@ function instBar() {
   const ios = /iphone|ipad/i.test(navigator.userAgent);
   const can = !!window.INSTALL;
   const d = document.createElement("div"); d.id = "instBar";
-  d.innerHTML = `<img src="/static/logo.png" alt=""><div><b>Такси ТАП! тиркемеси</b><small>${can ? "Телефонго орнотуп алыңыз — бир басуу менен ачылат"
-    : ios ? "Safari: «Бөлүшүү» ⬆️ → «На экран „Домой“»" : "Браузердин менюсу ⋮ → «Башкы экранга кошуу»"}</small></div>
+  const drv = location.pathname.startsWith("/driver");
+  d.innerHTML = `<img src="${drv ? "/static/icon-d-192.png?v=1" : "/static/logo.png"}" alt=""><div><b>${drv ? "«ТАП Айдоочу» тиркемеси" : "Такси ТАП! тиркемеси"}</b><small>${can ? "Телефонго орнотуп алыңыз — бир басуу менен ачылат"
+    : ios ? "Safari: «Бөлүшүү» ⬆️ → «На экран „Домой“»" : "Chrome менюсу ⋮ → «Добавить на гл. экран» → «Установить»"}</small></div>
     ${can ? `<button id="instGo">Орнотуу</button>` : ""}<button id="instX" aria-label="Жабуу">✕</button>`;
   document.body.appendChild(d);
   d.querySelector("#instX").onclick = () => { try { localStorage.setItem("instNo", Date.now()); } catch (e) {} d.remove(); };
