@@ -525,40 +525,52 @@ def nearest_landmark(lat, lon, max_m=LANDMARK_M):
     return best["name"] if best else None
 
 
+def _dgis_geo(params):
+    dgis_state["calls"] += 1
+    req = urllib.request.Request(DGIS_URL + "/geocode?" + urllib.parse.urlencode(params),
+                                 headers={"User-Agent": "TaksiTAP/1.0"})
+    with urllib.request.urlopen(req, timeout=5) as r:
+        return ((json.loads(r.read().decode()) or {}).get("result") or {}).get("items") or []
+
+
+def _bld_name(it):
+    a = it.get("address_name") or ""
+    if a:
+        parts = [x.strip() for x in a.split(",")]
+        return pretty(parts[0]) + " " + parts[1] if len(parts) >= 2 else pretty(a)
+    return it.get("name") or None
+
+
 def _dgis_reverse(lat, lon):
+    """Үйдүн номери менен дарек: адегенде имарат (үй), табылбаса — жакын 40 м ичиндеги имарат, акыры көчө."""
     if not _dgis_allow():
         return None
-    params = {"lat": "%.6f" % lat, "lon": "%.6f" % lon, "key": DGIS_KEY, "type": "building,street",
-              "fields": "items.point,items.address_name,items.full_name,items.address", "page_size": 3, "locale": "ru_KG"}
+    base = {"lat": "%.6f" % lat, "lon": "%.6f" % lon, "key": DGIS_KEY,
+            "fields": "items.point,items.address_name,items.full_name,items.address", "locale": "ru_KG"}
     try:
-        dgis_state["calls"] += 1
-        req = urllib.request.Request(DGIS_URL + "/geocode?" + urllib.parse.urlencode(params),
-                                     headers={"User-Agent": "TaksiTAP/1.0"})
-        with urllib.request.urlopen(req, timeout=5) as r:
-            data = json.loads(r.read().decode())
+        items = _dgis_geo(dict(base, type="building,street", page_size=5))
+        for it in items:                                   # үй биринчи (көчө алдыда келсе да)
+            if it.get("type") == "building" and _bld_name(it):
+                return _bld_name(it)
+        street = next((pretty(it["name"]) for it in items if it.get("type") == "street" and it.get("name")), None)
+        if _dgis_allow():                                  # пин жолдун четинде — жакынкы үйдү издейбиз
+            for it in _dgis_geo(dict(base, type="building", radius=40, page_size=3)):
+                n = _bld_name(it)
+                if n and (not street or norm(street.split()[0]) in norm(n) or len(items) == 0):
+                    return n
+                if n and not street:
+                    return n
+        return street
     except Exception as e:
         dgis_state["errors"] += 1
         dgis_state["last_error"] = "rev: " + str(e)[:150]
         _dgis_fail(e)
         return None
-    for it in ((data or {}).get("result") or {}).get("items") or []:
-        if it.get("type") == "building":
-            a = it.get("address_name") or ""
-            if a:
-                parts = [x.strip() for x in a.split(",")]
-                if len(parts) >= 2:
-                    return pretty(parts[0]) + " " + parts[1]
-                return pretty(a)
-            if it.get("name"):
-                return it["name"]
-        elif it.get("type") == "street" and it.get("name"):
-            return pretty(it["name"])
-    return None
 
 
 def reverse(lat, lon):
     """{"addr": "Эн-Сай көчөсү 12", "near": "Стадион"} — бири же экөө тең None болушу мүмкүн."""
-    key = (round(lat / 0.0003), round(lon / 0.0003))          # ~30 м тор
+    key = (round(lat / 0.00012), round(lon / 0.00012))        # ~12 м тор (үйдүн номери так болсун)
     hit = _rev_cache.get(key)
     if hit and hit[0] > time.time():
         return hit[1]
