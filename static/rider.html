@@ -133,7 +133,7 @@ body.ridp #bnav,body.ridp .top .modepill,body.ridp #menuBtn{display:none!importa
 html.uidark .drw-p{background:#1c1d22}html.uidark .drw-l button,html.uidark .drw-l a{color:#eee}html.uidark .sx-srch,html.uidark .sx-chips button{background:#2a2b31;color:#ddd}
 </style>
 <link rel="preload" as="image" href="/static/h_taxi.webp?v=24"><link rel="preload" as="image" href="/static/h_box.webp?v=24"><link rel="preload" as="image" href="/static/h_girl.webp?v=25"><link rel="preload" as="image" href="/static/h_map.webp?v=25">
-<link rel="stylesheet" href="/static/theme.css?v=149">
+<link rel="stylesheet" href="/static/theme.css?v=150">
 <link rel="stylesheet" href="/static/dark.css?v=21">
 <script src="/static/night.js?v=2"></script>
 </head>
@@ -157,7 +157,7 @@ html.uidark .drw-p{background:#1c1d22}html.uidark .drw-l button,html.uidark .drw
 <nav id="bnav" class="bnav pro" data-l="Жүргүнчү" data-r="режиминдесиз"><a data-k="home" class="on"><img src="/static/n_home.webp?v=24" alt="">Башкы бет</a><a data-k="trips"><img src="/static/n_trips.webp?v=24" alt="">Сапарлар</a><a data-k="go" class="big"><img src="/static/n_go.webp?v=24" alt="">Чакыруу</a><a data-k="help"><img src="/static/n_help.webp?v=24" alt="">Жардам</a><a data-k="cab"><img src="/static/n_cab.webp?v=24" alt="">Кабинет</a></nav>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="/static/area.js?v=22"></script>
+<script src="/static/area.js?v=23"></script>
 <script src="/static/voice.js?v=10"></script>
 <script>
 const $ = s => document.querySelector(s);
@@ -206,7 +206,16 @@ async function reverse(lat, lon) {
 // ---------- пин жана карта ----------
 let moveTimer = null;
 map.on("movestart", () => { if (pinActive()) $("#pin").classList.add("up"); });
+// «Сиз ушул жердесиз» — пин сиз турган жерден 30 м ашык алыстаганда гана көрүнөт
+function meLabel() {
+  const p = NAV.pos && NAV.pos(), c = map.getCenter();
+  let far = false;
+  if (p) { const dy = (c.lat - p[0]) * 111320, dx = (c.lng - p[1]) * 111320 * Math.cos(p[0] * Math.PI / 180); far = Math.hypot(dx, dy) > 60 || !pinActive(); }
+  document.body.classList.toggle("mefar", far);
+}
+map.on("move", meLabel);
 map.on("moveend", () => {
+  meLabel();
   $("#pin").classList.remove("up");
   if (!pinActive()) return;
   clearTimeout(moveTimer);

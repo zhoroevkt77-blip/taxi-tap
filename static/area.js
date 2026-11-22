@@ -243,7 +243,7 @@ window.NAV = (function () {
   const COMP = `<svg viewBox="0 0 40 40" width="34" height="34"><path d="M20 4 L26 20 L14 20 Z" fill="#ff3b30"/><path d="M20 36 L26 20 L14 20 Z" fill="#c9c9cf"/><circle cx="20" cy="20" r="2.6" fill="#fff"/></svg>`;
   // Жүргүнчүдө жебе жок — жөн гана «сиз бул жердесиз» деген тегерек чекит
   function icon() { return document.body.classList.contains("ridp")
-    ? L.divIcon({className:"", html:`<div class="medot"><i></i><b></b></div>`, iconSize:[30,30], iconAnchor:[15,15]})
+    ? L.divIcon({className:"", html:`<div class="medot"><i></i><b></b><span class="melbl">Сиз ушул жердесиз</span></div>`, iconSize:[30,30], iconAnchor:[15,15]})
     : L.divIcon({className:"", html:`<div class="navme"><i></i><b class="navarr">${ARROW}</b></div>`, iconSize:[52,52], iconAnchor:[26,26]}); }
   function paint() {
     const h = gpsHead !== null ? gpsHead : head;
@@ -290,7 +290,9 @@ window.NAV = (function () {
     if (mb && mb.contains && !mb.contains(p)) {
       const d = 0.03; map.setMaxBounds(L.latLngBounds(mb.getSouthWest(), mb.getNorthEast()).extend([p[0] - d, p[1] - d]).extend([p[0] + d, p[1] + d]));
     }
-    if (!marker) marker = L.marker(p, {icon:icon(), interactive:false, zIndexOffset:900, keyboard:false}).addTo(map);
+    if (!marker) { const rid = document.body.classList.contains("ridp");
+      marker = L.marker(p, {icon:icon(), interactive:rid, zIndexOffset:900, keyboard:false}).addTo(map);
+      if (rid) marker.on("click", () => { if (pos) map.setView(pos, Math.max(map.getZoom(), 16)); }); }
     else { if (map.hasLayer && !map.hasLayer(marker)) marker.addTo(map); marker.setLatLng(p); }
     paint();
   }
