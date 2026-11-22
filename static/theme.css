@@ -878,3 +878,6 @@ html.uidark .haddr span,html.uidark .hsearch em{color:#fff!important}
 .medot b{position:absolute;left:7px;top:7px;width:16px;height:16px;border-radius:50%;background:#16161a;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35)}
 .medot{overflow:visible}.melbl{position:absolute;left:50%;top:32px;transform:translateX(-50%);white-space:nowrap;background:#fff;color:#16161a;font-size:12.5px;font-weight:700;padding:4px 9px;border-radius:10px;box-shadow:0 3px 10px rgba(0,0,0,.18);opacity:0;transition:opacity .2s;pointer-events:none}
 body.mefar .melbl{opacity:1}
+/* А жана Б чекиттери чоңураак: картада жана заказ берүүдө */
+.carm.abig{width:46px!important;height:46px!important;font-size:22px!important;font-weight:800!important;border-width:4px!important;box-shadow:0 4px 12px rgba(0,0,0,.35)!important}
+body.ridp .bul.lt{width:34px!important;height:34px!important;font-size:17px!important;font-weight:800!important}

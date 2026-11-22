@@ -133,7 +133,7 @@ body.ridp #bnav,body.ridp .top .modepill,body.ridp #menuBtn{display:none!importa
 html.uidark .drw-p{background:#1c1d22}html.uidark .drw-l button,html.uidark .drw-l a{color:#eee}html.uidark .sx-srch,html.uidark .sx-chips button{background:#2a2b31;color:#ddd}
 </style>
 <link rel="preload" as="image" href="/static/h_taxi.webp?v=24"><link rel="preload" as="image" href="/static/h_box.webp?v=24"><link rel="preload" as="image" href="/static/h_girl.webp?v=25"><link rel="preload" as="image" href="/static/h_map.webp?v=25">
-<link rel="stylesheet" href="/static/theme.css?v=150">
+<link rel="stylesheet" href="/static/theme.css?v=151">
 <link rel="stylesheet" href="/static/dark.css?v=21">
 <script src="/static/night.js?v=2"></script>
 </head>
@@ -179,7 +179,8 @@ fetch("/api/mapcfg").then(x => x.json()).then(c => {
   g.addTo(map); g.bringToBack(); map.removeLayer(baseLayer); baseLayer = g;
 }).catch(() => {});
 
-const icon = (cls, txt) => L.divIcon({className:"", html:`<div class="carm ${cls}">${txt}</div>`, iconSize:[30,30], iconAnchor:[15,15]});
+const icon = (cls, txt) => { const ab = txt === "А" || txt === "Б", z = ab ? 46 : 30;
+  return L.divIcon({className:"", html:`<div class="carm ${cls}${ab ? " abig" : ""}">${txt}</div>`, iconSize:[z, z], iconAnchor:[z / 2, z / 2]}); };
 let nearLayer = L.layerGroup().addTo(map), rideLayer = L.layerGroup().addTo(map), driverMarker = null;
 const aLayer = L.layerGroup().addTo(map);
 // Б точканы тандап жатканда А точка картада кара белги болуп турат
@@ -210,7 +211,7 @@ map.on("movestart", () => { if (pinActive()) $("#pin").classList.add("up"); });
 function meLabel() {
   const p = NAV.pos && NAV.pos(), c = map.getCenter();
   let far = false;
-  if (p) { const dy = (c.lat - p[0]) * 111320, dx = (c.lng - p[1]) * 111320 * Math.cos(p[0] * Math.PI / 180); far = Math.hypot(dx, dy) > 60 || !pinActive(); }
+  if (p) { const dy = (c.lat - p[0]) * 111320, dx = (c.lng - p[1]) * 111320 * Math.cos(p[0] * Math.PI / 180); far = pinActive() && Math.hypot(dx, dy) > 60; }
   document.body.classList.toggle("mefar", far);
 }
 map.on("move", meLabel);
