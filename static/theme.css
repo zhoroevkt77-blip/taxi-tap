@@ -870,3 +870,6 @@ html.uidark .home{background:#17181c!important}
 /* Айдоочунун кабинети: профиль карточкасы */
 .dcab{margin:6px 0 10px;text-align:center}.dcab .cab-av{margin:4px auto 6px}
 .dmeta{display:flex;justify-content:center;gap:8px;margin:-4px 0 4px}.dmeta span{background:#fff;border:1.5px solid #ffd23f;border-radius:999px;padding:4px 12px;font-weight:700;font-size:14px}.dmeta span:empty{display:none}
+/* Кара тегерек жок — жөн кара стрелка (› ) */
+.haddr span,#home.hbg .haddr span,.hsearch em,#home.hbg .hsearch em{background:none!important;color:#16161a!important;width:auto!important;height:auto!important;border-radius:0!important;font-size:32px!important;font-weight:700!important;line-height:1;box-shadow:none!important}
+html.uidark .haddr span,html.uidark .hsearch em{color:#fff!important}
