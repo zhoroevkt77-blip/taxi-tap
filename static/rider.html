@@ -120,7 +120,7 @@ body.cabsolo #cabMore .lnks>h3:first-child{display:none}body.cabsolo #cabMore{te
 .solohd{display:flex;align-items:center;gap:12px;margin:0 0 12px}.solohd button{width:46px;height:46px;border-radius:50%;border:0;background:#fff;box-shadow:0 3px 10px rgba(0,0,0,.12);font-size:28px;font-weight:700;line-height:1}.solohd b{font-size:24px}
 .abwrap{position:relative;width:46px;height:46px}.abchg{position:absolute;left:52px;top:9px;white-space:nowrap;background:#fff;color:#16161a;font-size:13px;font-weight:800;padding:6px 10px;border-radius:12px;box-shadow:0 3px 10px rgba(0,0,0,.22);border:1.5px solid #ffd23f}
 .chips button.on{background:#16161a!important;color:#fff!important}
-.zpill.rz{margin:0 0 10px auto}
+.zpill.rz{margin:0 0 10px auto;position:relative;z-index:1}body.ridp #navBtns .zpill{pointer-events:auto}
 .chg{flex:none;margin-left:6px;border:0;background:#fff4c2;color:#16161a;font:inherit;font-size:13.5px;font-weight:700;border-radius:12px;padding:9px 10px}
 .sx-ab{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 0}.sx-ab button{display:flex;align-items:center;gap:8px;border:1.5px solid #ffe08a;background:#fffbea;border-radius:16px;padding:11px 10px;font:inherit;font-size:14.5px;font-weight:700;color:#16161a;text-align:left;line-height:1.15}.sx-ab button.done{background:#16161a;color:#fff;border-color:#16161a}.sx-ab button.done small{display:block;font-size:11px;color:#ffd31a}.sx-ab button.done span{overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.sx-ab button.next{background:#ffd31a;border-color:#f0b400;animation:nxt 1.2s ease 2}@keyframes nxt{50%{transform:scale(1.04)}}
 .sx-ab i{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-weight:800;font-size:12px}.sx-ab i.a{background:#16161a;color:#ffd31a}.sx-ab i.b{background:#fff;color:#16161a;border:2.5px solid #16161a}
@@ -288,7 +288,11 @@ NAV.init(map, {onLocate: () => locate(true)});
 // + / − баскычтары (жакындатуу / алыстатуу)
 (function () { const nb = document.getElementById("navBtns"); if (!nb) return;
   const z = document.createElement("div"); z.className = "zpill rz"; z.innerHTML = `<button id="rzIn" aria-label="Жакындатуу">+</button><i></i><button id="rzOut" aria-label="Алыстатуу">−</button>`;
-  nb.prepend(z); z.querySelector("#rzIn").onclick = () => map.zoomIn(1); z.querySelector("#rzOut").onclick = () => map.zoomOut(1); })();
+  nb.prepend(z);
+  const zb = (d, e) => { e.preventDefault(); e.stopPropagation(); const c = map.getCenter();   // пин турган жер ордунда калсын
+    map.setView(c, Math.max(3, Math.min(19, map.getZoom() + d)), {animate:true}); };
+  ["click", "dblclick", "touchstart", "mousedown"].forEach(ev => z.addEventListener(ev, e => e.stopPropagation(), {passive:ev !== "click"}));
+  z.querySelector("#rzIn").onclick = e => zb(1, e); z.querySelector("#rzOut").onclick = e => zb(-1, e); })();
 // GPS: бир жолу эмес — 60 сек бою такыраак жайгашууну күтөбүз (биринчи жооп көбүнчө болжолдуу болот)
 S.gps = {state:"wait", acc:null, at:0};       // wait | ok | denied | off | out
 let gpsWatch = null, gpsStop = null;
