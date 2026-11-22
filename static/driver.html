@@ -115,7 +115,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=157">
+<link rel="stylesheet" href="/static/theme.css?v=158">
 <link rel="stylesheet" href="/static/dark.css?v=21">
 <script src="/static/night.js?v=2"></script>
 </head>
@@ -667,7 +667,7 @@ function viewCabinet(part) {
       <div class="cab-nm">${esc(D.name || "Айдоочу")}</div><div class="cab-ph">${esc((ME_D && ME_D.phone) || D.phone || "")}</div>
       <div class="dmeta"><span>★ ${D.rating ?? "5.0"}</span><span>${esc(D.car_plate || "")}</span></div></div>` : ""}${C ? `<button class="carrow" id="myCar"><img src="${carImg(D.car_color)}" alt=""><span><b>Менин унаам</b><small>${esc(carText(D.car_color, D.car_model))}</small><div style="margin-top:4px">${kgPlate(D.car_plate)}</div></span><em>›</em></button>` + workHTML() + myQrHTML() : ""}
     <div${on(C)}><div class="irow">${yi("car")}<span><b>Тарифтериңиз</b><small>${(D.classes || []).map(c => esc((D.class_names || {})[c] || c)).join(", ")} · Комфорт же Минивэнге өтүү үчүн админге кайрылыңыз</small></span></div>
-      <div class="irow">${yi("percent")}<span><b>Комиссия</b><small>${esc(D.tariff)}</small></span></div></div>
+      <div class="irow">${yi("percent")}<span><b>Комиссия</b><small>${esc(D.tariff)}</small></span></div>${D.tax_pct > 0 ? `<div class="irow">${yi("building")}<span><b>Киреше салыгы</b><small>Ар бир сапардан ${D.tax_pct}% · балансыңыздан кармалат</small></span></div>` : ""}${D.ins_pct > 0 ? `<div class="irow"><img class="yi" src="/static/c_shield.webp?v=24" alt=""><span><b>Камсыздандыруу төгүмү</b><small>Ар бир сапардан ${D.ins_pct}% · балансыңыздан кармалат</small></span></div>` : ""}${(D.tax_pct || 0) + (D.ins_pct || 0) > 0 ? `<div class="irow tot">${yi("chart")}<span><b>Баары: ${+(D.pct_now + (D.tax_pct || 0) + (D.ins_pct || 0)).toFixed(2)}%</b><small>Комиссия + салык + камсыздандыруу ар бир сапардан</small></span></div>` : ""}</div>
     <div class="grid"><div class="stat"><span class="muted">Баланс</span><b style="color:${D.balance < D.min_balance ? "var(--bad)" : "inherit"}">${D.balance} с</b></div>
       <div class="stat"><span class="muted">Рейтинг</span><b>★ ${D.rating ?? "5.0"}</b></div></div>
     <div${on(E)}><div class="seg" id="ePer">${[["today", "Бүгүн"], ["week", "Жума"], ["month", "Ай"], ["all", "Жалпы"]].map(([k, t]) => `<button data-ep="${k}" class="${k === EPER ? "on" : ""}">${t}</button>`).join("")}</div>

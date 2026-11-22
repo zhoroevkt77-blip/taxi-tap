@@ -208,7 +208,7 @@ def driver_state(uid, seen=False):
           "car_plate": d.get("car_plate"), "park": parks.park_name_of_driver(uid) if d else None, "park_self": bool((parks.get(d["park_id"]) or {}).get("self_approve")) if d and d.get("park_id") else False, "blocked_by": (d or {}).get("blocked_by") or "",
           "online": bool(d and (core.is_available(d) or d.get("busy_ride"))),
           "balance": int(d.get("balance") or 0), "min_balance": core.min_balance(),
-          "tariff": core.finance_mode_text(), "pct_now": core.commission_pct(),
+          "tariff": core.finance_mode_text(), "pct_now": core.commission_pct(), "tax_pct": core.finance_config()["tax_pct"], "ins_pct": core.finance_config()["ins_pct"],
           "finance": core.driver_finance(uid) if d else None,
           "rating": d.get("rating"), "rides_done": d.get("rides_done"),
           "activity": d.get("activity") if d and d.get("activity") is not None else 100,
