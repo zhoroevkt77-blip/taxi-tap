@@ -238,8 +238,7 @@ function bindLinks() {
 window.NAV = (function () {
   let compFn = null, compAng = 0, onFix = null, single = false, showComp = false;
   let map = null, marker = null, pos = null, head = null, gpsHead = null, wrap = null, onLocate = null, watching = false, oriOn = false;
-  const ARROW = `<svg viewBox="0 0 60 60" width="50" height="50"><path d="M30 6 L50 52 L30 42 L10 52 Z" fill="#FAC775" stroke="#fff" stroke-width="5" stroke-linejoin="round"/>
-    <path d="M30 6 L50 52 L30 42 Z" fill="#E09A00"/><path d="M30 6 L10 52 L30 42 Z" fill="#FFC61A"/></svg>`;
+  const ARROW = `<img src="/static/nav_arrow.webp?v=1" width="54" height="54" alt="" draggable="false" style="display:block;pointer-events:none">`;
   const LOC = `<svg viewBox="0 0 24 24" width="24" height="24"><path d="M21.5 2.5 L2.8 10.3 L11 12.9 L13.7 21.2 Z" fill="#16161a" stroke="#16161a" stroke-width="1.2" stroke-linejoin="round"/></svg>`;
   const COMP = `<svg viewBox="0 0 40 40" width="34" height="34"><path d="M20 4 L26 20 L14 20 Z" fill="#ff3b30"/><path d="M20 36 L26 20 L14 20 Z" fill="#c9c9cf"/><circle cx="20" cy="20" r="2.6" fill="#fff"/></svg>`;
   function icon() { return L.divIcon({className:"", html:`<div class="navme"><i></i><b class="navarr">${ARROW}</b></div>`, iconSize:[52,52], iconAnchor:[26,26]}); }
