@@ -123,6 +123,11 @@ body.cabsolo #cabMore .lnks>h3:first-child{display:none}body.cabsolo #cabMore{te
 .sx-ab{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 0}.sx-ab button{display:flex;align-items:center;gap:8px;border:1.5px solid #ffe08a;background:#fffbea;border-radius:16px;padding:11px 10px;font:inherit;font-size:14.5px;font-weight:700;color:#16161a;text-align:left;line-height:1.15}.sx-ab button.done{background:#16161a;color:#fff;border-color:#16161a}.sx-ab button.done small{display:block;font-size:11px;color:#ffd31a}.sx-ab button.done span{overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.sx-ab button.next{background:#ffd31a;border-color:#f0b400;animation:nxt 1.2s ease 2}@keyframes nxt{50%{transform:scale(1.04)}}
 .sx-ab i{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-weight:800;font-size:12px}.sx-ab i.a{background:#16161a;color:#ffd31a}.sx-ab i.b{background:#fff;color:#16161a;border:2.5px solid #16161a}
 .sxb{flex:none;margin-left:auto;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-weight:800;font-size:16px}.sxb.a{background:#16161a;color:#ffd31a}.sxb.b{background:#ffc61a;color:#16161a;border:2.5px solid #16161a}.sxb+em{margin-left:10px!important}
+.sx-srch input{flex:1;min-width:0;border:0;background:none;font:inherit;font-size:19px;font-weight:600;color:#16161a;outline:none;padding:0}.sx-srch input::placeholder{color:#55555f}
+.sx-srch input::-webkit-search-cancel-button{display:none}.sxx{border:0;background:#dcdce2;width:28px;height:28px;border-radius:50%;font-size:14px;flex:none}
+.sx-res{margin-top:8px;background:#fff;border-radius:16px;box-shadow:0 6px 20px rgba(0,0,0,.1);overflow:hidden}.sx-res button{display:flex;align-items:center;gap:10px;width:100%;border:0;border-bottom:1px solid #f0f0f2;background:none;padding:10px 12px;font:inherit;text-align:left}
+.sx-res .ri{width:44px;height:34px;flex:none;display:grid;place-items:center;font-size:24px}.sx-res b{display:block;font-size:16px}.sx-res small{color:#7a7a85;font-size:13px}.sx-res p{padding:12px;margin:0}
+body.sxtyping .sx-ab,body.sxtyping .sx-chips,body.sxtyping .sx-cards,body.sxtyping #nearMsg{display:none!important}
 .sx-chips{display:flex;gap:8px;margin:12px 0 2px;overflow-x:auto;scrollbar-width:none}.sx-chips::-webkit-scrollbar{display:none}
 .sx-chips button{flex:none;display:flex;align-items:center;gap:6px;white-space:nowrap;padding:9px 13px;border:0;border-radius:999px;background:#f3f3f6;font:inherit;font-size:15px;font-weight:600;max-width:220px;overflow:hidden;text-overflow:ellipsis}.sx-chips img{width:22px;height:22px;object-fit:contain}
 .sx-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}.sx-cd{border:0;border-radius:20px;padding:14px;height:108px;position:relative;overflow:hidden;background:#fff4c2;text-align:left;font:inherit;color:#16161a}.sx-cd.k{background:#16161a;color:#fff}.sx-cd.w{background:#fff;color:#16161a;border:1.5px solid #ececf0;box-shadow:0 4px 14px rgba(0,0,0,.07)}.sx-cd.w small{color:#6b6b75;opacity:1}
@@ -387,7 +392,8 @@ function viewIdle(o) {
   if (P.work) rec.push({ico:"ic_briefcase", name:"Иш", lat:P.work.lat, lon:P.work.lon, addr:P.work.name});
   (P.recent || []).slice(0, 4).forEach(r => rec.push({ico:"c_trips", name:r.name, lat:r.lat, lon:r.lon}));
   render(`<div class="sx">
-    <button class="sx-srch" id="hSearch"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#16161a" stroke-width="2.6" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg><span id="sxT">Каяктан?</span><i class="sxb a" id="sxI">А</i></button>
+    <div class="sx-srch" id="hSearch"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="#16161a" stroke-width="2.6" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg><input id="sxQ" type="search" autocomplete="off" enterkeyhint="search" placeholder="Каяктан?"><button class="sxx hide" id="sxX" aria-label="Тазалоо">✕</button><i class="sxb a" id="sxI">А</i></div>
+    <div class="sx-res hide" id="sxRes"></div>
     <div class="sx-ab"><button id="pA"><i class="a">А</i><span>А точканы белгилеймин</span></button><button id="pB"><i class="b">Б</i><span>Б точканы белгилеймин</span></button></div>
     ${rec.length ? `<div class="sx-chips">${rec.map((r, i) => `<button data-i="${i}"><img src="/static/${r.ico}.webp?v=24" alt="">${esc(r.name)}</button>`).join("")}</div>` : ""}
     <div class="sx-cards">${has("delivery") ? `<button class="sx-cd" id="tDel"><b>Жеткирүү</b><small>Буюм, документ</small><img src="/static/h_box.webp?v=24" alt=""></button>` : ""}
@@ -396,7 +402,27 @@ function viewIdle(o) {
   homeOn(false);
   // Издөө тилкеси: адегенде «Каяктан? А», А тандалгандан кийин «Каякка барасыз? Б»
   S.aSet = false;
-  $("#hSearch").onclick = () => (S.aSet ? $("#pB") : $("#pA")).click();     // издөө барагы жок — пин турган жерди белгилейт
+  // Тилкеге түз жазуу: астында кыска тизме; тандаса — пин ошол жерге, А же Б белгиленет
+  const q = $("#sxQ"), res = $("#sxRes"); let sxT = null, sxSeq = 0, sxItems = [];
+  const sxClose = () => { document.body.classList.remove("sxtyping"); res.classList.add("hide"); res.innerHTML = ""; };
+  q.onfocus = () => { document.body.classList.add("sxtyping"); window.SHEET && SHEET.expand(); };
+  q.onblur = () => setTimeout(() => { if (!q.value.trim()) sxClose(); }, 200);
+  $("#sxX").onclick = () => { q.value = ""; $("#sxX").classList.add("hide"); sxClose(); q.blur(); };
+  q.oninput = () => {
+    const v = q.value.trim(); $("#sxX").classList.toggle("hide", !v); clearTimeout(sxT);
+    if (v.length < 2) { res.classList.add("hide"); return; }
+    sxT = setTimeout(async () => { const my = ++sxSeq, c = S.from || [map.getCenter().lat, map.getCenter().lng];
+      res.classList.remove("hide"); res.innerHTML = `<p class="muted">Изделүүдө…</p>`;
+      const x = await api(`/api/addr?q=${encodeURIComponent(v)}&lat=${c[0]}&lon=${c[1]}`); if (my !== sxSeq) return;
+      sxItems = (x.items || []).filter(r => r.lat != null).slice(0, 5);
+      res.innerHTML = sxItems.length ? sxItems.map((r, i) => `<button data-sx="${i}"><span class="ri">${eic(r.icon || "📍")}</span><span><b>${esc(r.name)}</b>${r.area ? `<small>${esc(r.area)}</small>` : ""}</span></button>`).join("")
+        : `<p class="muted">«${esc(v)}» табылган жок — көчөнүн атын гана жазып көрүңүз же пинди картадан коюңуз.</p>`;
+      res.querySelectorAll("[data-sx]").forEach(bt => bt.onmousedown = bt.onclick = e => { e.preventDefault(); const r = sxItems[+bt.dataset.sx];
+        map.setView([r.lat, r.lon], 17, {animate:false}); $("#chipAddr").textContent = r.name;
+        q.value = ""; $("#sxX").classList.add("hide"); sxClose(); q.blur();
+        (S.aSet ? $("#pB") : $("#pA")).click(); });
+    }, 300);
+  };
   if ($("#tDel")) $("#tDel").onclick = () => { S.cls = "delivery"; S.openOther = false; viewStepA(); };
   $("#tOther").onclick = () => { S.openOther = true; S.cls = "econom"; viewStepA(); };
   // Ошол эле жерден: пин турган жер А болот, анан пин Б'га айланат; экинчи басуу — Б, анан баа
@@ -404,7 +430,7 @@ function viewIdle(o) {
   const markA = (quiet) => {
     S.mode = "pickDest"; setPin("to"); showA(true);
     const a = $("#pA"); a.classList.add("done"); a.querySelector("span").innerHTML = `<small>А ✓</small>${esc(S.fromAddr || "")}`;
-    S.aSet = true; $("#sxT").textContent = S.cls === "delivery" ? "Кайда жеткирилет?" : "Каякка барасыз?"; $("#sxI").textContent = "Б"; $("#sxI").className = "sxb b";
+    S.aSet = true; $("#sxQ").placeholder = S.cls === "delivery" ? "Кайда жеткирилет?" : "Каякка барасыз?"; $("#sxI").textContent = "Б"; $("#sxI").className = "sxb b";
     $("#pB").classList.add("next"); if (!quiet) toast("Эми картаны жылдырып, Б точканы белгилеңиз", 2200); };
   $("#pA").onclick = () => { if (S.aSet) { S.aSet = false; return viewIdle({keep:true}); }   // кайра басса — А'ны кайра тандоо
     const c = map.getCenter(); S.from = [c.lat, c.lng]; S.fromAddr = pinAddr(); picked("А");
