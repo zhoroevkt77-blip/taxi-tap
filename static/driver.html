@@ -115,7 +115,7 @@ label.l{font-size:13px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=158">
+<link rel="stylesheet" href="/static/theme.css?v=159">
 <link rel="stylesheet" href="/static/dark.css?v=21">
 <script src="/static/night.js?v=2"></script>
 </head>
@@ -868,7 +868,7 @@ async function viewDiag(fromOnline) {
       <p>${bad.length ? (fromOnline ? "Линияга чыгуу үчүн буларды оңдоңуз:" : "Булар оңдолмоюнча заказ келбейт.") : warn.length ? `${warn.length} эскертүү бар — оңдосоңуз жакшыраак иштейт.` : "Баары жайында. Ийгиликтүү сапар!"}</p></div>
     ${bad.length ? `<h3 class="dgh">Заказга тоскоол</h3>${bad.map(x => row(x, all.indexOf(x))).join("")}` : ""}
     ${warn.length ? `<h3 class="dgh">Эскертүүлөр</h3>${warn.map(x => row(x, all.indexOf(x))).join("")}` : ""}
-    <details class="dgok"><summary>✓ Жайында — ${ok.length}</summary>${ok.map(x => row(x, all.indexOf(x))).join("")}</details>
+    <details class="dgok"><summary>Жайында — ${ok.length}</summary>${ok.map(x => row(x, all.indexOf(x))).join("")}</details>
     <button class="btn ghost" id="dgRe">↻ Кайра текшерүү</button><button class="btn bk" id="dgBk">‹ Артка</button>`);
   window.SHEET && SHEET.expand();
   document.querySelectorAll("[data-df]").forEach(b => b.onclick = e => { e.stopPropagation(); const x = all[+b.dataset.df]; x.act && x.act(); });

@@ -795,7 +795,7 @@ b,strong,h1,h2,h3,h4,th{font-weight:600}
 .dg .yi{width:44px!important;height:30px!important;margin:0!important;flex:none}
 .dgt{flex:1;min-width:0}.dgt b{display:block;font-size:15px}.dgt small{display:block;color:#6b6b76;font-size:12.5px;margin-top:2px}
 .dgb{flex:none;border:0;border-radius:999px;padding:9px 12px;background:#ffc61a;font:inherit;font-weight:600;font-size:13px;cursor:pointer}
-.dgok{margin:10px 0}.dgok summary{cursor:pointer;color:#1a7a40;font-weight:600;padding:8px 4px}
+.dgok{margin:10px 0}.dgok summary{cursor:pointer;color:#1a7a40;font-weight:600;padding:8px 4px;list-style:none;display:flex;align-items:center;gap:10px}.dgok summary::-webkit-details-marker{display:none}.dgok summary::before{content:"";flex:none;width:30px;height:30px;border-radius:50%;background:#e3f5ea url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M9 5l7 7-7 7' fill='none' stroke='%231a7a40' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/18px no-repeat;transition:transform .2s}.dgok[open] summary::before{transform:rotate(90deg)}
 .outd{margin:8px 0 0;font-size:15px}.outd.t{color:#b42318;font-weight:600}.outbtns{display:flex;flex-direction:column;gap:8px;margin-top:10px}.outbtns .btn{margin:0}
 .btn.go.off{background:#d9d9de!important;color:#6b6b76!important;box-shadow:none!important;font-size:15px}
 .outn .outd b{display:inline!important;font-size:inherit!important;margin:0!important}
