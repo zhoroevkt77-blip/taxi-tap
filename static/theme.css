@@ -873,3 +873,6 @@ html.uidark .home{background:#17181c!important}
 /* Кара тегерек жок — жөн кара стрелка (› ) */
 .haddr span,#home.hbg .haddr span,.hsearch em,#home.hbg .hsearch em{background:none!important;color:#16161a!important;width:auto!important;height:auto!important;border-radius:0!important;font-size:32px!important;font-weight:700!important;line-height:1;box-shadow:none!important}
 html.uidark .haddr span,html.uidark .hsearch em{color:#fff!important}
+/* Жүргүнчүнүн «мен» белгиси: жебе эмес, тегерек чекит */
+.medot{width:30px;height:30px;position:relative}.medot i{position:absolute;inset:0;border-radius:50%;background:rgba(255,183,3,.25);animation:navp 2s ease-out infinite}
+.medot b{position:absolute;left:7px;top:7px;width:16px;height:16px;border-radius:50%;background:#16161a;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35)}
