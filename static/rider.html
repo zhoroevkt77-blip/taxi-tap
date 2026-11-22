@@ -396,7 +396,7 @@ function viewIdle(o) {
   homeOn(false);
   // Издөө тилкеси: адегенде «Каяктан? А», А тандалгандан кийин «Каякка барасыз? Б»
   S.aSet = false;
-  $("#hSearch").onclick = () => viewSearch(S.aSet ? "to" : "from");
+  $("#hSearch").onclick = () => (S.aSet ? $("#pB") : $("#pA")).click();     // издөө барагы жок — пин турган жерди белгилейт
   if ($("#tDel")) $("#tDel").onclick = () => { S.cls = "delivery"; S.openOther = false; viewStepA(); };
   $("#tOther").onclick = () => { S.openOther = true; S.cls = "econom"; viewStepA(); };
   // Ошол эле жерден: пин турган жер А болот, анан пин Б'га айланат; экинчи басуу — Б, анан баа
@@ -655,7 +655,7 @@ function viewPickDest(save) {
     ${save ? "" : `<input class="f" id="pn" maxlength="80" placeholder="Бул жердин аты (мис. Нурбек той-кана)" value="${esc(S.pendName || "")}">
       <p class="muted" style="margin-top:-4px">Аты жазылса — тизмеге кошулуп, кийин башкалар да таба алат.</p>`}
     <button class="btn main" id="ok">${save ? "Сактоо" : "📍 Ушул жерди белгилеймин"}</button>
-    ${save ? "" : `<button class="btn ghost" id="typeB">✍️ Б точканы жазып тандоо</button>`}<button class="btn bk" id="back">‹ Артка</button>`);
+<button class="btn bk" id="back">‹ Артка</button>`);
   if ($("#typeB")) $("#typeB").onclick = () => viewSearch("to");
   $("#ok").onclick = async () => { const c = map.getCenter(); S.to = [c.lat, c.lng]; S.toAddr = $("#chipAddr").textContent;
     if (save) { PLACES = await api("/api/place", {kind:save, p:S.to, name:S.toAddr}); map.setView(S.from, 15); return viewIdle(); }
