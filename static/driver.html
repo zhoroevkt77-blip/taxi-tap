@@ -43,6 +43,10 @@ input.f{width:100%;font-size:17px;padding:14px;border-radius:14px;border:1px sol
 .accbig .osurge{position:absolute;right:14px;top:50%;transform:translateY(-50%);z-index:2;background:#16161a;color:#ffd31a;border-radius:999px;padding:4px 10px;font-size:16px}
 .hbr{font-size:12.5px;color:#6b6b75;margin-top:2px}.hbr s{text-decoration:none;color:#b3261e}.hbr u{text-decoration:none;color:#1f7a45}.hbr b{color:#1f7a45}
 .ftab{background:#fff;border:1.5px solid #ffe08a;border-radius:18px;padding:6px 14px 10px;margin:10px 0}.fr{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px dashed #eee;font-size:15px}.fr em{font-style:normal;font-size:12px;font-weight:700;background:#f3f3f6;border-radius:999px;padding:1px 7px;margin-left:4px}.fr b{font-variant-numeric:tabular-nums}.fr.fsum b{font-size:18px}.fr.net{border:0;margin-top:4px;background:#e8f7ee;border-radius:12px;padding:11px 10px}.fr.net b{color:#1f7a45;font-size:20px}.fsub{font-size:12.5px;color:#7a7a85;margin-top:6px}
+#earn,#heatBtn,#peerBtn{transition:transform .28s cubic-bezier(.2,.8,.2,1),opacity .2s;touch-action:pan-y}
+#earn.tucked,#heatBtn.tucked,#peerBtn.tucked,body.ridetuck #earn,body.ridetuck #heatBtn,body.ridetuck #peerBtn{transform:translateX(calc(100% - 50px))!important;border-radius:18px 0 0 18px;box-shadow:-3px 4px 14px rgba(20,20,30,.18);opacity:.95}
+#earn.tucked::after,#heatBtn.tucked::after,#peerBtn.tucked::after{content:"";position:absolute;left:3px;top:50%;width:3px;height:18px;margin-top:-9px;border-radius:2px;background:#ffb703}
+#earn,#heatBtn,#peerBtn{position:relative}.peek{animation:peek 1s ease 3}@keyframes peek{50%{box-shadow:0 0 0 5px rgba(255,183,3,.55)}}
 .offer{position:fixed;left:0;right:0;bottom:0;z-index:20;background:transparent;display:flex;align-items:flex-end;pointer-events:none}.offer .ocard{pointer-events:auto}
 .ocard{background:#fff;width:100%;border-radius:22px 22px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));animation:up .25s ease-out}
 @keyframes up{from{transform:translateY(40px);opacity:.5}to{transform:none;opacity:1}}
@@ -343,6 +347,7 @@ function earnPill() {
 function header() {
   const act = D.status === "active";
   $("#earn").classList.toggle("hide", !act); $("#tools").classList.toggle("hide", !act); $("#cabBtn").classList.toggle("hide", !act);
+  document.body.classList.toggle("ridetuck", !!D.ride);      // сапар учурунда чиптер четке кетет
   if (!act) return;
   earnPill();
   $("#stBadge").innerHTML = D.ride ? "🚕 Сапарда" : D.online ? "🟢 Линияда" : "▶ Линияга чыгуу";
@@ -1178,9 +1183,36 @@ function hexPts(lat, lon, r) {
   const c = Math.cos(41 * Math.PI / 180);
   return [0, 1, 2, 3, 4, 5].map(i => { const a = Math.PI / 3 * i; return [lat + r * Math.sin(a), lon + r * Math.cos(a) / c]; });
 }
+// Оң жактагы чиптер: оңго сүрсө — четке жашырылат (сөлөкөтү гана калат), солго сүрсө же басса — кайра чыгат
+const TUCK = ["earn", "heatBtn", "peerBtn"];
+function tuckSet(id, on, save = true) {
+  const el = document.getElementById(id); if (!el) return;
+  el.classList.toggle("tucked", on);
+  if (save) try { localStorage.setItem("tuck_" + id, on ? "1" : ""); } catch (e) {}
+}
+function tuckPeek(id) {             // маанилүү учур: 5 сек өзү чыгып, кайра жашырылат
+  const el = document.getElementById(id); if (!el || !el.classList.contains("tucked") || el.dataset.peek) return;
+  el.dataset.peek = "1"; el.classList.remove("tucked"); el.classList.add("peek");
+  setTimeout(() => { delete el.dataset.peek; el.classList.remove("peek"); if (localStorage.getItem("tuck_" + id)) el.classList.add("tucked"); }, 5000);
+}
+TUCK.forEach(id => {
+  const el = document.getElementById(id); if (!el) return;
+  try { if (localStorage.getItem("tuck_" + id)) el.classList.add("tucked"); } catch (e) {}
+  let x0 = null, y0 = 0, moved = false;
+  el.addEventListener("touchstart", e => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; moved = false; }, {passive:true});
+  el.addEventListener("touchmove", e => { if (x0 === null) return; const dx = e.touches[0].clientX - x0, dy = e.touches[0].clientY - y0;
+    if (Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy)) { moved = true; el.style.transform = el.classList.contains("tucked") ? "" : `translateX(${Math.max(0, dx)}px)`; } }, {passive:true});
+  el.addEventListener("touchend", e => { if (x0 === null) return; const dx = (e.changedTouches[0] || {}).clientX - x0; el.style.transform = ""; x0 = null;
+    if (!moved) return; el.dataset.swiped = "1"; setTimeout(() => delete el.dataset.swiped, 400);
+    if (dx > 40) tuckSet(id, true); else if (dx < -30) tuckSet(id, false); });
+  el.addEventListener("click", e => {            // жашырылганды басса — ачылат (өз аракети иштебейт)
+    if (el.dataset.swiped || el.classList.contains("tucked")) { e.stopImmediatePropagation(); e.preventDefault(); if (!el.dataset.swiped) tuckSet(id, false); }
+  }, true);
+});
 async function loadHeat() {
   const x = await api("/api/d/heat"); if (!x || x.error) return;
   const k = x.k_here || 1, b = $("#heatBtn");
+  if (k >= 1.2) tuckPeek("heatBtn");
   b.innerHTML = `<i>💓</i>×${k.toFixed(1)}`; b.classList.toggle("hot", k > 1); b.classList.toggle("warm", k <= 1 && (x.k_max || 1) > 1);
   heatLayer.clearLayers();
   if (!heatOn) return;
