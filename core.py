@@ -2448,9 +2448,18 @@ def demand_heat(minutes=120):
             for k, v in cells.items()]
 
 
-def passenger_history(uid, limit=20):
-    return query("SELECT id, status, price, discount, wait_fee, dist_km, p_addr, d_addr, cls, created_at, completed_at "
-                 "FROM rides WHERE passenger=? ORDER BY id DESC LIMIT ?", (uid, limit), "all")
+def passenger_history(uid, limit=30):
+    rows = query("SELECT r.id, r.status, r.price, r.discount, r.wait_fee, r.dist_km, r.p_addr, r.d_addr, r.cls, r.created_at, "
+                 "r.completed_at, r.p_lat, r.p_lon, r.d_lat, r.d_lon, r.driver, d.car_plate, d.car_model, d.car_color, u.name AS d_name "
+                 "FROM rides r LEFT JOIN drivers d ON d.uid=r.driver LEFT JOIN users u ON u.uid=r.driver "
+                 "WHERE r.passenger=? ORDER BY r.id DESC LIMIT ?", (uid, limit), "all")
+    done = [r["id"] for r in rows if r["status"] == "completed"]
+    rt = {x["ride_id"] for x in query("SELECT ride_id FROM ratings WHERE ride_id IN (%s)" % ",".join("?" * len(done)), tuple(done), "all")} if done else set()
+    for r in rows:
+        r["car"] = car_text(r.pop("car_color", None), r.pop("car_model", None)) if r.get("driver") else ""
+        r["rated"] = r["id"] in rt
+        r.pop("driver", None)
+    return rows
 
 
 def client_card(uid):

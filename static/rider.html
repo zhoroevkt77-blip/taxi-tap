@@ -99,6 +99,13 @@ input.f:focus{border-color:var(--navy)}
 .msgs div.me{align-self:flex-end;background:var(--navy);color:#fff}
 .quick{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:13px;cursor:pointer}
+.tmon{font-size:15px;font-weight:700;color:#7a7a85;margin:14px 2px 6px}.tcard{background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.08);margin-bottom:12px;border:1px solid #f0f0f2}
+.tmap{display:block;width:100%;height:130px;background:#f6f3ea}.tmap .sx{stroke:#fff;stroke-width:7}.tmap .pk{fill:#dcefd8}.tmap .rt0{fill:none;stroke:#16161a;stroke-width:8;stroke-linecap:round;opacity:.18}.tmap .rt{fill:none;stroke:#ffb300;stroke-width:5;stroke-linecap:round}
+.tmap .pa{fill:#16161a;stroke:#fff;stroke-width:3}.tmap .ta{fill:#ffd31a;font-size:11px;font-weight:800;text-anchor:middle}.tmap .pb{fill:#fff;stroke:#16161a;stroke-width:3}
+.tbody{padding:12px 14px 14px}.ttop{display:flex;justify-content:space-between;font-size:17px;margin-bottom:8px}.tad{display:flex;align-items:center;gap:10px;margin:5px 0;font-size:15px}.tad i{flex:0 0 22px;height:22px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-weight:800;font-size:12px}.tad i.a{background:#16161a;color:#ffd31a}.tad i.b{background:#fff;color:#16161a;border:2.5px solid #16161a}
+.tdrv{font-size:13.5px;color:#6b6b75;margin:8px 0 2px}.trate{display:flex;align-items:center;gap:2px;margin:8px 0 2px;font-size:14px}.trate span{margin-right:6px;color:#6b6b75}.trate button{border:0;background:none;font-size:24px;color:#d6d6dc;padding:0 2px}.trate button:hover{color:#ffb300}
+.tbtns{display:flex;gap:8px;margin-top:10px}.tbtns .btn{flex:1;margin:0;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center;padding:12px 6px;font-size:15px}
+html.uidark .tcard{background:#1f2026;border-color:#2b2c33}html.uidark .tmap{background:#26272e}html.uidark .tmap .sx{stroke:#30313a}html.uidark .tmap .pk{fill:#24352a}
 </style>
 <link rel="preload" as="image" href="/static/h_taxi.webp?v=24"><link rel="preload" as="image" href="/static/h_box.webp?v=24"><link rel="preload" as="image" href="/static/h_girl.webp?v=25"><link rel="preload" as="image" href="/static/h_map.webp?v=25">
 <link rel="stylesheet" href="/static/theme.css?v=147">
@@ -1032,14 +1039,32 @@ async function viewCabinet() {
     $("#vcR").onchange = e => { try { localStorage.setItem("voice", e.target.checked ? "on" : "off"); } catch (x) {} if (e.target.checked) speak(["voice_on"]); }; };
   $("#qH").onclick = async () => {
     more(`<div class="lnks"><h3 style="margin:4px 0 4px">🕘 Сапарларым</h3><div id="hist"><p class="muted">Жүктөлүүдө…</p></div></div>`);
-    const H = await api("/api/history");
-    const ST = {completed:"✅", cancelled:"✕", searching:"⏳", scheduled:"🕐", accepted:"🚕", arrived:"🚕", in_trip:"🚕"};
-    const box = $("#hist"); if (!box) return;
-    const all = (H.rides || []), nc = all.filter(r => r.status === "cancelled").length;
-    const row = r => { const d = new Date(r.created_at * 1000), pay = r.price ? Math.max(0, r.price - Math.round(r.discount || 0)) + " с" : "";
-      return `<div class="hrow"><span>${ST[r.status] || ""} ${d.toLocaleDateString("ru-RU", {day:"2-digit", month:"2-digit"})} · ${esc(r.d_addr || "сапар")}</span><b>${r.status === "cancelled" ? '<span class="muted">жокко чыкты</span>' : pay}</b></div>`; };
-    const rows = all.filter(r => r.status === "completed");          // сапарлар гана
-    box.innerHTML = rows.length ? rows.map(row).join("") : `<p class="muted">Азырынча бүткөн сапар жок.</p>`;
+    const H = await api("/api/history"), box = $("#hist"); if (!box) return;
+    const rows = (H.rides || []).filter(r => r.status === "completed");          // сапарлар гана
+    if (!rows.length) return box.innerHTML = `<p class="muted">Азырынча бүткөн сапар жок.</p>`;
+    const MON = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
+    const MS = ["янв", "фев", "мар", "апр", "май", "июн", "июл", "авг", "сен", "окт", "ноя", "дек"];
+    let lastM = "", html = "";
+    rows.forEach((r, i) => {
+      const d = new Date((r.completed_at || r.created_at) * 1000), m = MON[d.getMonth()] + (d.getFullYear() !== new Date().getFullYear() ? " " + d.getFullYear() : "");
+      if (m !== lastM) { html += `<div class="tmon">${m}</div>`; lastM = m; }
+      const pay = Math.max(0, (r.price || 0) - Math.round(r.discount || 0));
+      html += `<div class="tcard">${tripSvg(r)}<div class="tbody">
+        <div class="ttop"><b>${d.getDate()} ${MS[d.getMonth()]}, ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}</b><b>${pay} сом</b></div>
+        <div class="tad"><i class="a">А</i><span>${esc(r.p_addr || "Белгиленген жер")}</span></div>
+        ${r.d_addr || r.d_lat != null ? `<div class="tad"><i class="b">Б</i><span>${esc(r.d_addr || "Белгиленген жер")}</span></div>` : ""}
+        ${r.d_name ? `<div class="tdrv">🚕 ${esc(r.d_name)}${r.car ? " · " + esc(r.car) : ""}${r.car_plate ? " · " + esc(r.car_plate) : ""}</div>` : ""}
+        ${!r.rated ? `<div class="trate" data-rid="${r.id}"><span>Сапарды баалаңыз:</span>${[1, 2, 3, 4, 5].map(n => `<button data-st="${n}">★</button>`).join("")}</div>` : ""}
+        <div class="tbtns">${r.d_lat != null ? `<button class="btn go" data-again="${i}">🔁 Кайра заказ</button>` : ""}
+          <a class="btn ghost" href="${me.bot ? "https://t.me/" + me.bot : "/terms"}" target="_blank">💬 Колдоо</a></div></div></div>`;
+    });
+    box.innerHTML = html;
+    box.querySelectorAll("[data-again]").forEach(b => b.onclick = () => { const r = rows[+b.dataset.again];
+      S.cls = r.cls || "econom"; S.from = [r.p_lat, r.p_lon]; S.fromAddr = r.p_addr || "Белгиленген жер";
+      S.to = [r.d_lat, r.d_lon]; S.toAddr = r.d_addr || "Белгиленген жер"; homeOn(false); picked("Б"); viewQuote(); });
+    box.querySelectorAll(".trate button").forEach(b => b.onclick = async () => { const w = b.parentElement, n = +b.dataset.st;
+      const x = await api("/api/rate", {id:+w.dataset.rid, stars:n, tags:[], comment:""});
+      w.innerHTML = x.error ? `<span class="muted">Баалоо мүмкүн болбоду</span>` : `<span>Рахмат! ${"★".repeat(n)}</span>`; });
   };
 }
 
@@ -1048,6 +1073,28 @@ try { if (new URLSearchParams(location.search).get("next") === "park") localStor
 try { const qs = new URLSearchParams(location.search), rf = qs.get("ref"), pm = qs.get("promo");
   if (rf) { localStorage.setItem("parkRef", rf); if (pm) localStorage.setItem("promoPre", pm.toUpperCase()); history.replaceState(null, "", "/"); } } catch (e) {}
 let ME_ROLE = {};
+// Сапарларым: жөнөкөйлөтүлгөн карта (2ГИС лимитин коротпойт) — А→Б сары сызык, Б жанында машина
+function tripSvg(r) {
+  const W = 360, H = 130, seed = r.id * 9301 % 233280, rnd = k => ((seed * (k + 7) * 49297) % 233280) / 233280;
+  let st = "";
+  for (let k = 0; k < 7; k++) { const x = 20 + rnd(k) * 320; st += `<line x1="${x}" y1="0" x2="${x + (rnd(k + 20) - .5) * 60}" y2="${H}" class="sx"/>`; }
+  for (let k = 0; k < 5; k++) { const y = 10 + rnd(k + 40) * 110; st += `<line x1="0" y1="${y}" x2="${W}" y2="${y + (rnd(k + 60) - .5) * 40}" class="sx"/>`; }
+  st += `<rect x="${40 + rnd(3) * 200}" y="${10 + rnd(5) * 60}" width="${40 + rnd(8) * 40}" height="${26 + rnd(9) * 20}" rx="8" class="pk"/>`;
+  let A = [70, 85], B = [290, 45];
+  if (r.d_lat != null && r.p_lat != null) {
+    const kx = Math.cos(r.p_lat * Math.PI / 180), dx = (r.d_lon - r.p_lon) * kx, dy = r.d_lat - r.p_lat, L = Math.hypot(dx, dy) || 1e-6;
+    const sc = Math.min(220 / Math.max(Math.abs(dx), 1e-6), 80 / Math.max(Math.abs(dy), 1e-6), 1e9);
+    const cx = W / 2, cy = H / 2, hx = dx * sc / 2, hy = -dy * sc / 2;
+    A = [cx - hx, cy - hy]; B = [cx + hx, cy + hy];
+    if (L * sc < 40) { A = [cx - 30, cy + 10]; B = [cx + 30, cy - 10]; }
+  }
+  const mx = (A[0] + B[0]) / 2 + (B[1] - A[1]) * .18, my = (A[1] + B[1]) / 2 - (B[0] - A[0]) * .18;
+  return `<svg class="tmap" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid slice">${st}
+    <path d="M${A[0]},${A[1]} Q${mx},${my} ${B[0]},${B[1]}" class="rt0"/><path d="M${A[0]},${A[1]} Q${mx},${my} ${B[0]},${B[1]}" class="rt"/>
+    <circle cx="${A[0]}" cy="${A[1]}" r="9" class="pa"/><text x="${A[0]}" y="${A[1] + 4}" class="ta">А</text>
+    <image href="/static/c_taxi.webp?v=24" x="${B[0] - 26}" y="${B[1] - 30}" width="52" height="34"/>
+    <circle cx="${B[0]}" cy="${B[1] + 8}" r="5" class="pb"/></svg>`;
+}
 // Айдоочу/парк ээси гана көрөт — кичине баскыч (жүргүнчүлөргө — кабинетте «Таксиде иштөө»)
 const rolePill = () => ME_ROLE.driver ? `<a class="rpill" href="/driver" aria-label="Айдоочу режимине өтүү"><img src="/static/r_car.webp?v=24" alt=""><span class="t">Айдоочуга<br>өтүү</span></a>`
   : ME_ROLE.park ? `<a class="rpill" href="/park"><span>🏢</span><span class="t">Паркка<br>өтүү</span></a>` : "";
