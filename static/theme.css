@@ -886,3 +886,6 @@ body.ridp #navComp{display:none!important}
 /* Жүргүнчү: тандалган тариф плиткасы ак, сары чек менен */
 body.ridp .cls>div.on{background:#fff!important;box-shadow:0 0 0 2.5px #ffc400,0 6px 18px rgba(255,180,0,.25)!important;border:0!important;color:#16161a!important}
 body.ridp .cls>div.on *{color:#16161a!important}
+/* Издөө тизмесиндеги иконкалар — айдоочу кабинетиндей чоң (52×40) */
+body.ridp .res .ri{width:52px!important;height:40px!important;font-size:30px!important;margin-right:4px}
+body.ridp .res .ri .eic{max-width:52px;max-height:40px}
