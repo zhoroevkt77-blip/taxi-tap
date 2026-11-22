@@ -130,7 +130,8 @@ window.addEventListener("load", () => setTimeout(() => { if (!window.INSTALL && 
 function installHTML() {
   if (window.matchMedia("(display-mode: standalone)").matches) return "";
   const ios = /iphone|ipad/i.test(navigator.userAgent);
-  if (window.INSTALL) return `<button class="btn ghost" id="instBtn">📲 Телефонго тиркеме катары орнотуу</button>`;
+  const drv = location.pathname.startsWith("/driver");
+  if (window.INSTALL) return `<button class="btn ghost" id="instBtn">📲 ${drv ? "«ТАП Айдоочу» иконкасын телефонго орнотуу" : "Телефонго тиркеме катары орнотуу"}</button>`;
   if (ios) return `<p class="muted" style="margin-top:10px">📲 Орнотуу: Safari'де «Бөлүшүү» → «На экран „Домой“».</p>`;
   if (/android/i.test(navigator.userAgent)) return `<p class="muted" style="margin-top:10px">📲 Орнотуу: Chrome'дун менюсу ⋮ → «Установить приложение» же «Добавить на главный экран».</p>`;
   return "";
