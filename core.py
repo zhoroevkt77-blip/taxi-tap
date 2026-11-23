@@ -317,7 +317,7 @@ NEW_COLUMNS = {
     "addresses": {"approx": "INTEGER DEFAULT 0",        # жери болжолдуу (аты гана белгилүү)
                   "status": "TEXT DEFAULT 'ok'",        # ok | pending (жүргүнчү/айдоочу сунуштаган)
                   "votes": "INTEGER DEFAULT 0", "suggested_by": "TEXT"},
-    "users": {"signup_as": "TEXT", "park_ref": "INTEGER", "park_ref_at": "REAL", "tg_uid": "TEXT", "notify": "INTEGER DEFAULT 1", "terms_at": "REAL",
+    "users": {"role": "TEXT", "signup_as": "TEXT", "park_ref": "INTEGER", "park_ref_at": "REAL", "tg_uid": "TEXT", "notify": "INTEGER DEFAULT 1", "terms_at": "REAL",
               "places": "TEXT",                              # {"home": {...}, "work": {...}}
               "p_rating": "REAL", "p_rated": "INTEGER DEFAULT 0",
               "avatar": "TEXT",
@@ -349,7 +349,7 @@ NEW_COLUMNS = {
                 "diag_dev": "TEXT", "diag_at": "REAL"},          # телефондон келген диагностика (GPS, үн, батарея…)                          # admin | park:<id> — ким бөгөттөдү                  # күндүк максат (сом)                # күбөлүктүн мөөнөтү YYYY-MM-DD                # таксопарк (жок болсо — өз алдынча)   # активдүүлүк 0..100 (Яндекс Pro'догудай)              # аймактан сыртка чыккан убакыт
     "balance_tx": {"claimed": "REAL"},
     "tariffs": {"inc_km": "REAL DEFAULT 0", "inc_min": "REAL DEFAULT 0"},   # отуруу баасына кирген км/мүн (Яндекстей)
-    "rides": {"stops": "TEXT", "stop_i": "INTEGER", "offer_seen": "REAL", "del_size": "TEXT",       # айдоочу сунушту көргөн убакыт
+    "rides": {"stops": "TEXT", "stop_i": "INTEGER", "offer_seen": "REAL", "del_size": "TEXT", "disp_by": "TEXT",       # айдоочу сунушту көргөн убакыт
         "note": "TEXT", "source": "TEXT",   # source: web | phone (диспетчер)
               "est_min": "REAL",
               "cancel_reason": "TEXT", "accept_km": "REAL", "requeued": "INTEGER DEFAULT 0",                           # маршруттун пробкасыз убактысы (автоматтык баа үчүн)
@@ -414,6 +414,34 @@ def is_admin(uid):
     return bool(u) and (u.get("tg_uid") in ADMIN_IDS
                         or (u.get("phone") or "") in [phone_uid(p)[3:] for p in ADMIN_PHONES
                                                       if phone_uid(p)])
+
+
+def is_disp(uid):
+    """Диспетчер: телефон заказдарын гана берет (админдин башка укуктары жок)."""
+    return bool(uid) and ((get_user(uid) or {}).get("role") == "disp")
+
+
+def set_disp(phone, on=True, name=None):
+    uid = phone_uid(phone)
+    if not uid:
+        return None
+    u = ensure_user(uid, name)
+    set_user(uid, phone=uid[3:], role="disp" if on else None, **({"name": name} if name and not u.get("name") else {}))
+    return uid
+
+
+def dispatchers():
+    """Диспетчерлердин тизмеси + бүгүнкү жана 30 күндүк жыйынтыгы."""
+    t, day = now(), day_start()
+    out = []
+    for u in query("SELECT uid, name, phone FROM users WHERE role='disp' ORDER BY name", (), "all") or []:
+        st = {}
+        for k, since in (("day", day), ("month", t - 30 * 86400)):
+            r = query("SELECT COUNT(*) AS n, SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END) AS ok FROM rides "
+                      "WHERE disp_by=? AND created_at>=?", (u["uid"], since), "one") or {}
+            st[k] = {"n": int(r.get("n") or 0), "ok": int(r.get("ok") or 0)}
+        out.append({"uid": u["uid"], "name": u.get("name") or "", "phone": u.get("phone") or "", **st})
+    return out
 
 
 def tg_of(uid):
@@ -2414,7 +2442,7 @@ def web_session_verify(tok, phone_seen=None, tg_uid=None):
     if s.get("agreed") and not u.get("terms_at"):
         fields["terms_at"] = now()               # шарттарга макулдук берилген убакыт
     set_user(uid, **fields)
-    if s.get("kind") == "admin" and not is_admin(uid):
+    if s.get("kind") == "admin" and not is_admin(uid) and not is_disp(uid):   # диспетчер да ушул баракчадан кирет
         return None
     query("UPDATE web_sessions SET verified=1, uid=? WHERE token=?", (uid, tok))
     return uid
@@ -2681,13 +2709,14 @@ def client_card(uid):
 def phone_rides(hours=24):
     """Диспетчер берген заказдар (акыркы N саат): статус, айдоочу, унаа."""
     rows = query("SELECT r.*, u.name AS p_name, u.phone AS p_phone, du.name AS d_name, du.phone AS d_phone, "
-                 "d.car_model, d.car_color, d.car_plate FROM rides r LEFT JOIN users u ON u.uid=r.passenger "
+                 "d.car_model, d.car_color, d.car_plate, xu.name AS x_name FROM rides r LEFT JOIN users u ON u.uid=r.passenger "
                  "LEFT JOIN users du ON du.uid=r.driver LEFT JOIN drivers d ON d.uid=r.driver "
+                 "LEFT JOIN users xu ON xu.uid=r.disp_by "
                  "WHERE r.source='phone' AND r.created_at>=? ORDER BY r.id DESC LIMIT 50",
                  (now() - hours * 3600,), "all")
     return [{"id": r["id"], "status": r["status"], "price": r["price"], "cls": r.get("cls") or "econom",
              "passenger": r["p_name"], "phone": r["p_phone"], "p_addr": r.get("p_addr"), "d_addr": r.get("d_addr"),
-             "note": r.get("note"), "at": r["created_at"],
+             "note": r.get("note"), "at": r["created_at"], "disp": r.get("x_name"), "disp_uid": r.get("disp_by"),
              "driver": ({"name": r["d_name"], "phone": r["d_phone"], "plate": r["car_plate"],
                          "car": car_text(r["car_color"], r["car_model"])} if r.get("driver") else None)}
             for r in rows]

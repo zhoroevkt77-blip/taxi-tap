@@ -39,7 +39,7 @@ MAX_BODY = 9 * 1024 * 1024          # 3 документ (браузерде к�
 PAGES = {"/": "rider.html", "/index.html": "rider.html",
          "/driver": "driver.html", "/driver/": "driver.html",
          "/admin": "admin.html", "/admin/": "admin.html", "/terms": "terms.html",
-         "/park": "park.html", "/park/": "park.html"}
+         "/park": "park.html", "/park/": "park.html", "/disp": "admin.html", "/disp/": "admin.html"}
 SITE_URL = (os.environ.get("SITE_URL") or "").rstrip("/")
 
 # Out'торду жеткирүүчү: bot.py өзүнүкүн коёт (Telegram). Сайт өзү абалды окуйт.
@@ -259,6 +259,10 @@ def driver_state(uid, seen=False):
         if r and r["status"] == "accepted":
             st["next"] = _driver_ride(r)
     return st
+
+
+DISP_GET = {"client", "phone_rides", "disp_drivers"}        # диспетчерге уруксат берилген админ-суроолор
+DISP_POST = {"order", "quote", "cancel"}
 
 
 def _dsz(r):
@@ -546,7 +550,7 @@ class H(BaseHTTPRequestHandler):
                 return self._json({"cells": cells, "r": core.HEX, "k_here": max(here, city),
                                    "k_max": max([c["k"] for c in cells] + [city])})
             if u.path.startswith("/api/a/"):
-                if not core.is_admin(uid):
+                if not core.is_admin(uid) and not (core.is_disp(uid) and u.path[7:] in DISP_GET):
                     return self._json({"error": "auth"}, 401)
                 return self._admin_get(u.path[7:], q)
             return self._json({"error": "not_found"}, 404)
@@ -564,7 +568,7 @@ class H(BaseHTTPRequestHandler):
         d = core.get_driver(s["uid"])
         return self._json({"auth": True, "name": u.get("name"), "phone": u.get("phone"),
                            "driver": d["status"] if d else None,
-                           "admin": core.is_admin(s["uid"]),
+                           "admin": core.is_admin(s["uid"]), "disp": core.is_disp(s["uid"]), "uid": s["uid"] if core.is_disp(s["uid"]) else None,
                            "admin_n": core.admin_todo() if core.is_admin(s["uid"]) else 0,
                            "notify": bool(u.get("notify", 1)), "tg": bool(u.get("tg_uid")),
                            "avatar": core.avatar_url(u), "bot": BOT_USERNAME,
@@ -609,8 +613,12 @@ class H(BaseHTTPRequestHandler):
             if path.startswith("/api/d/"):
                 return self._driver_post(uid, path[7:], b)
             if path.startswith("/api/a/"):
-                if not core.is_admin(uid):
+                if not core.is_admin(uid) and not (core.is_disp(uid) and path[7:] in DISP_POST):
                     return self._json({"error": "auth"}, 401)
+                if not core.is_admin(uid) and path[7:] == "cancel":       # диспетчер телефон заказын гана жокко чыгарат
+                    rr = core.get_ride(int(b.get("id") or 0))
+                    if not rr or rr.get("source") != "phone":
+                        return self._json({"error": "auth"}, 401)
                 return self._admin_post(uid, path[7:], b)
             return self._rider_post(uid, path, b)
         except Exception:
@@ -987,6 +995,13 @@ class H(BaseHTTPRequestHandler):
             return self._json(core.client_card(cu) if cu else {"error": "bad_phone"})
         if action == "phone_rides":
             return self._json({"rides": core.phone_rides()})
+        if action == "disps":
+            return self._json({"disps": core.dispatchers()})
+        if action == "disp_drivers":         # диспетчердин картасы үчүн: линиядагы айдоочулар
+            t = core.now()
+            return self._json({"drivers": [{"lat": d["lat"], "lon": d["lon"], "busy": bool(d.get("busy_ride")), "name": d.get("name") or ""}
+                                           for d in core.admin_drivers() if d.get("online") and d.get("lat") is not None
+                                           and (d.get("loc_at") or 0) > t - 600]})
         if action == "addr":
             return self._json({"items": addrbook.admin_list((q.get("q") or [""])[0][:60],
                                                             only=(q.get("only") or [""])[0] or None),
@@ -1202,7 +1217,15 @@ class H(BaseHTTPRequestHandler):
             rid = core.create_ride(uid, q, p[0], p[1], *(d or (None, None)), note=note or None,
                                    source="phone", p_addr=_txt(b.get("p_addr"), 80) or None,
                                    d_addr=_txt(b.get("d_addr"), 80) or None)
+            core.query("UPDATE rides SET disp_by=? WHERE id=?", (admin, rid))        # ким берди
             return self._json({"ride": ride_view(core.get_ride(rid))})
+        if action == "disp_set":              # админ: диспетчер кошуу / алып салуу
+            if not core.is_admin(admin):
+                return self._json({"error": "auth"}, 401)
+            uid = core.set_disp(_txt(b.get("phone"), 20), bool(b.get("on", True)), _txt(b.get("name"), 40) or None)
+            if not uid:
+                return self._json({"error": "bad_phone"}, 400)
+            return self._json({"disps": core.dispatchers()})
         if action == "quote":
             p, d = _point(b.get("p")), _point(b.get("d"))
             if not p:
