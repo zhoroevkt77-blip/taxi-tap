@@ -906,3 +906,4 @@ body.ridp .cls{padding:6px 4px 8px!important;overflow:visible!important}
 .tiph{display:flex;align-items:center;gap:10px}.tiph b{flex:1;font-size:20px}.tipi{font-size:28px}.tipx{border:0;background:#f1f1f4;width:36px;height:36px;border-radius:50%;font-size:17px}
 .tipc p{font-size:17px;line-height:1.5;color:#33333b;margin:12px 0 14px}.tipc .btn{margin-top:8px}
 html.uidark .tipc{background:#1c1d22}html.uidark .tipc p{color:#ddd}html.uidark .tipx,html.uidark .stat[data-tip]:after{background:#2a2b31;color:#aaa}
+.head.num{background:#fff!important;border:3.5px solid #16161a;box-sizing:border-box}.head.num:after{content:attr(data-n)!important;color:#16161a!important;font-weight:800;font-size:21px}.stick.num{background:#16161a!important}
