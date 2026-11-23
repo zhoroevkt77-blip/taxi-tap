@@ -146,6 +146,7 @@ body.sxtyping .sx-ab,body.sxtyping .sx-chips,body.sxtyping .sx-cards,body.sxtypi
 .sx-chips{display:flex;gap:8px;margin:12px 0 2px;overflow-x:auto;scrollbar-width:none}.sx-chips::-webkit-scrollbar{display:none}
 .sx-chips button{flex:none;display:flex;align-items:center;gap:6px;white-space:nowrap;padding:9px 13px;border:0;border-radius:999px;background:#f3f3f6;font:inherit;font-size:16.5px;font-weight:600;max-width:220px;overflow:hidden;text-overflow:ellipsis}.sx-chips img{width:22px;height:22px;object-fit:contain}
 .dbox b{display:block;margin-bottom:6px}.dbox label{display:block;font-size:14px;font-weight:600;color:#55555f;margin:8px 0 3px}.dbox .f{margin:0}.dbox p{margin:10px 0 0;font-size:15px}.dtaxi{display:block;margin:8px auto 0;border:0;background:none;color:#7a6400;font:inherit;font-size:15px;font-weight:600;text-decoration:underline}
+.rsall{display:block;width:100%;margin:10px 0 4px;padding:14px;border:1.5px solid #ececf0;border-radius:16px;background:#fff;font:inherit;font-size:17px;font-weight:700;color:#16161a;box-shadow:0 4px 14px rgba(0,0,0,.06)}.rsall:active{transform:scale(.98)}html.uidark .rsall{background:#2a2b31;color:#eee;border-color:#3a3b41}
 .sx-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}.sx-cd{border:0;border-radius:20px;padding:14px;height:108px;position:relative;overflow:hidden;background:#fff4c2;text-align:left;font:inherit;color:#16161a}.sx-cd.k{background:#16161a;color:#fff}.sx-cd.w{background:#fff;color:#16161a;border:1.5px solid #ececf0;box-shadow:0 4px 14px rgba(0,0,0,.07)}.sx-cd.w small{color:#6b6b75;opacity:1}
 .sx-cards .sx-cd:only-child{grid-column:1/-1}.sx-cards .sx-cd:nth-child(3){grid-column:1/-1;height:92px}.sx-cd b{font-size:18px;display:block}.sx-cd small{font-size:15px;opacity:.75}.sx-cd img{position:absolute;right:10px;top:10px;width:auto;height:58px;max-width:64px;object-fit:contain}.sx-cd{display:flex;flex-direction:column;justify-content:flex-end;height:124px}.sx-cards .sx-cd:nth-child(3){height:124px}.sx-cd b{line-height:1.2}
 /* 3-плитка: туурасынан, сүрөт оңдо ортодо; бардык сүрөттөр бир өлчөмдө */
@@ -445,6 +446,7 @@ function askStops(done) {
   w.onclick = e => { const b = e.target.closest("[data-n]"); if (b) { close(); return done(+b.dataset.n); }
     if (e.target === w || e.target.closest(".tipx,.tipok")) close(); };
 }
+function rsShow() { const b = $("#rsAll"); if (b) b.classList.toggle("hide", !(S.aSet || S.multi || S.openOther || S.cls !== "econom")); }
 function viewIdle(o) {
   document.body.classList.remove("cabsolo"); if (!(o && o.keep)) S.keepTo = null;            // Жөнөкөй башкы бет: карта + борбордо пин + ылдыйда «Каякка барасыз?»
   navOn("home");
@@ -467,10 +469,16 @@ function viewIdle(o) {
     <div class="sx-cards">${has("delivery") ? `<button class="sx-cd w" id="tDel"><b>Жеткирүү</b><small>Буюм, документ</small><img src="/static/h_box.webp?v=24" alt=""></button>` : ""}
       <button class="sx-cd w" id="tOther"><b>Башка адамга</b><small>Такси чакыруу</small><img src="/static/h_girl.webp?v=25" alt=""></button>
       <button class="sx-cd w" id="tMulti"><b>Бир нече дарекке</b><small>Жолдо токтоп өтүү</small><img src="/static/c_addr.webp?v=24" alt=""></button></div>
-    <p class="hnote" id="nearMsg">${esc(S.nearMsg || "")}</p></div>`);
+    <p class="hnote" id="nearMsg">${esc(S.nearMsg || "")}</p>
+    <button class="rsall hide" id="rsAll">↺ Башынан баштоо</button></div>`);
   homeOn(false);
   // Издөө тилкеси: адегенде «Каяктан? А», А тандалгандан кийин «Каякка барасыз? Б»
-  S.aSet = false;
+  S.aSet = false; rsShow();
+  // «Башынан баштоо»: баарын тазалап, сиз турган жерден кайра баштайт
+  $("#rsAll").onclick = () => { S.keepTo = null; S.from = null; S.fromAddr = ""; S.nStops = 0; S.hnF = S.lmF = "";
+    viewIdle(); const g = S.gps && S.gps.state === "ok" && S.gps.ll;
+    if (g) map.setView(g, Math.max(map.getZoom(), 16)); else locate(true);
+    try { navigator.vibrate && navigator.vibrate(25); } catch (e) {} toast("✓ Башынан баштадыңыз", 1600); };
   // Тилкеге түз жазуу: астында кыска тизме; тандаса — пин ошол жерге, А же Б белгиленет
   const q = $("#sxQ"), res = $("#sxRes"); let sxT = null, sxSeq = 0, sxItems = [];
   const sxClose = () => { document.body.classList.remove("sxtyping"); res.classList.add("hide"); res.innerHTML = ""; };
@@ -510,7 +518,7 @@ function viewIdle(o) {
     S.mode = "pickDest"; setPin("to"); showA(true); drawStops();
     const a = $("#pA"); a.classList.add("done"); a.querySelector("span").innerHTML = `<small>А ✓</small>${esc(S.fromAddr || "")}`;
     S.aSet = true; $("#sxQ").placeholder = S.cls === "delivery" ? "Кайда жеткирилет?" : "Каякка барасыз?"; $("#sxI").textContent = "Б"; $("#sxI").className = "sxb b";
-    pinNum(); const sLeft = S.multi && (S.stops || []).length < (S.nStops || 1);
+    pinNum(); rsShow(); const sLeft = S.multi && (S.stops || []).length < (S.nStops || 1);
     if (sLeft) $("#pS").classList.add("next"); else $("#pB").classList.add("next");
     if (!quiet) toast(sLeft ? `Эми картаны жылдырып, токтоочу жер ${(S.stops || []).length + 1}ди белгилеңиз` : S.cls === "delivery" ? "📦 Эми пинди алуучунун жерине коюп, «Кайда жеткирилет» басыңыз" : "Эми картаны жылдырып, Б точканы белгилеңиз", 2200); };
   $("#pA").onclick = () => { if (S.aSet) { S.aSet = false; if (S.stops && S.stops.length) { S.stops = []; stopLayer.clearLayers(); } return viewIdle({keep:true}); }   // кайра басса — А'ны кайра тандоо
