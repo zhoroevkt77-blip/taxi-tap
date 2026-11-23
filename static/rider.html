@@ -789,7 +789,7 @@ async function viewQuote() {
   // Жеткирүү өчүк болсо — үнсүз таксиге которбой, ачык айтабыз
   if (S.cls === "delivery" && !q.classes.some(c => c.id === "delivery" && !c.off)) {
     render(`<h2>📦 Жеткирүү азыр иштебейт</h2><p class="muted">Бул аймакта жеткирүү кызматы азырынча өчүк. Такси чакырсаңыз болот.</p>
-      <button class="btn main" id="dTaxi">🚕 Такси чакыруу</button><button class="btn bk" id="back">‹ Артка</button>`);
+      <button class="btn main" id="dTaxi" style="display:flex;align-items:center;justify-content:center;gap:10px"><img src="/static/car_sary.webp?v=4" alt="" style="height:30px;width:auto">Такси чакыруу</button><button class="btn bk" id="back">‹ Артка</button>`);
     $("#dTaxi").onclick = () => { S.cls = "econom"; viewQuote(); }; $("#back").onclick = () => viewIdle({keep:true}); return;
   }
   if (!q.classes.some(c => c.id === S.cls && !c.off)) S.cls = q.classes.find(c => !c.off).id;
@@ -834,7 +834,7 @@ async function viewQuote() {
       <label>Алуучунун аты</label><input class="f" id="dNm" placeholder="мис. Айбек" value="${esc(S.dNm || "")}">
       <label>Алуучунун номери *</label><input class="f" id="dPh" placeholder="0700 123 456" inputmode="tel" value="${esc(S.dPh || "")}">
       <p class="muted">💵 Төлөм накталай — буюмду бергенде айдоочуга төлөйсүз. Айдоочу жеткирерде алуучуга чалат.</p></div>
-      <button class="dtaxi" id="toTaxi">🚕 Жеткирүү эмес, такси керек</button>` : "";
+      <button class="dtaxi" id="toTaxi"><img src="/static/car_sary.webp?v=4" alt="" style="height:20px;width:auto;vertical-align:-4px;margin-right:6px">Жеткирүү эмес, такси керек</button>` : "";
     if (del) { $("#toTaxi").onclick = () => { S.cls = "econom"; viewQuote(); };
       $("#dWhat").oninput = e => S.dWhat = e.target.value; $("#dPh").oninput = e => S.dPh = e.target.value; $("#dNm").oninput = e => S.dNm = e.target.value; }
     $("#otherOpen").classList.toggle("hide", del); $("#otherBox").classList.toggle("hide", del);
