@@ -359,7 +359,9 @@ function toast(text, ms) {
   let t = document.getElementById("toast");
   if (!t) { t = document.createElement("div"); t.id = "toast"; document.body.appendChild(t); }
   t.textContent = text; t.classList.add("on"); t.classList.toggle("ok", /^✓/.test(text));
-  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("on"), ms || 5000);
+  // эң аз 3 сек, узун текст — дагы көбүрөөк (окуп үлгүрсүн); басса — дароо жабылат
+  const dur = Math.max(ms || 5000, 3000, String(text).length * 55);
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("on"), dur);
   t.onclick = () => t.classList.remove("on");
 }
 
