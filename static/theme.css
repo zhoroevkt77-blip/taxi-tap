@@ -919,3 +919,4 @@ body.ridp .cls .clsimg,body.ridp .cls .clsimg.side{width:auto!important;max-widt
 body.ridp .cls>div .muted{font-size:15px!important;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 body.ridp .cls b{font-size:16.5px!important;line-height:1.2}
 body.ridp .cls>div.off b{font-size:14px!important}
+#promoOpen,#otherOpen,#noteOpen,#whenOpen{max-width:none!important;overflow:visible!important;text-overflow:clip!important}
