@@ -146,6 +146,7 @@ def ride_view(r):
         return None
     v = {k: r[k] for k in ("id", "status", "city", "price", "dist_km", "surge",
                            "p_lat", "p_lon", "d_lat", "d_lon", "cancel_by")}
+    v["del_size"] = _dsz(r)
     v["cls"] = r.get("cls") or "econom"
     v["stops"], v["stop_i"] = core.ride_stops(r), int(r.get("stop_i") or 0)
     v["p_addr"], v["d_addr"] = r.get("p_addr"), r.get("d_addr")
@@ -239,6 +240,7 @@ def driver_state(uid, seen=False):
                        "to_pickup_km": round(flow.eta_km(d, o) / core.ROAD_FACTOR, 1),
                        "has_dest": o["d_lat"] is not None, "note": o.get("note"),
                        "discount": o.get("discount") or 0, "cls": o.get("cls") or "econom",
+                       "del_size": _dsz(o),
                        "chained": bool(d.get("busy_ride")),
                        "p_addr": o.get("p_addr"), "d_addr": o.get("d_addr"),
                        "stops": len(core.ride_stops(o)),
@@ -259,6 +261,12 @@ def driver_state(uid, seen=False):
     return st
 
 
+def _dsz(r):
+    """Жеткирүүнүн өлчөмү айдоочу үчүн: {"ic","name","lim"} же None."""
+    x = r.get("del_size") and next((y for y in core.del_sizes(True) if y["id"] == r["del_size"]), None)
+    return {"ic": x["ic"], "name": x["name"], "lim": x["lim"]} if x else None
+
+
 def _driver_ride(r):
     p = core.get_user(r["passenger"]) or {}
     v = {"id": r["id"], "status": r["status"], "price": r["price"],
@@ -266,6 +274,7 @@ def _driver_ride(r):
          "phone": p.get("phone") or "", "p": [r["p_lat"], r["p_lon"]],
          "note": r.get("note"), "discount": r.get("discount") or 0,
          "cls": r.get("cls") or "econom", "p_addr": r.get("p_addr"), "d_addr": r.get("d_addr"),
+         "del_size": _dsz(r),
          "other_name": r.get("other_name"), "other_phone": r.get("other_phone"),
          "p_rating": p.get("p_rating") if (p.get("p_rated") or 0) >= 3 else None,
          "wait": _wait(r), "msgs": _msgs(r, r["driver"]),
@@ -641,6 +650,7 @@ class H(BaseHTTPRequestHandler):
             pc = core.passenger_cancels(uid)
             return self._json({"city": q["city"], "price": q["price"], "dist_km": q["dist_km"],
                                "minutes": q.get("minutes"), "surge": q["surge"], "fixed": q.get("fixed"),
+                               "del_sizes": core.del_sizes(),
                                "peak": q.get("peak"), "route": (q.get("route") or {}).get("coords"),
                                "far_fee": q.get("far_fee"), "far_km": q.get("far_km"),
                                "stops": q.get("stops") or 0, "stop_fee": core.stop_fee(),
@@ -693,13 +703,19 @@ class H(BaseHTTPRequestHandler):
             at = _num(b.get("at"))
             if at is not None and not (core.now() + core.SCHEDULE_MIN - 120 <= at <= core.now() + core.SCHEDULE_MAX):
                 return self._json({"error": "bad_time"}, 400)
+            dsz = None
+            if (b.get("cls") or "") == "delivery":            # жеткирүү: өлчөмгө жараша кошумча
+                dsz = core.del_size(_txt(b.get("size"), 4) or "s") or core.del_size("s")
+                if dsz and dsz["fee"]:
+                    q = dict(q, price=int(q["price"] or 0) + dsz["fee"])
             core.mark_quote_ordered(uid)
             rid = core.create_ride(uid, q, p[0], p[1], *(d or (None, None)), promo=promo, discount=disc,
                                    scheduled_at=at, note=_txt(b.get("note"), 200) or None,
                                    other_name=other_name, other_phone=other_phone,
                                    p_addr=_txt(b.get("p_addr"), 80) or None,
                                    d_addr=_txt(b.get("d_addr"), 80) or None if d else None,
-                                   stops=[{"p": [x[0], x[1]], "addr": x[2]} for x in stops] if stops and q.get("stops") else None)
+                                   stops=[{"p": [x[0], x[1]], "addr": x[2]} for x in stops] if stops and q.get("stops") else None,
+                                   del_size=dsz and dsz["id"])
             return self._json({"ride": ride_view(core.get_ride(rid))})
         if path == "/api/cancel":
             r = core.active_ride_of(uid)
@@ -993,7 +1009,7 @@ class H(BaseHTTPRequestHandler):
         if action == "promos":
             return self._json({"promos": core.list_promos()})
         if action == "tariffs":
-            return self._json({"tariffs": core.all_tariffs(), "classes": core.class_config(),
+            return self._json({"tariffs": core.all_tariffs(), "classes": core.class_config(), "del_sizes": core.del_sizes(True),
                                "wait": core.wait_config(), "activity_km": core.activity_km(),
                                "peak": core.peak_config(), "yx": core.get_setting("yx") or {"rows": [], "pct": 11}})
         if action == "finance":
@@ -1113,6 +1129,10 @@ class H(BaseHTTPRequestHandler):
         if action == "addr_import":
             threading.Thread(target=addrbook.import_osm, daemon=True).start()
             return self._json({"ok": True})
+        if action == "del_sizes":
+            if not core.set_del_sizes(b.get("sizes")):
+                return self._json({"error": "bad"}, 400)
+            return self._json({"del_sizes": core.del_sizes(True)})
         if action == "classes":
             if not core.set_class_config(b.get("classes")):
                 return self._json({"error": "bad"}, 400)

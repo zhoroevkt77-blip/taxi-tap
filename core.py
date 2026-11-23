@@ -349,7 +349,7 @@ NEW_COLUMNS = {
                 "diag_dev": "TEXT", "diag_at": "REAL"},          # телефондон келген диагностика (GPS, үн, батарея…)                          # admin | park:<id> — ким бөгөттөдү                  # күндүк максат (сом)                # күбөлүктүн мөөнөтү YYYY-MM-DD                # таксопарк (жок болсо — өз алдынча)   # активдүүлүк 0..100 (Яндекс Pro'догудай)              # аймактан сыртка чыккан убакыт
     "balance_tx": {"claimed": "REAL"},
     "tariffs": {"inc_km": "REAL DEFAULT 0", "inc_min": "REAL DEFAULT 0"},   # отуруу баасына кирген км/мүн (Яндекстей)
-    "rides": {"stops": "TEXT", "stop_i": "INTEGER", "offer_seen": "REAL",       # айдоочу сунушту көргөн убакыт
+    "rides": {"stops": "TEXT", "stop_i": "INTEGER", "offer_seen": "REAL", "del_size": "TEXT",       # айдоочу сунушту көргөн убакыт
         "note": "TEXT", "source": "TEXT",   # source: web | phone (диспетчер)
               "est_min": "REAL",
               "cancel_reason": "TEXT", "accept_km": "REAL", "requeued": "INTEGER DEFAULT 0",                           # маршруттун пробкасыз убактысы (автоматтык баа үчүн)
@@ -1698,6 +1698,46 @@ def class_config():
     return out
 
 
+# ==================== Жеткирүү: буюмдун өлчөмү ====================
+DEL_SIZES = [   # id, аты, мисал, чек, кошумча баа (сом) — админ «Тарифтер» бөлүмүнөн өзгөртөт
+    {"id": "s", "ic": "📄", "name": "Кичине", "ex": "документ, ачкыч, телефон", "lim": "2 кгга чейин", "fee": 0, "on": True},
+    {"id": "m", "ic": "📦", "name": "Орто", "ex": "пакет, торт, кутуча", "lim": "10 кгга чейин", "fee": 30, "on": True},
+    {"id": "l", "ic": "🧳", "name": "Чоң", "ex": "чемодан, мешок", "lim": "25 кгга чейин, багажникке", "fee": 70, "on": True},
+    {"id": "xl", "ic": "🛋", "name": "Өтө чоң", "ex": "бир нече мешок, жабдык", "lim": "50 кгга чейин, арткы отургуч да", "fee": 120, "on": True},
+]
+
+
+def del_sizes(all_=False):
+    saved = get_setting("del_sizes") or {}
+    out = []
+    for x in DEL_SIZES:
+        y = dict(x); y.update({k: v for k, v in (saved.get(x["id"]) or {}).items() if k in ("fee", "on", "lim")})
+        y["fee"] = int(y.get("fee") or 0)
+        if all_ or y["on"]:
+            out.append(y)
+    return out
+
+
+def del_size(sid):
+    return next((x for x in del_sizes() if x["id"] == sid), None)
+
+
+def set_del_sizes(rows):
+    clean = {}
+    for x in DEL_SIZES:
+        r = (rows or {}).get(x["id"]) or {}
+        try:
+            fee = int(r.get("fee", x["fee"]))
+        except (TypeError, ValueError):
+            return False
+        if not 0 <= fee <= 5000:
+            return False
+        clean[x["id"]] = {"fee": fee, "on": bool(r.get("on", True)) or x["id"] == "s",
+                          "lim": (str(r.get("lim") or x["lim"]))[:40]}
+    set_setting("del_sizes", clean)
+    return True
+
+
 def set_class_config(rows):
     clean = {}
     for c, x in (rows or {}).items():
@@ -1772,7 +1812,7 @@ def wait_fee_for(r, at=None):
 
 def create_ride(passenger, q, p_lat, p_lon, d_lat=None, d_lon=None, note=None, source="web",
                 promo=None, discount=0, scheduled_at=None, other_name=None, other_phone=None,
-                p_addr=None, d_addr=None, stops=None):
+                p_addr=None, d_addr=None, stops=None, del_size=None):
     status = "scheduled" if scheduled_at else "searching"
     rid = query("INSERT INTO rides (passenger, city, p_lat, p_lon, d_lat, d_lon, dist_km, "
                 "price, surge, status, created_at, note, source, promo, discount, scheduled_at, "
@@ -1787,6 +1827,8 @@ def create_ride(passenger, q, p_lat, p_lon, d_lat=None, d_lon=None, note=None, s
         query("UPDATE rides SET est_min=? WHERE id=?", (est, rid))
     if stops:
         query("UPDATE rides SET stops=?, stop_i=0 WHERE id=?", (json.dumps(stops, ensure_ascii=False), rid))
+    if del_size:
+        query("UPDATE rides SET del_size=? WHERE id=?", (del_size, rid))
     log_event(rid, status, passenger)
     return rid
 

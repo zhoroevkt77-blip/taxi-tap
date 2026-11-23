@@ -148,6 +148,7 @@ body.sxtyping .sx-ab,body.sxtyping .sx-chips,body.sxtyping .sx-cards,body.sxtypi
 .sx-chips button{flex:none;display:flex;align-items:center;gap:6px;white-space:nowrap;padding:9px 13px;border:0;border-radius:999px;background:#f3f3f6;font:inherit;font-size:16.5px;font-weight:600;max-width:220px;overflow:hidden;text-overflow:ellipsis}.sx-chips img{width:22px;height:22px;object-fit:contain}
 .dbox b{display:block;margin-bottom:6px}.dbox label{display:block;font-size:14px;font-weight:600;color:#55555f;margin:8px 0 3px}.dbox .f{margin:0}.dbox p{margin:10px 0 0;font-size:15px}.dtaxi{display:block;margin:8px auto 0;border:0;background:none;color:#7a6400;font:inherit;font-size:15px;font-weight:600;text-decoration:underline}
 .rsall{display:block;width:100%;margin:10px 0 4px;padding:14px;border:1.5px solid #ececf0;border-radius:16px;background:#fff;font:inherit;font-size:17px;font-weight:700;color:#16161a;box-shadow:0 4px 14px rgba(0,0,0,.06)}.rsall:active{transform:scale(.98)}html.uidark .rsall{background:#2a2b31;color:#eee;border-color:#3a3b41}
+.dsz{display:grid;grid-template-columns:1fr 1fr;gap:8px}.dsz button{display:grid;grid-template-columns:auto 1fr;grid-template-areas:"i b" "i s" "i e";column-gap:8px;align-items:center;text-align:left;border:1.5px solid #ececf0;background:#fff;border-radius:14px;padding:8px 10px;font:inherit;color:#16161a}.dsz button i{grid-area:i;font-style:normal;font-size:28px}.dsz button b{grid-area:b;font-size:16px;margin:0}.dsz button small{grid-area:s;font-size:12.5px;color:#6b6b75;line-height:1.2}.dsz button em{grid-area:e;font-style:normal;font-weight:700;font-size:14px;color:#a07800}.dsz button.on{border-color:#ffc400;box-shadow:0 0 0 2px #ffc400;background:#fffbea}.dsx{margin:6px 0 0!important;font-size:14px!important;color:#6b6b75}.dban{font-size:14px!important;color:#a33!important}
 .sx-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}.sx-cd{border:0;border-radius:20px;padding:14px;height:108px;position:relative;overflow:hidden;background:#fff4c2;text-align:left;font:inherit;color:#16161a}.sx-cd.k{background:#16161a;color:#fff}.sx-cd.w{background:#fff;color:#16161a;border:1.5px solid #ececf0;box-shadow:0 4px 14px rgba(0,0,0,.07)}.sx-cd.w small{color:#6b6b75;opacity:1}
 .sx-cards .sx-cd:only-child{grid-column:1/-1}.sx-cards .sx-cd:nth-child(3){grid-column:1/-1;height:92px}.sx-cd b{font-size:18px;display:block}.sx-cd small{font-size:15px;opacity:.75}.sx-cd img{position:absolute;right:10px;top:10px;width:auto;height:58px;max-width:64px;object-fit:contain}.sx-cd{display:flex;flex-direction:column;justify-content:flex-end;height:124px}.sx-cards .sx-cd:nth-child(3){height:124px}.sx-cd b{line-height:1.2}
 /* 3-плитка: туурасынан, сүрөт оңдо ортодо; бардык сүрөттөр бир өлчөмдө */
@@ -164,7 +165,7 @@ body.sxtyping .sx-ab,body.sxtyping .sx-chips,body.sxtyping .sx-cards,body.sxtypi
 html.uidark .drw-p{background:#1c1d22}html.uidark .drw-l button,html.uidark .drw-l a{color:#eee}html.uidark .sx-srch,html.uidark .sx-chips button{background:#2a2b31;color:#ddd}
 </style>
 <link rel="preload" as="image" href="/static/h_taxi.webp?v=24"><link rel="preload" as="image" href="/static/h_box.webp?v=24"><link rel="preload" as="image" href="/static/h_girl.webp?v=25"><link rel="preload" as="image" href="/static/h_map.webp?v=25">
-<link rel="stylesheet" href="/static/theme.css?v=168">
+<link rel="stylesheet" href="/static/theme.css?v=169">
 <link rel="stylesheet" href="/static/dark.css?v=21">
 <script src="/static/night.js?v=2"></script>
 </head>
@@ -837,14 +838,22 @@ async function viewQuote() {
     $("#cls").querySelectorAll("[data-c]").forEach(el => { el.classList.toggle("on", el.dataset.c === S.cls);
       el.classList.toggle("dim", el.dataset.c === "delivery" && S.cls !== "delivery"); });   // жеткирүү тандалганда гана күйөт
     const c = cur();
-    $("#qp").innerHTML = c.price ? (S.disc ? `<s>${c.price}</s> <b>${c.price - S.disc} с</b>` : `<b>${c.price} с</b>`) : "тариф боюнча";
-    const del = S.cls === "delivery";
+    const del = S.cls === "delivery", SZ = q.del_sizes || [];
+    if (del && SZ.length && !SZ.some(x => x.id === S.dSize)) S.dSize = SZ[0].id;
+    const szFee = del ? ((SZ.find(x => x.id === S.dSize) || {}).fee || 0) : 0, cp = c.price ? c.price + szFee : 0;
+    { const dl = $("#cls").querySelector("[data-c=delivery] b"), dc = q.classes.find(x => x.id === "delivery");
+      if (dl && dc && dc.price) dl.firstChild.textContent = (dc.price + ((SZ.find(x => x.id === S.dSize) || {}).fee || 0)) + " с"; }
+    $("#qp").innerHTML = cp ? (szFee ? `<span class="muted">${c.price} + ${szFee} =</span> ` : "") + (S.disc ? `<s>${cp}</s> <b>${cp - S.disc} с</b>` : `<b>${cp} с</b>`) : "тариф боюнча";
     $("#extra").innerHTML = del ? `<div class="wbox dbox"><b>📦 Айдоочу буюмду сизден алып, алуучуга жеткирет</b>
+      ${SZ.length ? `<label>Буюмдун өлчөмү</label><div class="dsz">${SZ.map(x => `<button data-sz="${x.id}" class="${x.id === S.dSize ? "on" : ""}"><i>${x.ic}</i><b>${esc(x.name)}</b><small>${esc(x.lim)}</small><em>${x.fee ? "+" + x.fee + " с" : "кошумча жок"}</em></button>`).join("")}</div>
+      <p class="dsx">${esc((SZ.find(x => x.id === S.dSize) || {}).ex || "")}</p>` : ""}
       <label>Эмне жеткирилет</label><input class="f" id="dWhat" placeholder="мис. документ, пакет, торт" value="${esc(S.dWhat || "")}">
       <label>Алуучунун аты</label><input class="f" id="dNm" placeholder="мис. Айбек" value="${esc(S.dNm || "")}">
       <label>Алуучунун номери *</label><input class="f" id="dPh" placeholder="0700 123 456" inputmode="tel" value="${esc(S.dPh || "")}">
-      <p class="muted">💵 Төлөм накталай — буюмду бергенде айдоочуга төлөйсүз. Айдоочу жеткирерде алуучуга чалат.</p></div>
+      <p class="muted">💵 Төлөм накталай — буюмду бергенде айдоочуга төлөйсүз. Айдоочу жеткирерде алуучуга чалат.</p>
+      <p class="muted dban">⛔ Акча, баалуу буюм, тирүү жаныбар жана коркунучтуу буюмдар жеткирилбейт.</p></div>
       <button class="dtaxi" id="toTaxi"><img src="/static/r_car.webp?v=24" alt="" style="height:22px;width:auto;vertical-align:-4px;margin-right:6px">Жеткирүү эмес, такси керек</button>` : "";
+    if (del) document.querySelectorAll("[data-sz]").forEach(b => b.onclick = () => { S.dSize = b.dataset.sz; paint(); });
     if (del) { $("#toTaxi").onclick = () => { S.cls = "econom"; viewQuote(); };
       $("#dWhat").oninput = e => S.dWhat = e.target.value; $("#dPh").oninput = e => S.dPh = e.target.value; $("#dNm").oninput = e => S.dNm = e.target.value; }
     $("#otherOpen").classList.toggle("hide", del); $("#otherBox").classList.toggle("hide", del);
@@ -888,7 +897,7 @@ async function viewQuote() {
     const oth = del ? {other_phone:S.dPh || "", other_name:(S.dNm || "").trim() || "Алуучу"}
       : $("#oPh") && $("#oPh").value.trim() ? {other_phone:$("#oPh").value, other_name:$("#oNm").value} : {};
     $("#order").disabled = true;
-    const r = await api("/api/order", {p:S.from, d:S.to, stops:(S.multi && S.stops && S.stops.length ? S.stops.map(x => [x.p[0], x.p[1], x.addr || ""]) : undefined), promo:S.promo, at:S.at, cls:S.cls, note:nt,
+    const r = await api("/api/order", {p:S.from, d:S.to, stops:(S.multi && S.stops && S.stops.length ? S.stops.map(x => [x.p[0], x.p[1], x.addr || ""]) : undefined), promo:S.promo, at:S.at, cls:S.cls, size:del ? S.dSize : undefined, note:nt,
       p_addr:withLm(withHn(S.fromAddr, $("#hnF").value), $("#lmF").value), d_addr:withLm(withHn(S.toAddr, $("#hnT").value), $("#lmT").value), ...oth});
     if (r.ride) { S.ride = r.ride; viewRide(); poll(); }
     else { $("#order").disabled = false; alertBox(r.error === "have_active" ? "Сизде активдүү заказ бар."

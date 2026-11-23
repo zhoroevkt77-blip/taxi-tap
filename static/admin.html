@@ -83,7 +83,7 @@ td input.f{padding:7px 8px;max-width:90px;min-width:58px}
 .dgl{display:block;margin-top:6px;font-size:15px}.dgl.ok{color:#1a7a40;font-weight:600}.dgl summary{cursor:pointer;list-style:none;font-weight:600}
 .dgl summary::-webkit-details-marker{display:none}.dgl summary b{display:inline!important;margin:0!important}.dgl summary{display:block}.dgl .r{color:#c22}.dgl .o{color:#b26a00}.dgi{padding:3px 0 0 4px;font-size:15px}.dgi.bad{color:#b42318}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=168">
+<link rel="stylesheet" href="/static/theme.css?v=169">
 </head>
 <body class="adm">
 <header><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b><span class="ver">Админ</span></div><div class="live" id="live"></div></header>
@@ -392,7 +392,7 @@ async function viewRides() {
 
 // ---------- тарифтер ----------
 async function viewTariffs() {
-  const {tariffs, classes, wait, activity_km: actKm = 0.8} = await api("/api/a/tariffs");
+  const {tariffs, classes, wait, activity_km: actKm = 0.8, del_sizes: dsz = []} = await api("/api/a/tariffs");
   $("#main").innerHTML = `<div class="panel"><h3>Тарифтер — күйгүзүү / өчүрүү</h3>
       ${Object.entries(classes).map(([c, x]) => `<div class="item"><div class="main"><b>${{econom:"🚕", comfort:"🚘", minivan:"🚐", delivery:"📦"}[c] || ""} ${esc(x.name)}</b>
         <span class="muted">${x.on ? "Жүргүнчүлөргө көрүнөт" : "Өчүк — жүргүнчүлөр тандай албайт"}</span></div>
@@ -400,6 +400,13 @@ async function viewTariffs() {
         <button class="btn ${x.on ? "ok" : ""}" data-con="${c}" style="min-width:110px">${x.on ? "✓ Күйүк" : "Өчүк"}</button></div>`).join("")}
       <div style="padding:0 14px 14px"><button class="btn gold" id="clSave">Коэффициенттерди сактоо</button> <span class="muted" id="clMsg"></span>
       <p class="muted">Баскычты бассаңыз дароо күйөт же өчөт. Коэффициент 1.3 = Экономдон 30% кымбат. Айдоочунун тарифтери «Айдоочулар» бөлүмүндө белгиленет. Комфорт/Минивэн айдоочусу Эконом заказды да алат. Жок дегенде бир тариф күйүк болушу керек.</p></div></div>
+    <div class="panel"><h3>📦 Жеткирүү — буюмдун өлчөмү боюнча кошумча баа</h3>
+      ${dsz.map(x => `<div class="item"><div class="main"><b>${x.ic} ${esc(x.name)}</b><span class="muted">${esc(x.ex)}</span>
+        <input class="f" data-dl="${x.id}" value="${esc(x.lim)}" maxlength="40" style="margin-top:4px"></div>
+        <label class="muted">+ сом <input class="f" inputmode="numeric" data-df="${x.id}" value="${x.fee}" style="max-width:80px;display:inline-block"></label>
+        ${x.id === "s" ? `<span class="muted" style="min-width:110px">ар дайым күйүк</span>` : `<button class="btn ${x.on ? "ok" : ""}" data-don="${x.id}" data-v="${x.on ? 1 : 0}" style="min-width:110px">${x.on ? "✓ Күйүк" : "Өчүк"}</button>`}</div>`).join("")}
+      <div style="padding:0 14px 14px"><button class="btn gold" id="dsSave">Сактоо</button> <span class="muted" id="dsMsg"></span>
+      <p class="muted">Жүргүнчү жеткирүү заказында өлчөмдү тандайт — кошумча баа жеткирүүнүн баасына кошулат. Айдоочу заказда өлчөмдү көрөт.</p></div></div>
     <div class="panel"><h3>Баалар (сом)</h3><div class="scroll"><table>
     <tr><th>Шаар</th><th>Отуруу</th><th>Ага кирген км</th><th>Ага кирген мүн</th><th>1 км</th><th>1 мүнөт</th><th>Минимум</th><th></th></tr>
     ${tariffs.map((t, i) => `<tr><td><b>${esc(t.city)}</b>${t.saved ? "" : `<div class="muted">демейки</div>`}</td>
@@ -432,6 +439,14 @@ async function viewTariffs() {
     viewTariffs();
   };
   $("#clSave").onclick = () => saveCl(null);
+  const saveDs = async flip => {
+    const out = {}; dsz.forEach(x => out[x.id] = {fee:+$(`[data-df=${x.id}]`).value, lim:$(`[data-dl=${x.id}]`).value, on:x.id === flip ? !x.on : x.on});
+    const r = await api("/api/a/del_sizes", {sizes:out});
+    if (r.error) return $("#dsMsg").textContent = "Текшериңиз: 0–5000 сом.";
+    flip ? viewTariffs() : ($("#dsMsg").textContent = "✓ Сакталды");
+  };
+  $("#dsSave").onclick = () => saveDs(null);
+  $("#main").querySelectorAll("[data-don]").forEach(b => b.onclick = () => saveDs(b.dataset.don));
   $("#main").querySelectorAll("[data-con]").forEach(b => b.onclick = () => saveCl(b.dataset.con));
   $("#wSave").onclick = async () => {
     const x = await api("/api/a/wait", {free_min:$("#wFree").value, per_min:$("#wPer").value});

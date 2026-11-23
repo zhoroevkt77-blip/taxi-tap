@@ -115,7 +115,7 @@ label.l{font-size:15px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:15px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=168">
+<link rel="stylesheet" href="/static/theme.css?v=169">
 <link rel="stylesheet" href="/static/dark.css?v=21">
 <script src="/static/night.js?v=2"></script>
 </head>
@@ -978,6 +978,7 @@ function viewRide() {
       <div class="muted">${r.price ? r.price + " сом" : "Тариф боюнча"}${r.dist_km ? " · ~" + r.dist_km + " км" : ""}${r.p_addr ? " · " + esc(r.p_addr) : ""}</div></div></div>
     ${r.d ? (r.d_addr ? `<div class="row"><span class="bul to lt">Б</span><div>${esc(r.d_addr)}</div></div>` : "") : `<div class="row"><span class="bul to lt">Б</span><div class="muted">Бара турган жерин жүргүнчү өзү айтат</div></div>`}
     ${sts.length ? `<div class="stl">${sts.map((x, i) => `<div class="row${i < si ? " dn" : i === si && r.status === "in_trip" ? " cur" : ""}"><span class="bul lt stn">${i < si ? "✓" : i + 1}</span><div>${esc(x.addr || "Токтоочу жер " + (i + 1))}${i === si && r.status === "in_trip" ? ` <b class="nowb">← азыр бул жерге</b>` : ""}</div></div>`).join("")}</div>` : ""}
+    ${del && r.del_size ? `<div class="note">${r.del_size.ic} Буюмдун өлчөмү: <b>${esc(r.del_size.name)}</b> · ${esc(r.del_size.lim)}</div>` : ""}
     ${del && r.other_phone ? `<div class="note">🙋 Алуучу (Б): <b>${esc(r.other_name || "Алуучу")}</b> · <a href="tel:${esc(r.other_phone)}">${esc(r.other_phone)}</a></div>` : ""}
     ${del && r.status !== "in_trip" && r.price ? `<div class="note">💵 Буюмду алганда <b>${r.price - Math.round(r.discount || 0)} сомду</b> жөнөтүүчүдөн алыңыз</div>` : ""}
     ${r.note ? `<div class="note">📝 ${esc(r.note)}</div>` : ""}
@@ -1114,7 +1115,7 @@ function showOffer() {
   box.classList.remove("hide"); offerMap(o);
   const sk = o.surge && o.surge > 1.04 ? o.surge : 0;
   $("#ocard").innerHTML = `<div style="display:flex;align-items:center;gap:14px">
-      <div style="flex:1"><div class="muted ohead">${o.stops ? `<span class="ocls stp">🔁 ${o.stops} токтоочу жер</span>` : ""}<span class="ocls ${esc(o.cls || "econom")}">${ICON[o.cls] || "🚕"} ${esc((D.class_names || {})[o.cls] || (o.cls === "delivery" ? "Жеткирүү" : "Эконом"))}</span>${o.chained ? "🔁 Кийинки заказ · азыркы сапардан кийин" : "Жаңы заказ"}</div>
+      <div style="flex:1"><div class="muted ohead">${o.stops ? `<span class="ocls stp">🔁 ${o.stops} токтоочу жер</span>` : ""}${o.del_size ? `<span class="ocls dsz">${o.del_size.ic} ${esc(o.del_size.name)} · ${esc(o.del_size.lim)}</span>` : ""}<span class="ocls ${esc(o.cls || "econom")}">${ICON[o.cls] || "🚕"} ${esc((D.class_names || {})[o.cls] || (o.cls === "delivery" ? "Жеткирүү" : "Эконом"))}</span>${o.chained ? "🔁 Кийинки заказ · азыркы сапардан кийин" : "Жаңы заказ"}</div>
       <div class="ochips"><span>📍 ${o.to_pickup_km} км</span><span>⏱ ${Math.max(1, Math.round(o.to_pickup_km * 2.4))} мүн</span><span class="k">💵 ${o.price ? o.price + " с" : "Тариф"}</span>${o.p_rating ? `<span>⭐ ${o.p_rating}</span>` : ""}</div>
       <div class="muted">${o.has_dest ? "Сапар ~" + o.dist_km + " км" + (o.est_min ? " · " + o.est_min + " мүн" : "") : "Багытын жүргүнчү айтат"}</div>
       ${o.p_addr || o.d_addr ? `<div class="muted">${esc(o.p_addr || "")}${o.d_addr ? " → " + esc(o.d_addr) : ""}</div>` : ""}
