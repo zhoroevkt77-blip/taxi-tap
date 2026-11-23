@@ -16,6 +16,8 @@ import os
 import threading
 import time
 import traceback
+import re
+import sys
 
 import core
 
@@ -53,6 +55,11 @@ def notify_admins(text):
 
 def report_error(where, exc=None):
     """Катаны логго жазат жана админге билдирет (бир эле ката 10 мүнөттө бир жолу)."""
+    e = exc or sys.exc_info()[1]
+    # Кардар суроону өзү үзүп салды (картаны жылдырды, баракты жапты) — бул ката эмес
+    if isinstance(e, (BrokenPipeError, ConnectionResetError, ConnectionAbortedError)):
+        return
+    where = re.sub(r"/tiles/([^/]+)/.*", r"/tiles/\1/…", where)    # ар бир плитка өзүнчө кабар болбосун
     tb = traceback.format_exc()
     print("  КАТА [%s]\n%s" % (where, tb), flush=True)
     last = tb.strip().splitlines()[-1] if tb.strip() else str(exc)
