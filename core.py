@@ -2724,6 +2724,19 @@ def admin_overview():
     }
 
 
+def admin_todo():
+    """Админ карай турган иштердин саны: жаңы айдоочулар, толуктоолор, фотоконтроль."""
+    n = 0
+    for sql in ("SELECT COUNT(*) AS n FROM drivers WHERE status='pending'",
+                "SELECT COUNT(*) AS n FROM balance_tx WHERE status='pending'",
+                "SELECT COUNT(*) AS n FROM drivers WHERE photo_status='pending'"):
+        try:
+            r = query(sql, (), "one"); n += int((r or {}).get("n") or 0)
+        except Exception:
+            pass
+    return n
+
+
 def admin_drivers():
     return query("SELECT d.uid, d.status, d.balance, d.rating, d.rides_done, d.car_model, "
                  "d.car_color, d.car_plate, d.online, d.busy_ride, d.loc_at, d.live_until, d.lat, d.lon, "

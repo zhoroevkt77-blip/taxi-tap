@@ -556,6 +556,7 @@ class H(BaseHTTPRequestHandler):
         return self._json({"auth": True, "name": u.get("name"), "phone": u.get("phone"),
                            "driver": d["status"] if d else None,
                            "admin": core.is_admin(s["uid"]),
+                           "admin_n": core.admin_todo() if core.is_admin(s["uid"]) else 0,
                            "notify": bool(u.get("notify", 1)), "tg": bool(u.get("tg_uid")),
                            "avatar": core.avatar_url(u), "bot": BOT_USERNAME,
                            "park": (parks.by_owner(s["uid"]) or {}).get("name"), "ask_role": core.ask_role(s["uid"])})
