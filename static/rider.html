@@ -162,7 +162,7 @@ body.sxtyping .sx-ab,body.sxtyping .sx-chips,body.sxtyping .sx-cards,body.sxtypi
 html.uidark .drw-p{background:#1c1d22}html.uidark .drw-l button,html.uidark .drw-l a{color:#eee}html.uidark .sx-srch,html.uidark .sx-chips button{background:#2a2b31;color:#ddd}
 </style>
 <link rel="preload" as="image" href="/static/h_taxi.webp?v=24"><link rel="preload" as="image" href="/static/h_box.webp?v=24"><link rel="preload" as="image" href="/static/h_girl.webp?v=25"><link rel="preload" as="image" href="/static/h_map.webp?v=25">
-<link rel="stylesheet" href="/static/theme.css?v=163">
+<link rel="stylesheet" href="/static/theme.css?v=164">
 <link rel="stylesheet" href="/static/dark.css?v=21">
 <script src="/static/night.js?v=2"></script>
 </head>
@@ -806,7 +806,7 @@ async function viewQuote() {
     <input class="f lm" id="lmF" maxlength="60" placeholder="${S.cls === "delivery" ? "Буюмду кайдан алат: мис. дүкөндүн алдында" : "А белгиси: мис. көк дарбаза, дүкөндүн алдында"}" value="${esc(S.lmF || "")}">
     <div class="row"><span class="bul to lt">Б</span><div style="flex:1"><b>${esc(S.toAddr)}</b></div><input class="hn" id="hnT" placeholder="үй №" maxlength="12" value="${esc(S.hnT || "")}"><button class="chg" id="chgB">Өзгөртүү</button></div>
     <input class="f lm" id="lmT" maxlength="60" placeholder="${S.cls === "delivery" ? "Алуучу кайда күтөт (милдеттүү эмес)" : "Б белгиси (милдеттүү эмес)"}" value="${esc(S.lmT || "")}">
-    <div class="cls" id="cls">${q.classes.filter(c => S.cls === "delivery" ? c.id === "delivery" : true).map(c => `<div data-c="${c.id}"${c.off ? ' class="off"' : ""}><i>${ICON[c.id] || "🚕"}</i><div class="muted">${esc(c.name)}</div><b>${c.off ? "Жакында" : priceTxt(c)}${q.surge > 1 && c.price ? `<s>${Math.round(c.price / q.surge / 10) * 10} с</s>` : ""}</b></div>`).join("")}</div>
+    <div class="cls" id="cls">${q.classes.map(c => `<div data-c="${c.id}"${c.off ? ' class="off"' : ""}><i>${ICON[c.id] || "🚕"}</i><div class="muted">${esc(c.name)}</div><b>${c.off ? "Жакында" : priceTxt(c)}${q.surge > 1 && c.price ? `<s>${Math.round(c.price / q.surge / 10) * 10} с</s>` : ""}</b></div>`).join("")}</div>
     ${q.fixed ? `<div class="fixbox"><img src="/static/c_map.webp?v=24" alt=""><span><b>Туруктуу баа</b>${esc(q.fixed)} — баа өзгөрбөйт</span></div>` : ""}
     ${q.surge > 1 ? `<div class="surgebox"><span>💓</span>Талап жогору ×${q.surge} — баа бир аз кымбатыраак. Бир аздан кийин арзандашы мүмкүн.</div>` : ""}
     <div class="muted" style="margin-top:6px">${sub} · <span id="qp"></span></div>${farTxt}
@@ -825,7 +825,8 @@ async function viewQuote() {
   $("#hnF").oninput = e => S.hnF = e.target.value; $("#hnT").oninput = e => S.hnT = e.target.value;
   $("#lmF").oninput = e => S.lmF = e.target.value; $("#lmT").oninput = e => S.lmT = e.target.value;
   const paint = () => {
-    $("#cls").querySelectorAll("[data-c]").forEach(el => el.classList.toggle("on", el.dataset.c === S.cls));
+    $("#cls").querySelectorAll("[data-c]").forEach(el => { el.classList.toggle("on", el.dataset.c === S.cls);
+      el.classList.toggle("dim", el.dataset.c === "delivery" && S.cls !== "delivery"); });   // жеткирүү тандалганда гана күйөт
     const c = cur();
     $("#qp").innerHTML = c.price ? (S.disc ? `<s>${c.price}</s> <b>${c.price - S.disc} с</b>` : `<b>${c.price} с</b>`) : "тариф боюнча";
     const del = S.cls === "delivery";

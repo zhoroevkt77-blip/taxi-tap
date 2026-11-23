@@ -907,3 +907,4 @@ body.ridp .cls{padding:6px 4px 8px!important;overflow:visible!important}
 .tipc p{font-size:17px;line-height:1.5;color:#33333b;margin:12px 0 14px}.tipc .btn{margin-top:8px}
 html.uidark .tipc{background:#1c1d22}html.uidark .tipc p{color:#ddd}html.uidark .tipx,html.uidark .stat[data-tip]:after{background:#2a2b31;color:#aaa}
 .head.num{background:#fff!important;border:3.5px solid #16161a;box-sizing:border-box}.head.num:after{content:attr(data-n)!important;color:#16161a!important;font-weight:800;font-size:21px}.stick.num{background:#16161a!important}
+body.ridp .cls>div.dim{filter:grayscale(1);opacity:.55;box-shadow:none!important;background:#f3f3f6!important}
