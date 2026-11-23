@@ -814,7 +814,7 @@ async function viewQuote() {
   $("#noteOpen").onclick = () => {
     if (chipToggle("noteOpen", "noteBox")) return;
     $("#noteBox").innerHTML = `<div class="quick" id="qn">${["Балдар отургучу керек", "Жүгүм бар", "Жаныбар менен", "Кондиционер"].map(t => `<button>${t}</button>`).join("")}</div>
-      <input class="f" id="nt" placeholder="Айдоочуга каалоо же белги" maxlength="200">`;
+      <input class="f" id="nt" placeholder="Айдоочуга белги" maxlength="200">`;
     $("#qn").querySelectorAll("button").forEach(b => b.onclick = () => { const i = $("#nt"); i.value = (i.value ? i.value + ", " : "") + b.textContent; });
   };
   paint();
