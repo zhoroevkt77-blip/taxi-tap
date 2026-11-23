@@ -144,8 +144,31 @@ def _broken(e):
 
 
 def _ph(sql):
-    """SQLite '?' -> Postgres '%s'."""
-    return sql.replace("?", "%s") if IS_PG else sql
+    """SQLite '?' -> Postgres '%s'. Postgres'те REAL — 4 байттык сан (убакыт ±64 сек тегеректелет),
+    ошондуктан таблица түзгөндө/тилке кошкондо DOUBLE PRECISION колдонулат."""
+    if not IS_PG:
+        return sql
+    if sql.lstrip()[:6].upper() in ("CREATE", "ALTER "):
+        sql = re.sub(r"\bREAL\b", "DOUBLE PRECISION", sql)
+    return sql.replace("?", "%s")
+
+
+def _pg_widen_real():
+    """Бир жолу: Postgres'теги эски REAL (float4) тилкелерди DOUBLE PRECISION кылат.
+    float4'тө 1.8e9 сек сыяктуу убакыт 128 секундга чейин тегеректелип, мисалы айдоочунун
+    15 секунддук сунушу дароо бүтүп калчу."""
+    if not IS_PG:
+        return
+    try:
+        cols = query("SELECT table_name, column_name FROM information_schema.columns "
+                     "WHERE table_schema = current_schema() AND data_type = 'real'", (), "all") or []
+    except Exception:
+        return
+    for c in cols:
+        try:
+            query('ALTER TABLE "%s" ALTER COLUMN "%s" TYPE DOUBLE PRECISION' % (c["table_name"], c["column_name"]))
+        except Exception as e:
+            print("widen real:", c, e)
 
 
 def _query_once(sql, params=(), fetch=None):
@@ -347,6 +370,7 @@ def init_db():
                 query("ALTER TABLE %s ADD COLUMN %s %s" % (table, col, typ))
             except Exception:
                 pass                      # тилке мурунтан бар
+    _pg_widen_real()
     try:                                  # эски номерлер → «04KG338APG» (бир жолу)
         for d in query("SELECT uid, car_plate FROM drivers WHERE car_plate IS NOT NULL", (), "all"):
             n = norm_plate(d["car_plate"])
