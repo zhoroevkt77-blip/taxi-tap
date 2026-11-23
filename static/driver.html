@@ -952,7 +952,8 @@ function viewRide() {
     ${r.status !== "in_trip" ? `<button class="btn red" id="cx">Жокко чыгаруу</button>` : ""}`);
   $("#rSos").onclick = sosOpen;
   $("#chat").onclick = viewChat;
-  if ($("#navGo")) $("#navGo").onclick = () => openNav(target);
+  // Сапарда: калган токтоочу жерлер + Б бир маршрут болуп навигаторго кетет
+  if ($("#navGo")) $("#navGo").onclick = () => r.status === "in_trip" && r.d && nextStop ? openNav(r.d, false, sts.slice(si).map(x => x.p)) : openNav(target);
   const nx = $("#nx"); if (nx) nx.onclick = async e => { e.preventDefault(); if (!confirm("Кийинки заказдан баш тартасызбы?")) return;
     D = await api("/api/d/cancel", {id:D.next.id}); lastView = ""; show(); };
   unread();
@@ -1172,22 +1173,24 @@ function vpickBind() {
 
 // ---------- Навигатор: Яндекс / 2ГИС / Google ----------
 const NAVS = {
-  yandex: {t:"Яндекс Навигатор", u:p => `yandexnavi://build_route_on_map?lat_to=${p[0]}&lon_to=${p[1]}`},
-  yamaps: {t:"Яндекс Карталар", u:p => `https://yandex.ru/maps/?rtext=~${p[0]},${p[1]}&rtt=auto`},
-  dgis:   {t:"2ГИС", u:p => `dgis://2gis.ru/routeSearch/rsType/car/to/${p[1]},${p[0]}`},
-  google: {t:"Google Maps", u:p => `https://www.google.com/maps/dir/?api=1&destination=${p[0]},${p[1]}&travelmode=driving`},
+  // via — жолдогу токтоочу жерлер (бир нече дарек): баары бир маршрутка кошулат
+  yandex: {t:"Яндекс Навигатор", u:(p, via = []) => `yandexnavi://build_route_on_map?lat_to=${p[0]}&lon_to=${p[1]}` + via.map((v, i) => `&lat_via_${i}=${v[0]}&lon_via_${i}=${v[1]}`).join("")},
+  yamaps: {t:"Яндекс Карталар", u:(p, via = []) => `https://yandex.ru/maps/?rtext=~${[...via, p].map(v => v[0] + "," + v[1]).join("~")}&rtt=auto`},
+  // 2ГИС шилтемеси ортодогу жерлерди кабыл албайт — кийинки жерге гана
+  dgis:   {t:"2ГИС", u:(p, via = []) => { const q = via[0] || p; return `dgis://2gis.ru/routeSearch/rsType/car/to/${q[1]},${q[0]}`; }},
+  google: {t:"Google Maps", u:(p, via = []) => `https://www.google.com/maps/dir/?api=1&destination=${p[0]},${p[1]}&travelmode=driving` + (via.length ? "&waypoints=" + encodeURIComponent(via.map(v => v[0] + "," + v[1]).join("|")) : "")},
 };
 const navPref = () => { try { return localStorage.getItem("nav") || ""; } catch (e) { return ""; } };
-function openNav(p, choose) {
-  const k = navPref();
-  if (k && NAVS[k] && !choose) { extNav = Date.now(); return void (location.href = NAVS[k].u(p)); }
+function openNav(p, choose, via) {
+  const k = navPref(); via = via || [];
+  if (k && NAVS[k] && !choose) { extNav = Date.now(); return void (location.href = NAVS[k].u(p, via)); }
   overlay(`<h2>🧭 Кайсы навигатор менен барасыз?</h2>
     ${Object.entries(NAVS).map(([k, n]) => `<button class="btn ghost" data-nav="${k}">${n.t}</button>`).join("")}
     <label class="muted" style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="navRem" checked style="width:20px;height:20px"> Эстеп калсын (кабинеттен өзгөртсө болот)</label>
     <button class="btn ghost" id="ovlX">Жабуу</button>`);
   document.querySelectorAll("[data-nav]").forEach(b => b.onclick = () => {
     const k = b.dataset.nav; try { if ($("#navRem").checked) localStorage.setItem("nav", k); } catch (e) {}
-    closeOverlay(); if (p) { extNav = Date.now(); location.href = NAVS[k].u(p); }
+    closeOverlay(); if (p) { extNav = Date.now(); location.href = NAVS[k].u(p, via); }
   });
 }
 function overlay(html) { $("#ovlc").innerHTML = html; $("#ovl").classList.remove("hide"); const x = $("#ovlX"); if (x) x.onclick = closeOverlay; }
