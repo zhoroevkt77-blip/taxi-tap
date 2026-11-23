@@ -789,7 +789,7 @@ function cabChips() {
   ].map(x => [x[0], x[1], x[2], x[3].filter(Boolean)]).filter(x => x[3].length);
   const warn = [];
   if (D.min_balance > 0 && D.balance < D.min_balance) warn.push(["alert", `Баланс аз — ${D.balance} с, толуктаңыз`, "bal", "r"]);
-  if (D.photo && (D.photo.need || D.photo.status === "rejected")) warn.push(["camera", "Фотоконтроль: сүрөт тартыңыз", "photo", "o"]);
+  // Фотоконтроль эскертүүсү Диагностикада бар — бул жерде кайталанбайт
   if (D.lic_until && D.lic_left !== undefined && D.lic_left <= 30) warn.push(["id", D.lic_left < 0 ? "Күбөлүктүн мөөнөтү бүттү" : `Күбөлүктүн мөөнөтүнө ${D.lic_left} күн калды`, "docs", D.lic_left < 0 ? "r" : "o"]);
   const ul = document.createElement("div"); ul.className = "cclist"; ul.id = "cList";
   const has = k => list.some(x => x[2] === k);
