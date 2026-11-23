@@ -115,7 +115,7 @@ label.l{font-size:15px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:15px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=164">
+<link rel="stylesheet" href="/static/theme.css?v=165">
 <link rel="stylesheet" href="/static/dark.css?v=21">
 <script src="/static/night.js?v=2"></script>
 </head>
@@ -901,8 +901,45 @@ async function viewHistory() {
   render(`<h2>Сапарлар</h2><div class="hist">${(h.rides || []).map(r => {
     const ded = (r.fee || 0) + (r.tax || 0) + (r.ins || 0), net = (r.price || 0) - ded + (r.bonus || 0);
     const br = r.status === "completed" && r.price && (ded || r.bonus) ? `<div class="hbr">${n(r.price)}${r.fee ? ` <s>−${r.fee} ком.</s>` : ""}${r.tax ? ` <s>−${r.tax} салык</s>` : ""}${r.ins ? ` <s>−${r.ins} камс.</s>` : ""}${r.bonus ? ` <u>+${r.bonus} бонус</u>` : ""} = <b>${n(net)} с</b></div>` : "";
-    return `<div class="row"><span>${name[r.status] || ""}</span><div style="flex:1">№${r.id} · ${new Date(r.created_at * 1000).toLocaleString("ky-KG", {day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit"})}${br}</div><b>${r.price ? r.price + " с" : "—"}</b></div>`; }).join("") || `<p class="muted">Азырынча сапар жок.</p>`}</div>
+    return `<div class="row${r.status === "completed" ? " htap" : ""}" data-trip="${r.id}"><span>${name[r.status] || ""}</span><div style="flex:1">№${r.id} · ${new Date(r.created_at * 1000).toLocaleString("ky-KG", {day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit"})}${br}</div><b>${r.price ? r.price + " с" : "—"}</b></div>`; }).join("") || `<p class="muted">Азырынча сапар жок.</p>`}</div>
     `); navOn("hist"); window.SHEET && SHEET.expand();
+  document.querySelectorAll(".hist [data-trip].htap").forEach(el => el.onclick = () => viewTrip(+el.dataset.trip));
+}
+// Аткарылган сапар: картада жолу (GPS болсо — чыныгы жол, болбосо — маршрут) + маалымат
+async function viewTrip(id) {
+  const t = await api("/api/d/trip?id=" + id); if (!t || t.error) return toast("Сапар табылган жок", 2000);
+  layer.clearLayers(); tapClear && tapClear();
+  FOLLOW = false; { const b = $("#navLoc"); b && b.classList.add("off"); } hupSync();    // карта айдоочунун артынан жүрбөсүн
+  const real = t.track && t.track.length > 1, path = real ? t.track : (t.plan && t.plan.length > 1 ? t.plan : [t.p, ...(t.stops || []).map(x => x.p), t.d].filter(Boolean));
+  const ln = L.polyline(path, real ? {color:"#1f9d55", weight:6, opacity:.9} : {color:"#17365C", weight:5, opacity:.8, dashArray:real ? null : "1 0"}).addTo(layer);
+  L.marker(t.p, {icon:icon("", "А"), interactive:false, zIndexOffset:900}).addTo(layer);
+  (t.stops || []).forEach((x, i) => L.marker(x.p, {icon:icon("", String(i + 1)), interactive:false, zIndexOffset:800}).addTo(layer));
+  if (t.d) L.marker(t.d, {icon:icon("to", "Б"), interactive:false, zIndexOffset:900}).addTo(layer);
+  const f = x => x ? new Date(x * 1000).toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"}) : "—";
+  const dur = t.started_at && t.completed_at ? Math.max(1, Math.round((t.completed_at - t.started_at) / 60)) : null;
+  const ded = (t.fee || 0) + (t.tax || 0) + (t.ins || 0), net = (t.price || 0) - ded + (t.bonus || 0);
+  const day = new Date((t.completed_at || t.created_at) * 1000).toLocaleDateString("ru-RU", {day:"numeric", month:"long"});
+  render(`<h2>${t.cls === "delivery" ? "📦 " : ""}Сапар №${t.id}</h2>
+    <p class="muted" style="margin:-6px 0 8px">${day} · ${f(t.started_at)} → ${f(t.completed_at)}${dur ? ` · ${dur} мүн` : ""}${t.dist_km ? ` · ${t.dist_km} км` : ""}</p>
+    <div class="row"><span class="bul lt">А</span><div>${esc(t.p_addr || "Отургузган жер")}</div></div>
+    ${(t.stops || []).map((x, i) => `<div class="row"><span class="bul lt stn">${i + 1}</span><div>${esc(x.addr || "Токтоочу жер " + (i + 1))}</div></div>`).join("")}
+    ${t.d ? `<div class="row"><span class="bul to lt">Б</span><div>${esc(t.d_addr || "Түшүргөн жер")}</div></div>` : ""}
+    <div class="note">${real ? "🟢 Картада — сиз чындап жүргөн жол (GPS)" : "🗺 Картада — маршрут (бул сапардын GPS жолу сакталган эмес)"}</div>
+    <div class="tripfin">
+      <div><span>Сапардын баасы</span><b>${t.price || 0} с</b></div>
+      ${t.fee ? `<div><span>Комиссия</span><b class="m">−${t.fee} с</b></div>` : ""}
+      ${t.tax ? `<div><span>Киреше салыгы</span><b class="m">−${t.tax} с</b></div>` : ""}
+      ${t.ins ? `<div><span>Камсыздандыруу</span><b class="m">−${t.ins} с</b></div>` : ""}
+      ${t.bonus ? `<div><span>Бонус</span><b class="p">+${t.bonus} с</b></div>` : ""}
+      <div class="tot"><span>Таза киреше</span><b>${net} с</b></div></div>
+    ${t.stars ? `<p class="muted" style="text-align:center">Жүргүнчүнүн баасы: <b style="color:#f5b800">${"★".repeat(t.stars)}${"☆".repeat(5 - t.stars)}</b></p>` : ""}
+    <button class="btn bk" id="tripBack">‹ Сапарларга кайтуу</button>`);
+  $("#tripBack").onclick = () => { layer.clearLayers(); FOLLOW = true; { const b = $("#navLoc"); b && b.classList.remove("off"); } followMe(true); lastView = ""; viewHistory(); };
+  // Жол картанын көрүнгөн бөлүгүнө (баракчанын үстүнө) батсын
+  window.SHEET && SHEET.collapse && SHEET.collapse();     // карта көбүрөөк көрүнсүн; маалымат — баракчаны өйдө тартса
+  setTimeout(() => { const sh = window.SHEET ? SHEET.visible() : 0;
+    const la = path.map(x => x[0]), lo = path.map(x => x[1]);
+    try { map.fitBounds(L.latLngBounds([[Math.min(...la), Math.min(...lo)], [Math.max(...la), Math.max(...lo)]]), {paddingTopLeft:[40, 120], paddingBottomRight:[40, sh + 30], maxZoom:17}); } catch (e) { map.setView(t.p, 15); } }, 350);
 }
 
 let seenRide = null;

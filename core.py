@@ -305,6 +305,9 @@ SCHEMA = [
         comment TEXT, created_at REAL, answered_at REAL, reminded INTEGER DEFAULT 0)""",
     "CREATE INDEX IF NOT EXISTS idx_tx_kind ON balance_tx(kind, at)",
     "CREATE INDEX IF NOT EXISTS idx_drivers_online ON drivers(online, status)",
+    # Сапардын чыныгы жолу (айдоочунун GPS чекиттери, сапар учурунда гана)
+    """CREATE TABLE IF NOT EXISTS ride_track (ride_id INTEGER, lat REAL, lon REAL, at REAL)""",
+    "CREATE INDEX IF NOT EXISTS idx_ride_track ON ride_track(ride_id, at)",
 ]
 
 
@@ -457,6 +460,64 @@ def driver_location(uid, lat, lon, live_period=None, msg_date=None):
     if live_period:
         fields["live_until"] = (msg_date or t) + live_period
     set_driver(uid, **fields)
+    try:
+        track_point(uid, lat, lon, t)
+    except Exception as e:                 # жолду жазуу — кошумча, негизги иш токтобосун
+        print("track:", e)
+
+
+TRACK_MIN_M = 20          # 20 метрден аз жылса — жаңы чекит жазылбайт
+TRACK_MAX = 3000          # бир сапарга эң көп чекит
+
+
+def track_point(uid, lat, lon, t=None):
+    """Айдоочу сапарда (in_trip) болсо — GPS чекитин сапардын жолуна кошот."""
+    d = query("SELECT busy_ride FROM drivers WHERE uid=?", (uid,), "one")
+    rid = d and d.get("busy_ride")
+    if not rid:
+        return
+    r = query("SELECT status FROM rides WHERE id=?", (rid,), "one")
+    if not r or r["status"] != "in_trip":
+        return
+    last = query("SELECT lat, lon FROM ride_track WHERE ride_id=? ORDER BY at DESC LIMIT 1", (rid,), "one")
+    if last and haversine_km(last["lat"], last["lon"], lat, lon) * 1000 < TRACK_MIN_M:
+        return
+    n = query("SELECT COUNT(*) AS n FROM ride_track WHERE ride_id=?", (rid,), "one")
+    if n and n["n"] >= TRACK_MAX:
+        return
+    query("INSERT INTO ride_track (ride_id, lat, lon, at) VALUES (?, ?, ?, ?)", (rid, lat, lon, t or now()))
+
+
+def driver_trip(uid, rid):
+    """Айдоочунун бир сапары: даректер, убакыт, акча, жүргүнчүнүн баасы, жана жолу
+    (чыныгы GPS жолу болсо — ошол, болбосо — А → токтоочу жерлер → Б маршруту)."""
+    r = query("SELECT * FROM rides WHERE id=? AND driver=?", (rid, uid), "one")
+    if not r:
+        return None
+    pts = query("SELECT lat, lon FROM ride_track WHERE ride_id=? ORDER BY at", (rid,), "all") or []
+    track = [[round(p["lat"], 5), round(p["lon"], 5)] for p in pts]
+    if len(track) > 400:                   # көп болсо — сейректетебиз
+        k = len(track) / 400.0
+        track = [track[int(i * k)] for i in range(400)] + [track[-1]]
+    sts = ride_stops(r)
+    plan = None
+    if len(track) < 2 and r.get("d_lat") is not None:
+        try:
+            plan = route_via(r["p_lat"], r["p_lon"], [x["p"] for x in sts], r["d_lat"], r["d_lon"]).get("coords")
+        except Exception:
+            plan = None
+    tx = {}
+    for t in query("SELECT kind, SUM(amount) AS a FROM balance_tx WHERE driver=? AND ride_id=? AND status='done' GROUP BY kind",
+                   (uid, rid), "all") or []:
+        tx[t["kind"]] = round(float(t["a"] or 0))
+    st = query("SELECT stars FROM ratings WHERE ride_id=?", (rid,), "one")
+    return {"id": r["id"], "status": r["status"], "cls": r.get("cls") or "econom", "price": r.get("price"),
+            "dist_km": r.get("dist_km"), "p": [r["p_lat"], r["p_lon"]],
+            "d": [r["d_lat"], r["d_lon"]] if r.get("d_lat") is not None else None,
+            "p_addr": r.get("p_addr"), "d_addr": r.get("d_addr"), "stops": sts,
+            "created_at": r.get("created_at"), "started_at": r.get("started_at"), "completed_at": r.get("completed_at"),
+            "fee": -tx.get("commission", 0), "tax": -tx.get("tax", 0), "ins": -tx.get("ins", 0), "bonus": tx.get("promo", 0),
+            "stars": st and st.get("stars"), "track": track, "plan": plan}
 
 
 def is_available(d, t=None):

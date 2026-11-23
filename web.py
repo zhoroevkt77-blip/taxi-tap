@@ -506,6 +506,13 @@ class H(BaseHTTPRequestHandler):
                 return self._json(driver_state(uid, seen=vis))
             if u.path == "/api/d/history":
                 return self._json({"rides": core.driver_history(uid)})
+            if u.path == "/api/d/trip":
+                try:
+                    rid = int((q.get("id") or ["0"])[0])
+                except ValueError:
+                    rid = 0
+                t = core.driver_trip(uid, rid)
+                return self._json(t if t else {"error": "not_found"}, 200 if t else 404)
             if u.path == "/api/d/praise":
                 return self._json(core.driver_praise(uid))
             if u.path == "/api/d/daily":
