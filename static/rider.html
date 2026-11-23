@@ -296,6 +296,7 @@ async function loadNear() {
   if (!S.from) return;
   const n = await api(`/api/near?lat=${S.from[0]}&lon=${S.from[1]}`);
   S.near = n;
+  if (n.classes && !n.classes.includes("delivery") && $("#tDel")) $("#tDel").remove();   // админ жеткирүүнү өчүргөн
   nearLayer.clearLayers();
   (n.drivers || []).forEach(p => L.marker(p, {icon:icon("", "🚕"), interactive:false}).addTo(nearLayer));
   $("#chipEta").textContent = n.city && n.eta_min ? `🚕 ${n.eta_min} мүн` : "";
@@ -785,6 +786,12 @@ async function viewQuote() {
       ? `Такси ТАП! ${esc(window.AREA && AREA.label ? AREA.label + " аймагынын" : "иштөө аймагынын")} ичинде гана иштейт. Шаар аралык каттамдарга бара албайбыз.`
       : "Бул жерде Такси ТАП! азырынча иштебейт."}</p><button class="btn bk" id="back">‹ Артка</button>`); $("#back").onclick = viewIdle; return; }
   S.quote = q;
+  // Жеткирүү өчүк болсо — үнсүз таксиге которбой, ачык айтабыз
+  if (S.cls === "delivery" && !q.classes.some(c => c.id === "delivery" && !c.off)) {
+    render(`<h2>📦 Жеткирүү азыр иштебейт</h2><p class="muted">Бул аймакта жеткирүү кызматы азырынча өчүк. Такси чакырсаңыз болот.</p>
+      <button class="btn main" id="dTaxi">🚕 Такси чакыруу</button><button class="btn bk" id="back">‹ Артка</button>`);
+    $("#dTaxi").onclick = () => { S.cls = "econom"; viewQuote(); }; $("#back").onclick = () => viewIdle({keep:true}); return;
+  }
   if (!q.classes.some(c => c.id === S.cls && !c.off)) S.cls = q.classes.find(c => !c.off).id;
   const ICON = {econom:'<img class="clsimg side" src="/static/car_sary.webp?v=4" alt="">', comfort:'<img class="clsimg side" src="/static/car_kara.webp?v=4" alt="">', minivan:"🚐",
     delivery:'<img class="clsimg" src="/static/h_box.webp?v=24" alt="">'};
