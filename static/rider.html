@@ -145,8 +145,11 @@ body.pinup #map{top:-34vh}body.pinup .pin{top:calc(25vh - 46px)}
 body.sxtyping .sx-ab,body.sxtyping .sx-chips,body.sxtyping .sx-cards,body.sxtyping #nearMsg{display:none!important}
 .sx-chips{display:flex;gap:8px;margin:12px 0 2px;overflow-x:auto;scrollbar-width:none}.sx-chips::-webkit-scrollbar{display:none}
 .sx-chips button{flex:none;display:flex;align-items:center;gap:6px;white-space:nowrap;padding:9px 13px;border:0;border-radius:999px;background:#f3f3f6;font:inherit;font-size:16.5px;font-weight:600;max-width:220px;overflow:hidden;text-overflow:ellipsis}.sx-chips img{width:22px;height:22px;object-fit:contain}
+.dbox b{display:block;margin-bottom:6px}.dbox label{display:block;font-size:14px;font-weight:600;color:#55555f;margin:8px 0 3px}.dbox .f{margin:0}.dbox p{margin:10px 0 0;font-size:15px}.dtaxi{display:block;margin:8px auto 0;border:0;background:none;color:#7a6400;font:inherit;font-size:15px;font-weight:600;text-decoration:underline}
 .sx-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}.sx-cd{border:0;border-radius:20px;padding:14px;height:108px;position:relative;overflow:hidden;background:#fff4c2;text-align:left;font:inherit;color:#16161a}.sx-cd.k{background:#16161a;color:#fff}.sx-cd.w{background:#fff;color:#16161a;border:1.5px solid #ececf0;box-shadow:0 4px 14px rgba(0,0,0,.07)}.sx-cd.w small{color:#6b6b75;opacity:1}
 .sx-cards .sx-cd:only-child{grid-column:1/-1}.sx-cards .sx-cd:nth-child(3){grid-column:1/-1;height:92px}.sx-cd b{font-size:18px;display:block}.sx-cd small{font-size:15px;opacity:.75}.sx-cd img{position:absolute;right:10px;top:10px;width:auto;height:58px;max-width:64px;object-fit:contain}.sx-cd{display:flex;flex-direction:column;justify-content:flex-end;height:124px}.sx-cards .sx-cd:nth-child(3){height:124px}.sx-cd b{line-height:1.2}
+/* 3-плитка: туурасынан, сүрөт оңдо ортодо; бардык сүрөттөр бир өлчөмдө */
+.sx-cd img{height:54px;max-width:70px;top:12px}.sx-cd b,.sx-cd small{position:relative;z-index:1}.sx-cards .sx-cd:nth-child(3){height:92px!important;justify-content:center}.sx-cards .sx-cd:nth-child(3) img{top:50%;transform:translateY(-50%);right:16px}.sx-cards .sx-cd:nth-child(3) b,.sx-cards .sx-cd:nth-child(3) small{padding-right:80px}
 #drw{position:fixed;inset:0;z-index:60}.drw-dim{position:absolute;inset:0;background:rgba(0,0,0,.4);opacity:0;transition:opacity .25s}#drw.on .drw-dim{opacity:1}
 .drw-p{position:absolute;right:0;top:0;bottom:0;width:min(310px,84vw);background:#fff;border-radius:24px 0 0 24px;padding:calc(env(safe-area-inset-top,0px) + 34px) 20px 22px;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s cubic-bezier(.2,.8,.2,1);overflow-y:auto}
 #drw.on .drw-p{transform:none}
@@ -458,9 +461,9 @@ function viewIdle(o) {
     <div class="sx-res hide" id="sxRes"></div>
     ${S.multi ? `<div class="mbar"><span>🔁 Токтоочу жер: ${(S.stops || []).length}/${S.nStops || 1}</span>
       ${(S.stops || []).length ? `<button id="mUndo" class="ic" aria-label="Акыркысын өчүрүү">↶</button>` : ""}<button id="mX" class="ic" aria-label="Жокко чыгаруу">✕</button></div>` : ""}
-    <div class="sx-ab${S.multi ? " m3" : ""}"><button id="pA"><i class="a">А</i><span>${S.multi ? "А точка" : "А точканы белгилеймин"}</span></button>${S.multi ? `<button id="pS" class="stp${(S.stops || []).length >= (S.nStops || 1) ? " ok" : ""}"><i class="s">${(S.stops || []).length >= (S.nStops || 1) ? "✓" : "+"}</i><span>${(S.stops || []).length >= (S.nStops || 1) ? `Токтоочу жер ✓` : `Токтоочу жер ${(S.stops || []).length + 1}`}</span></button>` : ""}<button id="pB"><i class="b">Б</i><span>${S.multi ? "Б точка" : "Б точканы белгилеймин"}</span></button></div>
+    <div class="sx-ab${S.multi ? " m3" : ""}"><button id="pA"><i class="a">А</i><span>${S.multi ? "А точка" : S.cls === "delivery" ? "Буюм кайдан алынат" : "А точканы белгилеймин"}</span></button>${S.multi ? `<button id="pS" class="stp${(S.stops || []).length >= (S.nStops || 1) ? " ok" : ""}"><i class="s">${(S.stops || []).length >= (S.nStops || 1) ? "✓" : "+"}</i><span>${(S.stops || []).length >= (S.nStops || 1) ? `Токтоочу жер ✓` : `Токтоочу жер ${(S.stops || []).length + 1}`}</span></button>` : ""}<button id="pB"><i class="b">Б</i><span>${S.multi ? "Б точка" : S.cls === "delivery" ? "Кайда жеткирилет" : "Б точканы белгилеймин"}</span></button></div>
     ${rec.length ? `<div class="sx-chips">${rec.map((r, i) => `<button data-i="${i}"><img src="/static/${r.ico}.webp?v=24" alt="">${esc(r.name)}</button>`).join("")}</div>` : ""}
-    <div class="sx-cards">${has("delivery") ? `<button class="sx-cd" id="tDel"><b>Жеткирүү</b><small>Буюм, документ</small><img src="/static/h_box.webp?v=24" alt=""></button>` : ""}
+    <div class="sx-cards">${has("delivery") ? `<button class="sx-cd w" id="tDel"><b>Жеткирүү</b><small>Буюм, документ</small><img src="/static/h_box.webp?v=24" alt=""></button>` : ""}
       <button class="sx-cd w" id="tOther"><b>Башка адамга</b><small>Такси чакыруу</small><img src="/static/h_girl.webp?v=25" alt=""></button>
       <button class="sx-cd w" id="tMulti"><b>Бир нече дарекке</b><small>Жолдо токтоп өтүү</small><img src="/static/c_addr.webp?v=24" alt=""></button></div>
     <p class="hnote" id="nearMsg">${esc(S.nearMsg || "")}</p></div>`);
@@ -508,7 +511,7 @@ function viewIdle(o) {
     S.aSet = true; $("#sxQ").placeholder = S.cls === "delivery" ? "Кайда жеткирилет?" : "Каякка барасыз?"; $("#sxI").textContent = "Б"; $("#sxI").className = "sxb b";
     pinNum(); const sLeft = S.multi && (S.stops || []).length < (S.nStops || 1);
     if (sLeft) $("#pS").classList.add("next"); else $("#pB").classList.add("next");
-    if (!quiet) toast(sLeft ? `Эми картаны жылдырып, токтоочу жер ${(S.stops || []).length + 1}ди белгилеңиз` : "Эми картаны жылдырып, Б точканы белгилеңиз", 2200); };
+    if (!quiet) toast(sLeft ? `Эми картаны жылдырып, токтоочу жер ${(S.stops || []).length + 1}ди белгилеңиз` : S.cls === "delivery" ? "📦 Эми пинди алуучунун жерине коюп, «Кайда жеткирилет» басыңыз" : "Эми картаны жылдырып, Б точканы белгилеңиз", 2200); };
   $("#pA").onclick = () => { if (S.aSet) { S.aSet = false; if (S.stops && S.stops.length) { S.stops = []; stopLayer.clearLayers(); } return viewIdle({keep:true}); }   // кайра басса — А'ны кайра тандоо
     const c = map.getCenter(); S.from = [c.lat, c.lng]; S.fromAddr = pinAddr(); picked("А");
     if (S.keepTo) { S.to = S.keepTo.to; S.toAddr = S.keepTo.addr; S.keepTo = null; return viewQuote(); }
@@ -793,10 +796,10 @@ async function viewQuote() {
   const cur = () => q.classes.find(c => c.id === S.cls);
   const priceTxt = c => c.price ? `${c.price} с` : `${c.min} с+`;
   render(`<div class="row"><span class="bul lt">А</span><div style="flex:1"><b>${esc(S.fromAddr)}</b></div><input class="hn" id="hnF" placeholder="үй №" maxlength="12" value="${esc(S.hnF || "")}"><button class="chg" id="chgA">Өзгөртүү</button></div>
-    <input class="f lm" id="lmF" maxlength="60" placeholder="А белгиси: мис. көк дарбаза, дүкөндүн алдында" value="${esc(S.lmF || "")}">
+    <input class="f lm" id="lmF" maxlength="60" placeholder="${S.cls === "delivery" ? "Буюмду кайдан алат: мис. дүкөндүн алдында" : "А белгиси: мис. көк дарбаза, дүкөндүн алдында"}" value="${esc(S.lmF || "")}">
     <div class="row"><span class="bul to lt">Б</span><div style="flex:1"><b>${esc(S.toAddr)}</b></div><input class="hn" id="hnT" placeholder="үй №" maxlength="12" value="${esc(S.hnT || "")}"><button class="chg" id="chgB">Өзгөртүү</button></div>
-    <input class="f lm" id="lmT" maxlength="60" placeholder="Б белгиси (милдеттүү эмес)" value="${esc(S.lmT || "")}">
-    <div class="cls" id="cls">${q.classes.map(c => `<div data-c="${c.id}"${c.off ? ' class="off"' : ""}><i>${ICON[c.id] || "🚕"}</i><div class="muted">${esc(c.name)}</div><b>${c.off ? "Жакында" : priceTxt(c)}${q.surge > 1 && c.price ? `<s>${Math.round(c.price / q.surge / 10) * 10} с</s>` : ""}</b></div>`).join("")}</div>
+    <input class="f lm" id="lmT" maxlength="60" placeholder="${S.cls === "delivery" ? "Алуучу кайда күтөт (милдеттүү эмес)" : "Б белгиси (милдеттүү эмес)"}" value="${esc(S.lmT || "")}">
+    <div class="cls" id="cls">${q.classes.filter(c => S.cls === "delivery" ? c.id === "delivery" : true).map(c => `<div data-c="${c.id}"${c.off ? ' class="off"' : ""}><i>${ICON[c.id] || "🚕"}</i><div class="muted">${esc(c.name)}</div><b>${c.off ? "Жакында" : priceTxt(c)}${q.surge > 1 && c.price ? `<s>${Math.round(c.price / q.surge / 10) * 10} с</s>` : ""}</b></div>`).join("")}</div>
     ${q.fixed ? `<div class="fixbox"><img src="/static/c_map.webp?v=24" alt=""><span><b>Туруктуу баа</b>${esc(q.fixed)} — баа өзгөрбөйт</span></div>` : ""}
     ${q.surge > 1 ? `<div class="surgebox"><span>💓</span>Талап жогору ×${q.surge} — баа бир аз кымбатыраак. Бир аздан кийин арзандашы мүмкүн.</div>` : ""}
     <div class="muted" style="margin-top:6px">${sub} · <span id="qp"></span></div>${farTxt}
@@ -819,11 +822,14 @@ async function viewQuote() {
     const c = cur();
     $("#qp").innerHTML = c.price ? (S.disc ? `<s>${c.price}</s> <b>${c.price - S.disc} с</b>` : `<b>${c.price} с</b>`) : "тариф боюнча";
     const del = S.cls === "delivery";
-    $("#extra").innerHTML = del ? `<div class="wbox">📦 Айдоочу буюмду алып, алуучуга жеткирет.
-      <input class="f" id="dWhat" placeholder="Эмне жеткирилет (мис. документ, пакет)" style="margin:8px 0 6px" value="${esc(S.dWhat || "")}">
-      <div class="two" style="margin:0"><input class="f" id="dNm" placeholder="Алуучунун аты" style="margin:0" value="${esc(S.dNm || "")}">
-      <input class="f" id="dPh" placeholder="Алуучунун номери *" inputmode="tel" style="margin:0" value="${esc(S.dPh || "")}"></div></div>` : "";
-    if (del) { $("#dWhat").oninput = e => S.dWhat = e.target.value; $("#dPh").oninput = e => S.dPh = e.target.value; $("#dNm").oninput = e => S.dNm = e.target.value; }
+    $("#extra").innerHTML = del ? `<div class="wbox dbox"><b>📦 Айдоочу буюмду сизден алып, алуучуга жеткирет</b>
+      <label>Эмне жеткирилет</label><input class="f" id="dWhat" placeholder="мис. документ, пакет, торт" value="${esc(S.dWhat || "")}">
+      <label>Алуучунун аты</label><input class="f" id="dNm" placeholder="мис. Айбек" value="${esc(S.dNm || "")}">
+      <label>Алуучунун номери *</label><input class="f" id="dPh" placeholder="0700 123 456" inputmode="tel" value="${esc(S.dPh || "")}">
+      <p class="muted">💵 Төлөм накталай — буюмду бергенде айдоочуга төлөйсүз. Айдоочу жеткирерде алуучуга чалат.</p></div>
+      <button class="dtaxi" id="toTaxi">🚕 Жеткирүү эмес, такси керек</button>` : "";
+    if (del) { $("#toTaxi").onclick = () => { S.cls = "econom"; viewQuote(); };
+      $("#dWhat").oninput = e => S.dWhat = e.target.value; $("#dPh").oninput = e => S.dPh = e.target.value; $("#dNm").oninput = e => S.dNm = e.target.value; }
     $("#otherOpen").classList.toggle("hide", del); $("#otherBox").classList.toggle("hide", del);
     $("#order").textContent = S.at ? "Алдын ала заказ берүү" : del ? "Жеткирүүнү чакыруу" : "Чакыруу";
   };
@@ -955,7 +961,7 @@ function tickRide() {
     $("#bar").style.width = Math.min(100, 100 * r.search_sec / r.search_max) + "%";
   }
   if (r.status === "accepted" && $("#eta") && r.driver) $("#eta").textContent = etaText(r) + " ›";
-  if (r.status === "in_trip" && $("#tripH")) { const m = tripMin(r); $("#tripH").textContent = (m ? `Барууга ~${m} мүн` : "Жолдо") + " ›"; }
+  if (r.status === "in_trip" && $("#tripH")) { const m = tripMin(r); $("#tripH").textContent = (r.cls === "delivery" ? "📦 Буюм жолдо" + (m ? ` · ~${m} мүн` : "") : m ? `Барууга ~${m} мүн` : "Жолдо") + " ›"; }
   if (r.status === "arrived" && $("#wt")) $("#wt").innerHTML = waitText(r);
   const n = (r.msgs || []).filter(m => !m.me).length, unread = n - (S.seen || 0);
   if ($("#chatN")) $("#chatN").textContent = unread > 0 ? unread : "", $("#chatN") && $("#chatN").classList.toggle("hide", unread <= 0);
@@ -963,7 +969,8 @@ function tickRide() {
 }
 function etaText(r) {
   const m = r.driver.eta_min;
-  return r.chained ? `Айдоочу азыркы сапарын бүтүрүп келет${m ? " · ~" + m + " мүн" : ""}` : m ? `${m} мүнөттө келет` : "Айдоочу жолдо";
+  const del = r.cls === "delivery" ? "буюмду алууга " : "";
+  return r.chained ? `Айдоочу азыркы сапарын бүтүрүп келет${m ? " · ~" + m + " мүн" : ""}` : m ? `Айдоочу ${del}${m} мүнөттө келет` : "Айдоочу жолдо";
 }
 function waitText(r) {
   const w = r.wait; if (!w.arrived_at) return "";
@@ -1093,11 +1100,12 @@ const BAD = [["rude", "😠", "Орой мамиле"], ["dirty", "🧹", "Са�
   ["route", "🗺", "Жолду билбейт"], ["late", "⏰", "Кечикти"], ["smoke", "🚬", "Тамеки жыты"]];
 function viewDone(r) {
   const F = {stars:0, tags:new Set(), car:null};
-  const head = `<div class="done-h">Келдиңиз: ${r.pay ? r.pay + " сом" : "тариф боюнча"}</div>`;
+  const del = r.cls === "delivery";
+  const head = `<div class="done-h">${del ? "📦 Буюм жеткирилди ✓" : "Келдиңиз: " + (r.pay ? r.pay + " сом" : "тариф боюнча")}</div>`;
   render(`${head}
     ${r.discount ? `<p class="muted" style="margin:-4px 0 6px">🎁 Промокод: −${Math.round(r.discount)} сом</p>` : ""}${r.wait.fee ? `<p class="muted" style="margin:-4px 0 6px">⏳ Күтүү: +${r.wait.fee} сом (баада бар)</p>` : ""}
     ${r.rated ? `<p class="muted" style="text-align:center;margin:14px 0">✓ Бааңыз кабыл алынды. Рахмат!</p>` : `
-    <div class="done-car"><img src="/static/r_car.webp?v=24" alt=""></div><h2 class="done-q" id="dq">Сапар кандай болду?</h2><p class="muted" style="text-align:center;margin:0">Пикириңиз жашыруун калат</p>
+    <div class="done-car"><img src="/static/${del ? "h_box" : "r_car"}.webp?v=24" alt=""></div><h2 class="done-q" id="dq">${del ? "Жеткирүү кандай болду?" : "Сапар кандай болду?"}</h2><p class="muted" style="text-align:center;margin:0">Пикириңиз жашыруун калат</p>
     <div class="stars big" id="stars">${[1,2,3,4,5].map(n => `<span data-n="${n}">★</span>`).join("")}</div>
     <div class="tagrow" id="tags"></div>
     <input class="f hide" id="cm" maxlength="300" placeholder="Пикир…">
@@ -1155,16 +1163,17 @@ function viewRide() {
       <p class="price" style="margin:4px 0">${t.toLocaleDateString("ru-RU", {day:"numeric", month:"long"})}, ${t.toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"})}</p>
       <p class="muted">Убактысынан 10 мүнөт мурун айдоочу изделе баштайт. Айдоочу табылганда кабар келет.</p>${cancelBtn}`);
   } else if (r.status === "searching") {
-    render(`${r.requeued ? `<div class="farn" style="margin:0 0 8px">🚕 Айдоочу заказды жокко чыгарды. Башка айдоочу изделип жатат — эч нерсе басуунун кереги жок.</div>` : ""}<div class="pulse"></div><h2 style="text-align:center">Айдоочу изделүүдө</h2>
+    render(`${r.requeued ? `<div class="farn" style="margin:0 0 8px">🚕 Айдоочу заказды жокко чыгарды. Башка айдоочу изделип жатат — эч нерсе басуунун кереги жок.</div>` : ""}<div class="pulse"></div><h2 style="text-align:center">${r.cls === "delivery" ? "📦 Жеткирүүчү айдоочу изделүүдө" : "Айдоочу изделүүдө"}</h2>
       <div class="bar"><i id="bar" style="width:0"></i></div>
       <p class="muted" style="text-align:center">Эң жакынкы айдоочуга сунуш кетти</p>${cancelBtn}`);
   } else if (r.status === "accepted") {
     render(`<h2 id="eta" class="rh">${etaText(r)} ›</h2>${carCard(r.driver)}${rideBtns()}${actRow(r)}${cancelBtn}`);
   } else if (r.status === "arrived") {
-    render(`<h2 class="rh">Айдоочу күтүп турат</h2><div class="wbox" id="wt">${waitText(r)}</div>${carCard(r.driver)}${rideBtns()}${actRow(r)}${cancelBtn}`);
+    render(`<h2 class="rh">${r.cls === "delivery" ? "📦 Айдоочу келди — буюмду бериңиз" : "Айдоочу күтүп турат"}</h2>${r.cls === "delivery" && r.price ? `<div class="wbox">💵 Айдоочуга <b>${r.price - Math.round(r.discount || 0)} сом</b> бериңиз</div>` : ""}<div class="wbox" id="wt">${waitText(r)}</div>${carCard(r.driver)}${rideBtns()}${actRow(r)}${cancelBtn}`);
   } else if (r.status === "in_trip") {
     const m = tripMin(r);
-    render(`<h2 class="rh" id="tripH">${m ? `Барууга ~${m} мүн` : "Жолдо"} ›</h2>
+    render(`<h2 class="rh" id="tripH">${r.cls === "delivery" ? "📦 Буюм жолдо" + (m ? ` · ~${m} мүн` : "") : m ? `Барууга ~${m} мүн` : "Жолдо"} ›</h2>
+      ${r.cls === "delivery" && r.other_phone ? `<p class="muted" style="margin:-6px 0 6px">🙋 Алуучу: ${esc(r.other_name || "")} ${esc(r.other_phone)} — айдоочу ага чалат</p>` : ""}
       ${r.wait.fee ? `<p class="muted" style="margin:-6px 0 6px">⏳ Күтүү: +${r.wait.fee} сом</p>` : ""}${carCard(r.driver)}${rideBtns()}${actRow(r)}`);
     $("#tripH").onclick = () => rideInfo(r);
   } else if (r.status === "completed") {

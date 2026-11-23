@@ -932,14 +932,17 @@ function viewRide() {
   const title = del ? {accepted:"Буюмду алууга барыңыз", arrived:"Буюмду алыңыз", in_trip:"Алуучуга жеткириңиз"}[r.status]
     : {accepted:"Жүргүнчүгө барыңыз", arrived:"Жүргүнчүнү күтүңүз", in_trip:"Сапар жүрүп жатат"}[r.status];
   const next = {accepted:["📍 Келдим", "main"], arrived:[del ? "▶️ Алдым, жолго чыктым" : "▶️ Сапарды баштоо", "go"], in_trip:[del ? "🏁 Жеткирдим" : "🏁 Сапарды бүтүрүү", "dark"]}[r.status];
-  const who = r.other_name || r.other_phone ? `${esc(r.other_name || "Башка адам")}<div class="muted">Заказ берген: ${esc(r.passenger)}</div>` : esc(r.passenger);
-  const callPh = !del && r.other_phone ? r.other_phone : r.phone;
+  // Жеткирүүдө: А — жөнөтүүчү (заказ берген), Б — алуучу; сапарда алуучуга чалат
+  const who = del ? `${esc(r.passenger)}<div class="muted">📦 Жөнөтүүчү — буюмду ушул адам берет</div>`
+    : r.other_name || r.other_phone ? `${esc(r.other_name || "Башка адам")}<div class="muted">Заказ берген: ${esc(r.passenger)}</div>` : esc(r.passenger);
+  const callPh = del ? (r.status === "in_trip" && r.other_phone ? r.other_phone : r.phone) : r.other_phone ? r.other_phone : r.phone;
   render(`<h2>${clsTag(r.cls)}${title}</h2><div class="muted" id="rinfo" style="margin:-6px 0 6px"></div>
     <div class="row"><span class="bul lt">А</span><div style="flex:1"><b>${who}</b>${r.p_rating ? `<span class="muted"> · ★ ${r.p_rating}</span>` : ""}
       <div class="muted">${r.price ? r.price + " сом" : "Тариф боюнча"}${r.dist_km ? " · ~" + r.dist_km + " км" : ""}${r.p_addr ? " · " + esc(r.p_addr) : ""}</div></div></div>
     ${r.d ? (r.d_addr ? `<div class="row"><span class="bul to lt">Б</span><div>${esc(r.d_addr)}</div></div>` : "") : `<div class="row"><span class="bul to lt">Б</span><div class="muted">Бара турган жерин жүргүнчү өзү айтат</div></div>`}
     ${sts.length ? `<div class="stl">${sts.map((x, i) => `<div class="row${i < si ? " dn" : i === si && r.status === "in_trip" ? " cur" : ""}"><span class="bul lt stn">${i < si ? "✓" : i + 1}</span><div>${esc(x.addr || "Токтоочу жер " + (i + 1))}${i === si && r.status === "in_trip" ? ` <b class="nowb">← азыр бул жерге</b>` : ""}</div></div>`).join("")}</div>` : ""}
-    ${del && r.other_phone ? `<div class="note">📦 Алуучу: <a href="tel:${esc(r.other_phone)}">${esc(r.other_phone)}</a></div>` : ""}
+    ${del && r.other_phone ? `<div class="note">🙋 Алуучу (Б): <b>${esc(r.other_name || "Алуучу")}</b> · <a href="tel:${esc(r.other_phone)}">${esc(r.other_phone)}</a></div>` : ""}
+    ${del && r.status !== "in_trip" && r.price ? `<div class="note">💵 Буюмду алганда <b>${r.price - Math.round(r.discount || 0)} сомду</b> жөнөтүүчүдөн алыңыз</div>` : ""}
     ${r.note ? `<div class="note">📝 ${esc(r.note)}</div>` : ""}
     ${r.status === "arrived" ? `<div class="note" id="wt">${waitText(r)}</div>` : r.wait && r.wait.fee ? `<div class="note">⏳ Күтүү акысы: +${r.wait.fee} сом (баага кошулду)</div>` : ""}
     ${r.discount ? `<div class="note">🎁 Промокод: жүргүнчү <b>${r.price - Math.round(r.discount)} с</b> төлөйт, ${Math.round(r.discount)} с сапар бүткөндө балансыңызга кошулат</div>` : ""}
@@ -986,9 +989,10 @@ function done(r) {
   lastView = D.ride ? "ride" + D.ride.id + D.ride.status + (D.next ? D.next.id : "") : D.online ? "on" : "off";
   const pay = r.price ? r.price - Math.round(r.discount || 0) : 0;
   speak(orderToks("d_done", pay > 0 ? pay : 0, null));
-  render(`<h2 style="text-align:center">Сапар бүттү</h2><p class="oprice" style="text-align:center;margin:0">${pay ? pay + " сом" : "Тариф боюнча"}</p>
-    <p class="muted" style="text-align:center">Жүргүнчүдөн акчаны алыңыз${r.discount ? ` · +${Math.round(r.discount)} с промокод балансыңызга кошулду` : ""}${r.wait && r.wait.fee ? ` · күтүү +${r.wait.fee} с баада бар` : ""}</p>
-    <p class="muted" style="text-align:center;margin-bottom:0">Жүргүнчүнү баалаңыз</p><div class="stars" id="stars">${[1,2,3,4,5].map(n => `<span data-n="${n}">★</span>`).join("")}</div>
+  const del = r.cls === "delivery";
+  render(`<h2 style="text-align:center">${del ? "📦 Жеткирүү бүттү" : "Сапар бүттү"}</h2><p class="oprice" style="text-align:center;margin:0">${pay ? pay + " сом" : "Тариф боюнча"}</p>
+    <p class="muted" style="text-align:center">${del ? "Акчаны жөнөтүүчүдөн буюмду алганда алгансыз" : "Жүргүнчүдөн акчаны алыңыз"}${r.discount ? ` · +${Math.round(r.discount)} с промокод балансыңызга кошулду` : ""}${r.wait && r.wait.fee ? ` · күтүү +${r.wait.fee} с баада бар` : ""}</p>
+    <p class="muted" style="text-align:center;margin-bottom:0">${del ? "Жөнөтүүчүнү баалаңыз" : "Жүргүнчүнү баалаңыз"}</p><div class="stars" id="stars">${[1,2,3,4,5].map(n => `<span data-n="${n}">★</span>`).join("")}</div>
     <button class="btn main" id="ok">${D.ride ? "Кийинки заказга" : "Улантуу"}</button>`);
   $("#stars").querySelectorAll("span").forEach(x => x.onclick = () => {
     const n = +x.dataset.n; $("#stars").querySelectorAll("span").forEach(y => y.classList.toggle("on", +y.dataset.n <= n));
