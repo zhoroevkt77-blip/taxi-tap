@@ -202,7 +202,7 @@ const api = async (path, body) => {
 };
 
 const S = { cls:"econom", seen:0, mode:"boot", from:null, fromAddr:"", to:null, toAddr:"", ride:null, quote:null, near:null, timer:null };
-const map = L.map("map", {zoomControl:false, attributionControl:true}).setView([41.0377, 72.7470], 15);
+const map = L.map("map", {zoomControl:false, attributionControl:true, zoomSnap:0.25, wheelPxPerZoomLevel:90}).setView([41.0377, 72.7470], 15);
 const areaReady = setupArea(map, {zoom:15});
 let baseLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:"© OpenStreetMap"}).addTo(map);
 // 2ГИС картасы (жүргүнчүлөр үчүн): сервер уруксат берсе — плиткалар биздин сервер аркылуу келет, лимит бүтсө OSM'ге өтөт

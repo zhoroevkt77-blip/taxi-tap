@@ -150,7 +150,8 @@ const api = async (path, body) => {
     {method:"POST", credentials:"same-origin", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)});
   return r.json();
 };
-const map = L.map("map", {zoomControl:false}).setView([41.0377, 72.7470], 14);
+// zoomSnap .25 — эки манжа менен чоңойткондо жылмакай (бүтүн деңгээлге «секирбейт»)
+const map = L.map("map", {zoomControl:false, zoomSnap:0.25, zoomDelta:1, wheelPxPerZoomLevel:90}).setView([41.0377, 72.7470], 14);
 setupArea(map, {zoom:14, bounds:false});
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:"© OpenStreetMap"}).addTo(map);
 const icon = (cls, t) => L.divIcon({className:"", html:`<div class="carm ${cls}">${t}</div>`, iconSize:[30,30], iconAnchor:[15,15]});
@@ -241,7 +242,10 @@ mapEl.addEventListener("touchmove", () => {                 // «Жол өйдө
   if (hupOn && touchN === 1) { FOLLOW = false; const b = $("#navLoc"); b && b.classList.add("off"); hupSync(); }
 }, {passive:true, capture:true});
 const userBusy = () => touchN > 0 || Date.now() - userAt < 2000 || document.body.classList.contains("offering");   // заказ келгенде карта маршрутту көрсөтүп турсун
-mapEl.addEventListener("touchstart", e => { touchN = e.touches.length; userAt = Date.now(); }, {passive:true, capture:true});
+mapEl.addEventListener("touchstart", e => { touchN = e.touches.length; userAt = Date.now();
+  // Машинаны ээрчип жүргөндө (айрыкча «Жол өйдө» — карта айланып турат) эки манжа менен чоңойтуу картанын борборунда болот:
+  // айланган картада манжалардын ордун Leaflet туура эсептей албайт, ал эми «борбордо» режиминде масштаб гана колдонулат.
+  if (map.options) map.options.touchZoom = FOLLOW && myPos ? "center" : true; }, {passive:true, capture:true});
 ["touchend", "touchcancel"].forEach(ev => mapEl.addEventListener(ev, e => { touchN = e.touches.length; userAt = Date.now(); }, {passive:true, capture:true}));
 map.on("zoomstart", () => { userAt = Date.now(); }); map.on("zoomend", () => { userAt = Date.now(); });
 function followMe(force) {
