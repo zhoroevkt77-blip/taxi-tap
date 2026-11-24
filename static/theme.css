@@ -928,3 +928,6 @@ html.uidark .inb{background:#25262b;border-color:#3a3b41}html.uidark .inb.new{ba
 .nb .xdi{font-style:normal;font-size:24px;margin-right:8px}.nb .xreq{font-style:normal;font-size:12px;background:#fde3e3;color:#c0392b;border-radius:8px;padding:2px 8px;margin-left:6px;font-weight:700}
 .xst{display:inline-block;align-self:flex-start;font-size:14px;font-weight:700;border-radius:10px;padding:3px 10px;margin-top:4px}.xst.g{background:#e3f5ea;color:#1a7a40}.xst.y{background:#fff3cf;color:#8a6500}.xst.r{background:#fde3e3;color:#c0392b}
 html.uidark .note.xdw>.nb{background:#25262b;border-color:#3a3b41}
+.stw{display:flex;flex-direction:column;gap:2px;background:#e8f6ee;border:1.5px solid #9bd6b2;border-radius:14px;padding:10px 12px;margin:8px 0}.stw b{font-size:18px}.stw span{font-size:15px;color:#33333b}.stw.paid{background:#fff3cf;border-color:#f5c518}.stw .p{color:#b26a00}
+html.uidark .stw{background:#1d3326;border-color:#2f5a40}html.uidark .stw span{color:#ddd}html.uidark .stw.paid{background:#3a3218}
+html.uidark .stl .row.cur{background:#3a3218!important;color:#fff}html.uidark .stl .row.cur *{color:#fff}

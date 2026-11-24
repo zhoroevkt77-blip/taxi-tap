@@ -115,7 +115,7 @@ label.l{font-size:15px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:15px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=171">
+<link rel="stylesheet" href="/static/theme.css?v=172">
 <link rel="stylesheet" href="/static/dark.css?v=21">
 <script src="/static/night.js?v=2"></script>
 </head>
@@ -491,6 +491,17 @@ async function viewInbox() {
   window.SHEET && SHEET.expand && SHEET.expand();
 }
 document.addEventListener("click", e => { const a = e.target.closest('a[href="#inbox"]'); if (a) { e.preventDefault(); viewInbox(); } });
+// Токтоочу жерде күтүү: таймер + акы (акысыз мүнөттөрдөн кийин)
+function stwText(el) {
+  const sec = Math.max(0, Math.floor(Date.now() / 1000 - (+el.dataset.since))), free = +el.dataset.free * 60, per = +el.dataset.per;
+  const mm = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`, over = sec - free, fee = over > 0 ? Math.ceil(over / 60) * per : 0;
+  return { html: `<b>⏱ Күтүү ${mm(sec)}</b><span>${over > 0 ? `акылуу: <b class="p">+${fee} с</b> (${per} с/мүн)` : `акысыз дагы ${mm(free - sec)}`}</span>`, paid: over > 0 };
+}
+function stwTick() {
+  clearInterval(window.STW_T); const el = document.querySelector(".stw"); if (!el) return;
+  const f = () => { if (!document.body.contains(el)) return clearInterval(window.STW_T); const t = stwText(el); el.innerHTML = t.html; el.classList.toggle("paid", t.paid); };
+  f(); window.STW_T = setInterval(f, 1000);
+}
 // Чиптерди басканда түшүндүрмө
 function statTip(k) {
   document.querySelectorAll(".tipw").forEach(e => e.remove());
@@ -1010,7 +1021,8 @@ function viewRide() {
       <a href="#" id="nx" style="color:var(--bad)">Баш тартуу</a></div>` : ""}
     <div class="rbtns"><a href="tel:${esc(callPh)}"><span>📞</span>Чалуу</a><button id="chat" class="chatb"><span>💬<em id="chatN" class="hide"></em></span>Чат</button>
       ${target ? `<button id="navGo"><span>🧭</span>Навигатор</button>` : ""}<button id="rSos" class="sos"><span>🆘</span>Жардам</button></div>
-    ${nextStop ? `<button class="btn go" id="stopOk">✓ Токтоочу жерге келдим (${si + 1}/${sts.length})</button>` : `<button class="btn ${next[1]}" id="step">${next[0]}</button>`}
+    ${nextStop && r.stop_wait && r.stop_wait.since ? `<div class="stw" id="stw" data-since="${r.stop_wait.since}" data-free="${r.stop_wait.free_min}" data-per="${r.stop_wait.per_min}"></div>` : ""}
+    ${nextStop ? `<button class="btn go" id="stopOk">${r.stop_wait && r.stop_wait.since ? `▶ Жолду улантуу (${si + 1}/${sts.length})` : `✓ Токтоочу жерге келдим (${si + 1}/${sts.length})`}</button>` : `<button class="btn ${next[1]}" id="step">${next[0]}</button>`}
     ${r.status === "arrived" && r.wait && r.wait.arrived_at && r.wait.now - r.wait.arrived_at >= 300 ? `<button class="btn" id="noshow" style="background:#fff6dd">🙋 Жүргүнчү келбеди</button>` : ""}
     ${r.status !== "in_trip" ? `<button class="btn red" id="cx">Жокко чыгаруу</button>` : ""}`);
   $("#rSos").onclick = sosOpen;
@@ -1020,6 +1032,7 @@ function viewRide() {
   const nx = $("#nx"); if (nx) nx.onclick = async e => { e.preventDefault(); if (!confirm("Кийинки заказдан баш тартасызбы?")) return;
     D = await api("/api/d/cancel", {id:D.next.id}); lastView = ""; show(); };
   unread();
+  stwTick();
   if ($("#stopOk")) $("#stopOk").onclick = async () => { $("#stopOk").disabled = true;
     const x = await api("/api/d/stop_done", {id:r.id}); if (x.error) { toast("Болбой калды", 1500); }
     D = await api("/api/d/state"); lastView = ""; show(); };
@@ -1628,7 +1641,7 @@ function show() {
   if (chatOpen && D.ride) return unread();
   chatOpen = false;
   const ns = D.ride && D.ride.status === "arrived" && D.ride.wait && D.ride.wait.arrived_at && D.ride.wait.now - D.ride.wait.arrived_at >= 300 ? "n" : "";
-  const key = D.ride ? "ride" + D.ride.id + D.ride.status + (D.next ? D.next.id : "") + ns : (D.online ? "on" : "off") + (D.in_area === false ? "x" : "");
+  const key = D.ride ? "ride" + D.ride.id + D.ride.status + (D.next ? D.next.id : "") + ns + (D.ride.stop_i || 0) + (D.ride.stop_wait && D.ride.stop_wait.since ? "w" : "") : (D.online ? "on" : "off") + (D.in_area === false ? "x" : "");
   if (key !== lastView) { if (D.ride && window.SHEET) SHEET.expand(); lastView = key; D.ride ? viewRide() : viewHome(); }
   else if (D.ride) unread();
   if (!D.ride) layer.clearLayers();

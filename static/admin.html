@@ -86,7 +86,7 @@ td input.f{padding:7px 8px;max-width:90px;min-width:58px}
 .dgl summary::-webkit-details-marker{display:none}.dgl summary b{display:inline!important;margin:0!important}.dgl summary{display:block}.dgl .r{color:#c22}.dgl .o{color:#b26a00}.dgi{padding:3px 0 0 4px;font-size:15px}.dgi.bad{color:#b42318}
 .dsdr{width:30px;height:30px;border-radius:50%;background:#1f9d55;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 2px 6px rgba(0,0,0,.3);border:2px solid #fff}.dsdr.b{background:#f5b800}.dsdrv{margin-top:10px;font-size:16px}body.dispm nav{justify-content:space-between}.xdr{display:flex;gap:10px;align-items:flex-start;margin:8px 0;padding:8px;border:1px solid #eee;border-radius:12px}.xdr img{width:84px;height:56px;object-fit:cover;border-radius:8px}.xdr .btn{padding:6px 10px;font-size:14px;margin-top:4px}.dlink{margin:0 14px 10px;padding:12px;border-radius:14px;background:#fffbea;border:1.5px solid #ffe08a;display:flex;flex-direction:column;gap:6px}.dlink span{font-size:14px;color:#6b6b75}.dlink b{word-break:break-all}.dlink div{display:flex;gap:8px}.dlink .btn{flex:1}.dxb{display:flex;flex-direction:column;gap:6px}.dxb a.btn{text-decoration:none;text-align:center}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=171">
+<link rel="stylesheet" href="/static/theme.css?v=172">
 </head>
 <body class="adm">
 <header><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b><span class="ver">Админ</span></div><div class="live" id="live"></div></header>
@@ -427,9 +427,10 @@ async function viewTariffs() {
       ${dsz.map(x => `<div class="item"><div class="main"><b>${x.ic} ${esc(x.name)}</b><span class="muted">${esc(x.ex)}</span>
         <input class="f" data-dl="${x.id}" value="${esc(x.lim)}" maxlength="40" style="margin-top:4px"></div>
         <label class="muted">+ сом <input class="f" inputmode="numeric" data-df="${x.id}" value="${x.fee}" style="max-width:80px;display:inline-block"></label>
+        <label class="muted">+ % <input class="f" inputmode="decimal" data-dp="${x.id}" value="${x.pct || 0}" style="max-width:70px;display:inline-block"></label>
         ${x.id === "s" ? `<span class="muted" style="min-width:110px">ар дайым күйүк</span>` : `<button class="btn ${x.on ? "ok" : ""}" data-don="${x.id}" data-v="${x.on ? 1 : 0}" style="min-width:110px">${x.on ? "✓ Күйүк" : "Өчүк"}</button>`}</div>`).join("")}
       <div style="padding:0 14px 14px"><button class="btn gold" id="dsSave">Сактоо</button> <span class="muted" id="dsMsg"></span>
-      <p class="muted">Жүргүнчү жеткирүү заказында өлчөмдү тандайт — кошумча баа жеткирүүнүн баасына кошулат. Айдоочу заказда өлчөмдү көрөт.</p></div></div>
+      <p class="muted">Жүргүнчү жеткирүү заказында өлчөмдү тандайт — кошумча баа жеткирүүнүн баасына кошулат: «+ сом» — туруктуу, «+ %» — сапардын баасынан (мис. 40% → 200 сомдук сапарга +80 с); экөө тең коюлса — кошулат. Айдоочу заказда өлчөмдү көрөт.</p></div></div>
     <div class="panel"><h3>Баалар (сом)</h3><div class="scroll"><table>
     <tr><th>Шаар</th><th>Отуруу</th><th>Ага кирген км</th><th>Ага кирген мүн</th><th>1 км</th><th>1 мүнөт</th><th>Минимум</th><th></th></tr>
     ${tariffs.map((t, i) => `<tr><td><b>${esc(t.city)}</b>${t.saved ? "" : `<div class="muted">демейки</div>`}</td>
@@ -439,6 +440,7 @@ async function viewTariffs() {
       <br>«Ага кирген км/мүн» — Яндекстегидей: мис. отуруу 70 с ичине алгачкы 2 км жана 4 мүн кирет, андан кийин гана км/мүн эсептелет. 0 болсо — мурункудай.</p>
     <div class="panel"><h3>Акылуу күтүү</h3><div class="fset">
       <div><label>Акысыз мүнөт</label><input class="f" id="wFree" inputmode="decimal" value="${wait.free_min}"></div>
+      <div><label>Ар бир токтоочу жерде акысыз мүнөт</label><input class="f" id="wStop" inputmode="decimal" value="${wait.stop_free_min ?? 2}"></div>
       <div><label>Андан кийин, сом/мүн</label><input class="f" id="wPer" inputmode="decimal" value="${wait.per_min}"></div></div>
       <div style="padding:0 14px 14px"><button class="btn gold" id="wSave">Сактоо</button> <span class="muted" id="wMsg"></span>
       <p class="muted">Айдоочу «Келдим» баскандан кийин эсептелет жана сапардын баасына кошулат.</p></div></div>
@@ -463,7 +465,7 @@ async function viewTariffs() {
   };
   $("#clSave").onclick = () => saveCl(null);
   const saveDs = async flip => {
-    const out = {}; dsz.forEach(x => out[x.id] = {fee:+$(`[data-df=${x.id}]`).value, lim:$(`[data-dl=${x.id}]`).value, on:x.id === flip ? !x.on : x.on});
+    const out = {}; dsz.forEach(x => out[x.id] = {fee:+$(`[data-df=${x.id}]`).value, pct:+$(`[data-dp=${x.id}]`).value, lim:$(`[data-dl=${x.id}]`).value, on:x.id === flip ? !x.on : x.on});
     const r = await api("/api/a/del_sizes", {sizes:out});
     if (r.error) return $("#dsMsg").textContent = "Текшериңиз: 0–5000 сом.";
     flip ? viewTariffs() : ($("#dsMsg").textContent = "✓ Сакталды");
@@ -472,7 +474,7 @@ async function viewTariffs() {
   $("#main").querySelectorAll("[data-don]").forEach(b => b.onclick = () => saveDs(b.dataset.don));
   $("#main").querySelectorAll("[data-con]").forEach(b => b.onclick = () => saveCl(b.dataset.con));
   $("#wSave").onclick = async () => {
-    const x = await api("/api/a/wait", {free_min:$("#wFree").value, per_min:$("#wPer").value});
+    const x = await api("/api/a/wait", {free_min:$("#wFree").value, per_min:$("#wPer").value, stop_free_min:$("#wStop").value});
     $("#wMsg").textContent = x.error ? "Текшериңиз: 0–30 мүн, 0–100 сом." : "✓ Сакталды";
   };
   $("#main").querySelectorAll("[data-i]").forEach(b => b.onclick = async () => {

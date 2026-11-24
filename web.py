@@ -149,6 +149,7 @@ def ride_view(r):
     v["del_size"] = _dsz(r)
     v["cls"] = r.get("cls") or "econom"
     v["stops"], v["stop_i"] = core.ride_stops(r), int(r.get("stop_i") or 0)
+    v["stop_wait"] = _stopw(r)
     v["p_addr"], v["d_addr"] = r.get("p_addr"), r.get("d_addr")
     v["other_name"], v["other_phone"] = r.get("other_name"), r.get("other_phone")
     v["wait"] = _wait(r)
@@ -266,6 +267,15 @@ DISP_GET = {"client", "phone_rides", "disp_drivers"}        # диспетчер
 DISP_POST = {"order", "quote", "cancel"}
 
 
+def _stopw(r):
+    """Токтоочу жерде күтүп жатса: канча убакыт күтүүдө, акысыз мүнөт, азыркы акы."""
+    if not r.get("stop_at") or r.get("status") != "in_trip":
+        return {"paid": int(r.get("stop_wait") or 0)} if r.get("stop_wait") else None
+    w = core.wait_config()
+    return {"since": r["stop_at"], "free_min": w["stop_free_min"], "per_min": w["per_min"],
+            "fee": core.stop_wait_fee(r["stop_at"]), "paid": int(r.get("stop_wait") or 0)}
+
+
 def _dsz(r):
     """Жеткирүүнүн өлчөмү айдоочу үчүн: {"ic","name","lim"} же None."""
     x = r.get("del_size") and next((y for y in core.del_sizes(True) if y["id"] == r["del_size"]), None)
@@ -283,7 +293,7 @@ def _driver_ride(r):
          "other_name": r.get("other_name"), "other_phone": r.get("other_phone"),
          "p_rating": p.get("p_rating") if (p.get("p_rated") or 0) >= 3 else None,
          "wait": _wait(r), "msgs": _msgs(r, r["driver"]),
-         "stops": core.ride_stops(r), "stop_i": int(r.get("stop_i") or 0),
+         "stops": core.ride_stops(r), "stop_i": int(r.get("stop_i") or 0), "stop_wait": _stopw(r),
          "d": [r["d_lat"], r["d_lon"]] if r["d_lat"] is not None else None}
     return v
 
@@ -719,8 +729,9 @@ class H(BaseHTTPRequestHandler):
             dsz = None
             if (b.get("cls") or "") == "delivery":            # жеткирүү: өлчөмгө жараша кошумча
                 dsz = core.del_size(_txt(b.get("size"), 4) or "s") or core.del_size("s")
-                if dsz and dsz["fee"]:
-                    q = dict(q, price=int(q["price"] or 0) + dsz["fee"])
+                xf = core.del_size_fee(dsz, q["price"])
+                if xf:
+                    q = dict(q, price=int(q["price"] or 0) + xf)
             core.mark_quote_ordered(uid)
             rid = core.create_ride(uid, q, p[0], p[1], *(d or (None, None)), promo=promo, discount=disc,
                                    scheduled_at=at, note=_txt(b.get("note"), 200) or None,
@@ -1206,7 +1217,7 @@ class H(BaseHTTPRequestHandler):
                 return self._json({"error": "bad"}, 400)
             return self._json({"activity_km": core.activity_km()})
         if action == "wait":
-            if not core.set_wait_config(_num(b.get("free_min")), _num(b.get("per_min"))):
+            if not core.set_wait_config(_num(b.get("free_min")), _num(b.get("per_min")), _num(b.get("stop_free_min"))):
                 return self._json({"error": "bad"}, 400)
             return self._json({"wait": core.wait_config()})
         if action == "car_photo_review":

@@ -149,6 +149,7 @@ body.sxtyping .sx-ab,body.sxtyping .sx-chips,body.sxtyping .sx-cards,body.sxtypi
 .dbox b{display:block;margin-bottom:6px}.dbox label{display:block;font-size:14px;font-weight:600;color:#55555f;margin:8px 0 3px}.dbox .f{margin:0}.dbox p{margin:10px 0 0;font-size:15px}.dtaxi{display:block;margin:8px auto 0;border:0;background:none;color:#7a6400;font:inherit;font-size:15px;font-weight:600;text-decoration:underline}
 .rsall{display:block;width:100%;margin:10px 0 4px;padding:14px;border:1.5px solid #ececf0;border-radius:16px;background:#fff;font:inherit;font-size:17px;font-weight:700;color:#16161a;box-shadow:0 4px 14px rgba(0,0,0,.06)}.rsall:active{transform:scale(.98)}html.uidark .rsall{background:#2a2b31;color:#eee;border-color:#3a3b41}
 .dsz{display:grid;grid-template-columns:1fr 1fr;gap:8px}.dsz button{display:grid;grid-template-columns:auto 1fr;grid-template-areas:"i b" "i s" "i e";column-gap:8px;align-items:center;text-align:left;border:1.5px solid #ececf0;background:#fff;border-radius:14px;padding:8px 10px;font:inherit;color:#16161a}.dsz button i{grid-area:i;font-style:normal;font-size:28px}.dsz button b{grid-area:b;font-size:16px;margin:0}.dsz button small{grid-area:s;font-size:12.5px;color:#6b6b75;line-height:1.2}.dsz button em{grid-area:e;font-style:normal;font-weight:700;font-size:14px;color:#a07800}.dsz button.on{border-color:#ffc400;box-shadow:0 0 0 2px #ffc400;background:#fffbea}.dsx{margin:6px 0 0!important;font-size:14px!important;color:#6b6b75}.dban{font-size:14px!important;color:#a33!important}
+.stw{display:flex;flex-direction:column;gap:2px;background:#e8f6ee;border:1.5px solid #9bd6b2;border-radius:14px;padding:10px 12px;margin:0 0 10px}.stw b{font-size:17px}.stw span{font-size:15px;color:#33333b}.stw.paid{background:#fff3cf;border-color:#f5c518}.stw .p{color:#b26a00}
 .sx-cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}.sx-cd{border:0;border-radius:20px;padding:14px;height:108px;position:relative;overflow:hidden;background:#fff4c2;text-align:left;font:inherit;color:#16161a}.sx-cd.k{background:#16161a;color:#fff}.sx-cd.w{background:#fff;color:#16161a;border:1.5px solid #ececf0;box-shadow:0 4px 14px rgba(0,0,0,.07)}.sx-cd.w small{color:#6b6b75;opacity:1}
 .sx-cards .sx-cd:only-child{grid-column:1/-1}.sx-cards .sx-cd:nth-child(3){grid-column:1/-1;height:92px}.sx-cd b{font-size:18px;display:block}.sx-cd small{font-size:15px;opacity:.75}.sx-cd img{position:absolute;right:10px;top:10px;width:auto;height:58px;max-width:64px;object-fit:contain}.sx-cd{display:flex;flex-direction:column;justify-content:flex-end;height:124px}.sx-cards .sx-cd:nth-child(3){height:124px}.sx-cd b{line-height:1.2}
 /* 3-плитка: туурасынан, сүрөт оңдо ортодо; бардык сүрөттөр бир өлчөмдө */
@@ -165,7 +166,7 @@ body.sxtyping .sx-ab,body.sxtyping .sx-chips,body.sxtyping .sx-cards,body.sxtypi
 html.uidark .drw-p{background:#1c1d22}html.uidark .drw-l button,html.uidark .drw-l a{color:#eee}html.uidark .sx-srch,html.uidark .sx-chips button{background:#2a2b31;color:#ddd}
 </style>
 <link rel="preload" as="image" href="/static/h_taxi.webp?v=24"><link rel="preload" as="image" href="/static/h_box.webp?v=24"><link rel="preload" as="image" href="/static/h_girl.webp?v=25"><link rel="preload" as="image" href="/static/h_map.webp?v=25">
-<link rel="stylesheet" href="/static/theme.css?v=171">
+<link rel="stylesheet" href="/static/theme.css?v=172">
 <link rel="stylesheet" href="/static/dark.css?v=21">
 <script src="/static/night.js?v=2"></script>
 </head>
@@ -449,6 +450,15 @@ function askStops(done) {
     if (e.target === w || e.target.closest(".tipx,.tipok")) close(); };
 }
 function rsShow() { const b = $("#rsAll"); if (b) b.classList.toggle("hide", !(S.aSet || S.multi || S.openOther || S.cls !== "econom")); }
+function stwTick() {
+  clearInterval(window.STW_T); const el = document.querySelector(".stw"); if (!el) return;
+  const f = () => { if (!document.body.contains(el)) return clearInterval(window.STW_T);
+    const sec = Math.max(0, Math.floor(Date.now() / 1000 - (+el.dataset.since))), free = +el.dataset.free * 60, per = +el.dataset.per;
+    const mm = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`, over = sec - free, fee = over > 0 ? Math.ceil(over / 60) * per : 0;
+    el.innerHTML = `<b>⏱ Айдоочу токтоочу жерде күтүүдө ${mm(sec)}</b><span>${over > 0 ? `акылуу күтүү: <b class="p">+${fee} с</b> (${per} с/мүн)` : `акысыз дагы ${mm(free - sec)}, андан кийин ${per} с/мүн`}</span>`;
+    el.classList.toggle("paid", over > 0); };
+  f(); window.STW_T = setInterval(f, 1000);
+}
 function viewIdle(o) {
   document.body.classList.remove("cabsolo"); if (!(o && o.keep)) S.keepTo = null;            // Жөнөкөй башкы бет: карта + борбордо пин + ылдыйда «Каякка барасыз?»
   navOn("home");
@@ -840,12 +850,13 @@ async function viewQuote() {
     const c = cur();
     const del = S.cls === "delivery", SZ = q.del_sizes || [];
     if (del && SZ.length && !SZ.some(x => x.id === S.dSize)) S.dSize = SZ[0].id;
-    const szFee = del ? ((SZ.find(x => x.id === S.dSize) || {}).fee || 0) : 0, cp = c.price ? c.price + szFee : 0;
+    const szF = (z, base) => z ? (z.fee || 0) + Math.round((base || 0) * (z.pct || 0) / 1000) * 10 : 0;   // сервердегидей
+    const szFee = del ? szF(SZ.find(x => x.id === S.dSize), c.price) : 0, cp = c.price ? c.price + szFee : 0;
     { const dl = $("#cls").querySelector("[data-c=delivery] b"), dc = q.classes.find(x => x.id === "delivery");
-      if (dl && dc && dc.price) dl.firstChild.textContent = (dc.price + ((SZ.find(x => x.id === S.dSize) || {}).fee || 0)) + " с"; }
+      if (dl && dc && dc.price) dl.firstChild.textContent = (dc.price + szF(SZ.find(x => x.id === S.dSize), dc.price)) + " с"; }
     $("#qp").innerHTML = cp ? (szFee ? `<span class="muted">${c.price} + ${szFee} =</span> ` : "") + (S.disc ? `<s>${cp}</s> <b>${cp - S.disc} с</b>` : `<b>${cp} с</b>`) : "тариф боюнча";
     $("#extra").innerHTML = del ? `<div class="wbox dbox"><b>📦 Айдоочу буюмду сизден алып, алуучуга жеткирет</b>
-      ${SZ.length ? `<label>Буюмдун өлчөмү</label><div class="dsz">${SZ.map(x => `<button data-sz="${x.id}" class="${x.id === S.dSize ? "on" : ""}"><i>${x.ic}</i><b>${esc(x.name)}</b><small>${esc(x.lim)}</small><em>${x.fee ? "+" + x.fee + " с" : "кошумча жок"}</em></button>`).join("")}</div>
+      ${SZ.length ? `<label>Буюмдун өлчөмү</label><div class="dsz">${SZ.map(x => `<button data-sz="${x.id}" class="${x.id === S.dSize ? "on" : ""}"><i>${x.ic}</i><b>${esc(x.name)}</b><small>${esc(x.lim)}</small><em>${x.pct ? `+${x.pct}%${x.fee ? " +" + x.fee + " с" : ""} (${szF(x, c.price)} с)` : x.fee ? "+" + x.fee + " с" : "кошумча жок"}</em></button>`).join("")}</div>
       <p class="dsx">${esc((SZ.find(x => x.id === S.dSize) || {}).ex || "")}</p>` : ""}
       <label>Эмне жеткирилет</label><input class="f" id="dWhat" placeholder="мис. документ, пакет, торт" value="${esc(S.dWhat || "")}">
       <label>Алуучунун аты</label><input class="f" id="dNm" placeholder="мис. Айбек" value="${esc(S.dNm || "")}">
@@ -945,7 +956,8 @@ function poll() {
   S.timer = setInterval(async () => {
     const r = await api("/api/ride");
     if (!r.ride) return;
-    const changed = !S.ride || r.ride.status !== S.ride.status || !!r.ride.chained !== !!S.ride.chained;
+    const sk = x => (x.stop_i || 0) + ":" + !!(x.stop_wait && x.stop_wait.since);      // токтоочу жерде күтүү башталды/бүттү
+    const changed = !S.ride || r.ride.status !== S.ride.status || !!r.ride.chained !== !!S.ride.chained || sk(r.ride) !== sk(S.ride);
     riderVoice(S.ride, r.ride);
     S.ride = r.ride; updateDriver();
     const live = ["accepted", "arrived", "in_trip"].includes(r.ride.status);
@@ -1199,6 +1211,7 @@ function viewRide() {
   } else if (r.status === "in_trip") {
     const m = tripMin(r);
     render(`<h2 class="rh" id="tripH">${r.cls === "delivery" ? "📦 Буюм жолдо" + (m ? ` · ~${m} мүн` : "") : m ? `Барууга ~${m} мүн` : "Жолдо"} ›</h2>
+      ${r.stop_wait && r.stop_wait.since ? `<div class="stw" data-since="${r.stop_wait.since}" data-free="${r.stop_wait.free_min}" data-per="${r.stop_wait.per_min}"></div>` : ""}
       ${r.cls === "delivery" && r.other_phone ? `<p class="muted" style="margin:-6px 0 6px">🙋 Алуучу: ${esc(r.other_name || "")} ${esc(r.other_phone)} — айдоочу ага чалат</p>` : ""}
       ${r.wait.fee ? `<p class="muted" style="margin:-6px 0 6px">⏳ Күтүү: +${r.wait.fee} сом</p>` : ""}${carCard(r.driver)}${rideBtns()}${actRow(r)}`);
     $("#tripH").onclick = () => rideInfo(r);
@@ -1217,7 +1230,7 @@ function viewRide() {
   if (cx) cx.onclick = () => askCancel(r);
   bindRideBtns(); if (["accepted", "arrived", "in_trip"].includes(r.status)) bindActs(r);
   if ($("#eta")) $("#eta").onclick = () => rideInfo(r);
-  tickRide();
+  tickRide(); stwTick();
 }
 
 let prevView = null;

@@ -354,7 +354,7 @@ NEW_COLUMNS = {
                 "diag_dev": "TEXT", "diag_at": "REAL"},          # телефондон келген диагностика (GPS, үн, батарея…)                          # admin | park:<id> — ким бөгөттөдү                  # күндүк максат (сом)                # күбөлүктүн мөөнөтү YYYY-MM-DD                # таксопарк (жок болсо — өз алдынча)   # активдүүлүк 0..100 (Яндекс Pro'догудай)              # аймактан сыртка чыккан убакыт
     "balance_tx": {"claimed": "REAL"},
     "tariffs": {"inc_km": "REAL DEFAULT 0", "inc_min": "REAL DEFAULT 0"},   # отуруу баасына кирген км/мүн (Яндекстей)
-    "rides": {"stops": "TEXT", "stop_i": "INTEGER", "offer_seen": "REAL", "del_size": "TEXT", "disp_by": "TEXT",       # айдоочу сунушту көргөн убакыт
+    "rides": {"stops": "TEXT", "stop_i": "INTEGER", "offer_seen": "REAL", "del_size": "TEXT", "disp_by": "TEXT", "stop_at": "REAL", "stop_wait": "REAL DEFAULT 0",       # айдоочу сунушту көргөн убакыт
         "note": "TEXT", "source": "TEXT",   # source: web | phone (диспетчер)
               "est_min": "REAL",
               "cancel_reason": "TEXT", "accept_km": "REAL", "requeued": "INTEGER DEFAULT 0",                           # маршруттун пробкасыз убактысы (автоматтык баа үчүн)
@@ -1733,19 +1733,30 @@ def class_config():
 
 # ==================== Жеткирүү: буюмдун өлчөмү ====================
 DEL_SIZES = [   # id, аты, мисал, чек, кошумча баа (сом) — админ «Тарифтер» бөлүмүнөн өзгөртөт
-    {"id": "s", "ic": "📄", "name": "Кичине", "ex": "документ, ачкыч, телефон", "lim": "2 кгга чейин", "fee": 0, "on": True},
-    {"id": "m", "ic": "📦", "name": "Орто", "ex": "пакет, торт, кутуча", "lim": "10 кгга чейин", "fee": 30, "on": True},
-    {"id": "l", "ic": "🧳", "name": "Чоң", "ex": "чемодан, мешок", "lim": "25 кгга чейин, багажникке", "fee": 70, "on": True},
-    {"id": "xl", "ic": "🛋", "name": "Өтө чоң", "ex": "бир нече мешок, жабдык", "lim": "50 кгга чейин, арткы отургуч да", "fee": 120, "on": True},
+    # fee — туруктуу кошумча (сом), pct — сапардын баасынан пайыз; экөө тең болсо — кошулат
+    {"id": "s", "ic": "📄", "name": "Кичине", "ex": "документ, ачкыч, телефон", "lim": "2 кгга чейин", "fee": 0, "pct": 0, "on": True},
+    {"id": "m", "ic": "📦", "name": "Орто", "ex": "пакет, торт, кутуча", "lim": "10 кгга чейин", "fee": 30, "pct": 0, "on": True},
+    {"id": "l", "ic": "🧳", "name": "Чоң", "ex": "чемодан, мешок", "lim": "25 кгга чейин, багажникке", "fee": 70, "pct": 0, "on": True},
+    {"id": "xl", "ic": "🛋", "name": "Өтө чоң", "ex": "бир нече мешок, жабдык", "lim": "50 кгга чейин, арткы отургуч да", "fee": 0, "pct": 40, "on": True},
 ]
+
+
+def del_size_fee(sz, base):
+    """Өлчөмдүн кошумчасы, сом: туруктуу + сапардын баасынан пайыз (ондукка тегеректелет)."""
+    if not sz:
+        return 0
+    return int(sz.get("fee") or 0) + int(round((base or 0) * float(sz.get("pct") or 0) / 100.0 / 10.0) * 10)
 
 
 def del_sizes(all_=False):
     saved = get_setting("del_sizes") or {}
     out = []
     for x in DEL_SIZES:
-        y = dict(x); y.update({k: v for k, v in (saved.get(x["id"]) or {}).items() if k in ("fee", "on", "lim")})
-        y["fee"] = int(y.get("fee") or 0)
+        sv = saved.get(x["id"]) or {}
+        y = dict(x); y.update({k: v for k, v in sv.items() if k in ("fee", "pct", "on", "lim")})
+        if "fee" in sv and "pct" not in sv:      # эски сактоо (пайыз жок кезде) — пайыз кошулбасын
+            y["pct"] = 0
+        y["fee"], y["pct"] = int(y.get("fee") or 0), float(y.get("pct") or 0)
         if all_ or y["on"]:
             out.append(y)
     return out
@@ -1760,12 +1771,12 @@ def set_del_sizes(rows):
     for x in DEL_SIZES:
         r = (rows or {}).get(x["id"]) or {}
         try:
-            fee = int(r.get("fee", x["fee"]))
+            fee, pct = int(r.get("fee", x["fee"])), float(r.get("pct", x["pct"]) or 0)
         except (TypeError, ValueError):
             return False
-        if not 0 <= fee <= 5000:
+        if not (0 <= fee <= 5000 and 0 <= pct <= 300):
             return False
-        clean[x["id"]] = {"fee": fee, "on": bool(r.get("on", True)) or x["id"] == "s",
+        clean[x["id"]] = {"fee": fee, "pct": pct, "on": bool(r.get("on", True)) or x["id"] == "s",
                           "lim": (str(r.get("lim") or x["lim"]))[:40]}
     set_setting("del_sizes", clean)
     return True
@@ -1805,14 +1816,25 @@ def can_take(d, cls):
 
 def wait_config():
     w = get_setting("wait") or {}
-    return {"free_min": float(w.get("free_min", 3)), "per_min": float(w.get("per_min", 3))}
+    return {"free_min": float(w.get("free_min", 3)), "per_min": float(w.get("per_min", 3)),
+            "stop_free_min": float(w.get("stop_free_min", 2))}       # ар бир токтоочу жерде акысыз мүнөт
 
 
-def set_wait_config(free_min, per_min):
+def set_wait_config(free_min, per_min, stop_free_min=None):
     if free_min is None or per_min is None or not (0 <= free_min <= 30 and 0 <= per_min <= 100):
         return False
-    set_setting("wait", {"free_min": free_min, "per_min": per_min})
+    sf = wait_config()["stop_free_min"] if stop_free_min is None else stop_free_min
+    if not 0 <= sf <= 30:
+        return False
+    set_setting("wait", {"free_min": free_min, "per_min": per_min, "stop_free_min": sf})
     return True
+
+
+def stop_wait_fee(arrived_at, at=None):
+    """Токтоочу жерде: акысыз мүнөттөрдөн кийин ар бир башталган мүнөт акылуу."""
+    w = wait_config()
+    over = (at or now()) - arrived_at - w["stop_free_min"] * 60
+    return int(math.ceil(over / 60.0) * w["per_min"]) if over > 0 else 0
 
 
 def activity_km():
@@ -1874,14 +1896,21 @@ def ride_stops(r):
 
 
 def stop_done(rid, uid):
-    """Айдоочу: «✓ Токтоочу жерге келдим» — кийинки чекитке өтөт."""
+    """Токтоочу жер, эки кадам: 1) «✓ Келдим» — күтүү башталат; 2) «▶ Жолду улантуу» — күтүү акысы
+    (акысыз мүнөттөрдөн ашса) баага кошулуп, кийинки чекитке өтөт."""
     r = get_ride(rid)
     if not r or r["driver"] != uid or r["status"] != "in_trip":
         return None
     n, i = len(ride_stops(r)), int(r.get("stop_i") or 0)
     if i >= n:
         return i
-    query("UPDATE rides SET stop_i=? WHERE id=?", (i + 1, rid))
+    if not r.get("stop_at"):
+        query("UPDATE rides SET stop_at=? WHERE id=?", (now(), rid))
+        log_event(rid, "stop_%d_in" % (i + 1), uid)
+        return i
+    fee = stop_wait_fee(r["stop_at"])
+    query("UPDATE rides SET stop_i=?, stop_at=NULL, stop_wait=COALESCE(stop_wait,0)+?, wait_fee=COALESCE(wait_fee,0)+?, "
+          "price=CASE WHEN price IS NULL THEN NULL ELSE price+? END WHERE id=?", (i + 1, fee, fee, fee, rid))
     log_event(rid, "stop_%d" % (i + 1), uid)
     return i + 1
 
