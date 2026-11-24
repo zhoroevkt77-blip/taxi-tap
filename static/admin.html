@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#fafafa">
 <title>Такси ТАП! — Админ</title>
+<link rel="manifest" href="/static/manifest-admin.json?v=1">
+<link rel="apple-touch-icon" href="/static/icon-a-192.png?v=1">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 .ulbl span{position:absolute;transform:translate(-50%,-50%);white-space:nowrap;font:600 13px/1 system-ui;color:#17365C;background:#fffc;padding:3px 6px;border-radius:8px}
@@ -104,7 +106,7 @@ td input.f{padding:7px 8px;max-width:90px;min-width:58px}
 <main id="main"></main>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="/static/area.js?v=26"></script>
+<script src="/static/area.js?v=27"></script>
 <script>
 function shareTxt(p) {
   if (!p.share_until) return p.share + "%";
@@ -127,7 +129,7 @@ function login(pending, link) {
   $("#main").innerHTML = pending
     ? `<div class="login"><h2>Номерди ырастаңыз</h2><p class="muted">Telegram'да ботко өтүп, номериңизди жөнөтүңүз.</p>
        ${link ? `<a href="${esc(link)}" target="_blank"><button class="btn gold">Telegram'да ырастоо</button></a>` : ""}</div>`
-    : `<div class="login"><h2>${location.pathname.startsWith("/disp") ? "☎ Диспетчер" : "Админ панели"}</h2><p class="muted">${location.pathname.startsWith("/disp") ? "Диспетчердин номери" : "Админдин номери (ADMIN_PHONES же ADMIN_IDS)"}.</p>
+    : `<div class="login"><h2>${/disp/.test(location.pathname + location.search) ? "☎ Диспетчер" : "Админ панели"}</h2><p class="muted">${/disp/.test(location.pathname + location.search) ? "Диспетчердин номери" : "Админдин номери (ADMIN_PHONES же ADMIN_IDS)"}.</p>
        <input class="f" id="ph" placeholder="0700 123 456" inputmode="tel"><div class="err" id="er"></div>
        <button class="btn gold" id="go">Кирүү</button></div>`;
   if (pending) { const t = setInterval(async () => { if ((await api("/api/me")).auth) { clearInterval(t); boot(); } }, 2500); return; }
@@ -1255,6 +1257,8 @@ async function boot() {
   const m = await api("/api/me");
   if (!m.auth) return login(m.pending, m.link);
   if (!m.admin && m.disp) return bootDisp(m);
+  if (m.admin) { appBadge((m.inbox_n || 0) + (m.admin_n || 0));
+    setInterval(async () => { const x = await api("/api/me"); if (x && x.admin) appBadge((x.inbox_n || 0) + (x.admin_n || 0)); }, 60000); }
   if (!m.admin) { $("#main").innerHTML = `<div class="login"><h2>Кирүүгө уруксат жок</h2><p class="muted">Бул номер админ эмес.</p><button class="btn" id="lo">Башка номер</button></div>`;
     $("#lo").onclick = async () => { await api("/api/logout", {}); location.reload(); }; return; }
   $("#nav").classList.remove("hide");

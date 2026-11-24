@@ -116,8 +116,8 @@ function instBar() {
   const ios = /iphone|ipad/i.test(navigator.userAgent);
   const can = !!window.INSTALL;
   const d = document.createElement("div"); d.id = "instBar";
-  const drv = location.pathname.startsWith("/driver");
-  d.innerHTML = `<img src="${drv ? "/static/icon-d-192.png?v=1" : "/static/logo.png"}" alt=""><div><b>${drv ? "«ТАП Айдоочу» тиркемеси" : "Такси ТАП! тиркемеси"}</b><small>${can ? "Телефонго орнотуп алыңыз — бир басуу менен ачылат"
+  const drv = location.pathname.startsWith("/driver"), adm = location.pathname.startsWith("/admin");
+  d.innerHTML = `<img src="${drv ? "/static/icon-d-192.png?v=1" : adm ? "/static/icon-a-192.png?v=1" : "/static/logo.png"}" alt=""><div><b>${drv ? "«ТАП Айдоочу» тиркемеси" : adm ? "«ТАП Башкаруу» тиркемеси" : "Такси ТАП! тиркемеси"}</b><small>${can ? "Телефонго орнотуп алыңыз — бир басуу менен ачылат"
     : ios ? "Safari: «Бөлүшүү» ⬆️ → «На экран „Домой“»" : "Chrome менюсу ⋮ → «Добавить на гл. экран» → «Установить»"}</small></div>
     ${can ? `<button id="instGo">Орнотуу</button>` : ""}<button id="instX" aria-label="Жабуу">✕</button>`;
   document.body.appendChild(d);
@@ -128,6 +128,8 @@ function instBar() {
 }
 // Браузер өзү сунуштабаса (Яндекс, Samsung, iPhone) — 4 секунддан кийин колдонмо көрсөтөбүз
 window.addEventListener("load", () => setTimeout(() => { if (!window.INSTALL && /android|iphone|ipad/i.test(navigator.userAgent)) instBar(); }, 4000));
+// Android: иконкадагы кызыл сан (окула элек билдирүүлөр)
+function appBadge(n) { try { if (!navigator.setAppBadge) return; n > 0 ? navigator.setAppBadge(n) : navigator.clearAppBadge(); } catch (e) {} }
 function installHTML() {
   if (window.matchMedia("(display-mode: standalone)").matches) return "";
   const ios = /iphone|ipad/i.test(navigator.userAgent);

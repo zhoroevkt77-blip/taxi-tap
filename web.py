@@ -39,7 +39,7 @@ MAX_BODY = 9 * 1024 * 1024          # 3 документ (браузерде к�
 PAGES = {"/": "rider.html", "/index.html": "rider.html",
          "/driver": "driver.html", "/driver/": "driver.html",
          "/admin": "admin.html", "/admin/": "admin.html", "/terms": "terms.html",
-         "/park": "park.html", "/park/": "park.html", "/disp": "admin.html", "/disp/": "admin.html"}
+         "/park": "park.html", "/park/": "park.html"}
 SITE_URL = (os.environ.get("SITE_URL") or "").rstrip("/")
 
 # Out'торду жеткирүүчү: bot.py өзүнүкүн коёт (Telegram). Сайт өзү абалды окуйт.
@@ -372,6 +372,9 @@ class H(BaseHTTPRequestHandler):
         try:
             u = urlparse(self.path)
             q = parse_qs(u.query)
+            if u.path in ("/disp", "/disp/"):         # диспетчер — «ТАП Башкаруу» тиркемесинин ичинде (бир тиркеме)
+                self.send_response(302); self.send_header("Location", "/admin?disp=1"); self.send_header("Content-Length", "0")
+                self.end_headers(); return
             if u.path in PAGES:
                 return self._file(os.path.join(STATIC, PAGES[u.path]))
             if u.path.startswith("/t/"):
