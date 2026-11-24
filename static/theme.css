@@ -931,3 +931,14 @@ html.uidark .note.xdw>.nb{background:#25262b;border-color:#3a3b41}
 .stw{display:flex;flex-direction:column;gap:2px;background:#e8f6ee;border:1.5px solid #9bd6b2;border-radius:14px;padding:10px 12px;margin:8px 0}.stw b{font-size:18px}.stw span{font-size:15px;color:#33333b}.stw.paid{background:#fff3cf;border-color:#f5c518}.stw .p{color:#b26a00}
 html.uidark .stw{background:#1d3326;border-color:#2f5a40}html.uidark .stw span{color:#ddd}html.uidark .stw.paid{background:#3a3218}
 html.uidark .stl .row.cur{background:#3a3218!important;color:#fff}html.uidark .stl .row.cur *{color:#fff}
+.gcard{background:#fff;border:1.5px solid #f3e3a1;border-radius:20px;padding:14px 16px;margin:12px 0}.gcard.done{border-color:#9bd6b2;background:#f2fbf5}
+.gcard .gh{display:flex;align-items:center;justify-content:space-between}.gcard .gh b{font-size:18px}.gch{border:0;background:#f4f4f6;border-radius:12px;padding:8px 12px;font:inherit;font-size:15px;font-weight:600}
+.gnum{margin:8px 0 6px}.gnum b{font-size:34px;font-weight:800}.gnum span{font-size:18px;color:#6b6b75;font-weight:600}
+.gbar{height:14px;border-radius:7px;background:#eeeef2;overflow:hidden}.gbar i{display:block;height:100%;border-radius:7px;background:linear-gradient(90deg,#ffc400,#ffb000);transition:width .5s}.gcard.done .gbar i{background:linear-gradient(90deg,#2fbf6a,#1f9d55)}
+.gleft{margin-top:8px;font-size:16px;color:#33333b}.gcard.done .gleft{color:#1a7a40;font-weight:700}
+.gpick{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:12px}.gpick button{border:1.5px solid #ececf0;background:#fff;border-radius:12px;padding:10px 0;font:inherit;font-size:15px;font-weight:700}.gpick button.on{border-color:#ffc400;background:#fff6d6}
+.gown{display:flex;gap:8px;margin-top:8px}.gown .f{margin:0;flex:1}.gown .btn{width:auto;margin:0;padding:0 18px}
+#earn .gp{display:flex;flex-direction:column;gap:4px;min-width:150px}#earn .gp b{font-size:19px;white-space:nowrap!important;display:block}#earn .gp b small{display:inline!important}#earn .gp b small{font-size:14px;color:#6b6b75;font-weight:600}#earn .gp .gd{font-size:13px;color:#1a7a40;font-weight:700}
+#earn .gp i{display:block;height:6px;border-radius:3px;background:#eeeef2;overflow:hidden}#earn .gp u{display:block;height:100%;background:#ffb703;border-radius:3px;text-decoration:none}#earn.done .gp u{background:#1f9d55}
+html.uidark .gcard{background:#25262b;border-color:#3a3b41}html.uidark .gnum span,html.uidark .gleft{color:#ccc}html.uidark .gch,html.uidark .gpick button{background:#2f3036;color:#eee;border-color:#3a3b41}html.uidark .gbar,html.uidark #earn .gp i{background:#3a3b41}
+.ginf{width:24px;height:24px;border-radius:50%;border:0;background:#f1f1f4;color:#8a8a95;font:italic 700 15px/24px Georgia,serif;margin-left:6px;vertical-align:2px;padding:0}html.uidark .ginf{background:#2f3036;color:#aaa}
