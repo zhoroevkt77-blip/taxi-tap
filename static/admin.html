@@ -82,9 +82,9 @@ td input.f{padding:7px 8px;max-width:90px;min-width:58px}
 .vmic.on{animation:vpulse 1s infinite}@keyframes vpulse{50%{box-shadow:0 0 0 22px rgba(229,56,59,.22)}}
 .dgl{display:block;margin-top:6px;font-size:15px}.dgl.ok{color:#1a7a40;font-weight:600}.dgl summary{cursor:pointer;list-style:none;font-weight:600}
 .dgl summary::-webkit-details-marker{display:none}.dgl summary b{display:inline!important;margin:0!important}.dgl summary{display:block}.dgl .r{color:#c22}.dgl .o{color:#b26a00}.dgi{padding:3px 0 0 4px;font-size:15px}.dgi.bad{color:#b42318}
-.dsdr{width:30px;height:30px;border-radius:50%;background:#1f9d55;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 2px 6px rgba(0,0,0,.3);border:2px solid #fff}.dsdr.b{background:#f5b800}.dsdrv{margin-top:10px;font-size:16px}body.dispm nav{justify-content:space-between}
+.dsdr{width:30px;height:30px;border-radius:50%;background:#1f9d55;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 2px 6px rgba(0,0,0,.3);border:2px solid #fff}.dsdr.b{background:#f5b800}.dsdrv{margin-top:10px;font-size:16px}body.dispm nav{justify-content:space-between}.dlink{margin:0 14px 10px;padding:12px;border-radius:14px;background:#fffbea;border:1.5px solid #ffe08a;display:flex;flex-direction:column;gap:6px}.dlink span{font-size:14px;color:#6b6b75}.dlink b{word-break:break-all}.dlink div{display:flex;gap:8px}.dlink .btn{flex:1}.dxb{display:flex;flex-direction:column;gap:6px}.dxb a.btn{text-decoration:none;text-align:center}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=169">
+<link rel="stylesheet" href="/static/theme.css?v=170">
 </head>
 <body class="adm">
 <header><div class="logo"><img src="/static/logo.png?v=2" alt="">Такси <b>ТАП!</b><span class="ver">Админ</span></div><div class="live" id="live"></div></header>
@@ -1281,12 +1281,23 @@ async function dsDrivers() {
 async function dispPanel() {
   const bx = $("#dsAdm"); if (!bx) return;
   const {disps = []} = await api("/api/a/disps");
-  bx.innerHTML = `<h3>👥 Диспетчерлер</h3>${disps.length ? disps.map(x => `<div class="item"><div class="main"><b>${esc(x.name || "—")}</b>
+  const link = location.origin + "/disp";
+  const msg = n => `Салам${n ? ", " + n : ""}! Сиз Такси ТАП! диспетчерисиз. Бул шилтеме аркылуу кириңиз: ${link} — өз номериңиз менен кирип, Telegram аркылуу ырастаңыз.`;
+  bx.innerHTML = `<h3>👥 Диспетчерлер</h3>
+    <div class="dlink"><span>🔗 Диспетчердин барагы</span><b>${esc(link)}</b>
+      <div><button class="btn" id="dlCp">📋 Көчүрүү</button><button class="btn" id="dlSh">📤 Бөлүшүү</button></div></div>
+    ${disps.length ? disps.map(x => `<div class="item"><div class="main"><b>${esc(x.name || "—")}</b>
       <span class="muted">☎ ${esc(x.phone)}<br>Бүгүн: <strong>${x.day.n}</strong> заказ (${x.day.ok} бүттү) · 30 күн: <strong>${x.month.n}</strong> (${x.month.ok} бүттү)</span></div>
-      <button class="btn" data-dxo="${esc(x.phone)}">Алып салуу</button></div>`).join("") : `<div class="empty">Азырынча диспетчер жок.</div>`}
+      <div class="dxb"><a class="btn ok" target="_blank" href="https://wa.me/${esc(String(x.phone).replace(/\D/g, ""))}?text=${encodeURIComponent(msg(x.name))}">📤 Шилтеме жөнөтүү</a>
+      <button class="btn" data-dxo="${esc(x.phone)}">Алып салуу</button></div></div>`).join("") : `<div class="empty">Азырынча диспетчер жок.</div>`}
     <div class="fset"><div><label>Аты</label><input class="f" id="dxNm" placeholder="Зарина"></div><div><label>Телефон</label><input class="f" id="dxPh" inputmode="tel" placeholder="0700 123 456"></div></div>
     <div style="padding:0 14px 14px"><button class="btn gold" id="dxAdd">Диспетчер кылуу</button> <span class="muted" id="dxMsg"></span>
     <p class="muted">Ал өз номери менен <b>${location.origin}/disp</b> барагына кирет. Телефон заказдарын гана бере алат — каржы, тарифтер, айдоочулар көрүнбөйт.</p></div>`;
+  $("#dlCp").onclick = async () => { try { await navigator.clipboard.writeText(link); } catch (e) {
+      const t = document.createElement("textarea"); t.value = link; document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove(); }
+    toast("✓ Көчүрүлдү", 1500); };
+  $("#dlSh").onclick = async () => { if (navigator.share) { try { await navigator.share({title:"Такси ТАП! — диспетчер", text:msg(""), url:link}); } catch (e) {} }
+    else $("#dlCp").click(); };
   $("#dxAdd").onclick = async () => { const r = await api("/api/a/disp_set", {phone:$("#dxPh").value, name:$("#dxNm").value, on:true});
     if (r.error) return $("#dxMsg").textContent = "Номерди толук жазыңыз."; dispPanel(); };
   bx.querySelectorAll("[data-dxo]").forEach(b => b.onclick = async () => { if (!confirm("Диспетчерликтен алып салабы?")) return;

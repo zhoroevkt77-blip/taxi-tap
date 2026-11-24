@@ -107,6 +107,11 @@ def deliver(outs):
     """flow/dispatch'тен келген Out'тор → Telegram (номер менен байланышкан чатка)."""
     with _lock:
         for o in outs or []:
+            try:
+                if core.is_admin(o.get("to") or ""):          # админге келген кабар — Кабинетте да көрүнөт
+                    core.inbox_add(o.get("text"), o.get("path"))
+            except Exception as e:
+                print("inbox:", e)
             to = core.tg_of(o.get("to") or "")
             if to and to.startswith("tg:"):
                 kb = open_kb(o.get("path") or "/")

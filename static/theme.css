@@ -921,3 +921,5 @@ body.ridp .cls b{font-size:16.5px!important;line-height:1.2}
 body.ridp .cls>div.off b{font-size:14px!important}
 #promoOpen,#otherOpen,#noteOpen,#whenOpen{max-width:none!important;overflow:visible!important;text-overflow:clip!important}
 .ocls.dsz{background:#fff1c2;color:#7a5a00}
+.inbx{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}.inb{display:block;text-decoration:none;color:inherit;background:#fff;border:1.5px solid #ececf0;border-radius:16px;padding:12px 14px;font-size:16px;line-height:1.4}.inb small{display:block;margin-top:6px;color:#8a8a95;font-size:13px}.inb.new{border-color:#ffc400;background:#fffbea;box-shadow:0 0 0 1px #ffc400}.inb.new small b{color:#e0322b}
+html.uidark .inb{background:#25262b;border-color:#3a3b41}html.uidark .inb.new{background:#3a3218}

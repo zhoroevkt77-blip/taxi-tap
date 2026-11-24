@@ -252,6 +252,8 @@ SCHEMA = [
         cancel_by TEXT,
         created_at REAL, accepted_at REAL, arrived_at REAL,
         started_at REAL, completed_at REAL)""",
+    f"""CREATE TABLE IF NOT EXISTS admin_inbox (
+        id {_PK}, text TEXT, path TEXT, at REAL)""",
     f"""CREATE TABLE IF NOT EXISTS ride_events (
         id {_PK}, ride_id INTEGER, status TEXT, actor TEXT, at REAL)""",
     f"""CREATE TABLE IF NOT EXISTS balance_tx (
@@ -2793,6 +2795,38 @@ def admin_overview():
                             "phone": t["phone"], "at": t["at"], "claimed": t["claimed"],
                             "proof": t["proof"]} for t in pend_tx],
     }
+
+
+# ==================== Админдин билдирүүлөрү (Кабинетте көрүнөт) ====================
+INBOX_KEEP_DAYS = 30
+
+
+def inbox_add(text, path=None):
+    """Админге келген ар бир кабар — бир жолу сакталат (бир нече админге бирдей кабар кайталанбайт)."""
+    text = (text or "").strip()
+    if not text:
+        return
+    t = now()
+    if query("SELECT id FROM admin_inbox WHERE text=? AND at>?", (text[:2000], t - 30), "one"):
+        return
+    query("INSERT INTO admin_inbox (text, path, at) VALUES (?, ?, ?)", (text[:2000], path or "/admin", t))
+    query("DELETE FROM admin_inbox WHERE at<?", (t - INBOX_KEEP_DAYS * 86400,))
+
+
+def inbox(uid, limit=60):
+    seen = float(get_setting("inbox_seen:" + uid) or 0)
+    rows = query("SELECT id, text, path, at FROM admin_inbox ORDER BY at DESC LIMIT ?", (limit,), "all") or []
+    return [dict(r, new=r["at"] > seen) for r in rows]
+
+
+def inbox_unread(uid):
+    seen = float(get_setting("inbox_seen:" + uid) or 0)
+    r = query("SELECT COUNT(*) AS n FROM admin_inbox WHERE at>?", (seen,), "one")
+    return int((r or {}).get("n") or 0)
+
+
+def inbox_seen(uid):
+    set_setting("inbox_seen:" + uid, now())
 
 
 def admin_todo():

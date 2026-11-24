@@ -570,6 +570,7 @@ class H(BaseHTTPRequestHandler):
                            "driver": d["status"] if d else None,
                            "admin": core.is_admin(s["uid"]), "disp": core.is_disp(s["uid"]), "uid": s["uid"] if core.is_disp(s["uid"]) else None,
                            "admin_n": core.admin_todo() if core.is_admin(s["uid"]) else 0,
+                           "inbox_n": core.inbox_unread(s["uid"]) if core.is_admin(s["uid"]) else 0,
                            "notify": bool(u.get("notify", 1)), "tg": bool(u.get("tg_uid")),
                            "avatar": core.avatar_url(u), "bot": BOT_USERNAME,
                            "park": (parks.by_owner(s["uid"]) or {}).get("name"), "ask_role": core.ask_role(s["uid"])})
@@ -995,6 +996,11 @@ class H(BaseHTTPRequestHandler):
             return self._json(core.client_card(cu) if cu else {"error": "bad_phone"})
         if action == "phone_rides":
             return self._json({"rides": core.phone_rides()})
+        if action == "inbox":               # Кабинеттеги «🔔 Билдирүүлөр»: ачканда окулду деп белгиленет
+            me = self._uid()
+            items = core.inbox(me)
+            core.inbox_seen(me)
+            return self._json({"items": items})
         if action == "disps":
             return self._json({"disps": core.dispatchers()})
         if action == "disp_drivers":         # диспетчердин картасы үчүн: линиядагы айдоочулар
@@ -1225,6 +1231,8 @@ class H(BaseHTTPRequestHandler):
             uid = core.set_disp(_txt(b.get("phone"), 20), bool(b.get("on", True)), _txt(b.get("name"), 40) or None)
             if not uid:
                 return self._json({"error": "bad_phone"}, 400)
+            if b.get("on", True) and core.tg_of(uid):          # ботко туташкан болсо — шилтемени өзү жөнөтөт
+                deliver([flow.note(uid, "disp_added", "/disp")])
             return self._json({"disps": core.dispatchers()})
         if action == "quote":
             p, d = _point(b.get("p")), _point(b.get("d"))

@@ -44,6 +44,11 @@ def _admins():
 
 
 def notify_admins(text):
+    try:
+        import core
+        core.inbox_add(text, "/admin")          # Кабинетте да көрүнөт
+    except Exception:
+        pass
     if not send_text:
         return
     for a in _admins():
