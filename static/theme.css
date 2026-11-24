@@ -942,3 +942,4 @@ html.uidark .stl .row.cur{background:#3a3218!important;color:#fff}html.uidark .s
 #earn .gp i{display:block;height:6px;border-radius:3px;background:#eeeef2;overflow:hidden}#earn .gp u{display:block;height:100%;background:#ffb703;border-radius:3px;text-decoration:none}#earn.done .gp u{background:#1f9d55}
 html.uidark .gcard{background:#25262b;border-color:#3a3b41}html.uidark .gnum span,html.uidark .gleft{color:#ccc}html.uidark .gch,html.uidark .gpick button{background:#2f3036;color:#eee;border-color:#3a3b41}html.uidark .gbar,html.uidark #earn .gp i{background:#3a3b41}
 .ginf{width:24px;height:24px;border-radius:50%;border:0;background:#f1f1f4;color:#8a8a95;font:italic 700 15px/24px Georgia,serif;margin-left:6px;vertical-align:2px;padding:0}html.uidark .ginf{background:#2f3036;color:#aaa}
+.dcab .cab-av,.cab2 .dcab .cab-av{width:128px!important;height:128px!important;font-size:52px!important;border-width:5px}.dcab .cab-av .cam,.dcab .cab-av>i{transform:scale(1.15)}
