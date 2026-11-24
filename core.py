@@ -344,6 +344,9 @@ NEW_COLUMNS = {
                 "photos": "TEXT", "photo_at": "REAL",  # фотоконтроль: {"front","back","left","right"} файлдар, жиберилген убакыт
                 "photo_status": "TEXT", "photo_note": "TEXT",   # pending | ok | rejected, баш тартуу себеби
                 "lic_until": "TEXT",
+                # Кошумча документтер: ОСАГО жана такси лицензиясы (мөөнөтү, сүрөтү, номери, абалы pending|ok|rejected)
+                "osago_until": "TEXT", "osago_photo": "TEXT", "osago_no": "TEXT", "osago_st": "TEXT",
+                "tlic_until": "TEXT", "tlic_photo": "TEXT", "tlic_no": "TEXT", "tlic_st": "TEXT",
                 "goal": "INTEGER",
                 "car_year": "INTEGER",
                 "approved_by": "TEXT", "approved_at": "REAL",   # admin | park:<id> — ким тастыктады
@@ -2562,6 +2565,74 @@ def lic_days_left(d):
 
 LIC_WARN_DAYS = (30, 7, 1)
 
+# ==================== ОСАГО жана такси лицензиясы ====================
+XDOCS = {"osago": "ОСАГО полиси", "tlic": "Такси лицензиясы"}
+
+
+def xdoc_left(d, k):
+    return lic_days_left({"lic_until": (d or {}).get(k + "_until")})
+
+
+def xdoc_required():
+    """Админ «Милдеттүү» кылганбы (демейки — эч бири милдеттүү эмес)."""
+    r = get_setting("xdoc_req") or {}
+    return {k: bool(r.get(k)) for k in XDOCS}
+
+
+def set_xdoc_required(v):
+    set_setting("xdoc_req", {k: bool((v or {}).get(k)) for k in XDOCS})
+
+
+def xdoc_state(d):
+    out = {}
+    for k, name in XDOCS.items():
+        left = xdoc_left(d, k)
+        out[k] = {"name": name, "until": d.get(k + "_until"), "left": left, "no": d.get(k + "_no"),
+                  "has_photo": bool(d.get(k + "_photo")), "st": d.get(k + "_st")}
+    return out
+
+
+def xdoc_block(d):
+    """Милдеттүү документ жок / мөөнөтү бүткөн / кабыл алынбаган болсо — анын аты (линияга чыгууга тоскоол)."""
+    req = xdoc_required()
+    for k, name in XDOCS.items():
+        if not req[k]:
+            continue
+        left = xdoc_left(d, k)
+        if not d.get(k + "_photo") or left is None or left < 0 or d.get(k + "_st") == "rejected":
+            return k
+    return None
+
+
+def set_xdoc(uid, k, until, no, photo):
+    set_driver(uid, **{k + "_until": until, k + "_no": no or None, k + "_photo": photo, k + "_st": "pending"})
+
+
+def xdoc_review(uid, k, ok):
+    set_driver(uid, **{k + "_st": "ok" if ok else "rejected"})
+
+
+def xdoc_daily():
+    """Күнүнө бир жолу: ОСАГО/лицензиянын мөөнөтү 30/7/1 күн калганда же бүткөндө — [(uid, kind, name, days, date)]."""
+    today = datetime.date.fromtimestamp(now()).isoformat()
+    if get_setting("xdoc_day") == today:
+        return []
+    set_setting("xdoc_day", today)
+    out, req = [], xdoc_required()
+    for d in query("SELECT * FROM drivers WHERE status='active'", (), "all") or []:
+        for k, name in XDOCS.items():
+            left = xdoc_left(d, k)
+            if left is None:
+                continue
+            if left < 0:
+                if left == -1:
+                    out.append((d["uid"], "expired", name, left, d[k + "_until"]))
+                if req[k] and d["online"] and not d["busy_ride"]:
+                    set_driver(d["uid"], online=0, live_until=None)
+            elif left in LIC_WARN_DAYS:
+                out.append((d["uid"], "soon", name, left, d[k + "_until"]))
+    return out
+
 
 def lic_daily():
     """Күнүнө бир жолу: мөөнөтү жакындаганга эскертүү, бүткөндү линиядан чыгаруу.
@@ -2847,7 +2918,7 @@ def admin_drivers():
                  "d.car_color, d.car_plate, d.online, d.busy_ride, d.loc_at, d.live_until, d.lat, d.lon, "
                  "d.doc_license, d.doc_techpass, d.doc_car, d.doc_selfie, d.lic_until, d.reject_note, d.created_at, d.classes, "
                  "d.photos, d.photo_status, d.photo_at, d.photo_note, d.approved_by, d.approved_at, d.blocked_by, d.park_id, "
-                 "d.activity, d.diag_dev, d.diag_at, d.area_free, u.tg_uid, "
+                 "d.activity, d.diag_dev, d.diag_at, d.area_free, u.tg_uid, d.osago_until, d.osago_photo, d.osago_no, d.osago_st, d.tlic_until, d.tlic_photo, d.tlic_no, d.tlic_st, "
                  "p.name AS park_name, p.code AS park_code, p.self_approve AS park_self, "
                  "u.name, u.phone FROM drivers d LEFT JOIN users u ON u.uid=d.uid LEFT JOIN parks p ON p.id=d.park_id "
                  "ORDER BY d.status='pending' DESC, d.rides_done DESC", (), "all")
@@ -3490,6 +3561,19 @@ def driver_diag(d, u=None):
         out.append(("bad", "Күбөлүктүн мөөнөтү бүткөн"))
     elif left is not None and left <= 30:
         out.append(("warn", "Күбөлүккө %d күн калды" % left))
+    req = xdoc_required()
+    for k, name in XDOCS.items():
+        left = xdoc_left(d, k)
+        lvl = "bad" if req[k] else "warn"
+        if not d.get(k + "_photo"):
+            if req[k]:
+                out.append(("bad", name + " жүктөлгөн эмес"))
+        elif left is not None and left < 0:
+            out.append((lvl, name + ": мөөнөтү бүткөн"))
+        elif d.get(k + "_st") == "rejected":
+            out.append((lvl, name + " кабыл алынган жок"))
+        elif left is not None and left <= 30:
+            out.append(("warn", "%s: %d күн калды" % (name, left)))
     ph = photo_state(d)
     if ph["status"] == "rejected":
         out.append(("warn", "Фотоконтроль кабыл алынган жок"))

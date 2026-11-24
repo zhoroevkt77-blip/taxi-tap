@@ -203,6 +203,7 @@ def driver_state(uid, seen=False):
     st = {"name": u.get("name"), "phone": u.get("phone"), "status": d.get("status"),
           "reject_note": d.get("reject_note"),
           "lic_until": d.get("lic_until"), "lic_left": core.lic_days_left(d),
+          "xdocs": core.xdoc_state(d), "xreq": core.xdoc_required(),
           "goal": int(d.get("goal") or 0) or 1000, "car_year": d.get("car_year"),
           "qr": _driver_qr(uid, d),
           "car_model": d.get("car_model"), "car_color": d.get("car_color"),
@@ -849,6 +850,24 @@ class H(BaseHTTPRequestHandler):
             u = core.get_user(uid) or {}
             deliver([flow.note(a, "a_car_photo", "/admin", name=u.get("name") or u.get("phone")) for a in core.admins()])
             return self._json(driver_state(uid))
+        if action == "xdoc":                      # ОСАГО / такси лицензиясы
+            k = b.get("kind")
+            if k not in core.XDOCS:
+                return self._json({"error": "bad"}, 400)
+            lu = _txt(b.get("until"), 10)
+            left = core.lic_days_left({"lic_until": lu})
+            if left is None:
+                return self._json({"error": "lic_date"}, 400)
+            if left < 0:
+                return self._json({"error": "lic_expired"}, 400)
+            photo = core.save_upload(b.get("photo")) if b.get("photo") else None
+            if not photo:
+                return self._json({"error": "doc_photo"}, 400)
+            core.set_xdoc(uid, k, lu, _txt(b.get("no"), 30), photo)
+            u = core.get_user(uid) or {}
+            deliver([flow.note(a, "a_xdoc", "/admin", name=u.get("name") or u.get("phone"), doc=core.XDOCS[k], date=lu)
+                     for a in core.admins()])
+            return self._json(driver_state(uid))
         if action == "license":
             lu = _txt(b.get("lic_until"), 10)
             left = core.lic_days_left({"lic_until": lu})
@@ -886,6 +905,9 @@ class H(BaseHTTPRequestHandler):
                 left = core.lic_days_left(d)
                 if left is not None and left < 0:
                     return self._json({"error": "lic_expired"}, 403)
+                xb = core.xdoc_block(d)
+                if xb:
+                    return self._json({"error": "xdoc", "doc": core.XDOCS[xb]}, 403)
                 p = _point(b.get("p"))
                 if not p:
                     return self._json({"error": "need_location"}, 400)
@@ -1004,6 +1026,8 @@ class H(BaseHTTPRequestHandler):
             items = core.inbox(me)
             core.inbox_seen(me)
             return self._json({"items": items})
+        if action == "xdoc_req":
+            return self._json({"xreq": core.xdoc_required()})
         if action == "disps":
             return self._json({"disps": core.dispatchers()})
         if action == "disp_drivers":         # диспетчердин картасы үчүн: линиядагы айдоочулар
@@ -1228,6 +1252,16 @@ class H(BaseHTTPRequestHandler):
                                    d_addr=_txt(b.get("d_addr"), 80) or None)
             core.query("UPDATE rides SET disp_by=? WHERE id=?", (admin, rid))        # ким берди
             return self._json({"ride": ride_view(core.get_ride(rid))})
+        if action == "xdoc_review":           # админ: ОСАГО / лицензия ✓ же ✕
+            k, duid = b.get("kind"), _txt(b.get("uid"), 40)
+            if k not in core.XDOCS or not core.get_driver(duid):
+                return self._json({"error": "bad"}, 400)
+            core.xdoc_review(duid, k, bool(b.get("ok")))
+            deliver([flow.note(duid, "d_xdoc_ok" if b.get("ok") else "d_xdoc_bad", "/driver", doc=core.XDOCS[k])])
+            return self._json({"ok": True})
+        if action == "xdoc_req":
+            core.set_xdoc_required(b.get("req"))
+            return self._json({"xreq": core.xdoc_required()})
         if action == "disp_set":              # админ: диспетчер кошуу / алып салуу
             if not core.is_admin(admin):
                 return self._json({"error": "auth"}, 401)

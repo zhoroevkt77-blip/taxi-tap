@@ -115,7 +115,7 @@ label.l{font-size:15px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:15px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
 </style>
-<link rel="stylesheet" href="/static/theme.css?v=170">
+<link rel="stylesheet" href="/static/theme.css?v=171">
 <link rel="stylesheet" href="/static/dark.css?v=21">
 <script src="/static/night.js?v=2"></script>
 </head>
@@ -847,6 +847,13 @@ async function diagChecks() {
   else if (D.lic_left < 0) add("bad", "id", "Айдоочулук күбөлүктүн мөөнөтү бүттү", "Мөөнөтү бүткөн күбөлүк менен линияга чыгууга болбойт.", "Жаңылоо", viewLicense);
   else if (D.lic_left <= 30) add("warn", "id", `Күбөлүктүн мөөнөтүнө ${D.lic_left} күн калды`, "Алдын ала жаңылап коюңуз.", "Жаңылоо", viewLicense);
   else add("ok", "id", "Күбөлүк жарактуу", D.lic_until + " чейин.");
+  Object.entries(D.xdocs || {}).forEach(([k, x]) => { const req = (D.xreq || {})[k], go = () => viewXdoc(k);
+    if (!x.has_photo) { if (req) add("bad", "id", `${x.name} жүктөлгөн эмес`, "Милдеттүү документ — жүктөмөйүнчө линияга чыга албайсыз.", "Жүктөө", go);
+      else add("warn", "id", `${x.name} жүктөлгөн эмес`, "Жүктөп коюңуз — мөөнөтү бүтөрдө эскертебиз.", "Жүктөө", go); }
+    else if (x.left < 0) add(req ? "bad" : "warn", "id", `${x.name}: мөөнөтү бүттү`, "Жаңысын жүктөңүз.", "Жаңылоо", go);
+    else if (x.st === "rejected") add(req ? "bad" : "warn", "id", `${x.name} кабыл алынган жок`, "Сүрөтүн жана мөөнөтүн кайра жүктөңүз.", "Кайра жүктөө", go);
+    else if (x.left <= 30) add("warn", "id", `${x.name}: ${x.left} күн калды`, "Алдын ала жаңылап коюңуз.", "Жаңылоо", go);
+    else add("ok", "id", `${x.name} жарактуу`, x.until + " чейин" + (x.st === "ok" ? " · текшерилди." : " · текшерүүдө.")); });
   // фотоконтроль
   const ph = D.photo || {};
   if (ph.status === "rejected") add("warn", "camera", "Фотоконтроль кабыл алынган жок", ph.note || "Сүрөттөрдү кайра тартыңыз.", "Тартуу", viewPhotos);
@@ -1171,6 +1178,7 @@ async function goOnline(btn) {
   if (r.error === "out_area") { if (btn) btn.disabled = false; beep(); speak(["d_out"]); D.in_area = false; D.near = {km:r.km, p:r.to, name:r.name}; lastView = ""; show();
     return toast(`Сиз аймактан ${r.km != null ? fmtKm(r.km) + " " : ""}сыртта турасыз — линияга чыгууга болбойт`, 3500); }
   if (r.error === "gps_acc") { if (btn) btn.disabled = false; return toast(`GPS тактыгы начар (±${r.acc} м). Ачык жерге чыгып кайра басыңыз.`, 3500); }
+  if (r.error === "xdoc") { if (btn) btn.disabled = false; toast(`📄 ${r.doc} милдеттүү — «Кабинет → Документтер» бөлүмүнөн жүктөңүз`, 4000); return; }
   if (r.error === "lic_expired") { if (btn) btn.disabled = false; alert("Айдоочулук күбөлүгүңүздүн мөөнөтү бүттү. Жаңы күбөлүктү жүктөңүз."); return viewLicense(); }
   if (r.error) { if (btn) btn.disabled = false; return viewDiag(true); }   // эмне тоскоол экенин көрсөтөбүз
   D = r; speak(["d_online"], 750);
@@ -1377,9 +1385,44 @@ function docInput(el, store, key) {
 
 const LIC_ERR = {doc_selfie:"Күбөлүктү колуңузга кармап селфи тартыңыз.", lic_date:"Күбөлүктүн мөөнөтүн жазыңыз.",
   lic_expired:"Күбөлүктүн мөөнөтү бүтүп калган — жарактуу күбөлүк керек."};
-function licNote() {
+function licNote() { return `<div class="note xdw">${licNote1().replace(/^<div class="note"/, '<div class="nb"')}${xdocNotes()}</div>`; }
+// ОСАГО жана такси лицензиясы
+const XD_IC = {osago:"🛡", tlic:"📜"};
+function xdocNotes() {
+  const X = D.xdocs || {}, Q = D.xreq || {};
+  return Object.entries(X).map(([k, x]) => {
+    const l = x.left, bad = l !== null && l < 0, soon = l !== null && l <= 30, rej = x.st === "rejected";
+    const st = !x.has_photo ? `<span class="muted">${Q[k] ? "<b style='color:var(--bad)'>Милдеттүү</b> — жүктөмөйүнчө линияга чыга албайсыз." : "Жүктөп коюңуз — мөөнөтү бүтөрдө эскертебиз."}</span>`
+      : `<span class="muted" style="color:${bad || rej ? "var(--bad)" : soon ? "#b26a00" : ""}">${esc(x.until)} чейин · ${bad ? "мөөнөтү бүттү" : `${l} күн калды`}${x.no ? " · №" + esc(x.no) : ""}</span>
+         <span class="xst ${rej ? "r" : x.st === "ok" ? "g" : "y"}">${rej ? "✕ Кабыл алынган жок — кайра жүктөңүз" : x.st === "ok" ? "✓ Текшерилди" : "⏳ Админ текшерүүдө"}</span>`;
+    return `<div class="nb xd"><b class="yh"><i class="xdi">${XD_IC[k] || "📄"}</i>${esc(x.name)}${Q[k] ? ' <em class="xreq">милдеттүү</em>' : ""}</b>${st}
+      <button class="btn ${!x.has_photo || bad || rej || soon ? "main" : "ghost"}" data-xd="${k}" style="margin-top:8px">${!x.has_photo ? "Жүктөө" : "Жаңылоо"}</button></div>`;
+  }).join("");
+}
+function viewXdoc(k) {
+  const x = (D.xdocs || {})[k] || {name:"Документ"}, box = {};
+  render(`<h2>${XD_IC[k] || "📄"} ${esc(x.name)}</h2>
+    <label class="l">Сүрөтү</label>
+    <div class="docs" style="grid-template-columns:1fr"><div class="doc" id="xp" style="aspect-ratio:1.6"><i>${XD_IC[k] || "📄"}</i>${esc(x.name)}<input type="file" accept="image/*"></div></div>
+    <label class="l">Номери${k === "osago" ? " (полистин)" : ""}</label><input class="f" id="xn" value="${esc(x.no || "")}" placeholder="мис. ${k === "osago" ? "ААА 1234567" : "№ 0123"}">
+    <label class="l">Мөөнөтү (качанга чейин)</label><input class="f" id="xu" type="date" value="${esc(x.until || "")}">
+    <p class="muted">Админ сүрөттү текшерет. Мөөнөтү бүтөрдөн 30 жана 7 күн мурун эскертебиз.</p>
+    <div class="err" id="er"></div><button class="btn main" id="send">Сактоо</button><button class="btn bk" id="back">‹ Артка</button>`);
+  docInput($("#xp"), box, "photo");
+  $("#back").onclick = () => { lastView = ""; show(); };
+  $("#send").onclick = async () => {
+    if (!box.photo) return $("#er").textContent = "Сүрөтүн жүктөңүз.";
+    if (!$("#xu").value) return $("#er").textContent = "Мөөнөтүн жазыңыз.";
+    $("#send").disabled = true;
+    const r = await api("/api/d/xdoc", {kind:k, photo:box.photo, no:$("#xn").value, until:$("#xu").value});
+    if (r.error) { $("#send").disabled = false; return $("#er").textContent = r.error === "lic_expired" ? "Мөөнөтү бүтүп калган — жарактуу документ керек." : "Ката."; }
+    D = r; toast("✅ Сакталды — админ текшерет"); lastView = ""; show();
+  };
+}
+document.addEventListener("click", e => { const b = e.target.closest("[data-xd]"); if (b) viewXdoc(b.dataset.xd); });
+function licNote1() {
   const l = D.lic_left;
-  if (!D.lic_until) return `<div class="note"><b class="yh">${yi("id", "s")}Документтер</b><span class="muted">Айдоочулук күбөлүгүңүздүн мөөнөтүн жазып коюңуз.</span>
+  if (!D.lic_until) return `<div class="note"><b class="yh">${yi("id", "s")}Айдоочулук күбөлүк</b><span class="muted">Мөөнөтүн жазып коюңуз.</span>
     <button class="btn ghost" id="licUp" style="margin-top:8px">Мөөнөтүн жазуу</button></div>`;
   const bad = l < 0, soon = l <= 30;
   return `<div class="note" ${bad ? 'style="background:#fdecec"' : ""}><b class="yh">${yi("id", "s")}Айдоочулук күбөлүк: ${esc(D.lic_until)} чейин</b>

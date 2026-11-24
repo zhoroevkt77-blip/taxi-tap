@@ -106,6 +106,8 @@ def tick():
                         addr=r.get("p_addr") or "—"))
     for uid, kind, days, date in core.lic_daily():
         out.append(note(uid, "d_lic_" + kind, "/driver", days=days, date=date))
+    for uid, kind, doc, days, date in core.xdoc_daily():
+        out.append(note(uid, "d_xdoc_" + kind, "/driver", doc=doc, days=days, date=date))
     t = core.now()
     for r in core.searching_rides():
         rid = r["id"]

@@ -923,3 +923,8 @@ body.ridp .cls>div.off b{font-size:14px!important}
 .ocls.dsz{background:#fff1c2;color:#7a5a00}
 .inbx{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}.inb{display:block;text-decoration:none;color:inherit;background:#fff;border:1.5px solid #ececf0;border-radius:16px;padding:12px 14px;font-size:16px;line-height:1.4}.inb small{display:block;margin-top:6px;color:#8a8a95;font-size:13px}.inb.new{border-color:#ffc400;background:#fffbea;box-shadow:0 0 0 1px #ffc400}.inb.new small b{color:#e0322b}
 html.uidark .inb{background:#25262b;border-color:#3a3b41}html.uidark .inb.new{background:#3a3218}
+.note.xdw{display:flex;flex-direction:column;gap:10px;background:none!important;padding:0!important;box-shadow:none!important;border:0!important}
+.note.xdw>.nb{background:#fff;border:1.5px solid #f3e3a1;border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:4px}
+.nb .xdi{font-style:normal;font-size:24px;margin-right:8px}.nb .xreq{font-style:normal;font-size:12px;background:#fde3e3;color:#c0392b;border-radius:8px;padding:2px 8px;margin-left:6px;font-weight:700}
+.xst{display:inline-block;align-self:flex-start;font-size:14px;font-weight:700;border-radius:10px;padding:3px 10px;margin-top:4px}.xst.g{background:#e3f5ea;color:#1a7a40}.xst.y{background:#fff3cf;color:#8a6500}.xst.r{background:#fde3e3;color:#c0392b}
+html.uidark .note.xdw>.nb{background:#25262b;border-color:#3a3b41}
