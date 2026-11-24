@@ -138,6 +138,20 @@ def save(name, owner_phone, share=80, ref_bonus=10, promo=None, promo_amount=50,
                        share_months, share_after), "id")
 
 
+def set_active(pid, on):
+    """Паркты өчүрүү / күйгүзүү. Өчүргөндө анын айдоочулары «парксыз» болот; тарых (сапар, акт, төлөм) калат."""
+    p = core.query("SELECT id FROM parks WHERE id=?", (pid,), "one")
+    if not p:
+        return None
+    core.query("UPDATE parks SET active=? WHERE id=?", (1 if on else 0, pid))
+    n = 0
+    if not on:
+        r = core.query("SELECT COUNT(*) AS n FROM drivers WHERE park_id=?", (pid,), "one")
+        n = int((r or {}).get("n") or 0)
+        core.query("UPDATE drivers SET park_id=NULL WHERE park_id=?", (pid,))
+    return n
+
+
 def attach_driver(phone, pid, by_park=None):
     """Айдоочуну паркка кошот (pid=None — парктан чыгарат).
     Парк ээси өзү кошсо (by_park): айдоочу башка паркта болбошу керек."""

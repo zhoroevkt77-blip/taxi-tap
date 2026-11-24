@@ -586,7 +586,7 @@ async function viewParks(edit) {
         <label style="display:flex;gap:8px;align-items:center;margin-top:8px;font-size:16px"><input type="checkbox" data-self="${p.id}" ${p.self_approve ? "checked" : ""} style="width:20px;height:20px">
           <span><b>Айдоочуларын өзү тастыктайт</b> <span class="muted">— өчүк болсо, арыздар сизге келет${p.pending ? ` · ⏳ ${p.pending} арыз күтүүдө` : ""}</span></span></label></div>
         <div class="acts"><a class="btn" href="/park?id=${p.id}" target="_blank">Кабинети</a>
-          <button class="btn" data-ed="${p.id}">Өзгөртүү</button><button class="btn gold" data-pay="${p.id}">💸 Төлөдүм</button></div></div>`).join("")
+          <button class="btn" data-ed="${p.id}">Өзгөртүү</button><button class="btn ${p.active ? "bad" : "ok"}" data-pact="${p.id}" data-on="${p.active ? 0 : 1}">${p.active ? "⛔ Өчүрүү" : "✓ Күйгүзүү"}</button><button class="btn gold" data-pay="${p.id}">💸 Төлөдүм</button></div></div>`).join("")
         : `<div class="empty">Азырынча парк жок. Төмөндөн кошуңуз.</div>`}</div>
     <div class="panel"><h3>📄 Акт салыштыруу</h3>
       <div class="item"><div class="main" style="width:100%"><div class="muted">Ар айдын 1-күнү саат 9:00дө бардык парктарга мурунку ай үчүн акт автоматтык түрдө түзүлүп, Telegram'га кетет. Парк 10 күн ичинде жооп бербесе, сизге эскертүү келет.</div>
@@ -625,6 +625,11 @@ async function viewParks(edit) {
   document.querySelectorAll("[data-acr]").forEach(b => b.onclick = () => { const [pid, per] = b.dataset.acr.split("|");
     if (confirm("Актты кайра эсептейсизби? Парктын мурунку жообу өчөт.")) mkAct(pid, per); });
   document.querySelectorAll("[data-ed]").forEach(b => b.onclick = () => viewParks(P.find(p => p.id == b.dataset.ed)));
+  document.querySelectorAll("[data-pact]").forEach(b => b.onclick = async () => {
+    const p = P.find(x => x.id == b.dataset.pact), on = b.dataset.on === "1";
+    if (!on && !confirm(`«${p.name}» паркын өчүрөсүзбү?\n\n• Парктын кабинети жабылат, промокоду/QR иштебейт\n• Анын айдоочулары «парксыз» болуп, иштей беришет\n• Сапарлар, актылар, төлөмдөр тарыхта калат\n• Кийин кайра күйгүзсө болот (айдоочуларды кайра кошуу керек)`)) return;
+    const r = await api("/api/a/park_active", {id:p.id, on});
+    toast(r.ok ? (on ? "✓ Парк кайра күйдү" : `⛔ Парк өчтү${r.freed ? ` · ${r.freed} айдоочу парксыз калды` : ""}`) : "Ката", 3000); viewParks(); });
   bindSelf();
   $("#ptS").onclick = async () => { const r = await api("/api/a/park_pay_time", {from:$("#ptA").value, to:$("#ptB").value});
     toast(r.ok ? "✓ Төлөм убактысы сакталды" : "Убакыт туура эмес", 2500); };

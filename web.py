@@ -1089,6 +1089,9 @@ class H(BaseHTTPRequestHandler):
                 return self._json({"error": "not_found"}, 404)
             core.set_driver(t, area_free=1 if b.get("on") is True else 0, out_since=None)
             return self._json({"ok": True})
+        if action == "park_active":                     # паркты өчүрүү / кайра күйгүзүү
+            n = parks.set_active(int(b.get("id") or 0), b.get("on") is True)
+            return self._json({"ok": n is not None, "freed": n or 0}, 200 if n is not None else 404)
         if action == "park_self_approve":
             ok = parks.set_self_approve(int(b.get("id") or 0), b.get("on") is True)
             return self._json({"ok": ok}, 200 if ok else 400)
