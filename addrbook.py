@@ -600,22 +600,19 @@ def _dgis_reverse(lat, lon):
     base = {"lat": "%.6f" % lat, "lon": "%.6f" % lon, "key": DGIS_KEY,
             "fields": "items.point,items.address_name,items.full_name,items.address", "locale": "ru_KG"}
     try:
-        items = _dgis_geo(dict(base, type="building,street", page_size=5))
-        for it in items:                                   # үй биринчи (көчө алдыда келсе да)
-            if it.get("type") == "building" and _bld_name(it) and it.get("address_name"):
-                return (_bld_name(it), "building")
-        street = next((pretty(it["name"]) for it in items if it.get("type") == "street" and it.get("name")), None)
-        if _dgis_allow():                                  # пин үйдүн четинде/жолдо — эң жакын номерлүү үйдү алабыз
-            best = None
-            for it in _dgis_geo(dict(base, type="building", radius=40, page_size=5)):
-                p = it.get("point") or {}
-                if not it.get("address_name") or p.get("lat") is None:
-                    continue
+        # Бир гана суроо (лимитти үнөмдөйбүз): 40 м ичиндеги үйлөр жана көчөлөр → эң жакын номерлүү үй, болбосо көчө
+        items = _dgis_geo(dict(base, type="building,street", radius=40, page_size=10))
+        best, street = None, None
+        for it in items:
+            if it.get("type") == "street" and it.get("name") and not street:
+                street = pretty(it["name"])
+            p = it.get("point") or {}
+            if it.get("type") == "building" and it.get("address_name") and p.get("lat") is not None:
                 d = core.haversine_km(lat, lon, p["lat"], p["lon"])
                 if best is None or d < best[0]:
                     best = (d, _bld_name(it))
-            if best:
-                return (best[1], "building")
+        if best:
+            return (best[1], "building")
         return (street, "street") if street else None
     except Exception as e:
         dgis_state["errors"] += 1

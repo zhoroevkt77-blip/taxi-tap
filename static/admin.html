@@ -995,7 +995,7 @@ function drawPreview() {
 let dmap = null, dlyr = null, DF = null, DONLY = "";
 async function viewAddr(q) {
   const A = await api("/api/a/addr?q=" + encodeURIComponent(q || "") + "&only=" + DONLY);
-  const K = A.kinds, c = A.count, im = A.import, G = A.dgis || {};
+  const K = A.kinds, c = A.count, im = A.import, G = A.dgis2 || {};
   const gLine = !G.on ? "⚪ 2ГИС ачкычы коюлган эмес — үй номерлери OpenStreetMap'тен гана"
     : G.blocked ? `🔴 2ГИС ушул айга токтотулган (лимит/ката: ${esc(G.last_error || "403/429")}). Үй номерлери азыр OpenStreetMap'тен гана — ал жерде номер аз.`
     : G.used >= G.max ? `🟠 2ГИС бүгүнкү лимити бүттү (${G.used}/${G.max}) — эртең кайра иштейт`
