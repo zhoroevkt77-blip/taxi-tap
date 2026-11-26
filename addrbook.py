@@ -619,17 +619,77 @@ def _dgis_reverse(lat, lon):
         return None
 
 
+_HNUM = re.compile(r"\s\d+[\w/-]*$")
+
+
+def has_num(a):
+    return bool(a and _HNUM.search(a.strip()))
+
+
+def osm_house(lat, lon, radius=45):
+    """Камдык: OpenStreetMap'тен эң жакын номерлүү үй (Overpass). 2ГИС лимити бүтсө же номер бербесе."""
+    q = ('[out:json][timeout:6];(way(around:%d,%.6f,%.6f)["addr:housenumber"];'
+         'node(around:%d,%.6f,%.6f)["addr:housenumber"];);out tags center 15;' % (radius, lat, lon, radius, lat, lon))
+    for url in ("https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"):
+        try:
+            req = urllib.request.Request(url, data=urllib.parse.urlencode({"data": q}).encode(),
+                                         headers={"User-Agent": "TaksiTAP/1.0 (taxi-tap.kg)"})
+            with urllib.request.urlopen(req, timeout=7) as r:
+                els = json.loads(r.read().decode()).get("elements") or []
+            best = None
+            for e in els:
+                t = e.get("tags") or {}
+                c = e.get("center") or e
+                if c.get("lat") is None or not t.get("addr:housenumber"):
+                    continue
+                d = core.haversine_km(lat, lon, c["lat"], c["lon"])
+                if best is None or d < best[0]:
+                    best = (d, t)
+            if not best:
+                return None
+            t = best[1]
+            street = t.get("addr:street") or t.get("addr:place") or ""
+            return (pretty(street) + " " if street else "") + t["addr:housenumber"]
+        except Exception as e:
+            dgis_state["osm_err"] = str(e)[:120]
+            continue
+    return None
+
+
 def reverse(lat, lon):
-    """{"addr": "Эн-Сай көчөсү 12", "near": "Стадион"} — бири же экөө тең None болушу мүмкүн."""
+    """{"addr": "Эн-Сай көчөсү 12", "near": "Стадион"} — бири же экөө тең None болушу мүмкүн.
+    Үйдүн номери: 2ГИС → (номер жок болсо) OpenStreetMap'тин жакынкы номерлүү үйү → көчө гана."""
     key = (round(lat / 0.00012), round(lon / 0.00012))        # ~12 м тор (үйдүн номери так болсун)
     hit = _rev_cache.get(key)
     if hit and hit[0] > time.time():
         return hit[1]
-    res = {"addr": _dgis_reverse(lat, lon), "near": nearest_landmark(lat, lon)}
+    addr = _dgis_reverse(lat, lon)
+    if not has_num(addr):
+        h = osm_house(lat, lon)
+        if h and (not addr or not h[0].isdigit()):
+            addr = h if not h[0].isdigit() else ((addr or "") + " " + h).strip()
+        elif h and addr:
+            addr = addr + " " + h
+    res = {"addr": addr, "near": nearest_landmark(lat, lon)}
     if len(_rev_cache) > 20000:
         _rev_cache.clear()
-    _rev_cache[key] = (time.time() + 86400, res)
+    # номери бар — 1 күн; номерсиз — 10 мүнөт гана (лимит кайра ачылса, номер чыксын)
+    _rev_cache[key] = (time.time() + (86400 if has_num(addr) else 600), res)
     return res
+
+
+def dgis_status():
+    """Админ үчүн: 2ГИС азыр иштейби, бүгүн канча суроо, ай бою токтотулганбы."""
+    st = core.get_setting("dgis_budget") or {}
+    month = time.strftime("%Y-%m", time.gmtime(core.now() + core.TZ))
+    return {"on": bool(DGIS_KEY), "used": st.get("n", 0), "max": DGIS_DAY_MAX, "blocked": st.get("blocked") == month,
+            "last_error": dgis_state.get("last_error"), "ok": dgis_state.get("ok")}
+
+
+def dgis_unblock():
+    st = core.get_setting("dgis_budget") or {}
+    st.pop("blocked", None)
+    core.set_setting("dgis_budget", st)
 
 
 # ==================== Көп барылчу жерлер (Б точка үчүн даяр тизме) ====================

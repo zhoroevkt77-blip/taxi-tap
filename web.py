@@ -1049,7 +1049,7 @@ class H(BaseHTTPRequestHandler):
         if action == "addr":
             return self._json({"items": addrbook.admin_list((q.get("q") or [""])[0][:60],
                                                             only=(q.get("only") or [""])[0] or None),
-                               "count": addrbook.count(), "import": addrbook.import_state,
+                               "count": addrbook.count(), "import": addrbook.import_state, "dgis": addrbook.dgis_status(),
                                "maptiles": maptiles.status(), "dgis": dict(addrbook.dgis_state, on=bool(addrbook.DGIS_KEY), budget=core.get_setting("dgis_budget"),
                                             day_max=addrbook.DGIS_DAY_MAX),
                                "kinds": {k: {"icon": v[0], "name": v[1]} for k, v in addrbook.KINDS.items()}})
@@ -1173,6 +1173,9 @@ class H(BaseHTTPRequestHandler):
                 return self._json({"error": "bad"}, 400)
             core.set_tariff(city, *vals, inc_km=inc[0], inc_min=inc[1])
             return self._json({"ok": True})
+        if action == "dgis_unblock":           # 2ГИС ай бою токтотулган болсо — кайра ачуу
+            addrbook.dgis_unblock()
+            return self._json({"dgis": addrbook.dgis_status()})
         if action == "addr":
             p = _point(b.get("p"))
             aid = addrbook.save(_txt(b.get("name"), 80), b.get("kind") or "poi", *(p or (None, None)),

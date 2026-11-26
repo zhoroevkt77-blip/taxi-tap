@@ -995,8 +995,15 @@ function drawPreview() {
 let dmap = null, dlyr = null, DF = null, DONLY = "";
 async function viewAddr(q) {
   const A = await api("/api/a/addr?q=" + encodeURIComponent(q || "") + "&only=" + DONLY);
-  const K = A.kinds, c = A.count, im = A.import;
-  $("#main").innerHTML = `<div class="panel"><h3>Даректер тизмеси — жүргүнчүлөр «Кайдан / Кайда» жазганда ушундан сунуш чыгат</h3>
+  const K = A.kinds, c = A.count, im = A.import, G = A.dgis || {};
+  const gLine = !G.on ? "⚪ 2ГИС ачкычы коюлган эмес — үй номерлери OpenStreetMap'тен гана"
+    : G.blocked ? `🔴 2ГИС ушул айга токтотулган (лимит/ката: ${esc(G.last_error || "403/429")}). Үй номерлери азыр OpenStreetMap'тен гана — ал жерде номер аз.`
+    : G.used >= G.max ? `🟠 2ГИС бүгүнкү лимити бүттү (${G.used}/${G.max}) — эртең кайра иштейт`
+    : `🟢 2ГИС иштеп жатат · бүгүн ${G.used}/${G.max} суроо`;
+  $("#main").innerHTML = `<div class="panel"><h3>🏠 Үй номерлери (дарек аныктоо)</h3><div class="item"><div class="main"><b>${gLine}</b>
+      <span class="muted">Пин коюлганда: адегенде 2ГИС, номер жок болсо — OpenStreetMap'тин эң жакын номерлүү үйү.</span></div>
+      ${G.blocked ? `<button class="btn gold" id="gUnb">↻ 2ГИСти кайра ачуу</button>` : ""}</div></div>
+    <div class="panel"><h3>Даректер тизмеси — жүргүнчүлөр «Кайдан / Кайда» жазганда ушундан сунуш чыгат</h3>
       <div class="item"><div class="main"><b>${c.total} дарек</b><span class="muted">${c.admin} — өзүңүз кошкон · ${c.hidden} жашырылган ·
         ${im.running ? "OpenStreetMap'тен жүктөлүүдө…" : im.error ? "OSM жүктөлбөдү: " + esc(im.error) : im.last ? "OSM акыркы жолу: +" + im.added + " жаңы" : "OSM'ден азырынча жүктөлө элек"}<br>${A.dgis.on && A.dgis.budget && A.dgis.budget.blocked ? "⛔ 2ГИС айлык лимити бүттү — кийинки айга чейин даректер OpenStreetMap'тен чыгат" : A.dgis.on ? (A.dgis.ok === false ? "⚠️ 2ГИС иштебей жатат: " + esc(A.dgis.last_error || "") : "🟢 2ГИС кошумча издөө күйүк · " + A.dgis.calls + " суроо (рестарттан бери) · бүгүн " + ((A.dgis.budget || {}).n || 0) + "/" + A.dgis.day_max) : "2ГИС туташкан эмес"}<br>${(() => { const m = A.maptiles || {}; if (!m.on) return "🗺 2ГИС картасы: өчүк (Railway'де DGIS_MAP_KEY жок) — жүргүнчүлөрдө OSM";
           const p = Math.min(100, Math.round(100 * m.used / Math.max(1, m.limit)));
@@ -1022,6 +1029,7 @@ async function viewAddr(q) {
   if (q) { const i = $("#dQ"); i.focus(); i.setSelectionRange(i.value.length, i.value.length); }
   $("#dImp").onclick = async () => { await api("/api/a/addr_import", {}); setTimeout(() => viewAddr(q), 800);
     setTimeout(() => tab === "addr" && viewAddr(q), 20000); };
+  if ($("#gUnb")) $("#gUnb").onclick = async () => { await api("/api/a/dgis_unblock", {}); toast("2ГИС кайра ачылды — пинди жылдырып текшериңиз", 3000); viewAddr(q); };
   $("#dNew").onclick = () => addrForm({kind:"poi"}, K, q);
   document.querySelectorAll("[data-ed]").forEach(b => b.onclick = () => addrForm(A.items.find(x => x.id == b.dataset.ed), K, q));
   document.querySelectorAll("[data-hd]").forEach(b => b.onclick = async () => { await api("/api/a/addr_hide", {id:+b.dataset.hd, hidden:b.dataset.h === "1"}); viewAddr(q); });
