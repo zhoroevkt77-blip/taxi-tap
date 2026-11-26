@@ -79,6 +79,31 @@ def fetch(z, x, y):
         return None, None, OSM % (z, x, y)
 
 
+MB_KEY = (os.environ.get("MAPBOX_TOKEN") or "").strip()
+MB_URL = "https://api.mapbox.com/styles/v1/mapbox/streets-v12/tiles/256/%d/%d/%d?access_token=%s"
+_mb = {"n": 0, "errors": 0, "last_error": None}
+
+
+def fetch_mb(z, x, y):
+    """Mapbox плиткасы (токен браузерге чыкпайт). Ката болсо — OSM."""
+    if not (0 <= z <= 19 and 0 <= x < 2 ** z and 0 <= y < 2 ** z):
+        return None, None, None
+    if not MB_KEY:
+        return None, None, OSM % (z, x, y)
+    try:
+        req = urllib.request.Request(MB_URL % (z, x, y, MB_KEY), headers={"User-Agent": "TaxiTAP/1.0"})
+        with urllib.request.urlopen(req, timeout=8) as r:
+            body, ct = r.read(), r.headers.get("Content-Type") or "image/png"
+        _mb["n"] += 1
+        return body, ct, None
+    except Exception as e:                         # noqa: BLE001
+        _mb["errors"] += 1
+        _mb["last_error"] = str(e)[:200]
+        if _mb["errors"] <= 3:
+            print("mapbox tile error:", _mb["last_error"], flush=True)
+        return None, None, OSM % (z, x, y)
+
+
 def status():
     return {"on": bool(KEY), "provider": provider(), "used": used(), "limit": LIMIT,
             "errors": _st["errors"], "last_error": _st["last_error"], "blocked": _st["blocked"] == _month()}
