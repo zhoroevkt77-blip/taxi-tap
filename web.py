@@ -439,10 +439,9 @@ class H(BaseHTTPRequestHandler):
                 rt = core.route(a[0], a[1], z[0], z[1])
                 return self._json({"coords": rt["coords"], "km": rt["km"],
                                    "min": round(rt["min"]), "real": rt["real"]})
-            m2 = re.match(r"^/tiles/(2gis|mb)/(\d+)/(\d+)/(\d+)\.png$", u.path)
+            m2 = re.match(r"^/tiles/2gis/(\d+)/(\d+)/(\d+)\.png$", u.path)
             if m2:
-                fn = maptiles.fetch if m2.group(1) == "2gis" else maptiles.fetch_mb
-                body, ct, red = fn(*map(int, m2.groups()[1:]))
+                body, ct, red = maptiles.fetch(*map(int, m2.groups()))
                 if red:
                     self.send_response(302); self.send_header("Location", red); self.send_header("Cache-Control", "no-store")
                     self.end_headers(); return
@@ -451,7 +450,7 @@ class H(BaseHTTPRequestHandler):
                 self.send_response(200); self.send_header("Content-Type", ct); self.send_header("Content-Length", str(len(body)))
                 self.send_header("Cache-Control", "public, max-age=86400"); self.end_headers(); self.wfile.write(body); return
             if u.path == "/api/mapcfg":
-                return self._json({"p": maptiles.provider(), "mb": bool(maptiles.MB_KEY)})
+                return self._json({"p": maptiles.provider()})
             if u.path == "/api/park_name":           # каттоодо парктын кодун текшерүү
                 pk = parks.by_code((q.get("code") or [""])[0])
                 return self._json({"name": pk["name"], "self": bool(pk.get("self_approve"))} if pk else {"error": "not_found"},

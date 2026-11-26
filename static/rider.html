@@ -206,12 +206,9 @@ const map = L.map("map", {zoomControl:false, attributionControl:true, zoomSnap:0
 const areaReady = setupArea(map, {zoom:15});
 let baseLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {maxZoom:19, attribution:"© OpenStreetMap"}).addTo(map);
 // 2ГИС картасы (жүргүнчүлөр үчүн): сервер уруксат берсе — плиткалар биздин сервер аркылуу келет, лимит бүтсө OSM'ге өтөт
-// ?map=mb — Mapbox картасын сынап көрүү; 2ГИС жок болсо да Mapbox (бар болсо)
 fetch("/api/mapcfg").then(x => x.json()).then(c => {
-  const wantMb = /[?&]map=mb/.test(location.search);
-  const p = (wantMb || c.p !== "2gis") && c.mb ? "mb" : c.p;
-  if (p !== "2gis" && p !== "mb") return;
-  const g = L.tileLayer("/tiles/" + p + "/{z}/{x}/{y}.png", {maxZoom:19, maxNativeZoom:18, attribution:p === "mb" ? "© Mapbox © OpenStreetMap" : "© 2ГИС"});
+  if (c.p !== "2gis") return;
+  const g = L.tileLayer("/tiles/2gis/{z}/{x}/{y}.png", {maxZoom:19, maxNativeZoom:18, attribution:"© 2ГИС"});
   g.addTo(map); g.bringToBack(); map.removeLayer(baseLayer); baseLayer = g;
 }).catch(() => {});
 

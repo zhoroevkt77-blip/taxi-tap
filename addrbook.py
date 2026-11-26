@@ -641,40 +641,6 @@ def _dgis_reverse(lat, lon):
         return None
 
 
-MAPBOX_TOKEN = (_os.environ.get("MAPBOX_TOKEN") or "").strip()
-mb_state = {"calls": 0, "hits": 0, "last_error": None}
-
-
-def _mb_reverse(lat, lon):
-    """Mapbox: үйдүн номери (жакын 60 м ичинде) → "Көчө 65" же None."""
-    if not MAPBOX_TOKEN:
-        return None
-    mb_state["calls"] += 1
-    url = "https://api.mapbox.com/search/geocode/v6/reverse?" + urllib.parse.urlencode(
-        {"longitude": "%.6f" % lon, "latitude": "%.6f" % lat, "types": "address", "limit": 1,
-         "language": "ru", "access_token": MAPBOX_TOKEN})
-    try:
-        with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "TaxiTAP/1.0"}), timeout=4) as r:
-            data = json.loads(r.read().decode())
-    except Exception as e:                         # noqa: BLE001
-        mb_state["last_error"] = str(e)[:150]
-        print("mapbox rev error:", mb_state["last_error"], flush=True)
-        return None
-    out = None
-    for f in data.get("features") or []:
-        pr = f.get("properties") or {}
-        ad = (pr.get("context") or {}).get("address") or {}
-        num, st = ad.get("address_number"), ad.get("street_name")
-        c = pr.get("coordinates") or {}
-        d = core.haversine_km(lat, lon, c["latitude"], c["longitude"]) if c.get("latitude") is not None else 0
-        if num and st and d <= 0.06:
-            out = pretty(st) + " " + num
-            mb_state["hits"] += 1
-            break
-    print("mapbox rev %.5f,%.5f: %s" % (lat, lon, out or [((f.get("properties") or {}).get("full_address")) for f in (data.get("features") or [])][:2]), flush=True)
-    return out
-
-
 _HNUM = re.compile(r"\s\d+[\w/-]*$")
 
 
@@ -721,10 +687,6 @@ def reverse(lat, lon):
         return hit[1]
     dg = _dgis_reverse(lat, lon)
     addr, bld = (dg[0], dg[1] == "building") if dg else (None, False)
-    if not bld:
-        mb = _mb_reverse(lat, lon)
-        if mb:
-            addr, bld = mb, True
     if not bld:
         h = osm_house(lat, lon)
         if h and h != addr and (not addr or not h[0].isdigit()):
