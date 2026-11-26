@@ -552,7 +552,7 @@ def dgis_selftest():
     if DGIS_KEY and _os.environ.get("DGIS_SELFTEST") == "1":        # ар деплойдо лимит жебесин
         r = dgis_search("Базар-Коргон", (41.0417, 72.7472))
         try:
-            print("  2ГИС дарек (тест): %s" % (_dgis_reverse(41.0399, 72.7466) or "табылган жок — " + str(dgis_state["last_error"])), flush=True)
+            print("  2ГИС дарек (тест): %s" % ((_dgis_reverse(41.0399, 72.7466) or [None])[0] or "табылган жок — " + str(dgis_state["last_error"])), flush=True)
         except Exception as e:
             print("  2ГИС дарек: ката", e, flush=True)
         print("  2ГИС: %s (%d натыйжа)%s" % ("ачкыч иштейт" if dgis_state["ok"] else "иштебей жатат", len(r),
@@ -593,7 +593,8 @@ def _bld_name(it):
 
 
 def _dgis_reverse(lat, lon):
-    """Үйдүн номери менен дарек: адегенде имарат (үй), табылбаса — жакын 40 м ичиндеги имарат, акыры көчө."""
+    """Үйдүн номери менен дарек: адегенде имарат (үй), табылбаса — жакын 40 м ичиндеги эң жакын имарат, акыры көчө.
+    Натыйжа: (дарек, "building"|"street") же None."""
     if not _dgis_allow():
         return None
     base = {"lat": "%.6f" % lat, "lon": "%.6f" % lon, "key": DGIS_KEY,
@@ -601,17 +602,21 @@ def _dgis_reverse(lat, lon):
     try:
         items = _dgis_geo(dict(base, type="building,street", page_size=5))
         for it in items:                                   # үй биринчи (көчө алдыда келсе да)
-            if it.get("type") == "building" and _bld_name(it):
-                return _bld_name(it)
+            if it.get("type") == "building" and _bld_name(it) and it.get("address_name"):
+                return (_bld_name(it), "building")
         street = next((pretty(it["name"]) for it in items if it.get("type") == "street" and it.get("name")), None)
-        if _dgis_allow():                                  # пин жолдун четинде — жакынкы үйдү издейбиз
-            for it in _dgis_geo(dict(base, type="building", radius=40, page_size=3)):
-                n = _bld_name(it)
-                if n and (not street or norm(street.split()[0]) in norm(n) or len(items) == 0):
-                    return n
-                if n and not street:
-                    return n
-        return street
+        if _dgis_allow():                                  # пин үйдүн четинде/жолдо — эң жакын номерлүү үйдү алабыз
+            best = None
+            for it in _dgis_geo(dict(base, type="building", radius=40, page_size=5)):
+                p = it.get("point") or {}
+                if not it.get("address_name") or p.get("lat") is None:
+                    continue
+                d = core.haversine_km(lat, lon, p["lat"], p["lon"])
+                if best is None or d < best[0]:
+                    best = (d, _bld_name(it))
+            if best:
+                return (best[1], "building")
+        return (street, "street") if street else None
     except Exception as e:
         dgis_state["errors"] += 1
         dgis_state["last_error"] = "rev: " + str(e)[:150]
@@ -663,10 +668,11 @@ def reverse(lat, lon):
     hit = _rev_cache.get(key)
     if hit and hit[0] > time.time():
         return hit[1]
-    addr = _dgis_reverse(lat, lon)
-    if not has_num(addr):
+    dg = _dgis_reverse(lat, lon)
+    addr, bld = (dg[0], dg[1] == "building") if dg else (None, False)
+    if not bld:
         h = osm_house(lat, lon)
-        if h and (not addr or not h[0].isdigit()):
+        if h and h != addr and (not addr or not h[0].isdigit()):
             addr = h if not h[0].isdigit() else ((addr or "") + " " + h).strip()
         elif h and addr:
             addr = addr + " " + h
@@ -674,7 +680,7 @@ def reverse(lat, lon):
     if len(_rev_cache) > 20000:
         _rev_cache.clear()
     # номери бар — 1 күн; номерсиз — 10 мүнөт гана (лимит кайра ачылса, номер чыксын)
-    _rev_cache[key] = (time.time() + (86400 if has_num(addr) else 600), res)
+    _rev_cache[key] = (time.time() + (86400 if bld or (addr and addr != (dg or [None])[0]) else 600), res)
     return res
 
 
