@@ -585,11 +585,16 @@ def _dgis_geo(params):
 
 
 def _bld_name(it):
+    """Үйдүн дареги: address_name → address.components (көчө + номер) → name (санды камтыса)."""
     a = it.get("address_name") or ""
     if a:
         parts = [x.strip() for x in a.split(",")]
         return pretty(parts[0]) + " " + parts[1] if len(parts) >= 2 else pretty(a)
-    return it.get("name") or None
+    for c in ((it.get("address") or {}).get("components") or []):
+        if c.get("number"):
+            return ((pretty(c["street"]) + " ") if c.get("street") else "") + c["number"]
+    n = it.get("name") or ""
+    return n if re.search(r"\d", n) else None
 
 
 def _dgis_reverse(lat, lon):
@@ -598,7 +603,7 @@ def _dgis_reverse(lat, lon):
     if not _dgis_allow():
         return None
     base = {"lat": "%.6f" % lat, "lon": "%.6f" % lon, "key": DGIS_KEY,
-            "fields": "items.point,items.address_name,items.full_name,items.address", "locale": "ru_KG"}
+            "fields": "items.point,items.address_name,items.full_name,items.address,items.adm_div", "locale": "ru_KG"}
     try:
         # Бир гана суроо (лимитти үнөмдөйбүз): 40 м ичиндеги үйлөр жана көчөлөр → эң жакын номерлүү үй, болбосо көчө
         items = _dgis_geo(dict(base, type="building,street", radius=40, page_size=10))
@@ -607,10 +612,13 @@ def _dgis_reverse(lat, lon):
             if it.get("type") == "street" and it.get("name") and not street:
                 street = pretty(it["name"])
             p = it.get("point") or {}
-            if it.get("type") == "building" and it.get("address_name") and p.get("lat") is not None:
-                d = core.haversine_km(lat, lon, p["lat"], p["lon"])
+            nm = it.get("type") in ("building", "adm_div.place", "branch") and _bld_name(it)
+            if nm and re.search(r"\d", nm):
+                d = core.haversine_km(lat, lon, p["lat"], p["lon"]) if p.get("lat") is not None else 0.05
                 if best is None or d < best[0]:
-                    best = (d, _bld_name(it))
+                    best = (d, nm)
+        print("rev %.5f,%.5f: %d items %s → %s" % (lat, lon, len(items),
+              [(it.get("type"), it.get("address_name") or it.get("name")) for it in items[:5]], best and best[1]), flush=True)
         if best:
             return (best[1], "building")
         return (street, "street") if street else None
@@ -630,13 +638,13 @@ def has_num(a):
 
 def osm_house(lat, lon, radius=45):
     """Камдык: OpenStreetMap'тен эң жакын номерлүү үй (Overpass). 2ГИС лимити бүтсө же номер бербесе."""
-    q = ('[out:json][timeout:6];(way(around:%d,%.6f,%.6f)["addr:housenumber"];'
+    q = ('[out:json][timeout:3];(way(around:%d,%.6f,%.6f)["addr:housenumber"];'
          'node(around:%d,%.6f,%.6f)["addr:housenumber"];);out tags center 15;' % (radius, lat, lon, radius, lat, lon))
-    for url in ("https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"):
+    for url in ("https://overpass-api.de/api/interpreter",):
         try:
             req = urllib.request.Request(url, data=urllib.parse.urlencode({"data": q}).encode(),
                                          headers={"User-Agent": "TaksiTAP/1.0 (taxi-tap.kg)"})
-            with urllib.request.urlopen(req, timeout=7) as r:
+            with urllib.request.urlopen(req, timeout=4) as r:
                 els = json.loads(r.read().decode()).get("elements") or []
             best = None
             for e in els:
