@@ -576,13 +576,15 @@ def nearest_landmark(lat, lon, max_m=LANDMARK_M):
     return best["name"] if best else None
 
 
-def _dgis_geo(params):
+def _dgis_geo(params, path="/geocode"):
     dgis_state["calls"] += 1
-    req = urllib.request.Request(DGIS_URL + "/geocode?" + urllib.parse.urlencode(params),
+    req = urllib.request.Request(DGIS_URL + path + "?" + urllib.parse.urlencode(params),
                                  headers={"User-Agent": "TaksiTAP/1.0"})
     with urllib.request.urlopen(req, timeout=5) as r:
         data = json.loads(r.read().decode()) or {}
     meta = data.get("meta") or {}
+    if not (data.get("result") or {}).get("items"):
+        dgis_state["last_meta"] = "%s %s" % (meta.get("code"), str(meta.get("error"))[:150])
     if meta.get("code") not in (200, 404, None):
         print("2gis geo meta:", meta.get("code"), str(meta.get("error"))[:200], {k: v for k, v in params.items() if k != "key"}, flush=True)
         if meta.get("code") in (403, 429):
@@ -614,7 +616,9 @@ def _dgis_reverse(lat, lon):
         # Бир гана суроо (лимитти үнөмдөйбүз): 40 м ичиндеги үйлөр жана көчөлөр → эң жакын номерлүү үй, болбосо көчө
         items = _dgis_geo(dict(base, type="building,street", page_size=10))
         if not any(it.get("type") == "building" for it in items) and _dgis_allow():
-            items += _dgis_geo(dict(base, type="building", radius=50, page_size=10))     # пин жолдо — жакынкы үйлөр
+            # Каталогдон чекиттин тегерегиндеги үйлөр (геокодер бош кайтарса да иштейт)
+            items += _dgis_geo({"point": "%.6f,%.6f" % (lon, lat), "radius": 60, "type": "building", "sort": "distance",
+                                "fields": base["fields"], "key": DGIS_KEY, "locale": "ru_KG", "page_size": 10}, path="")
         best, street = None, None
         for it in items:
             if it.get("type") == "street" and it.get("name") and not street:
@@ -625,7 +629,7 @@ def _dgis_reverse(lat, lon):
                 d = core.haversine_km(lat, lon, p["lat"], p["lon"]) if p.get("lat") is not None else 0.05
                 if best is None or d < best[0]:
                     best = (d, nm)
-        print("rev %.5f,%.5f: %d items %s → %s" % (lat, lon, len(items),
+        print("rev %.5f,%.5f: meta=%s %d items %s → %s" % (lat, lon, dgis_state.get("last_meta"), len(items),
               [(it.get("type"), it.get("address_name") or it.get("name")) for it in items[:5]], best and best[1]), flush=True)
         if best:
             return (best[1], "building")
