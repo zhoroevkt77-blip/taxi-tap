@@ -581,7 +581,13 @@ def _dgis_geo(params):
     req = urllib.request.Request(DGIS_URL + "/geocode?" + urllib.parse.urlencode(params),
                                  headers={"User-Agent": "TaksiTAP/1.0"})
     with urllib.request.urlopen(req, timeout=5) as r:
-        return ((json.loads(r.read().decode()) or {}).get("result") or {}).get("items") or []
+        data = json.loads(r.read().decode()) or {}
+    meta = data.get("meta") or {}
+    if meta.get("code") not in (200, 404, None):
+        print("2gis geo meta:", meta.get("code"), str(meta.get("error"))[:200], {k: v for k, v in params.items() if k != "key"}, flush=True)
+        if meta.get("code") in (403, 429):
+            raise RuntimeError("meta %s" % meta.get("code"))
+    return (data.get("result") or {}).get("items") or []
 
 
 def _bld_name(it):
@@ -606,7 +612,9 @@ def _dgis_reverse(lat, lon):
             "fields": "items.point,items.address_name,items.full_name,items.address,items.adm_div", "locale": "ru_KG"}
     try:
         # Бир гана суроо (лимитти үнөмдөйбүз): 40 м ичиндеги үйлөр жана көчөлөр → эң жакын номерлүү үй, болбосо көчө
-        items = _dgis_geo(dict(base, type="building,street", radius=40, page_size=10))
+        items = _dgis_geo(dict(base, type="building,street", page_size=10))
+        if not any(it.get("type") == "building" for it in items) and _dgis_allow():
+            items += _dgis_geo(dict(base, type="building", radius=50, page_size=10))     # пин жолдо — жакынкы үйлөр
         best, street = None, None
         for it in items:
             if it.get("type") == "street" and it.get("name") and not street:
