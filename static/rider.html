@@ -594,7 +594,7 @@ function drawer(open) {
   const it = (k, img, t, sub) => `<button data-dk="${k}"><img src="/static/${img}.webp?v=24" alt=""><span>${t}${sub ? `<small>${sub}</small>` : ""}</span></button>`;
   d.innerHTML = `<div class="drw-dim"></div><div class="drw-p"><button class="drw-me" data-dk="cab"><span class="drw-av">${ME_AV ? `<img src="${esc(ME_AV)}" alt="">` : "👤"}</span><span><b id="drwNm">Менин кабинетим</b><small>Профиль, сүрөт</small></span></button>
     <div class="drw-l">${it("qH", "c_trips", "Сапарларым")}${it("qA", "c_addr", "Тандалган даректер")}${it("cPay", "c_card", "Төлөм ыкмасы", "Накталай")}${it("cPromo", "c_gift", "Промокод")}${it("cSafe", "c_shield", "Коопсуздук")}
-      <a href="${ME_BOT ? "https://t.me/" + ME_BOT : "/terms"}" target="_blank"><img src="/static/n_help.webp?v=24" alt=""><span>Колдоо</span></a>${it("qS", "c_set", "Жөндөөлөр")}
+      <a href="${ME_BOT ? "https://t.me/" + ME_BOT : "/terms"}" target="_blank"><img src="/static/n_help.webp?v=24" alt=""><span>Колдоо</span></a>${it("tut", "c_info", "Кантип колдонуу", "11 кадамдык көрсөтмө")}${it("qS", "c_set", "Жөндөөлөр")}
       <a class="y" href="/driver"><img src="/static/r_car.webp?v=24" alt=""><span>Айдоочу болуу</span></a></div>
     <a class="drw-ver" href="/terms">Колдонмо тууралуу · шарттар</a></div>`;
   document.body.appendChild(d); requestAnimationFrame(() => d.classList.add("on"));
@@ -602,6 +602,7 @@ function drawer(open) {
   let x0 = null; d.addEventListener("touchstart", e => x0 = e.touches[0].clientX, {passive:true});
   d.addEventListener("touchend", e => { if (x0 !== null && e.changedTouches[0].clientX - x0 > 60) drawer(false); x0 = null; }, {passive:true});
   d.querySelectorAll("[data-dk]").forEach(b => b.onclick = async () => { const k = b.dataset.dk; drawer(false);
+    if (k === "tut") return tutOpen();
     document.body.classList.remove("cabsolo"); await viewCabinet(); if (k === "cab") return;
     const el = document.getElementById(k); if (!el) return; el.click();
     await new Promise(r => setTimeout(r, 30));
