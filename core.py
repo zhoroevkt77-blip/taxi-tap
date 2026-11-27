@@ -3416,6 +3416,18 @@ def voice_set_tpl(kind, toks):
     return True
 
 
+def migrate_manas_1127():
+    """Бир жолку (2026-11-27, Кайраттын уруксаты менен): Манас — Яндекстен ~10% арзан тариф;
+    айдоочу алыс болгондо кошулуучу акы өчүрүлөт."""
+    if get_setting("mig_manas_1127"):
+        return
+    set_setting("mig_manas_1127", 1)
+    set_tariff("Манас", 34, 12, 3, 39, 1.5, 3)      # отуруу 34 → 10 сомго тегеректелип 39дан ашпайт
+    f = far_cfg()
+    set_far_cfg(False, f["free_km"], f["per_km"], f["max"])
+    print("migrate: Манас тарифи мин 39, 12/км, 3/мүн, far_pickup өчтү", flush=True)
+
+
 def voice_migrate_thanks():
     """Бир жолку: «кызматыңыз / үчүн / чоң / рахмат!» өзүнчө сөздөрүн бир сөзгө бириктирип, «Сапар бүттү» сүйлөмүнө коёт."""
     if get_setting("mig_vthanks"):
