@@ -164,22 +164,6 @@ body.sxtyping .sx-ab,body.sxtyping .sx-chips,body.sxtyping .sx-cards,body.sxtypi
 .drw-ver{margin-top:auto;padding-top:16px;color:#8a8a95;font-size:15px;text-decoration:none}
 .cab-back{display:inline-flex;align-items:center;margin:0 0 10px;border:0;border-radius:999px;background:#fff;box-shadow:0 3px 10px rgba(0,0,0,.1);padding:10px 16px;font:inherit;font-size:17px;font-weight:700}
 html.uidark .drw-p{background:#1c1d22}html.uidark .drw-l button,html.uidark .drw-l a{color:#eee}html.uidark .sx-srch,html.uidark .sx-chips button{background:#2a2b31;color:#ddd}
-/* Үйрөткүч (story) */
-#tut{position:fixed;inset:0;z-index:9000;background:radial-gradient(120% 70% at 50% 0%,#fff6cf 0%,#fffdf5 55%,#fff 100%);display:flex;flex-direction:column;align-items:center;padding:calc(env(safe-area-inset-top) + 12px) 18px calc(env(safe-area-inset-bottom) + 14px);user-select:none;-webkit-user-select:none;touch-action:manipulation;animation:tutIn .25s ease}
-@keyframes tutIn{from{opacity:0;transform:scale(.98)}to{opacity:1}}
-#tut .tb{display:flex;gap:5px;width:100%}#tut .tb i{flex:1;height:4px;border-radius:3px;background:#e2ded2;overflow:hidden}#tut .tb i b{display:block;height:100%;width:0;background:#16161a}
-#tut .tx{position:absolute;right:14px;top:calc(env(safe-area-inset-top) + 26px);width:40px;height:40px;border:0;border-radius:50%;background:rgba(0,0,0,.06);font-size:22px;color:#16161a;z-index:3}
-#tut h2{margin:30px 46px 0;text-align:center;font-size:22px;line-height:1.2;color:#16161a}
-#tut .ph{position:relative;flex:1;min-height:0;margin:16px 0 0;display:flex;align-items:center;justify-content:center;width:100%}
-#tut .fr{position:relative;height:100%;max-height:520px;aspect-ratio:390/844;border:7px solid #16161a;border-radius:30px;overflow:hidden;background:#fff;box-shadow:0 18px 40px rgba(0,0,0,.18)}
-#tut .fr img{width:100%;height:100%;object-fit:cover;display:block}
-#tut .hl{position:absolute;border:3px solid #ffc61a;border-radius:16px;box-shadow:0 0 0 2000px rgba(0,0,0,.28);animation:tutP 1.4s ease-in-out infinite}
-@keyframes tutP{50%{border-color:#ff9f0a;transform:scale(1.04)}}
-#tut .hero{display:flex;flex-direction:column;align-items:center;gap:14px}#tut .hero img{width:210px}#tut .hero .lg{font-size:30px;font-weight:800;color:#16161a}#tut .hero .lg span{color:#f5b400}
-#tut p.c{margin:16px 6px 0;text-align:center;font-size:16.5px;line-height:1.4;color:#2c2c33;min-height:3.4em}
-#tut .nm{margin-top:8px;font-weight:700;color:#8a8a93;font-size:15px}#tut .nm b{color:#16161a}
-#tut .ok{margin-top:10px;width:100%;height:50px;border:0;border-radius:16px;background:#ffc61a;font:inherit;font-weight:700;font-size:17px;color:#16161a}
-#tut .tap{position:absolute;top:80px;bottom:120px;width:40%;z-index:2}#tut .tap.l{left:0}#tut .tap.r{right:0;width:60%}
 /* Кичирээк плиталар, чиптер жана эскертүү */
 .sx-cards{gap:8px!important;margin-top:10px!important}.sx-cd{height:96px!important;padding:11px 12px!important;border-radius:18px!important}
 .sx-cards .sx-cd:nth-child(3){height:72px!important}.sx-cd b{font-size:16.5px!important}.sx-cd small{font-size:13.5px!important}
@@ -213,6 +197,7 @@ html.uidark .drw-p{background:#1c1d22}html.uidark .drw-l button,html.uidark .drw
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="/static/area.js?v=27"></script>
+<script src="/static/tut.js?v=1"></script>
 <script src="/static/voice.js?v=10"></script>
 <script>
 const $ = s => document.querySelector(s);
@@ -1375,35 +1360,7 @@ try { const qs = new URLSearchParams(location.search), rf = qs.get("ref"), pm = 
 let ME_ROLE = {};
 // ---------- Үйрөткүч: катталуудан баалоого чейин (story сыяктуу) ----------
 const TUT = [{"i": "", "t": "Такси ТАП! менен<br>кантип жол тартабыз", "c": "Катталуудан баштап айдоочуну баалаганга чейин — 11 кадамда көрсөтөбүз.", "b": null}, {"i": "01_login", "t": "Катталуу", "c": "Атыңызды жана телефон номериңизди жазып, «Кирүү» баскычын басыңыз.", "b": [4.1, 93.7, 91.8, 4.4]}, {"i": "02_role", "t": "Катталуу", "c": "«Жүргүнчү катары» дегенди тандаңыз.", "b": [8.7, 22.6, 82.6, 15.3]}, {"i": "03_idle", "t": "А точка — кайдан?", "c": "Картаны жылдырып, пинди турган жериңизге коюңуз жана «А точканы белгилеймин» басыңыз.", "b": [3.5, 68.1, 46.1, 7.4]}, {"i": "04_b", "t": "Б точка — кайда?", "c": "Картаны барчу жериңизге жылдырып, «Б точканы белгилеймин» басыңыз. Издөөгө жазсаңыз да болот.", "b": [51.0, 60.6, 44.9, 7.2]}, {"i": "05_quote", "t": "Заказ берүү", "c": "Тарифти тандаңыз — баа алдын ала көрүнөт. «Чакыруу» баскычын басыңыз.", "b": [4.1, 88.0, 91.8, 4.4]}, {"i": "06_search", "t": "Айдоочу изделүүдө", "c": "Заказ эң жакынкы айдоочуга жөнөтүлдү. Ойуңуз өзгөрсө, заказды жокко чыгарсаңыз болот.", "b": null}, {"i": "07_coming", "t": "Айдоочу келе жатат", "c": "Айдоочунун аты, унаасы, номери жана канча мүнөттө келери көрүнөт. Чалып же жазып байланышсаңыз болот.", "b": [81.5, 69.8, 14.4, 6.6]}, {"i": "08_trip", "t": "Жолдо", "c": "Унааны картада көрүп турасыз. «Бөлүшүү» менен сапарды жакындарыңызга жибериңиз.", "b": null}, {"i": "09_done", "t": "Жол кире төлөө", "c": "Келдиңиз! Экранда жазылган сумманы айдоочуга накталай төлөңүз.", "b": [4.0, 73.2, 92, 4.4]}, {"i": "10_rate", "t": "Айдоочуну баалоо", "c": "Жылдызчалар менен баалап, жакканын белгилеңиз. Пикириңиз жашыруун калат. Жакшы жол!", "b": [4.1, 48.5, 91.8, 6.6]}];
-function tutOpen() {
-  if (document.getElementById("tut")) return;
-  try { localStorage.tutSeen = "1"; } catch (e) {}
-  const el = document.createElement("div"); el.id = "tut"; document.body.appendChild(el);
-  let i = 0, t0 = 0, raf = 0, paused = false, pausedAt = 0; const DUR = 10000;
-  const close = () => { cancelAnimationFrame(raf); el.remove(); };
-  const show = n => {
-    i = Math.max(0, Math.min(TUT.length - 1, n)); const s = TUT[i], last = i === TUT.length - 1;
-    const b = s.b ? `<i class="hl" style="left:${s.b[0] - 1.5}%;top:${s.b[1] - .8}%;width:${s.b[2] + 3}%;height:${s.b[3] + 1.6}%"></i>` : "";
-    el.innerHTML = `<div class="tb">${TUT.map((_, k) => `<i><b style="width:${k < i ? 100 : 0}%"></b></i>`).join("")}</div>
-      <button class="tx" aria-label="Жабуу">✕</button><h2>${s.t}</h2>
-      <div class="ph">${s.i ? `<div class="fr"><img src="/static/tut_${s.i}.webp?v=1" alt="">${b}</div>` : `<div class="hero"><img src="/static/r_car.webp?v=24" alt=""><div class="lg">ТАКСИ <span>ТАП!</span></div></div>`}</div>
-      <p class="c">${s.c}</p><div class="nm"><b>${i + 1}</b>/${TUT.length}</div>
-      ${last ? `<button class="ok">✓ Түшүндүм</button>` : ""}<div class="tap l"></div><div class="tap r"></div>`;
-    el.querySelector(".tx").onclick = close; const ok = el.querySelector(".ok"); if (ok) ok.onclick = close;
-    const l = el.querySelector(".tap.l"), r = el.querySelector(".tap.r");
-    l.onclick = () => show(i - 1); r.onclick = () => last ? null : show(i + 1);
-    [l, r].forEach(z => { z.onpointerdown = () => { paused = true; pausedAt = performance.now(); };
-      z.onpointerup = z.onpointercancel = z.onpointerleave = () => { if (paused) { t0 += performance.now() - pausedAt; paused = false; } }; });
-    t0 = performance.now();
-  };
-  const tick = now => {
-    if (!document.getElementById("tut")) return;
-    if (!paused) { const f = Math.min(1, (now - t0) / DUR), bar = el.querySelectorAll(".tb i b")[i]; if (bar) bar.style.width = (f * 100) + "%";
-      if (f >= 1 && i < TUT.length - 1) show(i + 1); }
-    raf = requestAnimationFrame(tick);
-  };
-  show(0); raf = requestAnimationFrame(tick);
-}
+function tutOpen() { tutShow(TUT, "tutSeen"); }
 // Жаңы адам: «Кантип колдоносуз?» — Жүргүнчү катары / Айдоочу катары (бир жолу)
 function viewRole(name) {
   homeOn(true);
