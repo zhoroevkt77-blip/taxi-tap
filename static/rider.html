@@ -215,7 +215,8 @@ let baseLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
 // 2ГИС картасы (жүргүнчүлөр үчүн): сервер уруксат берсе — плиткалар биздин сервер аркылуу келет, лимит бүтсө OSM'ге өтөт
 fetch("/api/mapcfg").then(x => x.json()).then(c => {
   if (c.p !== "2gis") return;
-  const g = L.tileLayer("/tiles/2gis/{z}/{x}/{y}.png", {maxZoom:19, maxNativeZoom:18, attribution:"© 2ГИС"});
+  const g = L.tileLayer("/tiles/2gis/{z}/{x}/{y}.png", {maxZoom:19, maxNativeZoom:18, attribution:"© 2ГИС",
+    updateWhenIdle:false, updateWhenZooming:false, keepBuffer:4});   // жылдырып жатканда эле жүктөлсүн (телефондо токтогонду күтпөйт)
   g.addTo(map); g.bringToBack(); map.removeLayer(baseLayer); baseLayer = g;
 }).catch(() => {});
 

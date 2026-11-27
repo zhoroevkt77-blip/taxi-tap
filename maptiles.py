@@ -16,6 +16,10 @@ WARN = (0.8, 1.0)
 URL = "https://tile%d.maps.2gis.com/v2/tiles/online_hd/%d/%d/%d.png?key=%s"
 OSM = "https://tile.openstreetmap.org/%d/%d/%d.png"
 _lock = threading.Lock()
+# Эстутумдагы кэш: бир плитка кайра суралса 2ГИСке барбай дароо берилет (лимит да үнөмдөлөт)
+_cache = {}
+CACHE_MAX = 2500
+CACHE_TTL = 12 * 3600
 _st = {"pending": 0, "flushed": 0.0, "errors": 0, "last_error": None, "blocked": None}
 
 
@@ -64,12 +68,20 @@ def fetch(z, x, y):
         return None, None, None
     if provider() != "2gis":
         return None, None, OSM % (z, x, y)
+    hit = _cache.get((z, x, y))
+    if hit and hit[0] > time.time():
+        _st["hits"] = _st.get("hits", 0) + 1
+        return hit[1], hit[2], None
     try:
         req = urllib.request.Request(URL % ((x + y) % 5, z, x, y, KEY), headers={"User-Agent": "TaxiTAP/1.0"})
         with urllib.request.urlopen(req, timeout=8) as r:
             body, ct = r.read(), r.headers.get("Content-Type") or "image/png"
         with _lock:
             _st["pending"] += 1
+            if len(_cache) >= CACHE_MAX:              # эң эскисин чыгарабыз
+                for k in list(_cache)[:CACHE_MAX // 10]:
+                    _cache.pop(k, None)
+            _cache[(z, x, y)] = (time.time() + CACHE_TTL, body, ct)
         return body, ct, None
     except Exception as e:                         # noqa: BLE001
         _st["errors"] += 1
