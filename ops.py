@@ -25,8 +25,12 @@ BACKUP_DIR = os.path.join(core.DATA_DIR, "backups")
 KEEP = 14
 BACKUP_HOUR = 3                      # Бишкек убактысы
 # web_sessions — кирүү токендери, көчүрмөгө кирбейт (коопсуздук)
-TABLES = ["users", "drivers", "rides", "ride_events", "balance_tx", "ratings",
-          "tariffs", "settings"]
+# web_sessions кирбейт (кирүү токендери файлга/Telegram'га чыкпасын) — калыбына келгенде кайра кирешет
+TABLES = ["users", "drivers", "rides", "ride_events", "balance_tx", "ratings", "tariffs", "settings",
+          "promos", "messages", "passenger_ratings", "addresses", "parks", "park_payouts", "park_acts",
+          "driver_online", "admin_inbox", "ride_track", "quote_log", "offer_log"]
+ID_TABLES = ("rides", "ride_events", "balance_tx", "admin_inbox", "messages", "addresses", "parks",
+             "park_payouts", "quote_log", "offer_log", "park_acts")
 
 # bot.py коёт: send_text(tg_uid, text), send_file(tg_uid, path, caption)
 send_text = None
@@ -134,7 +138,8 @@ def backup_worker():
 
 def restore(path):
     """Көчүрмөнү БОШ базага кайтарат (бар маалыматтын үстүнө жазбайт)."""
-    data = json.load(gzip.open(path, "rt", encoding="utf-8"))
+    opener = gzip.open if open(path, "rb").read(2) == b"\x1f\x8b" else open    # телефон .gz'ди ачып коюшу мүмкүн
+    data = json.load(opener(path, "rt", encoding="utf-8"))
     core.init_db()
     for t in TABLES:
         rows = data["tables"].get(t)
@@ -149,6 +154,6 @@ def restore(path):
             core.query(sql, tuple(r[c] for c in cols))
         print("  %s: %d жазуу" % (t, len(rows)))
     if core.IS_PG:          # SERIAL эсептегичтерин жаңылоо
-        for t in ("rides", "ride_events", "balance_tx"):
+        for t in ID_TABLES:
             core.query("SELECT setval(pg_get_serial_sequence('%s','id'), "
                        "COALESCE((SELECT MAX(id) FROM %s), 1))" % (t, t), (), "one")
