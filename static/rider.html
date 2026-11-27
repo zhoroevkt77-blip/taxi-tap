@@ -1378,7 +1378,7 @@ function tutOpen() {
   if (document.getElementById("tut")) return;
   try { localStorage.tutSeen = "1"; } catch (e) {}
   const el = document.createElement("div"); el.id = "tut"; document.body.appendChild(el);
-  let i = 0, t0 = 0, raf = 0, paused = false, pausedAt = 0; const DUR = 6500;
+  let i = 0, t0 = 0, raf = 0, paused = false, pausedAt = 0; const DUR = 10000;
   const close = () => { cancelAnimationFrame(raf); el.remove(); };
   const show = n => {
     i = Math.max(0, Math.min(TUT.length - 1, n)); const s = TUT[i], last = i === TUT.length - 1;
