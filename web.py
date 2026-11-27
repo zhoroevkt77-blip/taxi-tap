@@ -1370,6 +1370,7 @@ def start(port=None):
     try:
         core.voice_migrate_thanks()
         core.migrate_manas_1127()
+        core.migrate_manas_1127b()
     except Exception as e:
         print("voice migrate:", e, flush=True)
     srv = ThreadingHTTPServer(("0.0.0.0", port), H)

@@ -3428,6 +3428,16 @@ def migrate_manas_1127():
     print("migrate: Манас тарифи мин 39, 12/км, 3/мүн, far_pickup өчтү", flush=True)
 
 
+def migrate_manas_1127b():
+    """Бир жолку: Манас — км баасы 12 → 11 (Яндекстин ⚡ баасынан ~10–15% арзан)."""
+    if get_setting("mig_manas_1127b"):
+        return
+    set_setting("mig_manas_1127b", 1)
+    t = get_tariff("Манас") or {}
+    set_tariff("Манас", t.get("base", 34), 11, t.get("per_min", 3), t.get("min_price", 39), t.get("inc_km", 1.5), t.get("inc_min", 3))
+    print("migrate: Манас 11 сом/км", flush=True)
+
+
 def voice_migrate_thanks():
     """Бир жолку: «кызматыңыз / үчүн / чоң / рахмат!» өзүнчө сөздөрүн бир сөзгө бириктирип, «Сапар бүттү» сүйлөмүнө коёт."""
     if get_setting("mig_vthanks"):
