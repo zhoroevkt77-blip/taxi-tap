@@ -164,6 +164,13 @@ body.sxtyping .sx-ab,body.sxtyping .sx-chips,body.sxtyping .sx-cards,body.sxtypi
 .drw-ver{margin-top:auto;padding-top:16px;color:#8a8a95;font-size:15px;text-decoration:none}
 .cab-back{display:inline-flex;align-items:center;margin:0 0 10px;border:0;border-radius:999px;background:#fff;box-shadow:0 3px 10px rgba(0,0,0,.1);padding:10px 16px;font:inherit;font-size:17px;font-weight:700}
 html.uidark .drw-p{background:#1c1d22}html.uidark .drw-l button,html.uidark .drw-l a{color:#eee}html.uidark .sx-srch,html.uidark .sx-chips button{background:#2a2b31;color:#ddd}
+/* Пинди же даректи басса — точка тандалат */
+.pin .chip,.pin .head{pointer-events:auto;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.pin .chip{display:flex;flex-direction:column;align-items:center;position:relative;padding-right:34px!important}
+.pin .chip:after{content:"✓";position:absolute;right:8px;top:50%;transform:translateY(-50%);width:22px;height:22px;border-radius:50%;background:var(--gold,#ffc61a);color:#16161a;font-size:13px;font-weight:800;display:grid;place-items:center;line-height:22px}
+#chipHint{display:none;font-style:normal;font-size:12.5px;font-weight:600;color:#8a8a93;margin-top:1px}body.pinhint #chipHint{display:block}
+.pin.tap .head,.pin.tap .chip{animation:pinTap .35s ease}
+@keyframes pinTap{40%{transform:scale(.88)}80%{transform:scale(1.06)}}
 /* Кичирээк плиталар, чиптер жана эскертүү */
 .sx-cards{gap:8px!important;margin-top:10px!important}.sx-cd{height:96px!important;padding:11px 12px!important;border-radius:18px!important}
 .sx-cards .sx-cd:nth-child(3){height:72px!important}.sx-cd b{font-size:16.5px!important}.sx-cd small{font-size:13.5px!important}
@@ -186,7 +193,7 @@ html.uidark .drw-p{background:#1c1d22}html.uidark .drw-l button,html.uidark .drw
 </div>
 
 <div class="pin" id="pin">
-  <div class="chip" id="chip"><small id="chipEta"></small><span id="chipAddr">Дарек аныкталууда…</span></div>
+  <div class="chip" id="chip"><small id="chipEta"></small><span id="chipAddr">Дарек аныкталууда…</span><em id="chipHint">👆 Тандоо үчүн басыңыз</em></div>
   <div class="head" id="pinHead"></div><div class="stick" id="pinStick"></div><div class="dot"></div>
 </div>
 
@@ -286,6 +293,27 @@ map.on("moveend", () => {
   clearTimeout(moveTimer);
   moveTimer = setTimeout(onPinMoved, 250);
 });
+// Пинди же даректи басса — ошол учурдагы «белгилеймин» баскычы басылгандай болот
+function pinTap(e) {
+  if (e) { e.preventDefault(); e.stopPropagation(); }
+  if (!pinActive() || $("#pin").classList.contains("up")) return;
+  const t = $("#chipAddr").textContent;
+  if (!t || t === "…") return toast("Дарек аныкталууда — бир секунд…", 1200);
+  const pin = $("#pin"); pin.classList.remove("tap"); void pin.offsetWidth; pin.classList.add("tap");
+  try { navigator.vibrate && navigator.vibrate(25); } catch (er) {}
+  try { localStorage.pinTapN = (+localStorage.pinTapN || 0) + 1; } catch (er) {}
+  document.body.classList.remove("pinhint");
+  const ok = $("#ok"), sB = $("#pS");
+  setTimeout(() => {
+    if (ok && (S.mode === "pickFrom" || S.mode === "pickDest")) return ok.click();
+    if (!S.aSet && $("#pA")) return $("#pA").click();
+    if (sB && sB.classList.contains("next")) return sB.click();
+    if ($("#pB")) return $("#pB").click();
+  }, 180);
+}
+$("#chip").addEventListener("click", pinTap); $("#pinHead").addEventListener("click", pinTap);
+// Кеңеш: алгачкы 3 жолу «Тандоо үчүн басыңыз»
+try { if ((+localStorage.pinTapN || 0) < 3) document.body.classList.add("pinhint"); } catch (er) {}
 const pinActive = () => S.mode === "idle" || S.mode === "pickDest" || S.mode === "pickFrom";
 // Картаны басса — пин ошол жерге барат (жылдырбай эле тандаса болот)
 map.on("click", e => {
