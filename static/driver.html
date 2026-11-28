@@ -115,6 +115,15 @@ label.l{font-size:15px;color:var(--soft);display:block;margin:6px 0 4px}
 .quick{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
 .quick button{border:1px solid var(--line);background:#fff;border-radius:16px;padding:6px 10px;font-size:15px;cursor:pointer}
 .sw{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-top:1px solid var(--line);margin-top:10px}
+/* Стрелка: линияда — сары, нуру «дем алат»; линиядан тышкары — боз; GPS начар — кызгылт-сары согот */
+.navme b img{transition:filter .4s ease,opacity .4s ease}
+.navme i{transition:opacity .4s ease}
+body:not(.onl) .navme b img{filter:grayscale(1) brightness(1.08) contrast(.9);opacity:.82}
+body:not(.onl) .navme i{opacity:0;animation:none}
+body.onl .navme i{background:rgba(255,190,0,.42);box-shadow:0 0 18px 6px rgba(255,190,0,.45);animation:navBreath 2.2s ease-in-out infinite}
+@keyframes navBreath{0%,100%{transform:scale(.85);opacity:.55}50%{transform:scale(1.35);opacity:1}}
+body.onl.gpsweak .navme i{background:rgba(255,120,30,.5);box-shadow:0 0 16px 6px rgba(255,110,20,.55);animation:navWeak .7s ease-in-out infinite}
+@keyframes navWeak{0%,100%{transform:scale(.8);opacity:.35}50%{transform:scale(1.25);opacity:1}}
 </style>
 <link rel="stylesheet" href="/static/theme.css?v=174">
 <link rel="stylesheet" href="/static/dark.css?v=21">
@@ -208,6 +217,7 @@ function startGps() {
   clearInterval(pingT);
   pingT = setInterval(() => {
     if (myPos && D && D.online) api("/api/d/location", {p:myPos});
+    document.body.classList.toggle("gpsweak", !!(D && D.online) && (!myAt || Date.now() - myAt > 25000 || (myAcc && myAcc > 150)));
     // Android'дө GPS кээде үнсүз токтоп калат — 20 сек жаңы чекит келбесе, кайра иштетебиз
     if (document.visibilityState === "visible" && fixAt && Date.now() - fixAt > 20000 && watch !== null) {
       try { navigator.geolocation.clearWatch(watch); } catch (e) {} watch = null; fixAt = Date.now();
